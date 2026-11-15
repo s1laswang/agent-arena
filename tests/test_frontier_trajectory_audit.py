@@ -6,6 +6,7 @@ import importlib.util
 import json
 import math
 import os
+import subprocess
 import sys
 import tokenize
 from pathlib import Path
@@ -85,11 +86,39 @@ EXPECTED_SPEC_TOOLS = {
 }
 
 
+def _forbid_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _fail(*args, **kwargs):
+        raise AssertionError(f"subprocess call forbidden at runtime: {args}")
+
+    monkeypatch.setattr(subprocess, "run", _fail)
+    monkeypatch.setattr(subprocess, "Popen", _fail)
+    monkeypatch.setattr(subprocess, "check_call", _fail)
+    monkeypatch.setattr(subprocess, "check_output", _fail)
+
+
+def _strip_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    for var in (
+        "OPENAI_API_KEY",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+        "GOOGLE_GENERATIVE_AI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "CANARY_WORLD_SECRET",
+    ):
+        monkeypatch.delenv(var, raising=False)
+
+
 @pytest.fixture(scope="module")
 def computed_audit():
+    mp = pytest.MonkeyPatch()
+    _forbid_subprocess(mp)
+    _strip_keys(mp)
     env_before = dict(os.environ)
-    out = fta.compute_audit(root=ROOT, verify_replays=True, enforce_expected_counts=True)
-    assert dict(os.environ) == env_before
+    try:
+        out = fta.compute_audit(root=ROOT, verify_replays=True, enforce_expected_counts=True)
+        assert dict(os.environ) == env_before
+    finally:
+        mp.undo()
     return out
 
 
@@ -103,6 +132,8 @@ def test_approx_equal_float_tolerance():
 
 
 def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypatch):
+    _forbid_subprocess(monkeypatch)
+    _strip_keys(monkeypatch)
     monkeypatch.setattr(
         fta,
         "compute_audit",
@@ -110,10 +141,14 @@ def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypat
     )
     assert fta.main(["--check"]) == 0
     assert JSON_PATH.stat().st_size <= 50_000
+    assert JSON_PATH.read_bytes() == fta.serialize_audit_json(computed_audit).encode("utf-8")
+    assert MD_PATH.read_bytes() == fta.render_markdown(computed_audit).encode("utf-8")
 
     assert computed_audit["tiers_version"] == "v1.4"
+    assert computed_audit["upstream_justsilas_sync_commit"] == "5f9b3297"
     assert computed_audit["zero_live_api_calls"] is True
     assert computed_audit["zero_git_dependency"] is True
+    assert computed_audit["zero_subprocesses"] is True
 
     rv = computed_audit["replay_verification"]
     assert rv["committed_v14"]["total"] == 472
@@ -123,6 +158,7 @@ def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypat
     assert rv["committed_v14"]["duplicates"] == 0
     assert rv["committed_v14"]["pre_1bc3e281_detail_normalized_steps"] > 0
     assert rv["committed_v14"]["unwrapped_mcp_error_steps"] > 0
+    assert rv["committed_v14"]["clean_rc0_non_accuse_zero_day_seeds"] == [0, 17]
 
     assert rv["replication_v14"]["total"] == 305
     assert rv["replication_v14"]["verified"] == 305
@@ -131,6 +167,19 @@ def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypat
     assert rv["replication_v14"]["duplicates"] == 0
 
     prov = computed_audit["provenance_and_locks"]
+    up_sync = prov["upstream_justsilas_sync"]
+    assert up_sync["head_commit"] == "5f9b3297"
+    assert up_sync["code_freeze_tag"] == "afterquery-final"
+    assert up_sync["code_freeze_commit"] == "1bc3e281"
+    assert up_sync["afterquery_submit_tag"] == "afterquery-submit"
+    assert up_sync["afterquery_submit_commit"] == "9225f2ad"
+    assert up_sync["afterquery_submit_2_tag"] == "afterquery-submit-2"
+    assert up_sync["afterquery_submit_2_commit"] == "aa1c679e"
+    assert up_sync["ceo_correction_commit"] == "5f9b3297"
+    assert up_sync["rehearsal_final_branch_commit"] == "d0ead011"
+    assert up_sync["harbor_rehearsal_ratios_pct"] == [93, 116, 131]
+    assert up_sync["harbor_rehearsal_valid_trials"] == [10, 10, 9]
+
     assert prov["primary_0_29_lock"]["classification"] == "post_hoc_lock"
     assert prov["primary_0_29_lock"]["lock_commit"] == "671ed96"
     assert prov["primary_0_29_lock"]["episodes_commit"] == "8fd4dec"
@@ -140,7 +189,11 @@ def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypat
     assert prov["g1_hard_30_59_extension"]["completed_seeds"] == [34, 37]
     assert prov["gpt_5_5_hard_0_29"]["classification"] == "pre_registered"
     assert prov["gpt_5_5_hard_0_29"]["prereg_commit"] == "cf394894"
+    assert prov["gpt_5_5_hard_0_29"]["results_commit"] == "ca0a0dc0"
+    assert prov["gpt_5_5_hard_0_29"]["upstream_sync_commit"] == "5f9b3297"
     assert prov["gpt_5_5_hard_0_29"]["timeout_cap_s"] == 7200
+    assert prov["gpt_5_5_hard_0_29"]["committed_v14_episodes"] == 30
+    assert prov["gpt_5_5_hard_0_29"]["clean_rc0_non_accuse_zero_day_seeds"] == [0, 17]
     assert prov["step_error_detail_compat"]["commit"] == "1bc3e281"
 
     s34 = computed_audit["seed_34_cross_run"]
@@ -192,6 +245,14 @@ def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypat
     assert "8fd4dec" in md
     assert "f9fb7a4a" in md
     assert "cf394894" in md
+    assert "ca0a0dc0" in md
+    assert "5f9b3297" in md
+    assert "afterquery-submit" in md
+    assert "9225f2ad" in md
+    assert "afterquery-submit-2" in md
+    assert "aa1c679e" in md
+    assert "d0ead011" in md
+    assert "93%, 116%, 131%" in md
     assert "7200 s" in md
     assert "1bc3e281" in md
     assert "+0.790" in md
@@ -202,7 +263,9 @@ def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypat
         assert "0.373" not in md
 
 
-def test_gap_ships_flash_hard_false_and_true(tmp_path):
+def test_gap_ships_flash_hard_false_and_true(monkeypatch, tmp_path):
+    _forbid_subprocess(monkeypatch)
+    _strip_keys(monkeypatch)
     mock_root = tmp_path / "workspace"
     (mock_root / "data" / "runs" / "committed").mkdir(parents=True)
     (mock_root / "results" / "frontier_replication").mkdir(parents=True)
@@ -468,6 +531,8 @@ def test_step_result_normalization_1bc3e281_unwrap_order():
 
 
 def test_write_check_roundtrip_tamper_and_zero_git_dependency(computed_audit, monkeypatch, tmp_path):
+    _forbid_subprocess(monkeypatch)
+    _strip_keys(monkeypatch)
     no_git_root = tmp_path / "clean_tree_without_git"
     (no_git_root / "data" / "runs" / "committed").mkdir(parents=True)
     (no_git_root / "results" / "frontier_replication").mkdir(parents=True)
@@ -629,11 +694,37 @@ def test_synthetic_edge_cases_and_negative_controls():
     assert row["token_and_cache"]["episodes_over_3600s"] == 0
 
     with pytest.raises(ValueError, match="duplicate seeds"):
-        fta.compute_cohort_metrics(spec, [ep1, ep1], verify_replays=True)
+        fta.compute_cohort_metrics(spec, [ep1, ep1], verify_replays=False)
 
     bad_ep = dict(ep1, score=0.99)
     with pytest.raises(ValueError, match="replay mismatches"):
         fta.compute_cohort_metrics(spec, [bad_ep], verify_replays=True)
+
+    clean_zero_ep = {
+        "tier": "medium",
+        "seed": 1,
+        "agent": "opencode:openai/gpt-5.5",
+        "score": 0.0,
+        "correct": False,
+        "accused": None,
+        "final_day": 0,
+        "end_reason": "stop_early",
+        "steps": [{"t": 1, "day": 1, "tool": "status", "args": {}, "result": None}],
+        "meta": {"rc": 0, "valid": True, "error": None},
+    }
+    assert fta.is_clean_non_accuse_rc0_exit(clean_zero_ep, env_done=False) is True
+    clean_ver = fta.verify_episode_pool([clean_zero_ep], "synthetic_clean_zero")
+    assert clean_ver["verified"] == 1
+    assert clean_ver["clean_rc0_non_accuse_zero_day_seeds"] == [1]
+
+    timeout_zero_ep = dict(
+        clean_zero_ep,
+        end_reason="timeout",
+        meta={"rc": 124, "valid": True, "error": "timeout"},
+    )
+    assert fta.is_clean_non_accuse_rc0_exit(timeout_zero_ep, env_done=False) is False
+    with pytest.raises(ValueError, match="replay mismatches"):
+        fta.verify_episode_pool([timeout_zero_ep], "synthetic_timeout_zero")
 
 
 def test_file_hygiene_no_comments_or_em_dashes():

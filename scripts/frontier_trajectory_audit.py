@@ -22,12 +22,20 @@ if str(ROOT) not in sys.path:
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from canary.analysis.gap import load_runs, mean_ci
+from canary.analysis.gap import mean_ci
 from canary.env import Env
 from canary.rules import TIERS_VERSION, tier_params
 from canary.types import INVESTIGATIVE_TOOLS
 
 MAX_JSON_BYTES = 50_000
+EXPECTED_COMMITTED_V14_EPISODES = 472
+EXPECTED_REPLICATION_V14_EPISODES = 305
+EXPECTED_COMBINED_V14_EPISODES = 777
+
+_POOL_CACHE: dict[
+    tuple[str, str, tuple[tuple[str, int, int], ...]],
+    list[tuple[str, dict[str, Any]]],
+] = {}
 
 ENV_TOOLS: tuple[str, ...] = (
     "status",
@@ -385,12 +393,81 @@ def step_result_matches(raw_recorded: Any, replayed: dict[str, Any]) -> tuple[bo
     return matched, flags
 
 
+def _load_indexed_pool(
+    pool_dir: Path,
+    pool_rel_prefix: str,
+) -> list[tuple[str, dict[str, Any]]]:
+    if not pool_dir.exists():
+        return []
+    resolved = pool_dir.resolve()
+    files: list[tuple[Path, tuple[str, ...]]] = []
+    for f in sorted(resolved.rglob("episodes.jsonl")):
+        rel_parts = f.relative_to(resolved).parts[:-1]
+        if any(x == "superseded" or x.startswith("v1.") or x.endswith("-smoke") for x in rel_parts):
+            continue
+        files.append((f, rel_parts))
+    sig = tuple(
+        (str(f), st.st_mtime_ns, st.st_size)
+        for f, _ in files
+        for st in (f.stat(),)
+    )
+    cache_key = (str(resolved), pool_rel_prefix, sig)
+    cached = _POOL_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    rows: list[tuple[str, dict[str, Any]]] = []
+    for f, rel_parts in files:
+        rel_dir = "/".join((pool_rel_prefix, *rel_parts)) if rel_parts else pool_rel_prefix
+        run_id = f.parent.name
+        for line in f.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                ep = json.loads(line)
+                if (ep.get("meta") or {}).get("valid") is False:
+                    continue
+                ep.setdefault("meta", {})["run_id"] = run_id
+                rows.append((rel_dir, ep))
+    if len(_POOL_CACHE) >= 8:
+        _POOL_CACHE.clear()
+    _POOL_CACHE[cache_key] = rows
+    return rows
+
+
+def is_clean_non_accuse_rc0_exit(ep: dict[str, Any], env_done: bool | None = None) -> bool:
+    meta = ep.get("meta") or {}
+    done_ok = True if env_done is None else (not env_done)
+    rc = meta.get("rc")
+    fday = ep.get("final_day")
+    end_reason = str(ep.get("end_reason") or "").lower()
+    return (
+        done_ok
+        and meta.get("valid") is not False
+        and not isinstance(rc, bool)
+        and rc == 0
+        and meta.get("error") is None
+        and "timeout" not in end_reason
+        and ep.get("accused") is None
+        and not bool(ep.get("correct"))
+        and abs(float(ep.get("score") if ep.get("score") is not None else 1.0)) < 1e-9
+        and not isinstance(fday, bool)
+        and fday == 0
+    )
+
+
 def _step_ok(step: dict[str, Any]) -> bool:
     res = step.get("result")
     if client_truncated_bytes(res) is not None:
         return True
     unwrapped = norm_result(res)
     return bool((unwrapped or {}).get("ok"))
+
+
+def _replay_env_step(env: Env, tool: str, args: dict[str, Any]) -> dict[str, Any]:
+    res = env._dispatch(tool, args)
+    env._history.append(None)
+    if not env.done and len(env._history) >= env.p.tool_call_cap:
+        env._end("tool_cap")
+    return {"ok": res.ok, "data": res.data, "error": res.error}
 
 
 def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
@@ -410,8 +487,13 @@ def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
             if first_bad_step is None:
                 first_bad_step = idx
             continue
-        r = env.call(str(st["tool"]), st.get("args") or {})
-        got_payload = {"ok": r.ok, "data": r.data, "error": r.error}
+        tname = str(st.get("tool"))
+        if tname not in ENV_TOOLS:
+            step_mismatches += 1
+            if first_bad_step is None:
+                first_bad_step = idx
+            continue
+        got_payload = _replay_env_step(env, tname, st.get("args") or {})
         ok_step, flags = step_result_matches(st.get("result"), got_payload)
         if flags["unwrapped_mcp_error"]:
             unwrapped_mcp_error_steps += 1
@@ -425,13 +507,7 @@ def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
                 first_bad_step = idx
     res = env.result("replay")
     ep_fday = int(ep.get("final_day") or 0)
-    agent_stopped_unended = (
-        not env.done
-        and ep.get("accused") is None
-        and abs(float(ep["score"])) < 1e-9
-        and ep_fday == 0
-        and int((ep.get("meta") or {}).get("rc", -1)) == 0
-    )
+    agent_stopped_unended = is_clean_non_accuse_rc0_exit(ep, env_done=env.done)
     score_ok = (
         abs(float(res.score) - float(ep["score"])) < 1e-9
         and res.accused == ep.get("accused")
@@ -441,6 +517,7 @@ def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
     return {
         "ok": score_ok and step_mismatches == 0,
         "score_ok": score_ok,
+        "clean_zero_day_exit": agent_stopped_unended,
         "replay_score": float(res.score),
         "replay_accused": res.accused,
         "replay_correct": bool(res.correct),
@@ -466,6 +543,7 @@ def verify_episode_pool(episodes: list[dict[str, Any]], pool_name: str) -> dict[
         total_detail_norm = 0
         total_truncated = 0
         total_client_only = 0
+        clean_zero_day_seeds: list[int] = []
         for ep in episodes:
             key = (str(ep["agent"]), str(ep["tier"]), int(ep["seed"]))
             if key in seen:
@@ -477,6 +555,8 @@ def verify_episode_pool(episodes: list[dict[str, Any]], pool_name: str) -> dict[
             total_detail_norm += int(rep["detail_normalized_steps"])
             total_truncated += int(rep["truncated_steps_verified"])
             total_client_only += int(rep["client_only_steps"])
+            if rep["clean_zero_day_exit"]:
+                clean_zero_day_seeds.append(key[2])
             if not rep["ok"]:
                 mismatches.append(
                     {
@@ -507,6 +587,7 @@ def verify_episode_pool(episodes: list[dict[str, Any]], pool_name: str) -> dict[
             "unwrapped_mcp_error_steps": total_unwrapped,
             "truncated_output_steps_verified": total_truncated,
             "client_only_steps": total_client_only,
+            "clean_rc0_non_accuse_zero_day_seeds": sorted(clean_zero_day_seeds),
         }
     finally:
         if prev is None:
@@ -1031,8 +1112,24 @@ def compute_audit(
     comm_v14 = root / "data" / "runs" / "committed" / "v1.4"
     rep_v14 = root / "results" / "frontier_replication" / "v1.4"
 
-    comm_eps = load_runs(comm_v14)
-    rep_eps = load_runs(rep_v14)
+    comm_indexed = _load_indexed_pool(comm_v14, "data/runs/committed/v1.4")
+    rep_indexed = _load_indexed_pool(rep_v14, "results/frontier_replication/v1.4")
+    comm_eps = [ep for _, ep in comm_indexed]
+    rep_eps = [ep for _, ep in rep_indexed]
+
+    if enforce_expected_counts:
+        if len(comm_eps) != EXPECTED_COMMITTED_V14_EPISODES:
+            raise ValueError(
+                f"committed v1.4 expected {EXPECTED_COMMITTED_V14_EPISODES} episodes, got {len(comm_eps)}"
+            )
+        if len(rep_eps) != EXPECTED_REPLICATION_V14_EPISODES:
+            raise ValueError(
+                f"replication v1.4 expected {EXPECTED_REPLICATION_V14_EPISODES} episodes, got {len(rep_eps)}"
+            )
+        if len(comm_eps) + len(rep_eps) != EXPECTED_COMBINED_V14_EPISODES:
+            raise ValueError(
+                f"combined v1.4 expected {EXPECTED_COMBINED_V14_EPISODES} episodes, got {len(comm_eps) + len(rep_eps)}"
+            )
 
     if verify_replays:
         comm_pool_audit = verify_episode_pool(comm_eps, "data/runs/committed/v1.4")
@@ -1049,6 +1146,9 @@ def compute_audit(
             "unwrapped_mcp_error_steps": 0,
             "truncated_output_steps_verified": 0,
             "client_only_steps": 0,
+            "clean_rc0_non_accuse_zero_day_seeds": sorted(
+                int(e["seed"]) for e in comm_eps if is_clean_non_accuse_rc0_exit(e)
+            ),
         }
         rep_pool_audit = {
             "pool": "results/frontier_replication/v1.4",
@@ -1061,6 +1161,9 @@ def compute_audit(
             "unwrapped_mcp_error_steps": 0,
             "truncated_output_steps_verified": 0,
             "client_only_steps": 0,
+            "clean_rc0_non_accuse_zero_day_seeds": sorted(
+                int(e["seed"]) for e in rep_eps if is_clean_non_accuse_rc0_exit(e)
+            ),
         }
 
     include_flash_hard = gap_ships_flash_hard(root)
@@ -1072,13 +1175,16 @@ def compute_audit(
     for spec in COHORT_SPECS:
         if spec.get("requires_gap_flash_hard") and not include_flash_hard:
             continue
-        sub_eps = load_runs(root / spec["source_rel"])
+        pool_indexed = comm_indexed if spec["source"] == "committed" else rep_indexed
+        prefix = str(spec["source_rel"])
+        prefix_slash = prefix + "/"
         selected = [
-            e
-            for e in sub_eps
-            if e.get("agent") == spec["agent"]
-            and e.get("tier") == spec["tier"]
-            and int(spec["seed_min"]) <= int(e["seed"]) <= int(spec["seed_max"])
+            ep
+            for rel_dir, ep in pool_indexed
+            if (rel_dir == prefix or rel_dir.startswith(prefix_slash))
+            and ep.get("agent") == spec["agent"]
+            and ep.get("tier") == spec["tier"]
+            and int(spec["seed_min"]) <= int(ep["seed"]) <= int(spec["seed_max"])
         ]
         if enforce_expected_counts and len(selected) != int(spec["expected_n"]):
             raise ValueError(
@@ -1110,10 +1216,25 @@ def compute_audit(
         {
             "schema_version": "v1.4-frontier-trajectory-audit-2",
             "tiers_version": TIERS_VERSION,
+            "upstream_justsilas_sync_commit": "5f9b3297",
             "zero_live_api_calls": True,
             "zero_git_dependency": True,
+            "zero_subprocesses": True,
             "flash_hard_shipped_in_gap_md": include_flash_hard,
             "provenance_and_locks": {
+                "upstream_justsilas_sync": {
+                    "head_commit": "5f9b3297",
+                    "code_freeze_tag": "afterquery-final",
+                    "code_freeze_commit": "1bc3e281",
+                    "afterquery_submit_tag": "afterquery-submit",
+                    "afterquery_submit_commit": "9225f2ad",
+                    "afterquery_submit_2_tag": "afterquery-submit-2",
+                    "afterquery_submit_2_commit": "aa1c679e",
+                    "ceo_correction_commit": "5f9b3297",
+                    "rehearsal_final_branch_commit": "d0ead011",
+                    "harbor_rehearsal_ratios_pct": [93, 116, 131],
+                    "harbor_rehearsal_valid_trials": [10, 10, 9],
+                },
                 "primary_0_29_lock": {
                     "classification": "post_hoc_lock",
                     "episodes_commit": "8fd4dec",
@@ -1133,11 +1254,19 @@ def compute_audit(
                 "gpt_5_5_hard_0_29": {
                     "classification": "pre_registered",
                     "prereg_commit": "cf394894",
+                    "results_commit": "ca0a0dc0",
+                    "upstream_sync_commit": "5f9b3297",
+                    "run_dir": "data/runs/committed/v1.4/opencode-gpt-5.5/hard",
                     "timeout_cap_s": 7200,
                     "spend_cap_usd": 200,
                     "opencode_version": "1.19.5",
                     "committed_v14_episodes": sum(
                         1 for e in comm_eps if "gpt-5.5" in str(e.get("agent") or "")
+                    ),
+                    "clean_rc0_non_accuse_zero_day_seeds": sorted(
+                        int(e["seed"])
+                        for e in comm_eps
+                        if "gpt-5.5" in str(e.get("agent") or "") and is_clean_non_accuse_rc0_exit(e)
                     ),
                 },
                 "step_error_detail_compat": {
@@ -1145,7 +1274,8 @@ def compute_audit(
                     "rule": (
                         "Unwrap OpenCode stringified MCP error JSON via norm_result first, then match "
                         "pre-1bc3e281 data={} against live Env.call data={'detail': ...} when 'detail' "
-                        "is absent from recorded data."
+                        "is absent from recorded data; allow final_day=0 on clean rc=0 non-accuse exits "
+                        "while rejecting timeouts and rc!=0."
                     ),
                 },
             },
@@ -1221,8 +1351,20 @@ def _fmt_json_compact(obj: Any, depth: int = 0, max_expand_depth: int = 3) -> st
     return "{\n" + ",\n".join(items) + "\n" + pad + "}"
 
 
+def _round_for_json(obj: Any, ndigits: int = 12) -> Any:
+    if isinstance(obj, bool) or obj is None or isinstance(obj, int):
+        return obj
+    if isinstance(obj, float):
+        return round(obj, ndigits)
+    if isinstance(obj, dict):
+        return {k: _round_for_json(v, ndigits) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_round_for_json(v, ndigits) for v in obj]
+    return obj
+
+
 def serialize_audit_json(audit: dict[str, Any]) -> str:
-    blob = _fmt_json_compact(audit, depth=0, max_expand_depth=2) + "\n"
+    blob = _fmt_json_compact(_round_for_json(audit, ndigits=12), depth=0, max_expand_depth=2) + "\n"
     size = len(blob.encode("utf-8"))
     if size > MAX_JSON_BYTES:
         raise ValueError(f"serialized trajectory_audit.json is {size} bytes, exceeding {MAX_JSON_BYTES}")
@@ -1344,6 +1486,11 @@ def render_markdown(audit: dict[str, Any]) -> str:
     c_ip_hard = comp["opencode_vs_inproc_carbon_hard"]
     c_fl_med = comp["carbon_vs_flash_opencode_medium"]
     c_fl_hard = comp.get("carbon_vs_flash_opencode_hard")
+    c_gpt_hard = comp["carbon_vs_gpt_5_5_opencode_hard"]
+    up_sync = prov["upstream_justsilas_sync"]
+    gpt_prov = prov["gpt_5_5_hard_0_29"]
+    harbor_ratios_csv = ", ".join(f"{x}%" for x in up_sync["harbor_rehearsal_ratios_pct"])
+    harbor_trials_csv = ", ".join(str(x) for x in up_sync["harbor_rehearsal_valid_trials"])
 
     if include_flash_hard and c_fl_hard is not None:
         sec6_flash_bullet = (
@@ -1365,6 +1512,20 @@ def render_markdown(audit: dict[str, Any]) -> str:
             f"(`100.0%` vs `{_pct(oc_f_med['outcomes']['accuracy'])}`). Paired hard carbon-vs-flash rows remain gated on `gap_ships_flash_hard(root)`."
         )
 
+    sec6_gpt_bullet = (
+        f"- **`gemini-4-carbon` vs `gpt-5.5` on OpenCode hard (`{gpt_prov['results_commit']}`, `n=30` paired seeds `0-29`):** "
+        f"`gemini-4-carbon` executes `+{_f(c_gpt_hard['delta_total_tool_calls'], 2)}` more tool calls/episode "
+        f"(`+{_f(c_gpt_hard['delta_interviews_per_ep'], 2)}` more interviews: `{_f(oc_c_hard['tool_use']['by_spec_tool']['interview'], 2)}` "
+        f"vs `{_f(oc_g_hard['tool_use']['by_spec_tool']['interview'], 2)}`), plants `{_f(c_gpt_hard['delta_accepted_canaries_per_ep'], 2)}` "
+        f"fewer accepted canaries (`{_f(oc_c_hard['canary_design']['mean_accepted_canaries'], 2)}` vs "
+        f"`{_f(oc_g_hard['canary_design']['mean_accepted_canaries'], 2)}`, solver `{_f(sol_hard['canary_design']['mean_accepted_canaries'], 2)}`), "
+        f"accuses `+{_f(c_gpt_hard['delta_mean_accusation_day'], 2)}` days later (`{_f(oc_c_hard['collateral_and_horizon']['mean_accusation_day'], 2)}` "
+        f"vs `{_f(oc_g_hard['collateral_and_horizon']['mean_accusation_day'], 2)}`), consumes `{_f(c_gpt_hard['input_token_ratio_a_over_b'], 2)}x` "
+        f"input tokens and `{_f(c_gpt_hard['wall_s_ratio_a_over_b'], 1)}x` wall-clock time, and commits "
+        f"`{oc_c_hard['outcomes']['wrong_accusation_count']}` wrong accusations vs `gpt-5.5`'s `{oc_g_hard['outcomes']['wrong_accusation_count']}` "
+        f"(`{len(gpt_prov['clean_rc0_non_accuse_zero_day_seeds'])}` clean `rc=0` non-accuse stops on `seeds {gpt_prov['clean_rc0_non_accuse_zero_day_seeds']}`)."
+    )
+
     lines: list[str] = [
         _md_heading(1, "Canary v1.4 Trajectory, Canary Design, Horizon, and Token/Cache Audit"),
         "",
@@ -1372,7 +1533,7 @@ def render_markdown(audit: dict[str, Any]) -> str:
         f"`scripts/frontier_trajectory_audit.py` across `{s['total_episodes_audited']}` active cohort episodes "
         f"(`{s['cohort_count']}` cohorts, counts `[{counts_csv}]`) after full step-and-ledger `Env` replay verification of all "
         f"`{comm_rv['verified']}/{comm_rv['total']}` committed `v1.4` episodes and `{rep_rv['verified']}/{rep_rv['total']}` FR8 replication "
-        "episodes (`0` live API calls, `0` `.git` runtime dependency).",
+        f"episodes (synced through `justSilas@{audit['upstream_justsilas_sync_commit']}`, `0` live API calls, `0` `.git` or subprocess runtime dependency).",
         "",
         "Reproduce and verify:",
         "",
@@ -1382,17 +1543,22 @@ def render_markdown(audit: dict[str, Any]) -> str:
         "",
         _md_heading(2, "1. Provenance Honesty (Panel Fixes A/C/D), Replay Verification, and Executive Findings"),
         "",
-        "- **Provenance & registration honesty (Panel Fixes A/C/D):** "
+        f"- **Provenance & registration honesty (Panel Fixes A/C/D, synced to `justSilas@{up_sync['head_commit']}`):** "
         f"Primary `seeds 0-29` (`data/runs/committed/v1.4/`, committed in `{prov['primary_0_29_lock']['episodes_commit']}`) are a "
         f"**post-hoc lock** (`{prov['primary_0_29_lock']['lock_commit']}`, committed `{prov['primary_0_29_lock']['lock_delay_s']} s` after "
         f"`{prov['primary_0_29_lock']['episodes_commit']}`) preventing later reruns or cherry-picking, not a pre-registration "
         f"(`20+10` solver reference directories cover `0-19` and `20-29`). By contrast, the committed G1 hard extension on `seeds 30-59` "
         f"(`{prov['g1_hard_30_59_extension']['prereg_commit']}`, `data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard`, `n={oc_c_ext['n']}`, "
         f"completed `seeds {oc_c_ext['seeds']}` before stopping to preserve the shared 2M TPM carbon quota for the Harbor rehearsal) and the "
-        f"second frontier family `gpt-5.5` (`{prov['gpt_5_5_hard_0_29']['prereg_commit']}`, OpenCode `{prov['gpt_5_5_hard_0_29']['opencode_version']}`, "
-        f"`{prov['gpt_5_5_hard_0_29']['timeout_cap_s']} s` per-episode cap, `${prov['gpt_5_5_hard_0_29']['spend_cap_usd']}` spend cap, "
-        f"`{prov['gpt_5_5_hard_0_29']['committed_v14_episodes']}` committed `v1.4` episodes scoring `{_f(oc_g_hard['outcomes']['mean_score'], 3)} +/- {_f(oc_g_hard['outcomes']['score_ci'], 3)}` "
-        f"with `{_f(oc_g_hard['canary_design']['mean_accepted_canaries'], 2)}` accepted canaries and `{_f(oc_g_hard['tool_use']['by_spec_tool']['interview'], 2)}` interviews/episode) were **pre-registered** before any episode ran.",
+        f"second frontier family `gpt-5.5` (`{gpt_prov['prereg_commit']}`, shipped in `{gpt_prov['results_commit']}` at `{gpt_prov['run_dir']}`, "
+        f"OpenCode `{gpt_prov['opencode_version']}`, `{gpt_prov['timeout_cap_s']} s` per-episode cap, `${gpt_prov['spend_cap_usd']}` spend cap, "
+        f"`{gpt_prov['committed_v14_episodes']}` committed `v1.4` episodes with `0` infra exclusions and "
+        f"`{len(gpt_prov['clean_rc0_non_accuse_zero_day_seeds'])}` clean `rc=0` non-accuse `final_day=0` exits on "
+        f"`seeds {gpt_prov['clean_rc0_non_accuse_zero_day_seeds']}`, scoring `{_f(oc_g_hard['outcomes']['mean_score'], 3)} +/- {_f(oc_g_hard['outcomes']['score_ci'], 3)}` "
+        f"with `{_f(oc_g_hard['canary_design']['mean_accepted_canaries'], 2)}` accepted canaries and `{_f(oc_g_hard['tool_use']['by_spec_tool']['interview'], 2)}` interviews/episode) were **pre-registered** before any episode ran. "
+        f"Upstream submission tags: `{up_sync['code_freeze_tag']}` (`{up_sync['code_freeze_commit']}` code freeze), `{up_sync['afterquery_submit_tag']}` (`{up_sync['afterquery_submit_commit']}` 08:52 snapshot), "
+        f"and `{up_sync['afterquery_submit_2_tag']}` (`{up_sync['afterquery_submit_2_commit']}`) plus append-only CEO correction `{up_sync['ceo_correction_commit']}` recording final Harbor rehearsal ratios `{harbor_ratios_csv}` "
+        f"across `{harbor_trials_csv}` valid trials (`s1-rehearsal-final` `{up_sync['rehearsal_final_branch_commit']}`).",
         f"- **Step-level & ledger replay verification (`1bc3e281` `norm_result` compatibility):** "
         f"`{comm_rv['verified']}/{comm_rv['total']}` committed `v1.4` episodes and `{rep_rv['verified']}/{rep_rv['total']}` FR8 replication "
         f"episodes (`{s['total_pool_episodes_replay_verified']}/{s['total_pool_episodes']}` total) pass deterministic `Env` replay with `0` "
@@ -1400,7 +1566,8 @@ def render_markdown(audit: dict[str, Any]) -> str:
         f"OpenCode's stringified MCP error JSON via `norm_result` first (`{comm_rv['unwrapped_mcp_error_steps']}` committed and "
         f"`{rep_rv['unwrapped_mcp_error_steps']}` replication error steps) before normalizing pre-`1bc3e281` `data={{}}` against live `Env.call` "
         f"`data={{'detail': ...}}` (`{comm_rv['pre_1bc3e281_detail_normalized_steps']}` committed and `{rep_rv['pre_1bc3e281_detail_normalized_steps']}` "
-        "replication steps), so both pre- and post-`1bc3e281` episodes verify cleanly.",
+        f"replication steps) and validating `{len(comm_rv['clean_rc0_non_accuse_zero_day_seeds'])}` clean `rc=0` non-accuse `final_day=0` exits "
+        f"(`seeds {comm_rv['clean_rc0_non_accuse_zero_day_seeds']}`), so both pre- and post-`1bc3e281` episodes verify cleanly.",
         "- **G1 committed extension (`seeds [34, 37]`, `n=2`) alongside FR8 hard replication (`seeds 30, 34, 42, 45, 57`, `n=5`) and `seed 34` consistency:** "
         f"G1 (`opencode_gemini_4_carbon_hard_ext`) averages `{_f(oc_c_ext['outcomes']['mean_score'], 3)} +/- {_f(oc_c_ext['outcomes']['score_ci'], 3)}` "
         f"(`{_f(oc_c_ext['tool_use']['mean_total_tool_calls'], 2)}` tool calls, `{_f(oc_c_ext['tool_use']['by_spec_tool']['interview'], 2)}` interviews, "
@@ -1568,6 +1735,7 @@ def render_markdown(audit: dict[str, Any]) -> str:
             f"interview-heavy signature (`{_f(c_ip_med['delta_interviews_per_ep'], 2)}` interviews/ep delta on medium, "
             f"`+{_f(c_ip_hard['delta_interviews_per_ep'], 2)}` on hard) and nearly identical hard canary counts "
             f"(`{_f(oc_c_hard['canary_design']['mean_accepted_canaries'], 2)}` vs `{_f(ip_c_hard['canary_design']['mean_accepted_canaries'], 2)}`).",
+            sec6_gpt_bullet,
             sec6_flash_bullet,
             f"- **G1 committed extension (`seeds [34, 37]`) vs FR8 hard replication (`seeds 30, 34, 42, 45, 57`):** "
             f"Both extension/replication OpenCode `gemini-4-carbon` cohorts achieve `100.0%` targeted `2-3` canary split discipline "

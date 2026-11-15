@@ -85,6 +85,7 @@ OPTIONAL_INFERENCE_MODULES: tuple[str, ...] = (
     "train/frugal_raw_dagger.py",
     "train/compact_dagger_ablation.py",
     "train/qwen15b_dpo_dagger.py",
+    "scripts/tiebreak_mcp_wire_parity.py",
 )
 
 MODULES_REQUIRING_POLICY_CLASS: frozenset[str] = frozenset({

@@ -68,6 +68,10 @@ OPTIONAL_FILENAMES: tuple[str, ...] = (
     "tiebreak_pareto_efficiency.py",
     "tiebreak_channel_ablation_audit.py",
     "tiebreak_framing_decoy_audit.py",
+    "tiebreak_mcp_wire_parity.py",
+    "tiebreak_cross_tier_transfer_audit.py",
+    "tiebreak_harbor_shell_bridge.py",
+    "tiebreak_stopping_counterfactual_audit.py",
 )
 
 PREREG_RE = re.compile(r"\bpre[-\s]?regist(?:er(?:ed|ing|s)?|ration)\b", re.IGNORECASE)

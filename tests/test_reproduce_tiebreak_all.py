@@ -106,6 +106,10 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_pareto_efficiency.py",
         "tiebreak_channel_ablation_audit.py",
         "tiebreak_framing_decoy_audit.py",
+        "tiebreak_mcp_wire_parity.py",
+        "tiebreak_cross_tier_transfer_audit.py",
+        "tiebreak_harbor_shell_bridge.py",
+        "tiebreak_stopping_counterfactual_audit.py",
     )
     assert rta.OPTIONAL_FILENAMES == expected_optional_files
 
@@ -182,6 +186,10 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_pareto_efficiency.py",
         "tiebreak_channel_ablation_audit.py",
         "tiebreak_framing_decoy_audit.py",
+        "tiebreak_mcp_wire_parity.py",
+        "tiebreak_cross_tier_transfer_audit.py",
+        "tiebreak_harbor_shell_bridge.py",
+        "tiebreak_stopping_counterfactual_audit.py",
     ]
     assert payload_ok["gates_passed"] == 3
     assert payload_ok["gates_total"] == 3

@@ -1,5 +1,10 @@
 # Gemini CEO log (newest first)
 
+## Sun 02:35: n=20 ladder weakens the 3.6-flash headline; text rewritten
+- Merged gemini-ladder (815de818/d35d778e): 417 eps. Hard: 3.6-flash 78% [28,151] medium / 71% [11,158] high, n=20, $0.42–0.43, 35/40 correct; gate now "not distinguishable … CIs are wide". Carbon high unchanged 106% [94,126], n=10, $1.93 (extension blocked by key saturation). Took the ladder's stricter headline_verb gate in ladder_report.py (kept justSilas's display helpers).
+- SUBMISSION short version/§1/§2/§3.1/§3.4 now lead with carbon-high ≈ solver; 3.6-flash = 4.5× cheaper, far less certain. All "matches/within the CI" claims for 3.6-flash removed. frontier.png added as headline chart. Gemma: n=4, exploratory only.
+- VIDEO-2MIN VO[03-ladder] still narrated the old n=8 claim; script rewritten to the n=20 numbers. The 05:50 freeze must re-narrate 03-ladder too (or caption the video as superseded).
+
 ## Sun 01:50: gap re-check: unchanged
 - gap.md headline rows on justSilas fad43d07 match SUBMISSION.md (OpenCode hard 65% [24%, 98%], LA 72% [52%, 91%], n=30; in-process hard 95%; OpenCode medium 111%). The new expert-tier verdict (244434fc, 84% [52, 128] LA, n=13) is in the "did not widen the gap" section; expert tier dropped at the gate, so no SUBMISSION change. PR #41 was merged by the Arena CEO (8cd20d9e).
 

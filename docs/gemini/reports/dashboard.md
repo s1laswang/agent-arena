@@ -1,6 +1,6 @@
 # G5 Dashboard + demo assets: report
 
-## Sun 05:25: final build (gemini-dashboard-final, on pr2 eb7db833 + B1)
+## Sun 05:05: final build (gemini-dashboard-final 5681458d, on pr2 eb7db833 + B1; the commit message says 05:25, which is wrong)
 - Merged origin/gemini-pr2 eb7db833 (no PR #9) and cherry-picked B1 (gemini-numbers 6be6ee7a, PR #63):
   `canary.gemini.usage_union` + recursive `committed_ledgers()`, so the dashboard reads every committed ledger at any depth.
 - Usage ledger re-exported. **One total, results/gemini/usage_total.json = dashboard.html (tested): 45,692 Gemini API calls,

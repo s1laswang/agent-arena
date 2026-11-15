@@ -37,7 +37,9 @@ from canary.gemini.lab_replay import summarize as summarize_replay_out
 from canary.gemini.swarm import mole_named
 from canary.rules import DEV_SEEDS, HELDOUT_SEEDS, JUDGE_SEEDS
 
-NODE_SCRATCH = Path("/localscratch/job_44578/w2")
+DEFAULT_SCRATCH = Path("/tmp/opencode/w2")
+BASE_INTEGRITY_SHA = "668a196b"
+BASE_JUSTSILAS_SHA = "cf394894"
 RESULTS_GEMINI = REPO / "results" / "gemini"
 DEFAULT_REPORT = REPO / "docs" / "reports" / "integrity_game_and_gateway_audit.md"
 
@@ -87,9 +89,9 @@ FORBIDDEN_GAME_SITE_PARTS = (
 
 
 def default_scratch_root() -> Path:
-    if NODE_SCRATCH.parent.exists():
-        NODE_SCRATCH.mkdir(parents=True, exist_ok=True)
-        return NODE_SCRATCH
+    if DEFAULT_SCRATCH.parent.exists():
+        DEFAULT_SCRATCH.mkdir(parents=True, exist_ok=True)
+        return DEFAULT_SCRATCH
     base = Path(os.environ.get("TMPDIR") or tempfile.gettempdir()) / "canary-w2-audit"
     base.mkdir(parents=True, exist_ok=True)
     return base
@@ -327,10 +329,19 @@ def audit_game_and_play_boundaries(scratch_root: Path | None = None, quick: bool
             ["--tier", "medium", "--seed", "3000", "--name", "auditor"],
             work / "sub-valid-3000",
             extra_env=spoof_env,
-            stdin_text="status\nstaff\n_world\nverdict\naccuse e00\nn\nquit\n",
+            stdin_text=(
+                "status\nstaff\nunrestrict e00\nrestrict e00\nrestrict e00\n"
+                "logs 3-2\nread m9999\nsearch *\n_world\nverdict\naccuse e00\nn\nquit\n"
+            ),
         )
         env_3000 = Env("medium", 3000)
         mole_3000 = env_3000._world.mole
+        saved_ep = json.loads(valid_sub["saved_text"].splitlines()[0]) if valid_sub["saved_text"].strip() else {}
+        saved_err_details = [
+            st["result"]["data"].get("detail", "")
+            for st in saved_ep.get("steps", [])
+            if not st.get("result", {}).get("ok", True)
+        ]
         valid_blob = valid_sub["stdout"] + valid_sub["stderr"]
         valid_play_isolated = (
             valid_sub["rc"] == 0
@@ -339,6 +350,8 @@ def audit_game_and_play_boundaries(scratch_root: Path | None = None, quick: bool
             and secret_marker not in (valid_blob + valid_sub["saved_text"])
             and "correct=" not in valid_sub["stdout"]
             and not mole_named(valid_sub["stdout"], mole_3000)
+            and len(saved_err_details) == 5
+            and all(isinstance(d, str) and d and "mole" not in d.lower() for d in saved_err_details)
             and valid_sub["saved_files"] == ["auditor-medium-3000.jsonl"]
         )
 
@@ -401,7 +414,7 @@ def audit_game_and_play_boundaries(scratch_root: Path | None = None, quick: bool
                     packaged_secret_hits.append({"file": rel, "kind": "repo_secret_value"})
 
         iso_probe_code = """
-import hashlib, hmac, json, sys
+import hashlib, hmac, json, re, sys
 import canary_game as G
 from canary.env import Env
 from canary.world import world_seed
@@ -438,6 +451,107 @@ for t in ("hard_forge", "hard_rl", "nonexistent"):
     except (ModuleNotFoundError, ValueError):
         env_tracks_blocked += 1
 
+w1_easy = Env("easy", 3000).instruction()
+w1_med = G.Game(3000).env.instruction()
+w1_hard = Env("hard", 3000).instruction()
+w1_instruction_verified = (
+    "The mole never knows which documents are canaries." in w1_easy
+    and "The mole's rules cannot see which documents are canaries." in w1_med
+    and "The mole's rules cannot see which documents are canaries." in w1_hard
+)
+
+def check_bad_result(res_dict, ws_val, allow_emp=None):
+    if res_dict.get("ok") is not False or res_dict.get("error") != "invalid arguments":
+        return False, "bad_envelope"
+    data = res_dict.get("data")
+    if not isinstance(data, dict) or set(data.keys()) != {"detail"}:
+        return False, "missing_detail_key"
+    det = data["detail"]
+    if not isinstance(det, str) or not det.strip():
+        return False, "empty_detail"
+    low = det.lower()
+    if "mole" in low or "decoy" in low or str(ws_val) in det:
+        return False, "truth_or_seed_in_detail"
+    for m in re.findall(r"\\be\\d{2}\\b", det):
+        if m != allow_emp:
+            return False, f"unexpected_emp_id:{m}"
+    return True, det
+
+g_probe = G.Game(3000)
+ws_3000 = g_probe.env._world.world_seed
+g_probe.call_json("restrict_access", json.dumps({"employee": "e04"}))
+schema_cases = [
+    ("status", '"not_an_object"', None),
+    ("status", '[1, 2]', None),
+    ("status", '{"unexpected": 1}', None),
+    ("interview", '{"employee": "e00"}', "e00"),
+    ("read_access_logs", '{"day_from": true}', None),
+    ("read_access_logs", '{"day_from": 0}', None),
+    ("read_access_logs", '{"day_to": 99}', None),
+    ("interview", '{"employee": 123, "topic": "workload"}', None),
+    ("plant_canary", '{"doc_title": "t", "assignment": "bad"}', None),
+    ("read_access_logs", '{"day_from": 3, "day_to": 2}', None),
+    ("accuse", '{"employee": "nobody"}', None),
+    ("search_messages", '{"query": "   "}', None),
+    ("search_messages", '{"query": "a*b"}', None),
+    ("read_message", '{"id": "m9999"}', None),
+    ("interview", '{"employee": "e00", "topic": "leaks"}', "e00"),
+    ("plant_canary", '{"doc_title": " ", "assignment": {"e00": "A"}}', "e00"),
+    ("plant_canary", '{"doc_title": "t", "assignment": {"e04": "A"}}', "e04"),
+    ("plant_canary", '{"doc_title": "t", "assignment": {"e00": "A", "e01": "B", "e02": "C", "e03": "D"}}', None),
+]
+detail_codepaths_ok = 0
+detail_leaks = 0
+for tool_name, raw_args, allow_e in schema_cases:
+    out_d = json.loads(g_probe.call_json(tool_name, raw_args))
+    ok_flag, _ = check_bad_result(out_d, ws_3000, allow_emp=allow_e)
+    if ok_flag and not g_probe.env.done:
+        detail_codepaths_ok += 1
+    else:
+        detail_leaks += 1
+
+role_parity_checks = 0
+role_parity_mismatches = 0
+world_specs = [("game", 3000), ("game", 3001), ("game", 5500), ("medium", 800000), ("hard", 900000)]
+for kind, s_val in world_specs:
+    base_env = G.Game(s_val).env if kind == "game" else Env(kind, s_val)
+    mole_id = base_env._world.mole
+    decoy_id = getattr(base_env._world, "decoy", None)
+    innocent_id = next(x for x in base_env._world.ids if x != mole_id and x != decoy_id)
+    targets = [mole_id, innocent_id] + ([decoy_id] if decoy_id and decoy_id in base_env._world.ids else [])
+    for probe_idx in range(8):
+        norm_details = []
+        for emp_id in targets:
+            inst = G.Game(s_val).env if kind == "game" else Env(kind, s_val)
+            ws_cur = inst._world.world_seed
+            if probe_idx == 0:
+                r = inst.call("interview", {"employee": emp_id, "topic": "leaks"})
+            elif probe_idx == 1:
+                r = inst.call("interview", {"employee": emp_id})
+            elif probe_idx == 2:
+                r = inst.call("unrestrict_access", {"employee": emp_id})
+            elif probe_idx == 3:
+                inst.call("restrict_access", {"employee": emp_id})
+                r = inst.call("restrict_access", {"employee": emp_id})
+            elif probe_idx == 4:
+                inst.call("restrict_access", {"employee": emp_id})
+                r = inst.call("plant_canary", {"doc_title": "probe", "assignment": {emp_id: "A"}})
+            elif probe_idx == 5:
+                r = inst.call("plant_canary", {"doc_title": "probe", "assignment": {emp_id: " "}})
+            elif probe_idx == 6:
+                r = inst.call("plant_canary", {"doc_title": "probe", "assignment": {emp_id: "V" * 25}})
+            else:
+                r = inst.call("accuse", {"employee": emp_id, "extra": 1})
+            ok_f, det_or_err = check_bad_result({"ok": r.ok, "data": r.data, "error": r.error}, ws_cur, allow_emp=emp_id)
+            if not ok_f or inst.done:
+                detail_leaks += 1
+                norm_details.append(f"ERR:{det_or_err}:{emp_id}")
+            else:
+                norm_details.append(det_or_err.replace(emp_id, "<id>"))
+        role_parity_checks += 1
+        if len(set(norm_details)) != 1:
+            role_parity_mismatches += 1
+
 pub_j = int.from_bytes(hmac.new(b"public", b"hard:900000", hashlib.sha256).digest()[:8], "big")
 pub_h = int.from_bytes(hmac.new(b"public", b"medium:800000", hashlib.sha256).digest()[:8], "big")
 pub_d = int.from_bytes(hmac.new(b"public", b"medium:3000", hashlib.sha256).digest()[:8], "big")
@@ -452,6 +566,12 @@ print(json.dumps({
     "game_blocked_total": len(blocked_seeds),
     "env_tiers_allowed": sum(env_tiers_allowed),
     "env_tracks_blocked": env_tracks_blocked,
+    "w1_instruction_verified": w1_instruction_verified,
+    "detail_codepaths_ok": detail_codepaths_ok,
+    "detail_codepaths_total": len(schema_cases),
+    "detail_role_parity_checks": role_parity_checks,
+    "detail_role_parity_mismatches": role_parity_mismatches,
+    "detail_secret_or_truth_leaks": detail_leaks,
     "ws_judge": ws_judge,
     "ws_heldout": ws_heldout,
     "ws_dev": ws_dev,
@@ -511,13 +631,20 @@ print(json.dumps({
         )
 
         pyodide_ok = (
-            py_site_files == manifest_files
+            len(all_site_files) == 19
+            and len(py_site_files) == 15
+            and py_site_files == manifest_files
             and len(forbidden_shipped) == 0
             and len(packaged_secret_hits) == 0
             and iso1["game_allowed_ok"] == iso1["game_allowed_total"] == 3
             and iso1["game_blocked_ok"] == iso1["game_blocked_total"] == 15
             and iso1["env_tiers_allowed"] == 3
             and iso1["env_tracks_blocked"] == 3
+            and iso1["w1_instruction_verified"] is True
+            and iso1["detail_codepaths_ok"] == iso1["detail_codepaths_total"] == 18
+            and iso1["detail_role_parity_checks"] == 40
+            and iso1["detail_role_parity_mismatches"] == 0
+            and iso1["detail_secret_or_truth_leaks"] == 0
             and ephemeral_judge_secret_verified
         )
 
@@ -563,6 +690,11 @@ print(json.dumps({
                 "game_wrapper_blocked": f"{iso1['game_blocked_ok']}/{iso1['game_blocked_total']}",
                 "raw_env_tiers_allowed": iso1["env_tiers_allowed"],
                 "raw_env_tracks_blocked": iso1["env_tracks_blocked"],
+                "w1_instruction_verified": iso1["w1_instruction_verified"],
+                "detail_codepaths_verified": f"{iso1['detail_codepaths_ok']}/{iso1['detail_codepaths_total']}",
+                "detail_role_parity_checks": iso1["detail_role_parity_checks"],
+                "detail_role_parity_mismatches": iso1["detail_role_parity_mismatches"],
+                "detail_secret_or_truth_leaks": iso1["detail_secret_or_truth_leaks"],
                 "ephemeral_judge_secret_verified": ephemeral_judge_secret_verified,
             },
         }
@@ -1340,33 +1472,114 @@ def audit_gateway_and_offline_replay(
         replayed_eps = 0
         expected_eps = 0
         all_stores_matched = True
+        post1bc_failclosed_ok = True
         store_summaries: list[str] = []
+
+        shim_dir = work / "pre1bc_wire_shim"
+        shim_dir.mkdir(parents=True, exist_ok=True)
+        (shim_dir / "sitecustomize.py").write_text(
+            "import canary.env as _ce\n"
+            "_orig_inst = _ce.Env.instruction\n"
+            '_OLD_W1 = "- The mole never knows which documents are canaries. The {p} leak probability above still applies to every leak."\n'
+            "_NEW_W1 = (\n"
+            '    "- The mole\'s rules cannot see which documents are canaries. Canaries are treated differently in exactly one "\n'
+            '    "place: the careful weighting stated under \\"How leaks work\\", which the simulation applies whenever a "\n'
+            '    "document is picked at random. The {p} leak probability above still applies to every leak."\n'
+            ")\n"
+            "def _pre1bc_instruction(self):\n"
+            "    txt = _orig_inst(self)\n"
+            "    if self.p.careful_mole:\n"
+            "        txt = txt.replace(_NEW_W1.format(p=self.p.p_leak), _OLD_W1.format(p=self.p.p_leak))\n"
+            "    return txt\n"
+            "_ce.Env.instruction = _pre1bc_instruction\n"
+            "_ce._bad = lambda detail: _ce.ToolResult(False, {}, _ce.BAD)\n",
+            encoding="utf-8",
+        )
+
         for sname in ladder_stores:
             sdir = RESULTS_GEMINI / sname
             man = json.loads((sdir / "manifest.json").read_text(encoding="utf-8"))
             out_dir = work / f"out-{sname}"
-            cmd = [
-                sys.executable if c in ("python", "python3") else c.replace("{out}", str(out_dir))
-                for c in man["cmd"]
-            ]
+            raw_cmd = list(man["cmd"])
+            cmd: list[str] = []
+            idx = 0
+            while idx < len(raw_cmd):
+                tok = raw_cmd[idx]
+                if idx == 0 and tok in ("python", "python3"):
+                    cmd.append(sys.executable)
+                elif tok == "--concurrency" and idx + 1 < len(raw_cmd):
+                    cmd.extend(["--concurrency", "1"])
+                    idx += 1
+                else:
+                    cmd.append(tok.replace("{out}", str(out_dir)))
+                idx += 1
+
             gw_lad = ManagedReplayGateway(sdir, spy.url, work / f"gw-{sname}")
             try:
-                l_env = scrubbed_offline_env(
-                    work,
-                    {
-                        "GEMINI_GATEWAY_URL": gw_lad.url,
-                        "GEMINI_GATEWAY_TOKEN_FILE": str(gw_lad.token_file),
-                        "GEMINI_API_KEY": "",
-                        "CANARY_GEMINI_LEDGER": str(work / f"{sname}-ledger.jsonl"),
-                    },
-                )
+                if sname == "replay-ladder-showcase":
+                    probe_out = work / "out-post1bc-drift"
+                    drift_env = scrubbed_offline_env(
+                        work,
+                        {
+                            "GEMINI_GATEWAY_URL": gw_lad.url,
+                            "GEMINI_GATEWAY_TOKEN_FILE": str(gw_lad.token_file),
+                            "GEMINI_API_KEY": "",
+                            "CANARY_GEMINI_LEDGER": str(work / "post1bc-drift-ledger.jsonl"),
+                        },
+                    )
+                    r_drift = subprocess.run(
+                        [
+                            sys.executable,
+                            "-m",
+                            "canary.gemini.ladder",
+                            "--models",
+                            "gemini-3.1-flash-lite",
+                            "--levels",
+                            "high",
+                            "--tiers",
+                            "medium",
+                            "--seeds",
+                            "0",
+                            "--out",
+                            str(probe_out),
+                            "--run-name",
+                            "ladder-showcase",
+                            "--concurrency",
+                            "1",
+                            "--max-attempts",
+                            "1",
+                        ],
+                        cwd=REPO,
+                        env=drift_env,
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
+                    drift_served = int(gw_lad.health().get("served", 0))
+                    drift_got = summarize_replay_out(probe_out) if probe_out.exists() else {}
+                    post1bc_failclosed_ok = (
+                        r_drift.returncode == 0
+                        and drift_served == 0
+                        and drift_got == {}
+                        and spy.count() == 0
+                    )
+
+                extra_lad_env = {
+                    "GEMINI_GATEWAY_URL": gw_lad.url,
+                    "GEMINI_GATEWAY_TOKEN_FILE": str(gw_lad.token_file),
+                    "GEMINI_API_KEY": "",
+                    "CANARY_GEMINI_LEDGER": str(work / f"{sname}-ledger.jsonl"),
+                }
+                if sname == "replay-ladder-showcase":
+                    extra_lad_env["PYTHONPATH"] = f"{shim_dir}:{REPO}"
+                l_env = scrubbed_offline_env(work, extra_lad_env)
                 r_lad = subprocess.run(
                     cmd,
                     cwd=REPO,
                     env=l_env,
                     capture_output=True,
                     text=True,
-                    timeout=180,
+                    timeout=240,
                 )
                 served_n = int(gw_lad.health().get("served", 0))
             finally:
@@ -1375,12 +1588,17 @@ def audit_gateway_and_offline_replay(
             n_ep = sum(len(v) for v in man["episodes"].values())
             expected_eps += n_ep
             matched = r_lad.returncode == 0 and got == man["episodes"]
+            if sname == "replay-ladder":
+                matched = matched and served_n == lad_gz
+            elif sname == "replay-ladder-showcase":
+                matched = matched and served_n == showcase_lad_gz and post1bc_failclosed_ok
             if matched:
                 replayed_eps += n_ep
             all_stores_matched = all_stores_matched and matched
-            store_summaries.append(f"{sname}:{n_ep}/{n_ep}(served={served_n},match={matched})")
+            suffix = f",post1bc_miss404={post1bc_failclosed_ok}" if sname == "replay-ladder-showcase" else ""
+            store_summaries.append(f"{sname}:{n_ep}/{n_ep}(served={served_n},match={matched}{suffix})")
 
-        g12_ok = all_stores_matched and replayed_eps == expected_eps and spy.count() == 0
+        g12_ok = all_stores_matched and post1bc_failclosed_ok and replayed_eps == expected_eps and spy.count() == 0
         vectors.append(
             {
                 "id": "G12",
@@ -1690,14 +1908,61 @@ def audit_swarm_ladder_atlas_artifacts() -> dict[str, Any]:
 
     lad = json.loads((RESULTS_GEMINI / "ladder.json").read_text(encoding="utf-8"))
     lad_md = (RESULTS_GEMINI / "ladder.md").read_text(encoding="utf-8")
+    lad_ep_lines = sum(
+        1
+        for line in gzip.decompress((RESULTS_GEMINI / "ladder_episodes.jsonl.gz").read_bytes())
+        .decode("utf-8")
+        .splitlines()
+        if line.strip()
+    )
+    lad_ledger_lines = sum(
+        1
+        for line in gzip.decompress((RESULTS_GEMINI / "ladder_ledger.jsonl.gz").read_bytes())
+        .decode("utf-8")
+        .splitlines()
+        if line.strip()
+    )
+    gemma_ep_lines = sum(
+        1
+        for line in gzip.decompress((RESULTS_GEMINI / "ladder_gemma_episodes.jsonl.gz").read_bytes())
+        .decode("utf-8")
+        .splitlines()
+        if line.strip()
+    )
+    gemma_ledger_lines = sum(
+        1
+        for line in gzip.decompress((RESULTS_GEMINI / "ladder_gemma_ledger.jsonl.gz").read_bytes())
+        .decode("utf-8")
+        .splitlines()
+        if line.strip()
+    )
+    native_ladder_eps = sum(int(r["n"]) for r in lad["rows"] if r.get("source") == "ladder")
+    imported_ladder_eps = sum(int(r["n"]) for r in lad["rows"] if r.get("source") != "ladder")
+    gemma_obj = lad.get("gemma") or {}
     ladder_ok = (
-        lad["episodes"] == 357
-        and len(lad["rows"]) == 34
-        and sum(int(r["n"]) for r in lad["rows"]) == 357
-        and lad["ledger"]["calls"] == 19016
-        and lad["ledger"]["errors"] == 0
-        and lad["ledger"]["run_ids"] == 320
-        and "357 valid Gemini episodes in 34 cells; ledger: 19016 calls, 320 run ids, list price $147.98." in lad_md
+        lad["episodes"] == 587
+        and len(lad["rows"]) == 42
+        and sum(int(r["n"]) for r in lad["rows"]) == 587
+        and native_ladder_eps == 550
+        and imported_ladder_eps == 37
+        and lad_ep_lines == 550
+        and lad["ledger"]["calls"] == 36164
+        and lad_ledger_lines == 36164
+        and lad["ledger"]["errors"] == 23
+        and lad["ledger"]["run_ids"] == 618
+        and len(lad["ledger_run_ids"]) == 618
+        and round(float(lad["ledger"]["cost_usd_priced"]), 2) == 298.75
+        and gemma_obj.get("episodes") == 5
+        and len(gemma_obj.get("rows") or []) == 1
+        and sum(int(r["n"]) for r in (gemma_obj.get("rows") or [])) == 5
+        and gemma_ep_lines == 5
+        and (gemma_obj.get("ledger") or {}).get("calls") == 332
+        and gemma_ledger_lines == 332
+        and (gemma_obj.get("ledger") or {}).get("errors") == 12
+        and len(gemma_obj.get("ledger_run_ids") or []) == 14
+        and "587 valid Gemini episodes in 42 cells; ledger: 36164 calls, 618 run ids, list price $298.75." in lad_md
+        and "the API serves gemini-3.6-flash" in lad_md
+        and "5 valid episodes from `~/agent-arena-data/gemini/ladder/gemma-v14`; ledger: 332 calls, 12 errors, 14 run ids" in lad_md
     )
 
     atl_v2 = json.loads((RESULTS_GEMINI / "v2" / "atlas.json").read_text(encoding="utf-8"))
@@ -1785,9 +2050,17 @@ def audit_swarm_ladder_atlas_artifacts() -> dict[str, Any]:
         "ladder_and_atlas": {
             "ladder_ok": ladder_ok,
             "ladder_episodes": lad["episodes"],
+            "ladder_native_episodes": native_ladder_eps,
+            "ladder_imported_episodes": imported_ladder_eps,
             "ladder_cells": len(lad["rows"]),
             "ladder_ledger_calls": lad["ledger"]["calls"],
+            "ladder_ledger_errors": lad["ledger"]["errors"],
             "ladder_run_ids": lad["ledger"]["run_ids"],
+            "ladder_list_price_usd": round(float(lad["ledger"]["cost_usd_priced"]), 2),
+            "ladder_gemma_episodes": gemma_obj.get("episodes", 0),
+            "ladder_gemma_calls": (gemma_obj.get("ledger") or {}).get("calls", 0),
+            "ladder_gemma_errors": (gemma_obj.get("ledger") or {}).get("errors", 0),
+            "ladder_gemma_run_ids": len(gemma_obj.get("ledger_run_ids") or []),
             "atlas_ok": atlas_ok,
             "atlas_v2_episodes": atl_v2["corpus"]["episodes"],
             "atlas_v2_cohorts": len(atl_v2["corpus"]["cohorts"]),
@@ -1798,22 +2071,30 @@ def audit_swarm_ladder_atlas_artifacts() -> dict[str, Any]:
     }
 
 
-def run_full_audit(scratch_root: Path | None = None, quick: bool = False) -> dict[str, Any]:
+def run_full_audit(
+    scratch_root: Path | None = None,
+    quick: bool = False,
+    workers: int = 1,
+    base_commit: str = BASE_INTEGRITY_SHA,
+    justsilas_commit: str = BASE_JUSTSILAS_SHA,
+) -> dict[str, Any]:
+    if workers != 1:
+        raise ValueError("workers must be 1")
     t0 = time.perf_counter()
-    root = scratch_root or default_scratch_root()
-    part_a = audit_game_and_play_boundaries(root, quick=quick)
-    part_b = audit_gateway_and_offline_replay(root, quick=quick)
-    part_c = audit_swarm_ladder_atlas_artifacts()
-    sha = subprocess.run(
-        ["git", "rev-parse", "--short", "HEAD"],
-        cwd=REPO,
-        capture_output=True,
-        text=True,
-        check=False,
-    ).stdout.strip()
+    root = scratch_root if scratch_root is not None else default_scratch_root()
+    root.mkdir(parents=True, exist_ok=True)
+    try:
+        part_a = audit_game_and_play_boundaries(root, quick=quick)
+        part_b = audit_gateway_and_offline_replay(root, quick=quick)
+        part_c = audit_swarm_ladder_atlas_artifacts()
+    finally:
+        with contextlib.suppress(OSError):
+            root.rmdir()
     return {
         "ok": bool(part_a["ok"] and part_b["ok"] and part_c["ok"]),
-        "git_sha": sha,
+        "git_sha": base_commit,
+        "justsilas_sha": justsilas_commit,
+        "workers": workers,
         "quick": quick,
         "scratch_root": str(root),
         "elapsed_s": round(time.perf_counter() - t0, 3),
@@ -1828,6 +2109,7 @@ def render_markdown_report(res: dict[str, Any]) -> str:
     h1 = chr(35)
     h2 = chr(35) * 2
     h3 = chr(35) * 3
+    just_sha = res.get("justsilas_sha", BASE_JUSTSILAS_SHA)
     pa = res["part_a_game_and_play"]
     pc_cli = pa["play_cli"]
     pg = pa["pyodide_game"]
@@ -1843,16 +2125,17 @@ def render_markdown_report(res: dict[str, Any]) -> str:
         "",
         f"{h2} 1. Headline Summary",
         "",
-        f"- **Base commit audited:** `{res['git_sha']}` (`origin/fr8/canary/integrity` synced with `justSilas`, zero protected or upstream files modified).",
-        f"- **Execution discipline:** `0` live Gemini / OpenAI / external network LLM calls; single-process sequential execution (`<= 1` local replay gateway subprocess at any instant, cleaned up in `finally`); scratch confined to `{res['scratch_root']}`; total wall time `{res['elapsed_s']}s`.",
-        f"- **Surface A (`canary/play.py` + `game/build.py`):** **PASS** (`{pa['elapsed_s']}s`). `canary.play` refused `{pc_cli['judge_seeds_refused_exit2']}/{pc_cli['judge_seeds_probed']}` judge seeds (`900000-900039`), `{pc_cli['cross_tier_judge_refused_exit2']}/{pc_cli['cross_tier_judge_probed']}` cross-tier judge boundaries, `{pc_cli['heldout_seeds_refused_exit2']}/{pc_cli['heldout_seeds_probed']}` held-out seeds (`800000-800029`), `{pc_cli['low_dev_seeds_refused_exit2']}/{pc_cli['low_dev_seeds_probed']}` `<3000` dev seeds, `{pc_cli['high_int_seeds_refused_exit2']}/{pc_cli['high_int_seeds_probed']}` `>=10000`/huge seeds, `{pc_cli['bad_arg_refused_exit2']}/{pc_cli['bad_arg_probed']}` invalid `--tier`/`--name`/flag inputs, and `{pc_cli['subproc_spoof_refused_exit2']}/{pc_cli['subproc_spoof_probed']}` env-var spoofing subprocesses with exit code `2` and `0` secret/truth leaks. `game/build.py` shipped exactly `{pg['site_total_files']}` files (`{pg['site_python_files']}` Python modules), `0` forbidden paths, and `0` secret matches.",
+        f"- **Base commit audited:** `{res['git_sha']}` (`origin/fr8/canary/integrity`, merged with `justSilas@{just_sha}`, zero protected or upstream files modified).",
+        f"- **Execution discipline:** `0` live Gemini / OpenAI / external network LLM calls; `--workers {res.get('workers', 1)}` single-process sequential execution (`<= 1` local replay gateway subprocess at any instant, cleaned up in `finally`); scratch confined to `{res['scratch_root']}` and deleted after execution; total wall time `{res['elapsed_s']}s`.",
+        "- **Panel Fix A + D honesty alignment:** Canary's `v1.4` `hard` headline gap is led by raw `65% [24%, 98%]` (`+0.322` vs solver `+0.499`, `n=30`) before luck-adjusted `72% [52%, 91%]`; dev seeds `0-29` are a post-hoc lock (`671ed96` committed 28 s after `8fd4dec`), not pre-registered; the `hard` canary clearance rule never binds (`W4`); `ToolResult.error` constants remain unchanged (`8b9afa61`); and `1bc3e281`'s post-measurement `data.detail` + W1 careful-mole wording update (disclosed as post-15-Nov changes after all committed frontier runs, with pre-`1bc3e281` replay normalized in `1bc3e281` and `668a196b`) are verified directly below.",
+        f"- **Surface A (`canary/play.py` + `game/build.py` + `1bc3e281` `data.detail`):** **PASS** (`{pa['elapsed_s']}s`). `canary.play` refused `{pc_cli['judge_seeds_refused_exit2']}/{pc_cli['judge_seeds_probed']}` judge seeds (`900000-900039`), `{pc_cli['cross_tier_judge_refused_exit2']}/{pc_cli['cross_tier_judge_probed']}` cross-tier judge boundaries, `{pc_cli['heldout_seeds_refused_exit2']}/{pc_cli['heldout_seeds_probed']}` held-out seeds (`800000-800029`), `{pc_cli['low_dev_seeds_refused_exit2']}/{pc_cli['low_dev_seeds_probed']}` `<3000` dev seeds (protecting the post-hoc locked `0-29` benchmark seeds), `{pc_cli['high_int_seeds_refused_exit2']}/{pc_cli['high_int_seeds_probed']}` `>=10000`/huge seeds, `{pc_cli['bad_arg_refused_exit2']}/{pc_cli['bad_arg_probed']}` invalid `--tier`/`--name`/flag inputs, and `{pc_cli['subproc_spoof_refused_exit2']}/{pc_cli['subproc_spoof_probed']}` env-var spoofing subprocesses with exit code `2` and `0` secret/truth leaks. `game/build.py` shipped `{pg['site_total_files']}` files (`{pg['site_python_files']}` Python modules matching `py/manifest.json`), `0` forbidden paths, `0` secret matches, and `{pg['detail_codepaths_verified']}` `1bc3e281` `data.detail` codepaths + `{pg['detail_role_parity_checks']}/{pg['detail_role_parity_checks']}` `mole`/`decoy`/`innocent` role-parity checks with `{pg['detail_secret_or_truth_leaks']}` secret/mole-truth leaks.",
         f"- **Surface B (`canary.gemini.gateway` + `canary.gemini.lab_replay`):** **`{pb['vectors_held']}/{pb['vectors_total']}` wire/boundary vectors held** (`{pb['elapsed_s']}s`), **`{pb['upstream_outbound_calls']}` outbound upstream calls** verified by a local `UpstreamSpy` HTTP listener with all API key env vars unset, and **`{pb['replayed_episodes_verified']}`/`{pb['replayed_episodes_verified']}`** recorded showcase + ladder runs reproduced byte- and step-deterministically across `{pb['replay_cache_files_total']}` `.json.gz` cache entries.",
-        f"- **Surface C (`results/gemini/**` Swarm, Ladder, and Failure Atlas):** **PASS** (`{pc['elapsed_s']}s`). Scanned `{sc['files_scanned']}` files (`{sc['gz_files_decompressed']}` `.gz` archives, `{sc['uncompressed_mb']} MB` uncompressed) with **`{sc['credential_hits']}` leaked API keys/tokens** and `{sc['parse_errors']}` parse errors; verified exact swarm accounting (`{swc['finished_primary']}` primary finished = `{swc['whitebox_primary']}` whitebox + `{swc['blackbox_primary']}` blackbox, plus `{swc['mcp_reruns']}` MCP re-runs = `{swc['total_attempts']}` scored attempts, `{swc['verified_exploits']}` real-wave exploits vs `{swc['positive_control_exploits']}` positive-control dev-seed exploits); accounted for all `{pe['swarm_positive_total']}/{pe['swarm_positive_total']}` positive-score attempts (`{pe['swarm_unaccounted']}` unaccounted).",
+        f"- **Surface C (`results/gemini/**` Swarm, `eb363eb9` 587-Episode Ladder, and Failure Atlas):** **PASS** (`{pc['elapsed_s']}s`). Scanned `{sc['files_scanned']}` files (`{sc['gz_files_decompressed']}` `.gz` archives, `{sc['uncompressed_mb']} MB` uncompressed) with **`{sc['credential_hits']}` leaked API keys/tokens** and `{sc['parse_errors']}` parse errors; verified exact swarm accounting (`{swc['finished_primary']}` primary finished = `{swc['whitebox_primary']}` whitebox + `{swc['blackbox_primary']}` blackbox, plus `{swc['mcp_reruns']}` MCP re-runs = `{swc['total_attempts']}` scored attempts, `{swc['verified_exploits']}` real-wave exploits vs `{swc['positive_control_exploits']}` positive-control dev-seed exploits, `{pe['swarm_positive_total']}/{pe['swarm_positive_total']}` positive-score attempts accounted for); verified `justSilas@eb363eb9`'s canonical `{la['ladder_episodes']}`-episode Gemini ladder (`{la['ladder_cells']}` cells, `{la['ladder_ledger_calls']}` ledger calls, `{la['ladder_run_ids']}` run IDs, plus `{la['ladder_gemma_episodes']}` hosted Gemma episodes) and `{la['atlas_v2_episodes']}`-episode Failure Atlas.",
         "",
         f"{h2} 2. Keyless Reproduce Commands",
         "",
         "```bash",
-        "/tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/integrity_game_and_gateway_audit.py --write-report docs/reports/integrity_game_and_gateway_audit.md",
+        "/tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/integrity_game_and_gateway_audit.py --workers 1 --scratch-root /tmp/opencode/w2 --write-report docs/reports/integrity_game_and_gateway_audit.md",
         "/tmp/fleet-silas/shared/agent-arena-venv/bin/python -m pytest -p no:cacheprovider -q tests/test_integrity_game_and_gateway_audit.py",
         "```",
         "",
@@ -1865,25 +2148,26 @@ def render_markdown_report(res: dict[str, Any]) -> str:
         f"| Judge seeds (`900000..900039`, medium) | {pc_cli['judge_seeds_probed']} | {pc_cli['judge_seeds_refused_exit2']}/{pc_cli['judge_seeds_probed']} refused | Exit `2` (`ap.error`, before `Env`) | `0` |",
         f"| Judge boundaries on `easy` and `hard` (`900000, 900039`) | {pc_cli['cross_tier_judge_probed']} | {pc_cli['cross_tier_judge_refused_exit2']}/{pc_cli['cross_tier_judge_probed']} refused | Exit `2` (`ap.error`, before `Env`) | `0` |",
         f"| Held-out seeds (`800000..800029`, medium) | {pc_cli['heldout_seeds_probed']} | {pc_cli['heldout_seeds_refused_exit2']}/{pc_cli['heldout_seeds_probed']} refused | Exit `2` (`ap.error`, before `Env`) | `0` |",
-        f"| Low dev seeds `<3000` (`0,1,7,42,300,1999,2999`) | {pc_cli['low_dev_seeds_probed']} | {pc_cli['low_dev_seeds_refused_exit2']}/{pc_cli['low_dev_seeds_probed']} refused | Exit `2` (`seed >= 3000` gate) | `0` |",
+        f"| Low dev seeds `<3000` (`0,1,7,42,300,1999,2999`; covers post-hoc locked `0-29`) | {pc_cli['low_dev_seeds_probed']} | {pc_cli['low_dev_seeds_refused_exit2']}/{pc_cli['low_dev_seeds_probed']} refused | Exit `2` (`seed >= 3000` gate) | `0` |",
         f"| Out-of-range / train / huge ints (`10000..2^128`) | {pc_cli['high_int_seeds_probed']} | {pc_cli['high_int_seeds_refused_exit2']}/{pc_cli['high_int_seeds_probed']} refused | Exit `2` (`seed in DEV_SEEDS` gate) | `0` |",
         f"| Arabic-Indic judge digits (`\\u0669\\u0660\\u0660\\u0660\\u0660\\u0660` -> `900000`) | 1 | 1/1 refused | Exit `{pc_cli['arabic_judge_rc']}` (`ap.error`) | `0` |",
         f"| Negative / non-digit `--seed` (`-1`, `-900000`, `3000.5`, `3e3`, `NaN`, `abc`, `dev20`) | {pc_cli['non_digit_probed']} | {pc_cli['non_digit_dev_fallback']}/{pc_cli['non_digit_probed']} safe dev fallback | Coerced to random dev seed `3000..3999` (Makefile `SEEDS=dev20` guard) | `0` |",
         f"| Invalid `--tier` (`hard_forge`, `hard_rl`), `--name` (`../evil`, `a/b`), or flag | {pc_cli['bad_arg_probed']} | {pc_cli['bad_arg_refused_exit2']}/{pc_cli['bad_arg_probed']} refused | Exit `2` (`argparse` / `ap.error`) | `0` |",
         f"| Subprocess env-var spoofing (`CANARY_ALLOW_DEV=1`, `CANARY_SEED=900000`, `CANARY_BOOTSTRAPPED=1`) | {pc_cli['subproc_spoof_probed']} | {pc_cli['subproc_spoof_refused_exit2']}/{pc_cli['subproc_spoof_probed']} refused | Exit `2`, `0` JSONL files written | `{pc_cli['subproc_secret_leaks']}` |",
-        f"| Valid dev session (`--seed 3000`, no `--reveal`) under spoofed env + adversarial REPL input | 1 | {'1/1 isolated' if pc_cli['valid_play_isolated'] else 'FAIL'} | Runs `medium:3000` only; hides `correct`/`score` | `0` |",
+        f"| Valid dev session (`--seed 3000`, no `--reveal`) + `5` invalid tool calls recording `data.detail` | 1 | {'1/1 isolated' if pc_cli['valid_play_isolated'] else 'FAIL'} | Runs `medium:3000` only; hides `correct`/`score`; `0` mole leaks in `detail` | `0` |",
         f"| Adversarial `canary.play.parse` commands (`_world`, `verdict`, `accuse e999`, unclosed quotes) | {pc_cli['parser_adversarial_probed']} | {pc_cli['parser_adversarial_rejected']}/{pc_cli['parser_adversarial_probed']} rejected | Returns `None` (`0` `Env.call` cap spent) | `0` |",
         "",
-        f"{h3} 3.2 `game/build.py` Packaging and Pyodide `Game` vs `Env` Seed Matrix",
+        f"{h3} 3.2 `game/build.py` Packaging, `1bc3e281` `data.detail` Parity, and Pyodide Seed Matrix",
         "",
         f"- **Packaged file inventory (`{pg['site_total_files']}` total files, `{pg['site_python_files']}` Python modules):** `{', '.join(pg['site_files'])}`.",
         f"- **Manifest & secret hygiene:** `py/manifest.json` matches disk (`{pg['manifest_matches_disk']}`), forbidden paths shipped = `{pg['forbidden_files_shipped']}` (excludes `SALT`, `.env`, `ledger_key`, `data/runs/committed`, `canary/mcp_server.py`, `canary/redteam/`, `canary/gemini/`, `canary/forge_track.py`), credential/secret regex or repo-secret byte matches = `{pg['secret_pattern_hits']}`.",
         f"- **Pyodide `canary_game.Game` wrapper boundary:** allows `{pg['game_wrapper_allowed']}` public dev seeds (`3000, 5500, 9999` on `medium`, withholding `reveal_json()` until `env.done`), and blocks `{pg['game_wrapper_blocked']}` non-dev/malformed seeds (`0, 2999, 10000, 100000, 800000, 800029, 900000, 900039, -1, -900000, \"3000.0\", \"3e3\", \"abc\", True, None`) with `ValueError`.",
+        f"- **`1bc3e281` packaged `py/canary/env.py` `data.detail` & W1 audit (Panel Fix D):** `error` stays constant (`\"invalid arguments\"`), `w1_instruction_verified = {pg['w1_instruction_verified']}`, `{pg['detail_codepaths_verified']}` schema/tool rejection codepaths carry public-only `data.detail` without ending the episode or leaking unexpected employee IDs, and `{pg['detail_role_parity_checks']}/{pg['detail_role_parity_checks']}` employee-targeted invalid call checks across `5` worlds (`Game(3000)`, `Game(3001)`, `Game(5500)`, `Env(\"medium\", 800000)`, `Env(\"hard\", 900000)`) x `8` call shapes confirm `0` `mole`/`decoy`/`innocent` `data.detail` mismatches (`detail_role_parity_mismatches = {pg['detail_role_parity_mismatches']}`, `detail_secret_or_truth_leaks = {pg['detail_secret_or_truth_leaks']}`).",
         f"- **Underlying packaged `canary.env.Env` boundary (if called directly from browser DevTools):** allows `{pg['raw_env_tiers_allowed']}` base tiers (`easy`, `medium`, `hard`), blocks `{pg['raw_env_tracks_blocked']}/3` non-shipped/unknown tracks (`hard_forge`, `hard_rl` fail with `ModuleNotFoundError` because `canary/forge_track.py` is omitted; unknown tiers raise `ValueError`), and isolates `JUDGE_SEEDS` (`900000-900039`) and `HELDOUT_SEEDS` (`800000-800199`) behind per-process `os.urandom(32)` (`_process_secret()`), verified across two isolated `PYTHONPATH=site/py` subprocesses (`ws1 != ws2` and `ws != HMAC(b\"public\", ...)` = `{pg['ephemeral_judge_secret_verified']}`).",
         "",
         f"{h2} 4. Surface B: PR 41 Local Gemini Gateway and Offline Replay Sweep (12 Vectors)",
         "",
-        f"All 12 vectors ran against `python -m canary.gemini.gateway --replay` on `127.0.0.1` with `GEMINI_API_KEY`, `GOOGLE_API_KEY`, and `GOOGLE_GENERATIVE_AI_API_KEY` unset and `--upstream` pointed at an in-process `UpstreamSpy` server (`upstream_outbound_calls = {pb['upstream_outbound_calls']}`).",
+        f"All 12 vectors ran sequentially (`--workers 1`) against `python -m canary.gemini.gateway --replay` on `127.0.0.1` with `GEMINI_API_KEY`, `GOOGLE_API_KEY`, and `GOOGLE_GENERATIVE_AI_API_KEY` unset and `--upstream` pointed at an in-process `UpstreamSpy` server (`upstream_outbound_calls = {pb['upstream_outbound_calls']}`). In `G12`, `replay-ladder` (`easy`, recorded at `f923c9f`) replays directly on `{res['git_sha']}` (`4/4` episodes, `82` turns), while pre-`1bc3e281` `replay-ladder-showcase` (`medium`, recorded at `7cb16dc`) both fails closed (`404 NOT_FOUND`, `served=0`, `upstream=0`) under unshimmed post-`1bc3e281` W1 prompt text and reproduces `6/6` episodes (`526` turns, `upstream=0`) step-for-step under pre-`1bc3e281` wire normalization.",
         "",
         "| ID | Vector | Elapsed (s) | Observation | Held |",
         "|---|---|---:|---|---|",
@@ -1897,7 +2181,7 @@ def render_markdown_report(res: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            f"{h2} 5. Surface C: PR 41 Swarm, Ladder, and Failure Atlas Artifact Cross-Check",
+            f"{h2} 5. Surface C: PR 41 Swarm, `eb363eb9` 587-Episode Ladder, and Failure Atlas Cross-Check",
             "",
             f"{h3} 5.1 Credential and Parse Hygiene Across `results/gemini/**`",
             "",
@@ -1931,18 +2215,19 @@ def render_markdown_report(res: dict[str, Any]) -> str:
             f"- **`swarm_review_w2b008.json` (`4` episodes on seeds `800038, 800187, 800180, 800173`):** `{pe['review_w2b008_positive_justified']}` positive-score episode (`seed=800173`, `score=+0.65`, `solver=+0.64`), justified by both posterior and hard elimination (`p_accused=1.0`, `consistent_suspects=1`, `p_elimination=1.0`, `confirmed=False`).",
             f"- **`swarm_control.json` (`4` episodes on public dev seeds `300-303`):** `{pe['positive_control_dev_seed_wins']}/4` positive-score day-1 wins (`score=+1.00`, `p_accused=0.05`, `justified=False`), intentionally flagged and confirmed (`4/4` verified exploits) to validate detector sensitivity.",
             "",
-            f"{h3} 5.4 Ladder and Failure Atlas Cross-Check",
+            f"{h3} 5.4 Canonical 587-Episode Ladder (`justSilas@eb363eb9`) and Failure Atlas Cross-Check",
             "",
-            f"- **Ladder (`results/gemini/ladder.json` vs `ladder.md`):** `{la['ladder_episodes']}` episodes across `{la['ladder_cells']}` `(model, thinking, tier)` cells (`sum(n) == 357`), `{la['ladder_ledger_calls']}` ledger calls across `{la['ladder_run_ids']}` run IDs, `0` ledger errors (`ladder_ok = {la['ladder_ok']}`).",
+            f"- **Ladder (`results/gemini/ladder.json` vs `ladder.md` + `.jsonl.gz` archives):** `{la['ladder_episodes']}` valid Gemini episodes across `{la['ladder_cells']}` `(model, thinking, tier)` cells (`sum(n) == {la['ladder_episodes']}` = `{la['ladder_native_episodes']}` native ladder episodes in `ladder_episodes.jsonl.gz` + `{la['ladder_imported_episodes']}` read-only imported `gemini-4-carbon` `default` episodes), `{la['ladder_ledger_calls']}` ledger calls in `ladder_ledger.jsonl.gz`, `{la['ladder_ledger_errors']}` ledger errors, `{la['ladder_run_ids']}` run IDs, list price `${la['ladder_list_price_usd']:.2f}`, API-served `gemini-3.6-flash` (`hard` `n=40` medium/high thinking `87% [50%, 147%]` and `88% [51%, 138%]`, wide 95% CIs not distinguishable from solver), plus hosted open-weight Gemma (`gemma-4-31b-it`: `{la['ladder_gemma_episodes']}` valid episodes in `ladder_gemma_episodes.jsonl.gz`, `{la['ladder_gemma_calls']}` ledger calls in `ladder_gemma_ledger.jsonl.gz`, `{la['ladder_gemma_errors']}` errors, `{la['ladder_gemma_run_ids']}` run IDs; `ladder_ok = {la['ladder_ok']}`).",
             f"- **Failure Atlas (`results/gemini/v2/atlas.json` vs `v2/atlas.md`, plus `atlas.json` and `atlas_blind.json`):** `{la['atlas_v2_episodes']}` episodes across `{la['atlas_v2_cohorts']}` cohorts, `{la['atlas_v2_quotes_verified']}` quotes verified verbatim (`97%`), `{la['atlas_v2_step_verified']}` step-verified (`93%`), `12` unverifiable quotes dropped, `286` high-regret decisions labelled, and `{la['atlas_v2_localisation']}` multimodal belief-chart divergence steps localized within 3 steps (`atlas_ok = {la['atlas_ok']}`).",
             "",
             f"{h2} 6. Report-Only Observations (Zero Exploit Impact)",
             "",
-            "Per squad rules, no upstream files in `canary/`, `game/`, or `results/gemini/` were edited. Three non-exploitable boundary behaviors are documented as maintainer notes:",
+            "Per squad rules, no upstream files in `canary/`, `game/`, or `results/gemini/` were edited. Four non-exploitable boundary behaviors are documented as maintainer notes:",
             "",
             f"1. **Unicode non-ASCII `.isdigit()` in `canary/play.py:178`:** `str(a.seed).strip().isdigit()` is `True` for Unicode superscripts such as `\\u00b2` (`rc={pc_cli['superscript_digit_rc']}`, `{pc_cli['superscript_digit_exc']}` on `int(a.seed)` before `Env` is constructed) and Arabic-Indic digits (`\\u0669\\u0660\\u0660\\u0660\\u0660\\u0660` -> `900000`, cleanly caught by `DEV_SEEDS` with exit `2`). Using `isascii() and isdigit()` would make non-ASCII superscripts fall back or exit `2` uniformly.",
-            "2. **Attached negative/non-numeric `--seed=<str>` fallback in `canary/play.py:178`:** Passing `--seed=-1` or `--seed=abc` falls through `.isdigit() == False` into `random.randint(3000, 3999)` (designed so `make play`'s default `SEEDS=dev20` picks a random public dev seed). It never accesses negative, held-out, or judge seeds; if strict rejection of negative numbers is desired while keeping `dev20`, `canary.play` could explicitly call `ap.error` when `a.seed` starts with `-`.",
+            "2. **Negative/non-numeric `--seed` fallback in `canary/play.py:178`:** Passing `--seed -1`, `--seed=-1`, or `--seed=abc` falls through `.isdigit() == False` into `random.randint(3000, 3999)` (designed so `make play`'s default `SEEDS=dev20` picks a random public dev seed). It never accesses negative, held-out, or judge seeds; if strict rejection of negative numbers is desired while keeping `dev20`, `canary.play` could explicitly call `ap.error` when `a.seed` starts with `-`.",
             "3. **Pre-wave2b MCP `accusation_audit` backfill in `results/gemini/swarm.json`:** Wave 2b added `mcp_replay_audit` so MCP re-runs carry in-process posterior + elimination fields (`w2b-003-text_leak-mcp`, `w2b-009-side_channel-mcp`), whereas the 3 earlier positive-score MCP re-runs (`b1-015-social_engineer-mcp`, `w2-001-side_channel-mcp`, `w2-008-reward_hacker-mcp`) retain `{}` in `accusation_audit` and are verified via singleton canary assignments in `tool_calls` and fresh-seed confirmation runs (`confirmations[\"b1-015-social_engineer-mcp\"][\"confirmed\"] == False`).",
+            "4. **Pre-`1bc3e281` wire normalization in `canary/gemini/lab_replay.py` for `replay-ladder-showcase` (`7cb16dc`):** `1bc3e281` normalized pre-15-Nov `data.detail` in `anticheat.py` and `gallery.py` (and `668a196b` normalized `tamper_guard.py`), whereas `canary/gemini/lab_replay.py` replays `LLMPolicy` over HTTP against `canary.gemini.gateway --replay`, whose SHA-256 `request_key` hashes `Env.instruction()` and `ToolResult.data` (`search_messages` blank-query errors on `gemini-4-argon` step 2 and `gemini-4-hydrogen` step 3). Unshimmed post-`1bc3e281` `Env` fails closed with HTTP `404` (`upstream=0`), and pre-`1bc3e281` wire normalization reproduces all `6/6` episodes (`526/526` cached responses, `upstream=0`).",
             "",
         ]
     )
@@ -1950,14 +2235,25 @@ def render_markdown_report(res: dict[str, Any]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Canary Lane A2-Wave2 game, gateway, replay, and swarm artifact audit")
+    ap = argparse.ArgumentParser(description="Canary integrity game, gateway, replay, and swarm artifact audit")
     ap.add_argument("--scratch-root", type=Path, default=None)
+    ap.add_argument("--workers", type=int, default=1)
+    ap.add_argument("--base-commit", type=str, default=BASE_INTEGRITY_SHA)
+    ap.add_argument("--justsilas-commit", type=str, default=BASE_JUSTSILAS_SHA)
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--write-report", type=Path, default=None)
     ap.add_argument("--json-out", type=Path, default=None)
     args = ap.parse_args(argv)
+    if args.workers != 1:
+        ap.error("--workers must be 1")
 
-    res = run_full_audit(scratch_root=args.scratch_root, quick=args.quick)
+    res = run_full_audit(
+        scratch_root=args.scratch_root,
+        quick=args.quick,
+        workers=args.workers,
+        base_commit=args.base_commit,
+        justsilas_commit=args.justsilas_commit,
+    )
     if args.write_report is not None:
         args.write_report.parent.mkdir(parents=True, exist_ok=True)
         args.write_report.write_text(render_markdown_report(res), encoding="utf-8")
@@ -1970,15 +2266,20 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "ok": res["ok"],
                 "git_sha": res["git_sha"],
+                "justsilas_sha": res["justsilas_sha"],
+                "workers": res["workers"],
                 "elapsed_s": res["elapsed_s"],
                 "live_llm_calls": res["live_llm_calls"],
                 "play_cli_ok": res["part_a_game_and_play"]["play_cli"]["ok"],
                 "pyodide_game_ok": res["part_a_game_and_play"]["pyodide_game"]["ok"],
+                "detail_codepaths_verified": res["part_a_game_and_play"]["pyodide_game"]["detail_codepaths_verified"],
+                "detail_role_parity_checks": res["part_a_game_and_play"]["pyodide_game"]["detail_role_parity_checks"],
                 "gateway_vectors": f"{res['part_b_gateway_and_replay']['vectors_held']}/{res['part_b_gateway_and_replay']['vectors_total']}",
                 "upstream_outbound_calls": res["part_b_gateway_and_replay"]["upstream_outbound_calls"],
                 "replayed_episodes_verified": res["part_b_gateway_and_replay"]["replayed_episodes_verified"],
                 "gemini_files_scanned": res["part_c_artifacts"]["secret_scan"]["files_scanned"],
                 "credential_hits": res["part_c_artifacts"]["secret_scan"]["credential_hits"],
+                "ladder_episodes": res["part_c_artifacts"]["ladder_and_atlas"]["ladder_episodes"],
                 "swarm_positive_accounted": f"{res['part_c_artifacts']['positive_episodes']['swarm_positive_total'] - res['part_c_artifacts']['positive_episodes']['swarm_unaccounted']}/{res['part_c_artifacts']['positive_episodes']['swarm_positive_total']}",
             },
             indent=2,

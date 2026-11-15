@@ -85,6 +85,11 @@ def test_pyodide_game_build_and_ephemeral_secret_isolation(game_play_result):
     assert pg["game_wrapper_blocked"] == "15/15"
     assert pg["raw_env_tiers_allowed"] == 3
     assert pg["raw_env_tracks_blocked"] == 3
+    assert pg["w1_instruction_verified"] is True
+    assert pg["detail_codepaths_verified"] == "18/18"
+    assert pg["detail_role_parity_checks"] == 40
+    assert pg["detail_role_parity_mismatches"] == 0
+    assert pg["detail_secret_or_truth_leaks"] == 0
     assert pg["ephemeral_judge_secret_verified"] is True
 
 
@@ -112,8 +117,11 @@ def test_local_replay_gateway_wire_vectors_and_offline_manifests(gateway_wire_re
 def test_swarm_ladder_and_atlas_artifact_accounting(artifacts_result):
     assert artifacts_result["ok"] is True
     sc = artifacts_result["secret_scan"]
-    assert sc["files_scanned"] == 818
-    assert sc["gz_files_decompressed"] == 739
+    assert sc["files_scanned"] == 849
+    assert sc["gz_files_decompressed"] == 746
+    assert sc["png_files_scanned"] == 42
+    assert sc["json_files_parsed"] == 782
+    assert sc["jsonl_files_parsed"] == 14
     assert sc["parse_errors"] == 0
     assert sc["credential_hits"] == 0
 
@@ -144,10 +152,18 @@ def test_swarm_ladder_and_atlas_artifact_accounting(artifacts_result):
 
     la = artifacts_result["ladder_and_atlas"]
     assert la["ladder_ok"] is True
-    assert la["ladder_episodes"] == 357
-    assert la["ladder_cells"] == 34
-    assert la["ladder_ledger_calls"] == 19016
-    assert la["ladder_run_ids"] == 320
+    assert la["ladder_episodes"] == 587
+    assert la["ladder_native_episodes"] == 550
+    assert la["ladder_imported_episodes"] == 37
+    assert la["ladder_cells"] == 42
+    assert la["ladder_ledger_calls"] == 36164
+    assert la["ladder_ledger_errors"] == 23
+    assert la["ladder_run_ids"] == 618
+    assert la["ladder_list_price_usd"] == 298.75
+    assert la["ladder_gemma_episodes"] == 5
+    assert la["ladder_gemma_calls"] == 332
+    assert la["ladder_gemma_errors"] == 12
+    assert la["ladder_gemma_run_ids"] == 14
     assert la["atlas_ok"] is True
     assert la["atlas_v2_episodes"] == 111
     assert la["atlas_v2_cohorts"] == 24
@@ -180,9 +196,11 @@ def test_secret_and_parse_scanner_catches_planted_violations(tmp_path):
 def test_report_and_owned_files_integrity(game_play_result, gateway_wire_result, artifacts_result):
     synth_full = {
         "ok": True,
-        "git_sha": "62d258cd",
+        "git_sha": "668a196b",
+        "justsilas_sha": "cf394894",
+        "workers": 1,
         "quick": False,
-        "scratch_root": "/localscratch/job_44578/w2",
+        "scratch_root": "/tmp/opencode/w2",
         "elapsed_s": 10.0,
         "live_llm_calls": 0,
         "part_a_game_and_play": game_play_result,
@@ -197,24 +215,39 @@ def test_report_and_owned_files_integrity(game_play_result, gateway_wire_result,
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
     forbidden_model = "-".join(("gemini", "3.5", "flash"))
+    co_author = "-".join(("Co", "Authored", "By"))
 
     rendered = audit_mod.render_markdown_report(synth_full)
-    assert "Surface A (`canary/play.py` + `game/build.py`):" in rendered
+    assert "Surface A (`canary/play.py` + `game/build.py` + `1bc3e281` `data.detail`):" in rendered
     assert em_dash not in rendered and en_dash not in rendered
     assert forbidden_model not in rendered.lower()
+    assert rendered.index("65% [24%, 98%]") < rendered.index("72% [52%, 91%]")
 
     assert REPORT_PATH.is_file()
     report_txt = REPORT_PATH.read_text(encoding="utf-8")
+    assert report_txt.index("65% [24%, 98%]") < report_txt.index("72% [52%, 91%]")
     for expected in (
+        "668a196b",
+        "justSilas@cf394894",
+        "post-hoc lock",
+        "not pre-registered",
+        "clearance rule never binds",
+        "1bc3e281",
+        "data.detail",
+        "18/18",
         "40/40",
         "30/30",
         "10/10",
         "12/12",
         "614",
-        "818",
-        "739",
+        "849",
+        "746",
         "16/16",
-        "357",
+        "587",
+        "42",
+        "36164",
+        "618",
+        "gemini-3.6-flash",
         "111",
         "w2b-008-reward_hacker",
     ):
@@ -224,6 +257,7 @@ def test_report_and_owned_files_integrity(game_play_result, gateway_wire_result,
         txt = p.read_text(encoding="utf-8")
         assert em_dash not in txt and en_dash not in txt, p
         assert forbidden_model not in txt.lower(), p
+        assert co_author.lower() not in txt.lower(), p
 
     for py_path in (SCRIPT_PATH, Path(__file__).resolve()):
         with open(py_path, "rb") as fh:

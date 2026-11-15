@@ -507,3 +507,56 @@ def test_cli_exits_nonzero_on_failure(tmp_path, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert rc == 1
     assert payload["passed"] is False
+
+
+def test_gitless_gitignore_fallback_without_dot_git(tmp_path):
+    gitless_warn = tmp_path / "gitless_warn"
+    gitless_warn.mkdir(parents=True, exist_ok=True)
+    (gitless_warn / ".gitignore").write_text(
+        f"{H} comment line\nresults/latest/\n*.log\n!keep.log\n",
+        encoding="utf-8",
+    )
+    (gitless_warn / "README.md").write_text("See [exploits](docs/EXPLOITS.md).\n", encoding="utf-8")
+    (gitless_warn / "docs").mkdir(parents=True, exist_ok=True)
+    (gitless_warn / "docs" / "EXPLOITS.md").write_text(
+        "Ignored log [hunt](../results/anticheat/hunt.log) and [latest](../results/latest/judge_table.md).\n",
+        encoding="utf-8",
+    )
+    assert not (gitless_warn / ".git").exists()
+
+    res_links = craft.check_markdown_links(gitless_warn)
+    assert res_links.status == "WARN"
+    assert any("hunt.log" in d for d in res_links.details)
+    assert any("results/latest/judge_table.md" in d for d in res_links.details)
+
+    gitless_negated = tmp_path / "gitless_negated"
+    gitless_negated.mkdir(parents=True, exist_ok=True)
+    (gitless_negated / ".gitignore").write_text("*.log\n!keep.log\n", encoding="utf-8")
+    (gitless_negated / "README.md").write_text(
+        "Unignored missing [keep](keep.log) must fail.\n",
+        encoding="utf-8",
+    )
+    res_negated = craft.check_markdown_links(gitless_negated)
+    assert res_negated.status == "FAIL"
+    assert any("keep.log" in d for d in res_negated.details)
+
+    gitless_res = tmp_path / "gitless_res"
+    gitless_res.mkdir(parents=True, exist_ok=True)
+    (gitless_res / ".gitignore").write_text("*.log\n", encoding="utf-8")
+    for rel, content in _base_results_files().items():
+        p = gitless_res / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(content, encoding="utf-8")
+    res_hyg_fail = craft.check_results_hygiene(gitless_res)
+    assert res_hyg_fail.status == "FAIL"
+    assert any("not gitignored" in d for d in res_hyg_fail.details)
+
+    (gitless_res / ".gitignore").write_text("results/latest/\n*.log\n", encoding="utf-8")
+    res_hyg_pass = craft.check_results_hygiene(gitless_res)
+    assert res_hyg_pass.status == "PASS"
+
+    for py_path in (SCRIPT_PATH, Path(__file__).resolve()):
+        raw = py_path.read_text(encoding="utf-8")
+        assert H not in raw, f"unexpected hash character in {py_path.name}"
+        assert chr(0x2014) not in raw, f"unexpected em dash in {py_path.name}"
+        assert chr(0x2013) not in raw, f"unexpected en dash in {py_path.name}"

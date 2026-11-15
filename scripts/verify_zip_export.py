@@ -1,13 +1,14 @@
 """Verify that a gitless export of HEAD (matching GitHub's Download ZIP) works end-to-end.
 
 Exports HEAD via ``git archive --format=tar HEAD | tar -x -C <tmp_dir>`` into a temporary
-directory under ``/tmp/opencode``, confirms ``.git`` is absent, and runs five checks:
+directory under ``/tmp/opencode``, confirms ``.git`` is absent, and runs six checks:
 
 1. Keyless Mini-Reproduce Without .git
 2. Harbor Build Without .git
 3. Judge Analysis Scripts Without .git
 4. Frozen Tier Hash Without .git
 5. Git-Independent Security Tests Without .git
+6. Craft Verifiers Without .git
 """
 from __future__ import annotations
 
@@ -40,6 +41,7 @@ CHECK_HARBOR_BUILD = "Harbor Build Without .git"
 CHECK_JUDGE_SCRIPTS = "Judge Analysis Scripts Without .git"
 CHECK_FROZEN_TIER_HASH = "Frozen Tier Hash Without .git"
 CHECK_SECURITY_TESTS = "Git-Independent Security Tests Without .git"
+CHECK_CRAFT_VERIFIERS = "Craft Verifiers Without .git"
 
 CHECK_NAMES: tuple[str, ...] = (
     CHECK_MINI_REPRODUCE,
@@ -47,6 +49,15 @@ CHECK_NAMES: tuple[str, ...] = (
     CHECK_JUDGE_SCRIPTS,
     CHECK_FROZEN_TIER_HASH,
     CHECK_SECURITY_TESTS,
+    CHECK_CRAFT_VERIFIERS,
+)
+
+CRAFT_VERIFIER_SCRIPTS: tuple[str, ...] = (
+    "scripts/audit_doc_hygiene.py",
+    "scripts/check_craft_consistency.py",
+    "scripts/verify_doc_commands.py",
+    "scripts/verify_judge_walkthrough.py",
+    "scripts/verify_submission_surfaces.py",
 )
 
 STRIPPED_ENV_KEYS: tuple[str, ...] = (
@@ -561,12 +572,68 @@ def check_security_tests(
     )
 
 
+def check_craft_verifiers(
+    export_dir: Path,
+    runner: RunnerFn | None = None,
+) -> CheckResult:
+    """Check 6: run all five craft verifiers inside gitless ``export_dir`` and require ``0 FAIL``."""
+    name = CHECK_CRAFT_VERIFIERS
+    if has_dot_git(export_dir):
+        return _dot_git_failure(name, export_dir)
+
+    run_fn = runner if runner is not None else default_runner
+    ceiling = str(export_dir.resolve().parent)
+
+    def _run_one(script_rel: str) -> tuple[str, subprocess.CompletedProcess[str]]:
+        proc = run_fn(
+            [sys.executable, script_rel],
+            export_dir,
+            {"GIT_CEILING_DIRECTORIES": ceiling},
+        )
+        return script_rel, proc
+
+    with ThreadPoolExecutor(max_workers=len(CRAFT_VERIFIER_SCRIPTS)) as pool:
+        outcomes = list(pool.map(_run_one, CRAFT_VERIFIER_SCRIPTS))
+
+    failures: list[str] = []
+    for script_rel, proc in outcomes:
+        stdout = proc.stdout or ""
+        if proc.returncode != 0:
+            snippets = _snippet(proc)
+            tail = f" ({snippets[0]})" if snippets else ""
+            failures.append(f"{script_rel} exited with {proc.returncode}{tail}")
+            continue
+        has_zero_fail = re.search(r"\b0\s+FAIL\b", stdout) is not None
+        has_nonzero_fail = (
+            "[FAIL]" in stdout
+            or re.search(r"\b[1-9]\d*\s+FAIL\b", stdout) is not None
+        )
+        if not has_zero_fail or has_nonzero_fail:
+            snippets = _snippet(proc)
+            tail = f" ({snippets[0]})" if snippets else ""
+            failures.append(f"{script_rel} did not report 0 FAIL{tail}")
+
+    if failures:
+        return CheckResult(
+            name,
+            "FAIL",
+            f"{len(failures)} craft verifier failure(s) without .git",
+            failures,
+        )
+
+    return CheckResult(
+        name,
+        "PASS",
+        f"exit 0 and 0 FAIL across all {len(CRAFT_VERIFIER_SCRIPTS)} craft verifiers without .git",
+    )
+
+
 def verify_export_dir(
     export_dir: Path,
     harbor_out: Path,
     runner: RunnerFn | None = None,
 ) -> list[CheckResult]:
-    """Run all five checks against an already-extracted ``export_dir``."""
+    """Run all six checks against an already-extracted ``export_dir``."""
     if has_dot_git(export_dir):
         return [_dot_git_failure(name, export_dir) for name in CHECK_NAMES]
 
@@ -576,6 +643,7 @@ def verify_export_dir(
         lambda: check_judge_analysis_scripts(export_dir, runner=runner),
         lambda: check_frozen_tier_hash(export_dir, runner=runner),
         lambda: check_security_tests(export_dir, runner=runner),
+        lambda: check_craft_verifiers(export_dir, runner=runner),
     )
     with ThreadPoolExecutor(max_workers=len(tasks)) as pool:
         futures = [pool.submit(fn) for fn in tasks]

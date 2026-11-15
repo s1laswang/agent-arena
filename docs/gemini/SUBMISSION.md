@@ -19,8 +19,10 @@ One ledgered client (`canary/gemini/ledger.py`, a row per call) drives four role
 - **"0 exploits" as evidence**: scores come only from the server ledger, wins are audited against what the attacker saw, and a positive control proves the detector works.
 - **Blind failure discovery**, scored against our code's labels.
 
-## 4. Why Gemini is essential
-`thinking_level` on one model family makes the ladder a controlled experiment; thought signatures make tool-using episodes replay and audit exactly; explicit caching served 85.3% of 678M input tokens; the 1M-token context fits the whole corpus or repo in one request.
+## 4. Why Gemini is essential (measured, `results/gemini/ablations.md`)
+- **Thought signatures are load-bearing:** with signature replay stripped, the API rejected the first function-call replay in 10/10 hard-tier gemini-3.8-flash episodes (400 INVALID_ARGUMENT; Wilson 95% CI [72.2, 100]); with replay on, 10/10 played with 0/628 API errors.
+- **Explicit caching** cut the Atlas's corpus-scale reads from $58.56 to $21.72 (62.9% saved over 464 calls) and saved 75.9% ($678.19 of $893.08) across all 29,150 ledgered calls (list price; cache storage cost is not in the ledger).
+- **`thinking_level` is a controlled variable on one model:** on hard, 3.6-flash goes from −32% [−124, 34] of the solver at minimal thinking ($0.25/episode) to 78% [28, 151] at medium ($0.42); in 17 of 34 cells the CI excludes solver parity.
 
 ## Headline chart
 ![Score vs cost per episode on hard, per model and thinking level](../../results/gemini/frontier.png)

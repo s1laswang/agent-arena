@@ -1,5 +1,8 @@
 # Gemini CEO log (newest first)
 
+## Sun 03:01: ablations merged (PR #55); §4 is now measured
+- Merged origin/gemini-ablations (b4dc1e68): no PR #9; code changes are an opt-in --no-thought-signatures flag (default off). Every §4 number verified in results/gemini/ablations.md/json: signatures OFF → 10/10 episodes rejected (Wilson [72.2, 100]), ON → 0/628 errors; caching $58.56 → $21.72 on 464 atlas calls (62.9%), 75.9% ($678.19 of $893.08) over 29,150 calls (storage cost not ledgered); thinking sweep −32% → 78% for 3.6-flash on hard, 17/34 cells exclude parity. One-pager §4 = 3 compact sentences; LONG §4 = full sentences + caveat.
+
 ## Sun 02:41: SUBMISSION.md is now one page
 - Bake-off (80/100) clarity fix: SUBMISSION.md rewritten as a one-pager (~610 words body): 4 required questions, frontier.png headline chart, results table (ladder, red team, blind atlas, usage; jury row if WS2 merges), honesty notes in 5 bullets, reproduce. The previous full text moved verbatim to SUBMISSION-LONG.md. No new numbers; all re-verified (swarm hard best_unjustified 0.38, review solver mean 0.55, in-run 0.49). Did NOT adopt the grader's '3.6-flash matches the solver' headline (false at n=20).
 

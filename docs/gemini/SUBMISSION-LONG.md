@@ -55,12 +55,11 @@ Every Gemini call goes through one client that writes one log row per call (`can
 - **No human-agreement number is claimed.**
 - **The AfterQuery gap depends on the harness.** Per the headline table in `docs/reports/gap.md` (justSilas 1bfb77d), gemini-4-carbon on v1.4 hard via OpenCode over MCP (the judges' harness) scores 65% [24%, 98%] of the reference solver at n=30 (luck-adjusted 72% [52%, 91%]); in-process on hard it scores 95% [62%, 140%] and via OpenCode on medium 111% [99%, 127%]. This submission makes no further frontier-gap claim.
 
-## 4. Why Gemini is essential
-- **`thinking_level`** on one model family is what makes the ladder a controlled experiment.
-- **Thought signatures** keep reasoning state across tool turns, so episodes replay and audit exactly.
-- **Explicit context caching** makes corpus-scale and repo-scale reads affordable: 85.3% of 678M input tokens were cached.
-- **1M-token context** fits the whole trajectory corpus or the whole repo in one request.
-- **Live, TTS, multimodal and embeddings** sit on the same API and key.
+## 4. Why Gemini is essential (measured, `results/gemini/ablations.md`)
+- **Thought signatures are load-bearing:** with signature replay stripped, the API rejected the first function-call replay on 10/10 hard-tier episodes of gemini-3.8-flash (400 INVALID_ARGUMENT, "Function call is missing a thought_signature"; Wilson 95% CI [72.2, 100.0]), so 0 episodes were playable, versus 10/10 played with replay on (0/628 API errors, accuracy 70.0% [39.7, 89.2]).
+- **Explicit context caching** cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 75.9% ($678.19 of $893.08) across all 29,150 ledgered calls. These figures leave out explicit-cache storage cost, which the ledger does not record.
+- **`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, 3.6-flash (requested as 3.5-flash) goes from −32% [−124, 34] at minimal (n=10, 0 thinking tokens, $0.25/episode) to 78% [28, 151] at medium (n=20, 20,151 thinking tokens, $0.42/episode) of the solver on the same seeds, while gemini-4-argon is non-monotone (102% [83, 130] at low, n=10, $0.17/episode, vs 45% [−34, 99] at high, n=10, $1.61/episode). Across all 34 cells the 95% CI excludes solver parity in 17.
+- **1M-token context** fits the whole trajectory corpus or the whole repo in one request; **Live, TTS, multimodal and embeddings** sit on the same API and key.
 
 ## Gemini across the team (breadth)
 Gemini is used in all three of our Junction challenges, most heavily here.

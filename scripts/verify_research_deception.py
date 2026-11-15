@@ -35,6 +35,12 @@ RESEARCH_DIR_REL = "docs/research"
 SELF_CODE_RELS: tuple[str, ...] = (
     "scripts/verify_research_deception.py",
     "tests/test_research_deception.py",
+    "scripts/simulate_research_proposals.py",
+    "tests/test_simulate_research_proposals.py",
+    "scripts/audit_transcript_biases.py",
+    "tests/test_audit_transcript_biases.py",
+    "scripts/audit_blackwell_channel_capacity.py",
+    "tests/test_audit_blackwell_channel_capacity.py",
 )
 
 FENCE_RX = re.compile(r"^\s*(?:>\s*)*(`{3,}|~{3,})([^\n`]*)?$")

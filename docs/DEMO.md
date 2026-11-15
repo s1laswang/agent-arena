@@ -68,7 +68,7 @@ ANTI-CHEAT: every probe blocked, every replayable episode and Harbor trial consi
 | medium | OpenCode over MCP | 111% [99%, 127%] | 101% [85%, 119%] |
 | medium | in-process | 82% [56%, 108%] | 74% [52%, 99%] |
 
-**P:** "In the judges' harness on hard, Gemini 4 Carbon keeps 65% of the solver's value, and both CIs stay below parity. We report the parity rows too: on medium, and in our in-process loop, it matches the solver. Dev seeds 0-29 were locked right after the primary episodes were committed (post-hoc seed lock in 671ed96, 28 s after 8fd4dec, in `docs/reports/gap.md`)."
+**P:** "With the 13 MCP tools only on hard, Gemini 4 Carbon keeps 65% of the solver's value (`65% [24%, 98%]` raw, `72% [52%, 91%]` luck-adjusted, `n=30`, `8.5` canaries, `53%` interviews). We state the full `afterquery-submit-2` (`aa1c679e`) picture plainly too: on medium and in-process it matches the solver; `gpt-5.5` with MCP tools only matches the solver at `101% [79%, 140%]` (`+0.504 +/- 0.064`, `17.2` canaries, `0` wrong accusations; [`results/behaviour_compare_v1.4.md`](../results/behaviour_compare_v1.4.md)); and in our 3-run Harbor judge-path rehearsal on `afterquery-final` (`1bc3e281`, [`results/harbor/rehearsal/TABLE.md`](../results/harbor/rehearsal/TABLE.md)), where the container also gives a shell, that gap did not reproduce (`93%`, `116%`, and `131%` across `10`, `10`, and `9` valid trials, `+0.472` / `+0.585` / `+0.626` vs oracle `+0.506`). Dev seeds 0-29 were locked right after the primary episodes were committed (post-hoc seed lock in 671ed96, 28 s after 8fd4dec, in `docs/reports/gap.md`)."
 
 **O:** `uv run python scripts/demo_replay.py --seed 4 --verify` (0.5 s). Expected:
 ```
@@ -114,9 +114,9 @@ P: "Day 10 on seed 26. One canary readout comes back with copy S1. On hard, one 
 **O:** tab 2, scroll `docs/EXPLOITS.md`.
 - **52 attacks logged** (#0–#51), each with the score before the fix, the fix commit and a regression test (`docs/EXPLOITS.md`).
 - **The cheat run at −1:** the Harbor agent that accuses everyone scores **−1.0 on 6/6 trials** (3 judge seeds × medium/hard, separate verifier, HMAC-signed ledger; `results/harbor/signed-cheat/result.json`). The probe that never accuses and hunts for holes instead scores **0.0 on 6/6**, 0 holes in 149 attempts each (`docs/EXPLOITS.md` #41).
-- **The Gemini swarm:** **100 attacks** across 4 waves (75 whitebox attackers with the whole repo in context + 16 blackbox, plus 9 re-runs through the real MCP server), **0 verified exploits**; the one flagged attack (w2b-008) was refuted at n=40 judge seeds per tier (EXPLOITS #50). Source: `results/gemini/swarm.md`.
-- **Positive control:** with one closed exploit reopened on purpose (EXPLOITS #23, public dev seeds), **4 of 4** attackers re-find it and the pipeline confirms it (`results/gemini/swarm_control.md`).
-- Live option (only if ahead of time): `make anticheat-verify` (2 min 08 s; expect "99 rows rerun … 0 differences") reruns the committed 40-seed battery and diffs it with `results/anticheat/exploits.json`.
+- **The Gemini red-team sweep:** **1,034 ledger-verified attacks** across all waves including `afterquery-final` (`1bc3e281`) (**0 verified exploits**, `16/16` positive-control recall in [`results/redteam_1000/summary.md`](../results/redteam_1000/summary.md); initial 4-wave pack: **100 attacks** = 75 whitebox attackers with the whole repo in context + 16 blackbox, plus 9 re-runs through the real MCP server, 0 exploits in `results/gemini/swarm.md`; the one flagged attack w2b-008 was refuted at n=40 judge seeds per tier, EXPLOITS #50).
+- **Positive control:** with one closed exploit reopened on purpose (EXPLOITS #23, public dev seeds), **4 of 4** attackers re-find it (`16/16` across all 4 planted controls) and the pipeline confirms it (`results/gemini/swarm_control.md`, `results/redteam_1000/summary.md`).
+- **Full replay coverage:** **1,051 of 1,061** committed episodes and **53,889** recorded tool steps replay with **0 mismatches** (`results/anticheat/exploits.json`). Live option (only if ahead of time): `make anticheat-verify` (2 min 08 s; expect "99 rows rerun ... 0 differences") reruns the committed 40-seed battery and diffs it with `results/anticheat/exploits.json`.
 
 ## 8:00–9:00 · Tiebreak: the small model, honest (T)
 Committed WS4 held-out readout ([`docs/reports/fr8.md`](reports/fr8.md), "04:45 WS4 small-model tiebreaker readout: bar NOT met"; [`fr8/analysis/out/ws4_table_v3.md`](../fr8/analysis/out/ws4_table_v3.md); `README.md`): `Qwen2.5-1.5B-Instruct` LoRA playing full held-out episodes alone:
@@ -124,8 +124,9 @@ Committed WS4 held-out readout ([`docs/reports/fr8.md`](reports/fr8.md), "04:45 
 - `v2` (SFT on solver play, dense 4k windows): `-0.457 +/- 0.086` (`n=172`)
 - `v3-4k` (GRPO on the environment's reward, Verda H100): `-0.147 +/- 0.063` (`n=180`; `+0.310 +/- 0.107` two-sample recovery vs `v2`, `100%` valid calls, training-state mole ID `0.19 -> 0.89`)
 - `v3-8k seed 2` (GRPO, 8k context, Verda H100 spot): `-0.050 +/- 0.049` (`n=90`)
+- `DAgger round 1` (own-policy states relabeled by solver, `9225f2ad`): honest null `-0.542 +/- 0.214` at 8k context (`n=50` partial), level with `v3-4k` at 4k context
 
-Verdict: **bar not met** (no held-out gain over base). P: "Reward training fixed reckless accusations (+0.310 +/- 0.107 over SFT, 100% valid calls, and 0.19 -> 0.89 mole ID on training states), but held-out mean is still below 0: bar not met, no held-out gain over base. Gathering evidence in its own games is the same hard decision Gemini gets wrong." Don't say more than the file says.
+Verdict: **bar not met** (no held-out gain over base across all 7 trained runs plus DAgger). P: "Reward training fixed reckless accusations (+0.310 +/- 0.107 over SFT, 100% valid calls, and 0.19 -> 0.89 mole ID on training states), and a DAgger round on own states ended at -0.542 +/- 0.214 at 8k (n=50): bar not met, no held-out gain over base. Gathering evidence in its own games is the same hard decision Gemini gets wrong." Don't say more than the file says.
 
 ## 9:00–10:00 · Gemini is essential, and play it yourself (peer review / best overall)
 **O:** tab 3 (dashboard), then terminal B: `make lab-replay` (11.5 s). Expected last lines:

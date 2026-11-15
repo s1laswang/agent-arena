@@ -263,9 +263,38 @@ def test_q2_seed_lock_solver_dirs_pooled_extension_and_cross_model(
         flash_hard["post_expected_hi"],
     ) in doc_text
 
+    gpt_hard = next(
+        r for r in paired_rows
+        if r["agent"] == "opencode:openai/gpt-5.5"
+        and r["tier"] == "hard"
+        and "alternative" not in r["label"]
+    )
+    assert gpt_hard["n"] == 30 and gpt_hard["seeds"] == list(range(30))
+    assert f"{gpt_hard['mean']:+.3f} +/- {gpt_hard['ci']:.3f}" in doc_text
+    assert _pct_band(gpt_hard["ratio"], gpt_hard["ratio_lo"], gpt_hard["ratio_hi"]) in doc_text
+    assert _pct_band(
+        gpt_hard["post_expected_ratio"],
+        gpt_hard["post_expected_lo"],
+        gpt_hard["post_expected_hi"],
+    ) in doc_text
+
+    behav_md = (ROOT / "results" / "behaviour_compare_v1.4.md").read_text(encoding="utf-8")
+    assert "17.2" in behav_md and "8.5" in behav_md and "53%" in behav_md
     gap_md = (ROOT / "docs" / "reports" / "gap.md").read_text(encoding="utf-8")
     assert "gpt-5.5 via OpenCode 1.19.5" in gap_md and "$200" in gap_md
-    for tok in ("f9fb7a4a", "cf394894", "gpt-5.5", "1.19.5", "$200", "97% [89%, 107%]", "infra:provider_quota"):
+    for tok in (
+        "f9fb7a4a",
+        "cf394894",
+        "ca0a0dc0",
+        "gpt-5.5",
+        "1.19.5",
+        "$200",
+        "17.2",
+        "8.5",
+        "53%",
+        "97% [89%, 107%]",
+        "infra:provider_quota",
+    ):
         assert tok in doc_text
 
 
@@ -375,6 +404,10 @@ def test_q4_harness_parity_isolation_and_panel_fix_d(doc_text: str, oc_hard_meta
     assert "+0.467" in reh_table and "+0.398" in reh_table and "85% [11%, 355%]" in reh_table
     assert "+0.467" in doc_text and "+0.398" in doc_text and "85% [11%, 355%]" in doc_text
 
+    final_reh_table = (ROOT / "results" / "harbor" / "rehearsal" / "TABLE.md").read_text(encoding="utf-8")
+    for reh_tok in ("+0.506", "+0.472", "+0.585", "+0.626", "93%", "116%", "131%", "[86%, 590%]"):
+        assert reh_tok in final_reh_table and reh_tok in doc_text
+
     oc_eps = _read_jsonl(
         ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gemini-4-carbon" / "hard" / "episodes.jsonl"
     )
@@ -395,8 +428,8 @@ def test_q4_harness_parity_isolation_and_panel_fix_d(doc_text: str, oc_hard_meta
 
     exp = json.loads((ROOT / "results" / "anticheat" / "exploits.json").read_text(encoding="utf-8"))
     rc = exp["replay_counts"]
-    assert rc["replayed"] == 1021 and rc["n"] == 1031 and rc["steps"] == 51814 and rc["step_mismatches"] == 0
-    assert "1,021/1,031" in doc_text and "51,814" in doc_text
+    assert rc["replayed"] == 1051 and rc["n"] == 1061 and rc["steps"] == 53889 and rc["step_mismatches"] == 0
+    assert "1,051/1,061" in doc_text and "53,889" in doc_text
 
     from canary.rules import TierParams
 
@@ -568,6 +601,13 @@ def test_q6_reward_integrity_and_final_58716742_hunt(doc_text: str):
     for sw_tok in ("`91`", "`75`", "`16`", "`9`", "`100` attempts", "4,325", "4/4"):
         assert sw_tok in doc_text
 
+    rt1000 = json.loads((ROOT / "results" / "redteam_1000" / "summary.json").read_text(encoding="utf-8"))
+    assert rt1000["counts"]["attempts"] == 1034 and rt1000["counts"]["exploits"] == 0
+    assert rt1000["counts"]["tool_calls"] == 22032
+    assert rt1000["positive_control"]["attackers_found"] == 16 and rt1000["positive_control"]["attempts"] == 16
+    for rt_tok in ("1,034", "22,032", "16/16"):
+        assert rt_tok in doc_text
+
     integrity_md = (ROOT / "docs" / "reports" / "integrity.md").read_text(encoding="utf-8")
     hunt_md = (ROOT / "results" / "anticheat" / "judge_hunt.md").read_text(encoding="utf-8")
     assert "12 of 12 held" in hunt_md and "52 s" in hunt_md
@@ -610,6 +650,8 @@ def test_q7_ws4_small_model_tiebreaker_honesty(doc_text: str):
         "n=90",
         "-0.050 +/- 0.049",
         "-0.777 +/- 0.118",
+        "-0.542 +/- 0.214",
+        "n=50",
         "two-sample",
         "115/115",
         "0.08 -> 0.99",

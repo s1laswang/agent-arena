@@ -42,7 +42,7 @@ HOLDUP_CLIP = ROOT / "docs/gemini/assets/holdup-demo-20s.mp4"
 HOLDUP_SECONDS = 20.0
 HOLDUP_SCALE = 1.2              # 1280x720 -> 1536x864 at top-left; captions use the freed right column and bottom band
 HOLDUP_BG = (9, 15, 22)         # the HoldUp page background, so the scaled frame sits seamlessly
-XPROV_PNG = ROOT / "results/gemini/xprov.png"
+XPROV_PNG = ROOT / "docs/gemini/assets/xprov.png"   # copy of results/gemini/xprov.png (gemini-v3)
 LADDER_FRONTIER_BOX = (186, 714, 1416, 1142)   # cost-frontier region of the ladder panel (1x page coords)
 REPO_URL = "github.com/s1laswang/agent-arena"
 
@@ -156,7 +156,7 @@ def swarm_numbers(md_path: Path) -> dict:
             waves.append({"name": m.group(1).strip(), "finished": int(m.group(3)), "mcp": int(m.group(5)),
                           "calls": int(m.group(6)), "exploits": int(m.group(7))})
     allw = re.search(r"\| \*\*all real waves\*\* \|[^|]*\|[^|]*\| (\d+) \| (\d+) \| (\d+) \| (\d+) \| (\d+) \|.*?\*\*(\d+)\*\*", md)
-    pc = re.search(r"\*\*(\d+)/(\d+) attackers found it\*\*", md)
+    pc = re.search(r"\*\*(\d+)/(\d+) attackers found it\*\*", md) or re.search(r"\*\*(\d+)/(\d+) attackers found\*\*", md) or re.search(r"Overall detector recall: \*\*(\d+)/(\d+)", md)
     return {"attempts": attempts, "waves": waves, "finished": int(allw.group(2)), "mcp": int(allw.group(4)),
             "calls": int(allw.group(5)), "exploits": int(allw.group(6)),
             "whitebox": sum(w["finished"] for w in waves if w["name"] != "blackbox"),
@@ -624,9 +624,9 @@ def timeline(slots: list[Slot], shots_png: dict[str, Path], replay_lines: list[s
     q2 = s.t0 + 2.2
     t_hard, t_cost = at("ladder", sent("ladder", 2)), at("ladder", sent("ladder", 3))
     c, fl = L["carbon"], L["flash"]
-    segs.append(Seg(s.t0, q2, still(card_section("Q2", "Gemini integration", "Gemini plays: five models, up to four thinking levels, paired with a Bayesian solver."), 1.0, 1.03), label="3 card"))
+    segs.append(Seg(s.t0, q2, still(card_section("Q2", "Gemini integration", "Gemini plays: six models, up to five thinking levels, paired with a Bayesian solver."), 1.0, 1.03), label="3 card"))
     segs.append(Seg(q2, t_cost, pan(img["ladder"], (150, 130, 1300), (195, 300, 540)),
-                    [(q2 + 0.2, t_hard, caption(f"5 models · up to 4 thinking levels · {L['episodes']} paired episodes", src)),
+                    [(q2 + 0.2, t_hard, caption(f"6 models · up to 5 thinking levels · {L['episodes']} paired episodes", src)),
                      (t_hard, t_cost, caption(f"Hard · gemini-4-carbon, high thinking: {c['ratio']} of the solver · ${c['usd']:.2f} per episode (n = {c['n']})", src))],
                     "3 heatmap"))
     segs.append(Seg(t_cost, s.t1, still(focus(img["ladder"], LADDER_FRONTIER_BOX, fill=0.94), 1.0, 1.06),
@@ -638,12 +638,15 @@ def timeline(slots: list[Slot], shots_png: dict[str, Path], replay_lines: list[s
     if "xprov" in by:
         s = by["xprov"]
         xp = Image.open(XPROV_PNG).convert("RGB")
-        k = min(W * 0.92 / xp.width, (H - 200) * 0.95 / xp.height)
+        k = min(W * 0.94 / xp.width, (H - 420) / xp.height)
         xp = xp.resize((round(xp.width * k), round(xp.height * k)), Image.LANCZOS)
-        im, _ = canvas(BG)
-        im.paste(xp, ((W - xp.width) // 2, max(30, (H - 200 - xp.height) // 2)))
+        im, d = canvas(BG)
+        kicker(d, (80, 60), "CROSS-PROVIDER CONTROL · SAME WORLDS, SAME HARNESS")
+        d.text((76, 100), "Gemini vs GPT-5.5 on identical Canary worlds", font=font("serif", 56), fill=INK)
+        im.paste(xp, ((W - xp.width) // 2, 200))
         segs.append(Seg(s.t0, s.t1, still(im, 1.0, 1.03),
-                        [(s.t0 + 0.2, s.t1, caption("Cross-provider control", "results/gemini/xprov.md · results/gemini/xprov.png"))], "3b xprov"))
+                        [(s.t0 + 0.2, s.t1, caption("Matched medium effort: not distinguishable from GPT-5.5 in all 4 pairings · 2.0x–3.8x cheaper per episode",
+                                                    "results/gemini/xprov.md · Canary v1.3, hard + medium, 8–9 shared seeds per pairing"))], "3b xprov"))
 
     # 4 atlas (blind re-run: Gemini never saw our labels)
     s = by["atlas"]

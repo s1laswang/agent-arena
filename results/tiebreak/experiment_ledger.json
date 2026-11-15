@@ -8,9 +8,9 @@
     "gate4_paired_ci95_positive": "paired ci95_low(after - before) > 0.0"
   },
   "summary_counts": {
-    "historical_runs": 9,
+    "historical_runs": 15,
     "discovered_runs": 1,
-    "total_runs": 10,
+    "total_runs": 16,
     "verified_improvements": 1,
     "verified_run_ids": [
       "empirical-bayes-v14"
@@ -18,12 +18,17 @@
     "by_status": {
       "FAILED_OOM": 1,
       "NEGATIVE_REWARD_PROTOCOL_GAIN": 1,
-      "BASELINE_CAVEATED": 1,
+      "BASELINE_CAVEATED": 2,
       "NEGATIVE_BLIND_ACCUSE": 2,
       "FAILED_CUDA_OOM": 1,
       "FAILED_ZERO_VARIANCE": 1,
-      "IN_PROGRESS_PARTIAL": 1,
+      "FAILED_SPOT_PREEMPTED": 1,
+      "NEGATIVE_FLAT_PARTIAL": 1,
       "NEGATIVE_4K_TRUNCATION_PERSISTS": 1,
+      "NEGATIVE_INFERENCE_CTX_CONFOUND": 1,
+      "NEGATIVE_OFFPOLICY_OVERACCUSE": 1,
+      "NEGATIVE_ABSTAIN_COLLAPSE": 1,
+      "NEGATIVE_PAIRED_8K_NULL": 1,
       "VERIFIED_IMPROVEMENT": 1
     }
   },
@@ -354,6 +359,76 @@
       "notes": "Qwen2.5-1.5B base v1.4 held-out n=16 scored 0.000 (valid call rate 0.03, never leaves Day 1); ran without CANARY_WORLD_SECRET so os.urandom(32) world key f272803cdb679dbe is unpaired vs 44412."
     },
     {
+      "run_id": "WS4-base-pooled",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct (base, pooled)",
+      "method": "Zero-shot base evaluation at 4k context (44411 n=16 + 44584 off6 n=20, max_calls=120)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "context_len": 4096,
+      "heldout_n": 36,
+      "before_mean_score": 0.0,
+      "after_mean_score": null,
+      "after_ci95": 0.0,
+      "paired_mean_delta": null,
+      "paired_ci95_low": null,
+      "paired_ci95_high": null,
+      "before_valid_call_rate": 0.03,
+      "after_valid_call_rate": null,
+      "before_world_secret_tag": "f272803cdb679dbe",
+      "after_world_secret_tag": null,
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "BASELINE_CAVEATED",
+      "details": {
+        "slurm_job_ids": [
+          44411,
+          44584
+        ],
+        "aborted_duplicate_job_id": 44583,
+        "aborted_44583_secret_tag": "b8cf262cf76208ae",
+        "n_44411": 16,
+        "n_44584": 20,
+        "heldout_seed_range": "800000..800012",
+        "by_tier_n": {
+          "easy": 13,
+          "medium": 12,
+          "hard": 11
+        },
+        "world_secret_tags": [
+          "f272803cdb679dbe",
+          "404f83e6a15c3f1c"
+        ],
+        "unpaired_urandom_secret_caveat": true,
+        "invalid_call_rate": 0.9713,
+        "valid_call_rate_exact": 0.0287,
+        "eval_cap_rate": 1.0,
+        "mean_final_day": 1.0
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "baseline-only pooled reference (n=36: 44411 n=16 + 44584 n=20) across unpaired os.urandom(32) world secrets (f272803cdb679dbe and 404f83e6a15c3f1c)",
+          "36/36 episodes hit eval_cap=120 on Day 1 without accusing (0.000 score, valid call rate 0.03)"
+        ]
+      },
+      "evidence": [
+        "README.md",
+        "docs/reports/fr8.md",
+        "origin/justSilas-fr8@8f920b2f:data/fr8/ws4/ws4-base-v14-off6/summary.json",
+        "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_table_v3.md"
+      ],
+      "notes": "Published pooled untrained Qwen2.5-1.5B base reference (n=36: job 44411 n=16 on 800000..800005 + job 44584 n=20 on 800006..800012) scored 0.000 +/- 0.000 because valid tool calls were 0.03 and all 36 episodes hit eval_cap=120 on Day 1."
+    },
+    {
       "run_id": "WS4-v2-44412",
       "source": "historical",
       "model": "Qwen2.5-1.5B-Instruct LoRA r=16 (dense v2)",
@@ -456,7 +531,11 @@
         "invalid_call_rate": 0.0825,
         "pooled_v2_n": 172,
         "pooled_v2_mean_score": -0.457,
-        "pooled_v2_ci95": 0.086
+        "pooled_v2_ci95": 0.086,
+        "pooled_v2_accused_count": 94,
+        "pooled_v2_correct_count": 8,
+        "pooled_v2_accused_rate": 0.55,
+        "pooled_v2_precision": 0.09
       },
       "gates": {
         "gate1_seed_hygiene": true,
@@ -471,10 +550,12 @@
         ]
       },
       "evidence": [
-        "origin/justSilas-fr8@3f5de3de:data/fr8/verda/evalbox-68bb/v2-off30/summary.json",
-        "origin/justSilas-fr8@e649e288:fr8/analysis/out/ws4_table_v3s0.md"
+        "README.md",
+        "docs/reports/fr8.md",
+        "data/fr8/verda/evalbox-68bb/v2-off30/summary.json",
+        "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_table_v3.md"
       ],
-      "notes": "Verda A100 extra held-out n=90 (800030..800059) confirmed v2 blind-accusation collapse: -0.514 +/- 0.115 (52/90 accused, 3/90 correct, 0/30 on hard); pooled v2 n=172 is -0.457 +/- 0.086."
+      "notes": "Verda A100 extra held-out n=90 (800030..800059) confirmed v2 blind-accusation collapse: -0.514 +/- 0.115 (52/90 accused, 3/90 correct, 0/30 on hard); pooled v2 n=172 is -0.457 +/- 0.086 (accused 94/172 = 0.55, precision 8/94 = 0.09)."
     },
     {
       "run_id": "WS4-v3-44548-44550",
@@ -579,14 +660,15 @@
       "notes": "Unguided GRPO collapsed to continue_frac=1.0 (8/10 groups zero variance in first 5 steps; 10/12 across 6 steps) before guided forced-accuse exploration was introduced."
     },
     {
-      "run_id": "WS4-v3-verda-s0-44572",
+      "run_id": "WS4-v3-4k-s1-714d-spot",
       "source": "historical",
-      "model": "Qwen2.5-1.5B-Instruct LoRA (v3 guided GRPO 4k)",
-      "method": "Guided decision-point GRPO (Verda H100 s0 + FR8 V100 job 44572 s1)",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s1 spot replicate)",
+      "method": "Guided decision-point GRPO at 4k context on Verda A100-80GB spot 714d8144",
       "tiers_version": "v1.4",
       "tiers": [
         "easy",
-        "medium"
+        "medium",
+        "hard"
       ],
       "context_len": 4096,
       "heldout_n": 0,
@@ -602,15 +684,16 @@
       "after_world_secret_tag": null,
       "replay_verified": false,
       "verified_improvement": false,
-      "status": "IN_PROGRESS_PARTIAL",
+      "status": "FAILED_SPOT_PREEMPTED",
       "details": {
-        "verda_instance": "3bb74f5a",
-        "fr8_slurm_job_id": 44572,
-        "n_states": 2000,
-        "s1_train_seed_start": 151000,
-        "step_milestone": 140,
-        "valid_only_gain_vs_solver": 0.091,
-        "forced_accuse_whom_accuracy": 0.19
+        "verda_instance": "714d8144",
+        "verda_instance_full": "714d8144-c036-4814-999d-a38ed192a48f",
+        "gpu": "A100-80GB spot (1A100.22V)",
+        "region": "FIN-01",
+        "grpo_replicate": 1,
+        "approx_train_minutes": 29,
+        "spot_preempted": true,
+        "eval_episodes": 0
       },
       "gates": {
         "gate1_seed_hygiene": true,
@@ -619,22 +702,21 @@
         "gate4_paired_ci95_positive": false,
         "all_passed": false,
         "reasons": [
-          "training-time decision-point metric only; no completed n>=30 paired held-out evaluation",
-          "forced-accuse whom-accuracy remained flat (~0.19) at 4k raw context due to recipient truncation"
+          "Verda A100-80GB spot instance 714d8144 preempted ~30 min into 4k GRPO training (started 02:39, gone by 03:08)",
+          "heldout_n=0 < 30; 0 evaluation episodes completed"
         ]
       },
       "evidence": [
-        "docs/reports/CEO.md",
-        "docs/reports/verda-evidence.md",
-        "/home/silas/agent-arena-data/v3/slurm-44572.out"
+        "fr8/verda/README.md",
+        "data/fr8/verda/instances-0308.txt"
       ],
-      "notes": "Guided GRPO reached +0.091 valid-only gain at step 140 without tool collapse, but forced-accuse whom-accuracy stayed flat around ~0.19 at 4k context because raw transcripts still drop early canary-to-recipient assignments."
+      "notes": "Verda A100-80GB spot instance 714d8144 (4k GRPO s1 replicate) was preempted ~30m into training (launched 02:39, absent from 03:08 SDK capture); 0 eval episodes completed."
     },
     {
-      "run_id": "WS4-v3-verda-s0-eval",
+      "run_id": "WS4-v3-4k-s1-44572",
       "source": "historical",
-      "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s0, 609 GRPO steps)",
-      "method": "Guided decision-point GRPO on Verda H100 3bb74f5a (2.0h, 609 steps, max_ctx=4096)",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s1, 192 GRPO steps partial)",
+      "method": "Guided decision-point GRPO on FR8 V100 job 44572 (4.0h, 192 steps, max_ctx=4096; partial eval 44573)",
       "tiers_version": "v1.4",
       "tiers": [
         "easy",
@@ -642,13 +724,92 @@
         "hard"
       ],
       "context_len": 4096,
-      "heldout_n": 90,
+      "heldout_n": 25,
       "before_mean_score": 0.0,
-      "after_mean_score": -0.103,
-      "after_ci95": 0.081,
-      "paired_mean_delta": -0.062,
-      "paired_ci95_low": -0.184,
-      "paired_ci95_high": 0.06,
+      "after_mean_score": -0.24,
+      "after_ci95": 0.171,
+      "paired_mean_delta": -0.24,
+      "paired_ci95_low": -0.411,
+      "paired_ci95_high": -0.069,
+      "before_valid_call_rate": 0.03,
+      "after_valid_call_rate": 0.97,
+      "before_world_secret_tag": "f272803cdb679dbe",
+      "after_world_secret_tag": "09f8bc6443018b18",
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "NEGATIVE_FLAT_PARTIAL",
+      "details": {
+        "train_slurm_job_id": 44572,
+        "eval_slurm_job_id": 44573,
+        "precursor_slurm_job_id": 44555,
+        "gpu": "Tesla V100-PCIE-32GB",
+        "grpo_steps": 192,
+        "train_hours": 4.0,
+        "n_states": 2000,
+        "train_seed_start": 150000,
+        "grpo_replicate": 1,
+        "forced_accuse_whom_first_w96": 0.224,
+        "forced_accuse_whom_last_w96": 0.267,
+        "heldout_seed_range": "800000..800008",
+        "by_tier_n": {
+          "easy": 9,
+          "medium": 8,
+          "hard": 8
+        },
+        "accused_count": 6,
+        "accused_rate": 0.24,
+        "correct_count": 0,
+        "accuracy": 0.0,
+        "abstain_rate": 0.76,
+        "easy_score": -0.667,
+        "medium_score": 0.0,
+        "hard_score": 0.0,
+        "two_sample_delta_vs_base_mean": -0.24,
+        "two_sample_delta_vs_base_ci95": 0.171,
+        "two_sample_delta_vs_v2_mean": 0.217,
+        "two_sample_delta_vs_v2_ci95": 0.191,
+        "two_sample_delta_vs_v3_4k_s0_mean": -0.093,
+        "two_sample_delta_vs_v3_4k_s0_ci95": 0.182
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "unpaired per-process world secret (f272803cdb679dbe vs 09f8bc6443018b18)",
+          "partial held-out n=25 < 30 (9 easy, 8 medium, 8 hard); 19/25 episodes hit eval_cap=120",
+          "flat training dynamics (whom-acc 0.22 -> 0.27 over 192 V100 steps) and negative held-out score (-0.240 +/- 0.171, 0/6 correct)"
+        ]
+      },
+      "evidence": [
+        "docs/reports/fr8.md",
+        "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_table_v3.md",
+        "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_whom_v3.md",
+        "/home/silas/agent-arena-data/v3/run-44572/lora/train_summary.json"
+      ],
+      "notes": "FR8 V100 192-step 4k GRPO s1 replicate had flat training whom-accuracy (0.224 -> 0.267, W=96) and scored -0.240 +/- 0.171 on partial held-out n=25 (valid 0.97, accused 0.24, correct 0.00)."
+    },
+    {
+      "run_id": "WS4-v3-verda-s0-eval",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s0, 609 GRPO steps, pooled n=180)",
+      "method": "Guided decision-point GRPO on Verda H100 3bb74f5a (2.0h, 609 steps, max_ctx=4096; s0 + off30 pooled)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "context_len": 4096,
+      "heldout_n": 180,
+      "before_mean_score": 0.0,
+      "after_mean_score": -0.147,
+      "after_ci95": 0.063,
+      "paired_mean_delta": -0.147,
+      "paired_ci95_low": -0.21,
+      "paired_ci95_high": -0.084,
       "before_valid_call_rate": 0.03,
       "after_valid_call_rate": 1.0,
       "before_world_secret_tag": null,
@@ -658,26 +819,42 @@
       "status": "NEGATIVE_4K_TRUNCATION_PERSISTS",
       "details": {
         "verda_instance": "3bb74f5a",
+        "verda_off30_instance": "68bbe201",
+        "adapter_sha256_12": "3d0cd43b8037",
         "grpo_steps": 609,
         "train_hours": 2.0,
-        "heldout_seed_range": "800000..800029",
-        "mean_score_exact": -0.103,
-        "ci95_exact": 0.0806,
-        "accused_count": 15,
-        "eval_cap_count": 75,
+        "step_140_valid_only_gain_vs_solver": 0.091,
+        "forced_accuse_whom_first_w100": 0.19,
+        "forced_accuse_whom_last_w100": 0.892,
+        "forced_accuse_whom_last_reported": 0.89,
+        "train_state_draws": 1218,
+        "train_state_pool": 2000,
+        "heldout_seed_range": "800000..800059",
+        "s0_n": 90,
+        "s0_mean_score": -0.103,
+        "s0_ci95": 0.081,
+        "off30_n": 90,
+        "off30_mean_score": -0.192,
+        "off30_mean_score_exact": -0.1919,
+        "off30_ci95": 0.096,
+        "off30_ci95_exact": 0.0959,
+        "accused_count": 38,
+        "eval_cap_count": 142,
+        "accused_rate": 0.21,
+        "abstain_rate": 0.79,
+        "correct_count": 6,
+        "accuracy": 0.03,
         "accuracy_exact": 0.0333,
-        "easy_score": -0.2757,
+        "precision_when_accused": 0.16,
+        "easy_score": -0.409,
         "medium_score": 0.0,
-        "hard_score": -0.0333,
+        "hard_score": -0.033,
         "medium_accuracy": 0.0,
         "hard_accuracy": 0.0,
-        "invalid_call_rate": 0.0019,
-        "delta_vs_v2_mean": 0.306,
-        "delta_vs_v2_ci95": 0.136,
-        "delta_vs_v2_paired_n": 82,
-        "delta_vs_base_mean": -0.062,
-        "delta_vs_base_ci95": 0.122,
-        "delta_vs_base_paired_n": 16
+        "delta_vs_v2_mean": 0.31,
+        "delta_vs_v2_ci95": 0.107,
+        "delta_vs_base_mean": -0.147,
+        "delta_vs_base_ci95": 0.063
       },
       "gates": {
         "gate1_seed_hygiene": true,
@@ -686,17 +863,315 @@
         "gate4_paired_ci95_positive": false,
         "all_passed": false,
         "reasons": [
-          "unpaired per-process world secret across Verda H100 eval vs FR8 base 44411",
-          "75/90 episodes hit eval_cap=120",
-          "held-out score remained negative (-0.103 +/- 0.081, n=90; -0.062 +/- 0.122 vs base n=16) despite +0.306 +/- 0.136 stopping gain over v2"
+          "unpaired per-process world secrets across Verda H100 s0 (800000..800029), A100 off30 (800030..800059), and FR8 base",
+          "142/180 episodes hit eval_cap=120",
+          "pooled held-out score remained negative (-0.147 +/- 0.063, n=180; 6/38 = 0.16 precision) despite +0.310 +/- 0.107 two-sample gain over v2"
         ]
       },
       "evidence": [
-        "origin/justSilas-fr8@e649e288:data/fr8/verda/h100-3bb7/runs/v3-verda-s0/summary.json",
-        "origin/justSilas-fr8@e649e288:data/fr8/verda/h100-3bb7/run-verda-s0/lora/train_summary.json",
-        "origin/justSilas-fr8@e649e288:fr8/analysis/out/ws4_table_v3s0.md"
+        "README.md",
+        "docs/reports/fr8.md",
+        "data/fr8/verda/h100-3bb7/runs/v3-verda-s0/summary.json",
+        "data/fr8/verda/evalbox-68bb/v3-4k-s0-off30/summary.json",
+        "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_table_v3.md"
       ],
-      "notes": "Verda H100 609-step GRPO (max_ctx=4096) cured blind accusations vs v2 (+0.306 +/- 0.136, valid 1.00, accused 15/90), but still scored -0.103 +/- 0.081 on held-out n=90 (-0.062 +/- 0.122 vs base; 3/90 correct, 0/60 on medium+hard) because 4k raw context still truncates canary-to-recipient tables."
+      "notes": "Pooled v3-4k-s0 across held-out 800000..800059 (n=180: s0 n=90 -0.103 +/- 0.081 + off30 n=90 -0.192 +/- 0.096) scored -0.147 +/- 0.063 (valid 1.00, accused 38/180 = 0.21, correct 6/38 = 0.16; two-sample +0.310 +/- 0.107 vs v2), learning solver-state culprit reading (0.19 -> 0.89) but not autonomous evidence gathering."
+    },
+    {
+      "run_id": "WS4-v3-4k-s0-ctx8k",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s0 evaluated at max_ctx=8192)",
+      "method": "Same 609-step 4k GRPO adapter (3d0cd43b8037) evaluated at 8k context on Verda A100 68bbe201 (shared secret 1ca0c2a64d)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "context_len": 8192,
+      "heldout_n": 90,
+      "before_mean_score": 0.0,
+      "after_mean_score": -0.716,
+      "after_ci95": 0.105,
+      "paired_mean_delta": -0.716,
+      "paired_ci95_low": -0.821,
+      "paired_ci95_high": -0.611,
+      "before_valid_call_rate": 0.03,
+      "after_valid_call_rate": 0.99,
+      "before_world_secret_tag": null,
+      "after_world_secret_tag": "1ca0c2a64d",
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "NEGATIVE_INFERENCE_CTX_CONFOUND",
+      "details": {
+        "verda_eval_instance": "68bbe201",
+        "adapter_sha256_12": "3d0cd43b8037",
+        "grpo_steps": 609,
+        "train_context_len": 4096,
+        "eval_context_len": 8192,
+        "shared_world_secret_tag": "1ca0c2a64d",
+        "heldout_seed_range": "800000..800029",
+        "accused_count": 70,
+        "accused_rate": 0.78,
+        "correct_count": 3,
+        "accuracy": 0.03,
+        "precision_when_accused": 0.0429,
+        "abstain_rate": 0.22,
+        "easy_score": -0.447,
+        "easy_accused_rate": 0.63,
+        "medium_score": -0.8,
+        "medium_accused_rate": 0.8,
+        "hard_score": -0.9,
+        "hard_accused_rate": 0.9,
+        "two_sample_delta_vs_4k_mean": -0.568,
+        "two_sample_delta_vs_4k_ci95": 0.123,
+        "two_sample_delta_vs_v2_mean": -0.258,
+        "two_sample_delta_vs_v2_ci95": 0.136
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "shared secret 1ca0c2a64d is paired with WS4-v3-8k-s3-f437, but untrained base never ran under 1ca0c2a64d",
+          "inference-length confound: raising eval max_ctx from 4096 to 8192 flipped medium/hard accusations from 0.00/0.03 to 0.80/0.90 (0 correct)",
+          "severe held-out regression (-0.716 +/- 0.105, n=90; two-sample -0.568 +/- 0.123 vs 4k inference)"
+        ]
+      },
+      "evidence": [
+        "origin/justSilas-fr8@8f920b2f:docs/reports/fr8.md",
+        "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_table_v3.md",
+        "origin/justSilas-fr8@8f920b2f:fr8/verda/README.md"
+      ],
+      "notes": "Evaluating the exact same 609-step 4k adapter (3d0cd43b8037) at max_ctx=8192 under shared secret 1ca0c2a64d dropped held-out n=90 from -0.147 to -0.716 +/- 0.105 (two-sample -0.568 +/- 0.123 vs 4k; accused 0.78, 3/70 correct), proving longer inference context alone triggers reckless accusations."
+    },
+    {
+      "run_id": "WS4-v3-8k-s1-ac58",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (v3-8k s1, 371 GRPO steps)",
+      "method": "Guided decision-point GRPO at 8k context on Verda A100-80GB spot ac58df04 (3.0h, 371 steps)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "context_len": 8192,
+      "heldout_n": 90,
+      "before_mean_score": 0.0,
+      "after_mean_score": -0.777,
+      "after_ci95": 0.118,
+      "paired_mean_delta": -0.777,
+      "paired_ci95_low": -0.895,
+      "paired_ci95_high": -0.659,
+      "before_valid_call_rate": 0.03,
+      "after_valid_call_rate": 0.92,
+      "before_world_secret_tag": null,
+      "after_world_secret_tag": null,
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "NEGATIVE_OFFPOLICY_OVERACCUSE",
+      "details": {
+        "verda_instance": "ac58df04",
+        "gpu": "A100-80GB spot",
+        "grpo_steps": 371,
+        "train_hours": 3.01,
+        "grpo_replicate": 1,
+        "heldout_seed_range": "800000..800029",
+        "mean_score_exact": -0.7767,
+        "ci95_exact": 0.118,
+        "accused_count": 85,
+        "eval_cap_count": 4,
+        "horizon_count": 1,
+        "accused_rate": 0.94,
+        "correct_count": 8,
+        "accuracy": 0.09,
+        "accuracy_exact": 0.0889,
+        "precision_when_accused": 0.09,
+        "abstain_rate": 0.06,
+        "invalid_call_rate": 0.0775,
+        "forced_accuse_whom_first_w100": 0.35,
+        "forced_accuse_whom_last_w100": 0.412,
+        "easy_score": -0.58,
+        "medium_score": -0.938,
+        "hard_score": -0.813,
+        "two_sample_delta_vs_v3_4k_s0_mean": -0.629,
+        "two_sample_delta_vs_v3_4k_s0_ci95": 0.134
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "unpaired per-process world secret on Verda A100-80GB spot ac58df04",
+          "4/90 episodes hit eval_cap=120",
+          "off-policy + 8k context over-accusation (-0.777 +/- 0.118, accused 0.94, correct 0.09)"
+        ]
+      },
+      "evidence": [
+        "docs/reports/fr8.md",
+        "data/fr8/verda/a100-ac58/runs/v3-verda-8k-s1/summary.json",
+        "data/fr8/verda/a100-ac58/run-verda-8k-s1/lora/train_summary.json",
+        "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_table_v3.md"
+      ],
+      "notes": "Verda A100-80GB spot 371-step 8k GRPO s1 scored -0.777 +/- 0.118 on held-out n=90 (valid 0.92, accused 0.94, correct 0.09 = 8/85 precision); 8k gave a step 0..99 whom head start (0.35 vs 0.19) but did not learn faster at steps 271..370 (0.41 vs 0.37) and over-accused early on own states."
+    },
+    {
+      "run_id": "WS4-v3-8k-s2-dbd0",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (v3-8k s2, 693 GRPO steps)",
+      "method": "Guided decision-point GRPO at 8k context on Verda H100 spot dbd083ca (3.0h, 693 steps)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "context_len": 8192,
+      "heldout_n": 90,
+      "before_mean_score": 0.0,
+      "after_mean_score": -0.05,
+      "after_ci95": 0.049,
+      "paired_mean_delta": -0.05,
+      "paired_ci95_low": -0.099,
+      "paired_ci95_high": -0.001,
+      "before_valid_call_rate": 0.03,
+      "after_valid_call_rate": 0.96,
+      "before_world_secret_tag": null,
+      "after_world_secret_tag": null,
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "NEGATIVE_ABSTAIN_COLLAPSE",
+      "details": {
+        "verda_instance": "dbd083ca",
+        "gpu": "H100-80GB spot",
+        "grpo_steps": 693,
+        "train_hours": 3.0,
+        "grpo_replicate": 2,
+        "heldout_seed_range": "800000..800029",
+        "mean_score_exact": -0.0498,
+        "ci95_exact": 0.0492,
+        "accused_count": 6,
+        "eval_cap_count": 59,
+        "horizon_count": 25,
+        "accused_rate": 0.07,
+        "correct_count": 1,
+        "accuracy": 0.01,
+        "accuracy_exact": 0.0111,
+        "precision_when_accused": 0.17,
+        "abstain_rate": 0.93,
+        "invalid_call_rate": 0.037,
+        "forced_accuse_whom_first_w100": 0.313,
+        "forced_accuse_whom_last_w100": 0.458,
+        "easy_score": -0.067,
+        "medium_score": 0.0,
+        "hard_score": -0.083,
+        "two_sample_delta_vs_v3_4k_s0_mean": 0.098,
+        "two_sample_delta_vs_v3_4k_s0_ci95": 0.08,
+        "two_sample_delta_vs_v2_mean": 0.408,
+        "two_sample_delta_vs_v2_ci95": 0.099
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "unpaired per-process world secret on Verda H100 spot dbd083ca",
+          "59/90 episodes hit eval_cap=120",
+          "collapsed to 93% abstention (-0.050 +/- 0.049, accused 0.07, correct 0.01)"
+        ]
+      },
+      "evidence": [
+        "README.md",
+        "docs/reports/fr8.md",
+        "data/fr8/verda/h100spot-dbd0/runs/v3-verda-8k-s2/summary.json",
+        "data/fr8/verda/h100spot-dbd0/run-verda-8k-s2/lora/train_summary.json",
+        "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_table_v3.md"
+      ],
+      "notes": "Verda H100 spot 693-step 8k GRPO s2 collapsed to conservative abstention on held-out n=90: -0.050 +/- 0.049 (valid 0.96, accused 0.07 = 6/90, correct 0.01 = 1/90, abstain 0.93; training whom-acc reached only 0.458)."
+    },
+    {
+      "run_id": "WS4-v3-8k-s3-f437",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (v3-8k s3, 344 GRPO steps, shared secret)",
+      "method": "Guided decision-point GRPO at 8k context on Verda A100-80GB f4378173 (344 steps; eval under shared secret 1ca0c2a64d)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "context_len": 8192,
+      "heldout_n": 90,
+      "before_mean_score": 0.0,
+      "after_mean_score": -0.788,
+      "after_ci95": 0.117,
+      "paired_mean_delta": -0.073,
+      "paired_ci95_low": -0.246,
+      "paired_ci95_high": 0.1,
+      "before_valid_call_rate": 0.03,
+      "after_valid_call_rate": 0.94,
+      "before_world_secret_tag": null,
+      "after_world_secret_tag": "1ca0c2a64d",
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "NEGATIVE_PAIRED_8K_NULL",
+      "details": {
+        "verda_instance": "f4378173",
+        "gpu": "A100-80GB on-demand",
+        "grpo_steps": 344,
+        "train_hours": 3.0,
+        "grpo_replicate": 3,
+        "shared_world_secret_tag": "1ca0c2a64d",
+        "heldout_seed_range": "800000..800029",
+        "mean_score_exact": -0.7882,
+        "ci95_exact": 0.1166,
+        "accused_count": 86,
+        "eval_cap_count": 4,
+        "accused_rate": 0.96,
+        "correct_count": 8,
+        "accuracy": 0.09,
+        "accuracy_exact": 0.0889,
+        "abstain_rate": 0.04,
+        "invalid_call_rate": 0.0642,
+        "easy_score": -0.643,
+        "medium_score": -0.878,
+        "hard_score": -0.843,
+        "paired_counterpart_run_id": "WS4-v3-4k-s0-ctx8k",
+        "matching_step0_rosters": 60,
+        "matching_step0_rosters_total": 60,
+        "paired_vs_4k_ctx8k_mean_delta": -0.073,
+        "paired_vs_4k_ctx8k_ci95": 0.173,
+        "two_sample_delta_vs_base_mean": -0.788,
+        "two_sample_delta_vs_base_ci95": 0.117,
+        "two_sample_delta_vs_v3_4k_s0_mean": -0.641,
+        "two_sample_delta_vs_v3_4k_s0_ci95": 0.132
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "unpaired vs untrained FR8 base; truly paired under shared secret 1ca0c2a64d against WS4-v3-4k-s0-ctx8k (60/60 matching rosters)",
+          "4/90 episodes hit eval_cap=120",
+          "negative held-out score (-0.788 +/- 0.117, n=90) and null truly paired 8k-vs-4k@8k delta (-0.073 +/- 0.173)"
+        ]
+      },
+      "evidence": [
+        "origin/justSilas-fr8@8f920b2f:docs/reports/fr8.md",
+        "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_table_v3.md",
+        "origin/justSilas-fr8@8f920b2f:data/fr8/verda/a100-f437/runs/v3-verda-8k-s3/summary.json",
+        "origin/justSilas-fr8@8f920b2f:data/fr8/verda/a100-f437/run-verda-8k-s3/lora/train_summary.json"
+      ],
+      "notes": "Verda A100-80GB 344-step 8k GRPO s3 under shared secret 1ca0c2a64d scored -0.788 +/- 0.117 on held-out n=90 (valid 0.94, accused 0.96, correct 0.09); truly paired vs v3-4k-s0@8k on 60/60 matching step-0 rosters gave -0.073 +/- 0.173, showing 8k training adds nothing at 8k inference."
     }
   ],
   "discovered_runs": [

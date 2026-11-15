@@ -240,6 +240,40 @@ def _git_lines(root: Path, args: Sequence[str]) -> list[str]:
     return [line for line in proc.stdout.splitlines() if line.strip()]
 
 
+def _git_ref_exists(root: Path, ref: str) -> bool:
+    proc = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 0
+
+
+def resolve_base_ref(root: Path, base_ref: str = "origin/justSilas") -> tuple[str | None, bool]:
+    candidates: list[str] = [base_ref]
+    if base_ref == "origin/justSilas":
+        candidates.append("justSilas")
+    elif base_ref == "justSilas":
+        candidates.append("origin/justSilas")
+    for cand in candidates:
+        if _git_ref_exists(root, cand):
+            return cand, False
+    if base_ref in ("origin/justSilas", "justSilas") and _git_ref_exists(root, "HEAD"):
+        return "HEAD", True
+    return None, True
+
+
+def _should_forbid_untracked_workspace_dirs(root: Path) -> bool:
+    resolved_str = root.resolve().as_posix()
+    if resolved_str.startswith("/tmp/fleet-silas/"):
+        return True
+    if not (root / "Makefile").is_file() and not (root / "pyproject.toml").is_file():
+        return True
+    return False
+
+
 def load_protected_rules(root: Path) -> list[str]:
     rules: list[str] = list(MANDATORY_PROTECTED_RULES)
     pf = root / ".github" / "protected-paths.txt"
@@ -294,14 +328,16 @@ def collect_branch_changes(
     include_worktree: bool = True,
 ) -> dict[str, str]:
     changes: dict[str, str] = {}
-    for line in _git_lines(root, ["diff", "--name-status", f"{base_ref}...HEAD"]):
-        parts = line.split("\t")
-        status = parts[0].strip()
-        if status.startswith("R") and len(parts) >= 3:
-            changes[parts[1].strip()] = "D"
-            changes[parts[2].strip()] = "A"
-        elif len(parts) >= 2:
-            changes[parts[1].strip()] = status[0]
+    resolved_ref, _ = resolve_base_ref(root, base_ref)
+    if resolved_ref is not None and resolved_ref != "HEAD":
+        for line in _git_lines(root, ["diff", "--name-status", f"{resolved_ref}...HEAD"]):
+            parts = line.split("\t")
+            status = parts[0].strip()
+            if status.startswith("R") and len(parts) >= 3:
+                changes[parts[1].strip()] = "D"
+                changes[parts[2].strip()] = "A"
+            elif len(parts) >= 2:
+                changes[parts[1].strip()] = status[0]
     if include_worktree:
         proc = subprocess.run(
             ["git", "status", "--porcelain"],
@@ -329,10 +365,12 @@ def collect_branch_changes(
 
 def _added_diff_lines(root: Path, rel_path: str, base_ref: str) -> list[tuple[int, str]]:
     out: list[tuple[int, str]] = []
-    for diff_args in (
-        ["diff", "-U0", f"{base_ref}...HEAD", "--", rel_path],
-        ["diff", "-U0", "HEAD", "--", rel_path],
-    ):
+    resolved_ref, _ = resolve_base_ref(root, base_ref)
+    diff_specs: list[list[str]] = []
+    if resolved_ref is not None and resolved_ref != "HEAD":
+        diff_specs.append(["diff", "-U0", f"{resolved_ref}...HEAD", "--", rel_path])
+    diff_specs.append(["diff", "-U0", "HEAD", "--", rel_path])
+    for diff_args in diff_specs:
         proc = subprocess.run(
             ["git", *diff_args],
             cwd=root,
@@ -425,8 +463,17 @@ def gate_1_protected_paths(
             if sz > MAX_W9_FILE_BYTES and not any(v.startswith(f"{w9_rel}:") for v in violations):
                 violations.append(f"{w9_rel}: W9 file size {sz} bytes exceeds {MAX_W9_FILE_BYTES} bytes")
 
+    tracked_forbidden = _git_lines(root, ["ls-files", "--", *FORBIDDEN_WORKSPACE_DIRS])
     for forbidden_dir in FORBIDDEN_WORKSPACE_DIRS:
-        if (root / forbidden_dir).exists():
+        has_tracked = any(
+            p == forbidden_dir or p.startswith(f"{forbidden_dir}/") for p in tracked_forbidden
+        ) or any(
+            (p == forbidden_dir or p.startswith(f"{forbidden_dir}/")) and st != "D"
+            for p, st in changes.items()
+        )
+        if has_tracked:
+            violations.append(f"forbidden tracked workspace directory: {forbidden_dir}")
+        elif _should_forbid_untracked_workspace_dirs(root) and (root / forbidden_dir).exists():
             violations.append(f"forbidden workspace directory present: {forbidden_dir}")
 
     if (root / "data" / "worlds" / "judge" / "SALT").exists():
@@ -527,22 +574,24 @@ def gate_2_squad_hygiene(
 
     coauthor_commits: list[str] = []
     scoped_paths = sorted(full_check_paths | diff_only_paths)
-    log_cmd = ["git", "log", "--format=%h%x09%B", f"{base_ref}..HEAD"]
-    if scoped_paths:
-        log_cmd.extend(["--", *scoped_paths])
-    proc = subprocess.run(
-        log_cmd,
-        cwd=root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode == 0:
-        for chunk in proc.stdout.split("\n\n"):
-            if CO_AUTHOR_LOWER in chunk.lower():
-                sha = chunk.strip().split("\t", 1)[0]
-                coauthor_commits.append(sha)
-                violations.append(f"commit {sha}: commit message contains {'Co-Authored' + '-By'}")
+    resolved_ref, _ = resolve_base_ref(root, base_ref)
+    if resolved_ref is not None and resolved_ref != "HEAD":
+        log_cmd = ["git", "log", "--format=%h%x09%B", f"{resolved_ref}..HEAD"]
+        if scoped_paths:
+            log_cmd.extend(["--", *scoped_paths])
+        proc = subprocess.run(
+            log_cmd,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode == 0:
+            for chunk in proc.stdout.split("\n\n"):
+                if CO_AUTHOR_LOWER in chunk.lower():
+                    sha = chunk.strip().split("\t", 1)[0]
+                    coauthor_commits.append(sha)
+                    violations.append(f"commit {sha}: commit message contains {'Co-Authored' + '-By'}")
 
     return {
         "name": "Gate 2: Squad Python/Markdown/Commit/Secret Hygiene",
@@ -1072,6 +1121,7 @@ def run_all_gates(
 ) -> dict[str, Any]:
     t0 = time.perf_counter()
     resolved = root.resolve()
+    resolved_base_ref, shallow_fallback = resolve_base_ref(resolved, base_ref)
     shared_changes = collect_branch_changes(resolved, base_ref=base_ref, include_worktree=include_worktree)
     gates = {
         "gate_1_protected_paths": gate_1_protected_paths(
@@ -1097,6 +1147,8 @@ def run_all_gates(
         "gates_total": len(gates),
         "elapsed_s": elapsed_s,
         "base_ref": base_ref,
+        "resolved_base_ref": resolved_base_ref,
+        "shallow_checkout_fallback": shallow_fallback,
         "live_llm_calls": 0,
         "c3_exploits_md_citations": gates["gate_4_panel_honesty_and_ledger_sync"].get("c3_exploits_md_citations"),
         "gates": gates,

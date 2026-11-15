@@ -1,6 +1,6 @@
 # Canary v1.4 Frontier Replication and Cross-Model Capability Report
 
-Every figure in this report is deterministically computed from replay-verified episodes by `scripts/verify_frontier_replication.py` using `canary.analysis.gap` (`load_runs`, `mean_ci`) and `scripts/paired_v13.py` (`boot_ratio`, `p_acc`, `post_expected`), with zero live API calls.
+Every figure in this report is deterministically computed from replay-verified episodes by `scripts/verify_frontier_replication.py` using `canary.analysis.gap` (`load_runs`, `mean_ci`) and `scripts/paired_v13.py` (`boot_ratio`, `p_acc`, `post_expected`), with zero live API calls and zero runtime `.git` calls.
 
 Reproduce and verify:
 
@@ -8,19 +8,19 @@ Reproduce and verify:
 PYTHONPATH=. python scripts/verify_frontier_replication.py --check
 ```
 
-## 1. Post-Hoc Seed Lock, Pre-Registered Extension, and Replay Audit
+## 1. Post-Hoc Seed Lock, Pre-Registered Extensions, and Replay Audit
 
-- **Post-hoc seed lock and pre-registered extension (`docs/reports/gap.md`, commits `671ed96` and `f9fb7a4a`):** The `justSilas` committed dev set (`seeds 0-29`, `n=30` per tier in `data/runs/committed/v1.4/`) is the locked **PRIMARY** headline result (`671ed96` came 28 s after `8fd4dec`, so it is a post-hoc lock against later reruns and cherry-picking, not a pre-registration). The `opencode-gemini-4-carbon-ext` partial extension (`seeds 34, 37`, `n=2`, pre-registered in `f9fb7a4a`) and all FR8 episodes under `results/frontier_replication/v1.4/` are evaluated and reported strictly separately as replication or cross-model cohorts, never swapped into the primary `0-29` set.
-- **Replay verification (`scripts/verify_replay.py`):** `442/442` episodes verified in `data/runs/committed/v1.4/` and `305/305` episodes verified in `results/frontier_replication/v1.4/` (`5` `opencode:google/gemini-4-carbon` hard, `30` `opencode:google/gemini-3.5-flash` medium, and `270` reference solver and baseline episodes on hard `seeds 30-59`), with `0` mismatches and `0` duplicate `(agent, tier, seed)` entries.
-- **Headline summary:**
+- **Post-hoc seed lock and pre-registered extensions (`docs/reports/gap.md`, commits `8fd4dec`, `671ed96`, `f9fb7a4a`, `cf394894`, `eb9dee54`):** The `justSilas` committed dev set (`seeds 0-29`, `n=30` per tier in `data/runs/committed/v1.4/`) is the locked **PRIMARY** headline result (`671ed96` came 28 s after `8fd4dec`, so it is a post-hoc lock against later reruns and cherry-picking, not a pre-registration). By contrast, the G1 `opencode-gemini-4-carbon-ext` hard extension (`seeds 34, 37`, `n=2` completed before early quota stop, pre-registered in `f9fb7a4a`) and the second frontier family `gpt-5.5` (`v1.4` hard `seeds 0-29`, OpenCode `1.19.5`, pre-registered in `cf394894`, `0` committed v1.4 episodes at `58716742`) were pre-registered before any episode launched. All FR8 episodes under `results/frontier_replication/v1.4/` are evaluated separately; when G1 and FR8 `30-59` hard runs are reconciled into the deduplicated 6-seed union (`seeds 30, 34, 37, 42, 45, 57`, `n=6`), shared seed `34` deterministically uses committed `opencode-gemini-4-carbon-ext` (`eb9dee54`, never double-counting a repeated `(tier, seed)`).
+- **Replay verification (`scripts/verify_replay.py`, commit `1bc3e281` compatibility) and solver `30-59` parity:** `442/442` episodes verified in `data/runs/committed/v1.4/` (`60` primary OpenCode carbon, `2` G1 carbon-ext, `60` in-process carbon, `30` OpenCode flash hard, `90` solver, `200` baselines) and `305/305` episodes verified in `results/frontier_replication/v1.4/` (`5` OpenCode carbon hard, `30` OpenCode flash medium, `270` reference solver and baselines on hard `seeds 30-59`), with `0` mismatches and `0` intra-cohort duplicates across all `747` episodes (including `517` committed and `348` replication pre-`1bc3e281` tool-error steps recorded before `data.detail` was added). Furthermore, `solver-hard-seeds30to59` matches `30/30` (`0` mismatches on `score`, `accused`, `correct`, and `final_day`) between `data/runs/committed/v1.4/reference/` and `results/frontier_replication/v1.4/reference/`.
+- **Headline and reconciled extension summary:**
   - **Primary `0-29` (`n=30`, locked headline):** `opencode:google/gemini-4-carbon` on hard scores `0.322 +/- 0.199` vs solver `0.499`, giving **65% [24%, 98%]** raw and **72% [52%, 91%]** luck-adjusted; on medium (`n=30`) it reaches `111% [99%, 127%]` raw and `101% [85%, 119%]` luck-adjusted.
-  - **Replication hard (`seeds 30, 34, 42, 45, 57`, `n=5`, separate cohort):** `opencode:google/gemini-4-carbon` scores `0.656 +/- 0.110` (5/5 correct, mean `P(accused) = 0.89`, luck-adjusted `0.472`) vs solver `0.248` raw (luck-adjusted `0.430`, ratio `110% [58%, 179%]`).
-  - **Secondary pooled sensitivity (`n=35`, secondary under post-hoc seed lock `671ed96`):** Pooling primary `0-29` with replication `30, 34, 42, 45, 57` yields `80% [42%, 124%]` raw and **77% [58%, 96%]** luck-adjusted, where the luck-adjusted 95% CI `[58%, 96%]` continues to exclude parity.
+  - **Reconciled `30-59` hard extensions (`n=2` G1, `n=5` FR8, `n=6` deduplicated union, separate cohorts):** Committed G1 (`seeds 34, 37`, `n=2`) scores `0.745 +/- 0.088` vs solver `0.735` (`101% [91%, 113%]` raw, `109% [105%, 114%]` luck-adjusted); FR8 replication (`seeds 30, 34, 42, 45, 57`, `n=5`) scores `0.656 +/- 0.110` (5/5 correct, luck-adjusted `0.472`) vs solver `0.248` raw (`110% [58%, 179%]` luck-adjusted); and the deduplicated 6-seed union (`seeds 30, 34, 37, 42, 45, 57`, `n=6`, committed G1 on shared seed `34`) scores `0.658 +/- 0.085` vs solver `0.335` (`197% [104%, 2141%]` raw, `129% [109%, 162%]` luck-adjusted; FR8 seed-34 tie-break: `109% [66%, 160%]`).
+  - **Secondary pooled hard sensitivity (`n=32`, `n=35`, `n=36`, secondary under post-hoc seed lock `671ed96`):** Pooling primary `0-29` with G1 (`n=32`, matching `README.md` / `docs/reports/gap.md`) gives `68% [32%, 100%]` raw and **75% [56%, 93%]** luck-adjusted; pooling with FR8 (`n=35`) gives `80% [42%, 124%]` raw and **77% [58%, 96%]** luck-adjusted; and pooling with the deduplicated 6-seed union (`n=36`, `0` duplicate seeds) gives `80% [44%, 122%]` raw and **81% [62%, 99%]** luck-adjusted (`post_expected_hi = 0.987 < 1.000`; FR8 seed-34 tie-break: `78% [59%, 96%]`). Across all secondary pooled sets (`n=32`, `n=35`, `n=36`), the luck-adjusted 95% CI continues to exclude parity.
   - **Cross-model replication (`gemini-3.5-flash` medium `n=30`, separate FR8 replication cohort):** On medium (`n=30` shared seeds `0-29`), `opencode:google/gemini-3.5-flash` reaches `67% [29%, 103%]` raw / `75% [45%, 105%]` luck-adjusted (`gemini-4-carbon - gemini-3.5-flash = +0.279 +/- 0.231` V raw, `+0.167 +/- 0.186` V luck-adjusted). `docs/reports/gap.md` is the sole source for primary `hard` (`0-29`) gap rows; `opencode:google/gemini-3.5-flash` hard is replay-verified in `committed_v14` (`442/442`) and omitted from tables here until `docs/reports/gap.md` ships it.
 
 ## 2. Primary Committed v1.4 Cohort (Seeds 0-29, Locked Headline)
 
-Exact reproduction of `docs/reports/gap.md` rows in `data/runs/committed/v1.4/` (`scripts/paired_gemini.py --version v1.4 --seeds 0-29`):
+Exact reproduction of `docs/reports/gap.md` rows in `data/runs/committed/v1.4/` (`scripts/paired_gemini.py --version v1.4 --seeds 0-29`; solver `0-29` spans `solver-*-20261114-121126` for `0-19` plus `solver-*-seeds20to29` for `20-29`):
 
 | tier | run | n | score +/- 95% CI | accuracy | accused | mean accuse day | mean P(accused) | solver, same seeds | frontier / solver [95% CI] | paired diff +/- CI | luck-adjusted score | luck-adj. / solver [95% CI] |
 |---|---|---:|---|---:|---:|---:|---:|---:|---|---|---|---|
@@ -45,11 +45,20 @@ Exact reproduction of `docs/reports/gap.md` rows in `data/runs/committed/v1.4/` 
 
 Note on `stop_early` provenance: the `data/runs/committed/v1.4/reference/stop_early-*` episodes (`seeds 0-19`) were recorded under the earlier day-1 random accusation baseline (now named `guess_day1`), whereas current `stop_early` (`StopEarlyQuit` in `canary/baselines.py`, used in `seeds 30-59` below) stops on day 1 without accusing and scores `0.000`.
 
-## 3. Cohort (a): gemini-4-carbon Hard Replication (Seeds 30, 34, 42, 45, 57) and Seeds 30-59 Baselines
+## 3. Cohort (a): Reconciled Seeds 30-59 Hard Extensions (G1 n=2, FR8 n=5, Deduplicated Union n=6) and Baselines
 
-### 3.1 Paired 5-Seed Hard Replication Cohort (`seeds 30, 34, 42, 45, 57`, `n=5`)
+### 3.1 Committed G1 Partial Hard Extension (`seeds 34, 37`, `n=2`, Pre-Registered in `f9fb7a4a`)
 
-`5` completed `opencode:google/gemini-4-carbon` episodes in `results/frontier_replication/v1.4/opencode-gemini-4-carbon/` (25 seeds in `30-59` remain pending), paired on the exact same 5 seeds against `results/frontier_replication/v1.4/reference/solver-hard-seeds30to59` and all 8 non-solver baselines:
+`2` valid episodes completed in `data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard` before the run was stopped early to preserve shared carbon quota for the Harbor rehearsal (28 seeds in `30-59` stopped on `infra:provider_quota`), paired on `[34, 37]` against `data/runs/committed/v1.4/reference/solver-hard-seeds30to59`:
+
+| run | n | score +/- 95% CI | accuracy | accused | mean accuse day | mean P(accused) | solver, same seeds | frontier / solver [95% CI] | paired diff +/- CI | luck-adjusted score | luck-adj. / solver [95% CI] |
+|---|---:|---|---:|---:|---:|---:|---:|---|---|---|---|
+| OpenCode + gemini-4-carbon over MCP, extension (seeds 30-59) | 2 | 0.745 +/- 0.088 | 1.00 | 1.00 | 5.5 | 0.98 | 0.735 | 101% [91%, 113%] | +0.010 +/- 0.157 | 0.710 | **109% [105%, 114%]** |
+| reference solver (same 2 seeds) | 2 | 0.735 +/- 0.069 | 1.00 | 1.00 | 5.5 | 0.95 | 0.735 | n/a | n/a | 0.649 | n/a |
+
+### 3.2 FR8 Hard Replication Cohort (`seeds 30, 34, 42, 45, 57`, `n=5`)
+
+`5` completed `opencode:google/gemini-4-carbon` episodes in `results/frontier_replication/v1.4/opencode-gemini-4-carbon/` (25 seeds in `30-59` remain pending in FR8), paired on the exact same 5 seeds against `results/frontier_replication/v1.4/reference/solver-hard-seeds30to59` and all 8 non-solver baselines:
 
 | run | n | score +/- 95% CI | accuracy | accused | mean accuse day | mean P(accused) | solver, same seeds | frontier / solver [95% CI] | paired diff +/- CI | luck-adjusted score | luck-adj. / solver [95% CI] |
 |---|---:|---|---:|---:|---:|---:|---:|---|---|---|---|
@@ -72,11 +81,41 @@ Per-seed inspection on `[30, 34, 42, 45, 57]` explains why the raw 5-seed ratio 
 | 34 | +0.820 | True | 8 | 0.650 | +0.183 | +0.700 | True | 6 | 0.978 | +0.663 | +0.000 | +0.000 |
 | 42 | +0.570 | True | 12 | 0.969 | +0.521 | +0.510 | True | 10 | 0.997 | +0.505 | +0.150 | +0.086 |
 | 45 | +0.590 | True | 16 | 0.973 | +0.547 | +0.490 | True | 11 | 0.955 | +0.423 | +0.530 | +0.530 |
-| 57 | +0.760 | True | 8 | 0.970 | +0.707 | +0.540 | True | 8 | 0.899 | +0.384 | +0.170 | +0.089 |
+| 57 | +0.760 | True | 8 | 0.970 | +0.707 | +0.540 | True | 8 | 0.899 | +0.385 | +0.170 | +0.089 |
 
-### 3.2 Full Hard Extension Reference and Baselines (`seeds 30-59`, `n=30`)
+### 3.3 Deduplicated 6-Seed Hard Extension Union (`seeds 30, 34, 37, 42, 45, 57`, `n=6`, `eb9dee54`) and Seed-34 Comparison
 
-Across the full 30-seed extension block (`results/frontier_replication/v1.4/reference/*-hard-seeds30to59`), the reference solver averages `0.498 +/- 0.156` (`0.542` luck-adjusted), matching its `0-29` mean (`0.499 +/- 0.119`), while all 8 non-solver baselines remain well below solver parity on luck-adjusted value:
+Combining G1 (`seeds 34, 37`) and FR8 (`seeds 30, 34, 42, 45, 57`) covers `6` unique seeds in `30-59` (`30, 34, 37, 42, 45, 57`, with `24` seeds in `30-59` still unplayed). Seed `34` was played independently in both G1 and FR8; per `eb9dee54` (never double-count a repeated `(tier, seed)` when pooling), the canonical union deterministically selects the committed G1 episode (`1` duplicate episode dropped), with the FR8 tie-break shown alongside for sensitivity:
+
+| run | n | score +/- 95% CI | accuracy | accused | mean accuse day | mean P(accused) | solver, same seeds | frontier / solver [95% CI] | paired diff +/- CI | luck-adjusted score | luck-adj. / solver [95% CI] |
+|---|---:|---|---:|---:|---:|---:|---:|---|---|---|---|
+| OpenCode + gemini-4-carbon over MCP (deduplicated union seeds 30, 34, 37, 42, 45, 57; committed G1 on seed 34) | 6 | 0.658 +/- 0.085 | 1.00 | 1.00 | 9.7 | 0.96 | 0.335 | 197% [104%, 2141%] | +0.323 +/- 0.483 | 0.599 | **129% [109%, 162%]** |
+| OpenCode + gemini-4-carbon over MCP (union sensitivity: FR8 tie-break on seed 34, seeds 30, 34, 37, 42, 45, 57) | 6 | 0.663 +/- 0.091 | 1.00 | 1.00 | 10.2 | 0.91 | 0.335 | 198% [104%, 2159%] | +0.328 +/- 0.481 | 0.504 | **109% [66%, 160%]** |
+| reference solver (same 6 seeds) | 6 | 0.335 +/- 0.531 | 0.83 | 1.00 | 9.7 | 0.94 | 0.335 | n/a | n/a | 0.464 | n/a |
+| grok_tactics (same 6 seeds) | 6 | 0.190 +/- 0.160 | 0.67 | 0.67 | 12.2 | 0.96 | 0.335 | 57% [18%, 640%] | -0.145 +/- 0.488 | 0.155 | **33% [7%, 73%]** |
+
+Side-by-side reconciliation on shared seed `34` (true mole `e29`):
+
+| cohort / run | source | score | correct | accused | final day | P(accused) | luck-adjusted score |
+|---|---|---:|---|---|---:|---:|---:|
+| Committed G1 (selected for union) | `data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard` | +0.790 | True | `e29` | 5 | 0.979 | +0.752 |
+| FR8 replication (tie-break sensitivity) | `results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s34` | +0.820 | True | `e29` | 8 | 0.650 | +0.183 |
+| Reference solver | `data/runs/committed/v1.4/reference/solver-hard-seeds30to59` | +0.700 | True | `e29` | 6 | 0.978 | +0.663 |
+
+Per-seed breakdown across all `6` unique seeds in the deduplicated `30-59` union:
+
+| seed | union source | carbon score | carbon correct | carbon day | carbon P(accused) | carbon luck-adj. | solver score | solver correct | solver day | solver luck-adj. | grok_tactics score | grok_tactics luck-adj. |
+|---:|---|---:|---|---:|---:|---:|---:|---|---:|---:|---:|---:|
+| 30 | `fr8_replication` | +0.540 | True | 11 | 0.909 | +0.400 | -1.000 | False | 18 | +0.175 | +0.000 | +0.000 |
+| 34 | `committed_g1` | +0.790 | True | 5 | 0.979 | +0.752 | +0.700 | True | 6 | +0.663 | +0.000 | +0.000 |
+| 37 | `committed_g1` | +0.700 | True | 6 | 0.981 | +0.668 | +0.770 | True | 5 | +0.635 | +0.290 | +0.226 |
+| 42 | `fr8_replication` | +0.570 | True | 12 | 0.969 | +0.521 | +0.510 | True | 10 | +0.505 | +0.150 | +0.086 |
+| 45 | `fr8_replication` | +0.590 | True | 16 | 0.973 | +0.547 | +0.490 | True | 11 | +0.423 | +0.530 | +0.530 |
+| 57 | `fr8_replication` | +0.760 | True | 8 | 0.970 | +0.707 | +0.540 | True | 8 | +0.385 | +0.170 | +0.089 |
+
+### 3.4 Full Hard Extension Reference and Baselines (`seeds 30-59`, `n=30`) and Solver Parity (`30/30`)
+
+Exact `30/30` per-seed parity (`score`, `accused`, `correct`, `final_day`) holds between `data/runs/committed/v1.4/reference/solver-hard-seeds30to59` and `results/frontier_replication/v1.4/reference/solver-hard-seeds30to59`. Across all 30 extension seeds (`30-59`), the reference solver averages `0.498 +/- 0.156` (`0.542` luck-adjusted), matching its `0-29` mean (`0.499 +/- 0.119`), while all 8 non-solver baselines remain well below solver parity on luck-adjusted value:
 
 | run | n | score +/- 95% CI | accuracy | accused | mean accuse day | mean P(accused) | solver, same seeds | frontier / solver [95% CI] | paired diff +/- CI | luck-adjusted score | luck-adj. / solver [95% CI] |
 |---|---:|---|---:|---:|---:|---:|---:|---|---|---|---|
@@ -90,14 +129,19 @@ Across the full 30-seed extension block (`results/frontier_replication/v1.4/refe
 | guess_day1 (seeds 30-59) | 30 | -1.000 +/- 0.000 | 0.00 | 1.00 | 1.0 | 0.03 | 0.498 | -201% [-306%, -159%] | -1.498 +/- 0.156 | -0.950 | **-175% [-199%, -159%]** |
 | restrict_all (seeds 30-59) | 30 | -1.000 +/- 0.000 | 0.00 | 1.00 | 9.0 | 0.01 | 0.498 | -201% [-306%, -159%] | -1.498 +/- 0.156 | -0.993 | **-183% [-208%, -166%]** |
 
-## 4. Cohort (b): Secondary Pooled Hard Sensitivity Row (`n=35`)
+## 4. Cohort (b): Secondary Pooled Hard Sensitivity Reconciliation (`n=32`, `n=35`, `n=36`)
 
-**SECONDARY SENSITIVITY ONLY (NOT THE HEADLINE):** Per the post-hoc seed lock (`docs/reports/gap.md`, commit `671ed96`), the `n=30` (`seeds 0-29`) result remains the primary headline (`65% [24%, 98%]` raw, `72% [52%, 91%]` luck-adjusted). Pooling the 30 primary episodes with the 5 non-overlapping replication episodes (`seeds 30, 34, 42, 45, 57`, total `n=35`) provides a secondary sensitivity check:
+**SECONDARY SENSITIVITY ONLY (NOT THE HEADLINE):** Per the post-hoc seed lock (`docs/reports/gap.md`, commit `671ed96`), the `n=30` (`seeds 0-29`) result remains the primary headline (`65% [24%, 98%]` raw, `72% [52%, 91%]` luck-adjusted). Reconciling all non-overlapping pooled combinations with primary `0-29` (`n=32` with committed G1 `34, 37`, `n=35` with FR8 `30, 34, 42, 45, 57`, and `n=36` with the deduplicated 6-seed union `30, 34, 37, 42, 45, 57`, `0` duplicate seeds in every pool) shows that every luck-adjusted 95% CI continues to exclude parity (`post_expected_hi` = `0.935`, `0.959`, and `0.987`, all `< 1.000`):
 
 | run | n | score +/- 95% CI | accuracy | accused | mean accuse day | mean P(accused) | solver, same seeds | frontier / solver [95% CI] | paired diff +/- CI | luck-adjusted score | luck-adj. / solver [95% CI] |
 |---|---:|---|---:|---:|---:|---:|---:|---|---|---|---|
+| OpenCode + gemini-4-carbon over MCP, pooled (primary + extension) | 32 | 0.349 +/- 0.190 | 0.84 | 0.97 | 12.7 | 0.89 | 0.514 | 68% [32%, 100%] | -0.165 +/- 0.182 | 0.381 | **75% [56%, 93%]** |
+| reference solver (same 32 seeds) | 32 | 0.514 +/- 0.114 | 0.97 | 1.00 | 10.3 | 0.96 | 0.514 | n/a | n/a | 0.509 | n/a |
 | SECONDARY sensitivity: OpenCode + gemini-4-carbon hard pooled (0-29 primary + 30, 34, 42, 45, 57 replication) | 35 | 0.370 +/- 0.175 | 0.86 | 0.97 | 12.9 | 0.88 | 0.463 | 80% [42%, 124%] | -0.093 +/- 0.193 | 0.376 | **77% [58%, 96%]** |
 | reference solver (same 35 seeds) | 35 | 0.463 +/- 0.133 | 0.94 | 1.00 | 10.6 | 0.96 | 0.463 | n/a | n/a | 0.489 | n/a |
+| SECONDARY sensitivity: OpenCode + gemini-4-carbon hard pooled (0-29 primary + deduplicated union 30, 34, 37, 42, 45, 57; committed G1 seed 34) | 36 | 0.378 +/- 0.171 | 0.86 | 0.97 | 12.6 | 0.90 | 0.472 | 80% [44%, 122%] | -0.093 +/- 0.188 | 0.399 | **81% [62%, 99%]** |
+| SECONDARY sensitivity: OpenCode + gemini-4-carbon hard pooled (0-29 primary + union 30, 34, 37, 42, 45, 57; FR8 seed 34 tie-break) | 36 | 0.379 +/- 0.171 | 0.86 | 0.97 | 12.7 | 0.89 | 0.472 | 80% [44%, 122%] | -0.092 +/- 0.188 | 0.384 | **78% [59%, 96%]** |
+| reference solver (same 36 seeds) | 36 | 0.472 +/- 0.130 | 0.94 | 1.00 | 10.4 | 0.96 | 0.472 | n/a | n/a | 0.493 | n/a |
 
 ## 5. Cohort (c): gemini-3.5-flash Medium Replication (`n=30`) and Capability Ordering
 

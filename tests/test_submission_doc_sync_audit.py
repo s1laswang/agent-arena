@@ -65,6 +65,19 @@ REQUIRED_AUDIT_TOKENS = (
     "tests/test_arena_share_and_bundle.py",
     "origin/g2-families",
     "8911130e",
+    "c5bc8c97",
+    "984f7e06",
+    "frontier_ext30to59_selection_sensitivity.md",
+    "analyze_ext30to59_selection.py",
+    "origin/vaishnav/windows-clone",
+    "51334799",
+    "c81b057d",
+    "4acdc9ec",
+    "162796ac",
+    "6c771968",
+    "9225f2ad",
+    "afterquery-submit",
+    "e578da72",
 )
 
 

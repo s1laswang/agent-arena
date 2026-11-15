@@ -1,0 +1,4092 @@
+{
+ "generated_from_git_sha": "587167429aabe85fdf53786cb78c47b272ea0325",
+ "summary": {
+  "scenarios_count": 62,
+  "tiers": [
+   "medium",
+   "hard"
+  ],
+  "total_episodes": 587,
+  "ladder_episodes": 550,
+  "playable_12_scenarios_count": 11,
+  "decision_contrast_count": 22,
+  "models": [
+   "gemini-3.1-flash-lite",
+   "gemini-3.5-flash",
+   "gemini-3.8-flash",
+   "gemini-4-hydrogen",
+   "gemini-4-argon",
+   "gemini-4-carbon"
+  ],
+  "levels": [
+   "minimal",
+   "low",
+   "medium",
+   "high",
+   "xhigh"
+  ],
+  "dominant_failure_tag_totals": {
+   "premature_accusation": 194,
+   "uninformative_canary": 116,
+   "ignored_delay": 4,
+   "over_restriction": 16
+  },
+  "best_showcase_scenarios": [
+   "medium:0",
+   "hard:3",
+   "hard:1",
+   "hard:18",
+   "hard:8",
+   "hard:5",
+   "hard:4",
+   "hard:9",
+   "hard:0",
+   "medium:6",
+   "medium:3",
+   "hard:6"
+  ]
+ },
+ "scenarios": {
+  "medium:0": {
+   "key": "medium:0",
+   "tier": "medium",
+   "seed": 0,
+   "in_playable_12": false,
+   "solver_score": 0.74,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.0,
+    "low": 0.666667,
+    "medium": 1.0,
+    "high": 0.666667,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -1.0,
+    "low": 0.105,
+    "medium": 0.714,
+    "high": 0.093333,
+    "xhigh": 0.84
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.843666,
+    "low": 0.465319,
+    "medium": 0.356581,
+    "high": 0.472102,
+    "xhigh": 1.077075
+   },
+   "ladder_spread": 1.84,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 10,
+    "uninformative_canary": 1,
+    "ignored_delay": 1,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/medium/0",
+     "key": "gemini-3.1-flash-lite/minimal/medium/0",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/medium/0",
+     "key": "gemini-3.1-flash-lite/medium/medium/0",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": 0.73,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/medium/0",
+     "key": "gemini-4-carbon/high/medium/0",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.78,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 1
+  },
+  "medium:1": {
+   "key": "medium:1",
+   "tier": "medium",
+   "seed": 1,
+   "in_playable_12": true,
+   "solver_score": 0.39,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.833333,
+    "medium": 1.0,
+    "high": 0.833333,
+    "xhigh": 0.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.11,
+    "low": 0.523333,
+    "medium": 0.648,
+    "high": 0.616667,
+    "xhigh": 0.0
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.75485,
+    "low": 0.121096,
+    "medium": 0.334681,
+    "high": 0.211484,
+    "xhigh": 0.068549
+   },
+   "ladder_spread": 0.758,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 4,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/medium/1",
+     "key": "gemini-3.1-flash-lite/minimal/medium/1",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/medium/1",
+     "key": "gemini-3.1-flash-lite/medium/medium/1",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": 0.71,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/medium/1",
+     "key": "gemini-3.5-flash/high/medium/1",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.84,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 18
+  },
+  "medium:2": {
+   "key": "medium:2",
+   "tier": "medium",
+   "seed": 2,
+   "in_playable_12": true,
+   "solver_score": 0.8,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.833333,
+    "medium": 0.6,
+    "high": 0.833333,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.1,
+    "low": 0.383333,
+    "medium": 0.06,
+    "high": 0.525,
+    "xhigh": 0.7
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.834613,
+    "low": 0.693985,
+    "medium": 0.373255,
+    "high": 0.240811,
+    "xhigh": 0.000387
+   },
+   "ladder_spread": 0.8,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 10,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 2
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/medium/2",
+     "key": "gemini-3.1-flash-lite/minimal/medium/2",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/medium/2",
+     "key": "gemini-3.1-flash-lite/medium/medium/2",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/medium/2",
+     "key": "gemini-4-carbon/high/medium/2",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.86,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 17
+  },
+  "medium:3": {
+   "key": "medium:3",
+   "tier": "medium",
+   "seed": 3,
+   "in_playable_12": false,
+   "solver_score": 0.6,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.5,
+    "medium": 0.4,
+    "high": 0.833333,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.16,
+    "low": -0.183333,
+    "medium": 0.06,
+    "high": 0.318333,
+    "xhigh": 0.71
+   },
+   "mean_regret_by_level": {
+    "minimal": 1.440271,
+    "low": 0.843593,
+    "medium": 0.526648,
+    "high": 0.636249,
+    "xhigh": 0.016959
+   },
+   "ladder_spread": 0.893333,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 13,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 1
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/medium/3",
+     "key": "gemini-3.1-flash-lite/minimal/medium/3",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/medium/3",
+     "key": "gemini-3.1-flash-lite/medium/medium/3",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/medium/3",
+     "key": "gemini-4-carbon/high/medium/3",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.43,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    }
+   ],
+   "showcase_rank": 11
+  },
+  "medium:4": {
+   "key": "medium:4",
+   "tier": "medium",
+   "seed": 4,
+   "in_playable_12": true,
+   "solver_score": 0.69,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.666667,
+    "medium": 0.6,
+    "high": 0.833333,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.175,
+    "low": 0.1,
+    "medium": -0.022,
+    "high": 0.408333,
+    "xhigh": 0.69
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.911424,
+    "low": 0.450918,
+    "medium": 0.470683,
+    "high": 0.24174,
+    "xhigh": 0.033634
+   },
+   "ladder_spread": 0.865,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 7,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 1
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/medium/4",
+     "key": "gemini-3.1-flash-lite/minimal/medium/4",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/medium/4",
+     "key": "gemini-3.1-flash-lite/medium/medium/4",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/medium/4",
+     "key": "gemini-4-carbon/high/medium/4",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.73,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 13
+  },
+  "medium:5": {
+   "key": "medium:5",
+   "tier": "medium",
+   "seed": 5,
+   "in_playable_12": false,
+   "solver_score": 0.79,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.833333,
+    "medium": 0.8,
+    "high": 0.833333,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.235,
+    "low": 0.446667,
+    "medium": 0.322,
+    "high": 0.366667,
+    "xhigh": 0.51
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.848148,
+    "low": 0.500728,
+    "medium": 0.674429,
+    "high": 0.536249,
+    "xhigh": 0.017949
+   },
+   "ladder_spread": 0.745,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 10,
+    "uninformative_canary": 2,
+    "ignored_delay": 1,
+    "over_restriction": 1
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/medium/5",
+     "key": "gemini-3.1-flash-lite/minimal/medium/5",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/medium/5",
+     "key": "gemini-3.1-flash-lite/medium/medium/5",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/medium/5",
+     "key": "gemini-4-carbon/high/medium/5",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.77,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 19
+  },
+  "medium:6": {
+   "key": "medium:6",
+   "tier": "medium",
+   "seed": 6,
+   "in_playable_12": true,
+   "solver_score": 0.79,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.833333,
+    "medium": 0.6,
+    "high": 0.833333,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.175,
+    "low": 0.411667,
+    "medium": 0.04,
+    "high": 0.426667,
+    "xhigh": 0.75
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.814306,
+    "low": 0.845905,
+    "medium": 0.660758,
+    "high": 0.273952,
+    "xhigh": 0.002344
+   },
+   "ladder_spread": 0.925,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 9,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/medium/6",
+     "key": "gemini-3.1-flash-lite/minimal/medium/6",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/medium/6",
+     "key": "gemini-3.1-flash-lite/medium/medium/6",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/medium/6",
+     "key": "gemini-4-carbon/high/medium/6",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.78,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 10
+  },
+  "medium:7": {
+   "key": "medium:7",
+   "tier": "medium",
+   "seed": 7,
+   "in_playable_12": false,
+   "solver_score": 0.82,
+   "episode_count": 19,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 1.0,
+    "low": 0.666667,
+    "medium": 0.75,
+    "high": 0.6,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": 0.795,
+    "low": 0.251667,
+    "medium": 0.2625,
+    "high": -0.014,
+    "xhigh": 0.79
+   },
+   "mean_regret_by_level": {
+    "minimal": 1.162516,
+    "low": 0.581368,
+    "medium": 0.664429,
+    "high": 0.7436,
+    "xhigh": 0.0
+   },
+   "ladder_spread": 0.809,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 10,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/low/medium/7",
+     "key": "gemini-3.1-flash-lite/low/medium/7",
+     "model": "gemini-3.1-flash-lite",
+     "level": "low",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/medium/7",
+     "key": "gemini-3.1-flash-lite/medium/medium/7",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/medium/7",
+     "key": "gemini-4-carbon/high/medium/7",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.5,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    }
+   ],
+   "showcase_rank": 15
+  },
+  "medium:8": {
+   "key": "medium:8",
+   "tier": "medium",
+   "seed": 8,
+   "in_playable_12": true,
+   "solver_score": 0.88,
+   "episode_count": 20,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.666667,
+    "medium": 0.8,
+    "high": 0.833333
+   },
+   "mean_score_by_level": {
+    "minimal": -0.05,
+    "low": 0.388333,
+    "medium": 0.46,
+    "high": 0.51
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.882999,
+    "low": 0.096026,
+    "medium": 0.381934,
+    "high": 0.183827
+   },
+   "ladder_spread": 0.56,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 4,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/medium/8",
+     "key": "gemini-3.1-flash-lite/minimal/medium/8",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/medium/8",
+     "key": "gemini-3.1-flash-lite/medium/medium/8",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/medium/8",
+     "key": "gemini-4-carbon/high/medium/8",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.85,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 22
+  },
+  "medium:9": {
+   "key": "medium:9",
+   "tier": "medium",
+   "seed": 9,
+   "in_playable_12": true,
+   "solver_score": 0.8,
+   "episode_count": 20,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.666667,
+    "medium": 0.8,
+    "high": 0.833333
+   },
+   "mean_score_by_level": {
+    "minimal": -0.155,
+    "low": 0.316667,
+    "medium": 0.318,
+    "high": 0.42
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.85188,
+    "low": 0.476134,
+    "medium": 0.494374,
+    "high": 0.349962
+   },
+   "ladder_spread": 0.575,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 7,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 1
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/medium/9",
+     "key": "gemini-3.1-flash-lite/minimal/medium/9",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/medium/9",
+     "key": "gemini-3.1-flash-lite/medium/medium/9",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/medium/9",
+     "key": "gemini-4-carbon/high/medium/9",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.69,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 21
+  },
+  "medium:10": {
+   "key": "medium:10",
+   "tier": "medium",
+   "seed": 10,
+   "in_playable_12": false,
+   "solver_score": 0.69,
+   "episode_count": 8,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 1.0,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "low": 0.75,
+    "medium": 0.695,
+    "high": 0.725,
+    "xhigh": 0.64
+   },
+   "mean_regret_by_level": {
+    "low": 0.426523,
+    "medium": 0.007223,
+    "high": 0.004599,
+    "xhigh": 0.00558
+   },
+   "ladder_spread": 0.11,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-hydrogen/low/medium/10",
+     "key": "gemini-4-hydrogen/low/medium/10",
+     "model": "gemini-4-hydrogen",
+     "level": "low",
+     "score": 0.71,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/medium/10",
+     "key": "gemini-3.5-flash/medium/medium/10",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.77,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/medium/10",
+     "key": "gemini-3.5-flash/high/medium/10",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.82,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 51
+  },
+  "medium:11": {
+   "key": "medium:11",
+   "tier": "medium",
+   "seed": 11,
+   "in_playable_12": false,
+   "solver_score": 0.84,
+   "episode_count": 9,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 1.0,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "low": 0.795,
+    "medium": 0.845,
+    "high": 0.6825,
+    "xhigh": 0.79
+   },
+   "mean_regret_by_level": {
+    "low": 0.01125,
+    "medium": 0.0126,
+    "high": 0.077011,
+    "xhigh": 0.00131
+   },
+   "ladder_spread": 0.1625,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/medium/11",
+     "key": "gemini-4-argon/low/medium/11",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.69,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/medium/11",
+     "key": "gemini-4-argon/medium/medium/11",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.74,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-hydrogen/xhigh/medium/11",
+     "key": "gemini-4-hydrogen/xhigh/medium/11",
+     "model": "gemini-4-hydrogen",
+     "level": "xhigh",
+     "score": 0.79,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 45
+  },
+  "medium:12": {
+   "key": "medium:12",
+   "tier": "medium",
+   "seed": 12,
+   "in_playable_12": false,
+   "solver_score": 0.67,
+   "episode_count": 6,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "low": 0.55,
+    "medium": 0.66,
+    "high": 0.753333
+   },
+   "mean_regret_by_level": {
+    "low": 0.801762,
+    "medium": 0.023071,
+    "high": 0.034211
+   },
+   "ladder_spread": 0.203333,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/medium/12",
+     "key": "gemini-4-argon/low/medium/12",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.55,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/medium/12",
+     "key": "gemini-4-argon/medium/medium/12",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.74,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/medium/12",
+     "key": "gemini-3.5-flash/high/medium/12",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.83,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 27
+  },
+  "medium:13": {
+   "key": "medium:13",
+   "tier": "medium",
+   "seed": 13,
+   "in_playable_12": false,
+   "solver_score": 0.79,
+   "episode_count": 8,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 0.666667
+   },
+   "mean_score_by_level": {
+    "low": 0.705,
+    "medium": 0.76,
+    "high": 0.186667
+   },
+   "mean_regret_by_level": {
+    "low": 0.134217,
+    "medium": 0.001847,
+    "high": 0.03116
+   },
+   "ladder_spread": 0.573333,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/medium/13",
+     "key": "gemini-4-argon/low/medium/13",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.61,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/medium/13",
+     "key": "gemini-4-argon/medium/medium/13",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.78,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/medium/13",
+     "key": "gemini-3.5-flash/high/medium/13",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.78,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 34
+  },
+  "medium:14": {
+   "key": "medium:14",
+   "tier": "medium",
+   "seed": 14,
+   "in_playable_12": false,
+   "solver_score": 0.69,
+   "episode_count": 6,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "low": 0.81,
+    "medium": 0.64,
+    "high": 0.74
+   },
+   "mean_regret_by_level": {
+    "low": 0.0,
+    "medium": 0.049004,
+    "high": 0.029327
+   },
+   "ladder_spread": 0.17,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 1
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/medium/14",
+     "key": "gemini-4-argon/low/medium/14",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.81,
+     "correct": true,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/medium/14",
+     "key": "gemini-4-argon/medium/medium/14",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.54,
+     "correct": true,
+     "primary_failure_tag": "over_restriction"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.8-flash/high/medium/14",
+     "key": "gemini-3.8-flash/high/medium/14",
+     "model": "gemini-3.8-flash",
+     "level": "high",
+     "score": 0.85,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 44
+  },
+  "medium:15": {
+   "key": "medium:15",
+   "tier": "medium",
+   "seed": 15,
+   "in_playable_12": false,
+   "solver_score": 0.7,
+   "episode_count": 6,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 0.666667
+   },
+   "mean_score_by_level": {
+    "low": 0.5,
+    "medium": 0.565,
+    "high": 0.123333
+   },
+   "mean_regret_by_level": {
+    "low": 0.064625,
+    "medium": 0.050472,
+    "high": 0.503138
+   },
+   "ladder_spread": 0.441667,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/medium/15",
+     "key": "gemini-4-argon/low/medium/15",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.5,
+     "correct": true,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/medium/15",
+     "key": "gemini-3.5-flash/medium/medium/15",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.69,
+     "correct": true,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.8-flash/high/medium/15",
+     "key": "gemini-3.8-flash/high/medium/15",
+     "model": "gemini-3.8-flash",
+     "level": "high",
+     "score": 0.74,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 35
+  },
+  "medium:16": {
+   "key": "medium:16",
+   "tier": "medium",
+   "seed": 16,
+   "in_playable_12": false,
+   "solver_score": 0.74,
+   "episode_count": 6,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "low": 0.73,
+    "medium": 0.635,
+    "high": 0.58
+   },
+   "mean_regret_by_level": {
+    "low": 0.007173,
+    "medium": 0.395424,
+    "high": 0.01468
+   },
+   "ladder_spread": 0.15,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/medium/16",
+     "key": "gemini-4-argon/low/medium/16",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.73,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/medium/16",
+     "key": "gemini-3.5-flash/medium/medium/16",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.57,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/medium/16",
+     "key": "gemini-3.5-flash/high/medium/16",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.62,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 47
+  },
+  "medium:17": {
+   "key": "medium:17",
+   "tier": "medium",
+   "seed": 17,
+   "in_playable_12": false,
+   "solver_score": 0.47,
+   "episode_count": 6,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "low": 0.67,
+    "medium": 0.57,
+    "high": 0.595
+   },
+   "mean_regret_by_level": {
+    "low": 0.115714,
+    "medium": 0.458256,
+    "high": 0.108191
+   },
+   "ladder_spread": 0.1,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 2,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/medium/17",
+     "key": "gemini-4-argon/low/medium/17",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.67,
+     "correct": true,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/medium/17",
+     "key": "gemini-3.5-flash/medium/medium/17",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.46,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/medium/17",
+     "key": "gemini-3.5-flash/high/medium/17",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.73,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 54
+  },
+  "medium:18": {
+   "key": "medium:18",
+   "tier": "medium",
+   "seed": 18,
+   "in_playable_12": false,
+   "solver_score": 0.75,
+   "episode_count": 5,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 0.5
+   },
+   "mean_score_by_level": {
+    "low": 0.48,
+    "medium": 0.715,
+    "high": -0.13
+   },
+   "mean_regret_by_level": {
+    "low": 0.815504,
+    "medium": 0.641443,
+    "high": 0.383846
+   },
+   "ladder_spread": 0.845,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 3,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/medium/18",
+     "key": "gemini-4-argon/low/medium/18",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.48,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/medium/18",
+     "key": "gemini-3.5-flash/medium/medium/18",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.64,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/medium/18",
+     "key": "gemini-3.5-flash/high/medium/18",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.74,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 32
+  },
+  "medium:19": {
+   "key": "medium:19",
+   "tier": "medium",
+   "seed": 19,
+   "in_playable_12": false,
+   "solver_score": 0.7,
+   "episode_count": 5,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "low": 0.66,
+    "medium": 0.585,
+    "high": 0.605
+   },
+   "mean_regret_by_level": {
+    "low": 0.03821,
+    "medium": 0.057035,
+    "high": 0.118983
+   },
+   "ladder_spread": 0.075,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/medium/19",
+     "key": "gemini-4-argon/low/medium/19",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.66,
+     "correct": true,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/medium/19",
+     "key": "gemini-3.5-flash/medium/medium/19",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.62,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.8-flash/high/medium/19",
+     "key": "gemini-3.8-flash/high/medium/19",
+     "model": "gemini-3.8-flash",
+     "level": "high",
+     "score": 0.69,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 56
+  },
+  "medium:20": {
+   "key": "medium:20",
+   "tier": "medium",
+   "seed": 20,
+   "in_playable_12": false,
+   "solver_score": 0.0,
+   "episode_count": 1,
+   "models_present": [
+    "gemini-4-argon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0
+   },
+   "mean_score_by_level": {
+    "low": 0.8
+   },
+   "mean_regret_by_level": {
+    "low": 0.0
+   },
+   "ladder_spread": 0.0,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/medium/20",
+     "key": "gemini-4-argon/low/medium/20",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.8,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 61
+  },
+  "medium:21": {
+   "key": "medium:21",
+   "tier": "medium",
+   "seed": 21,
+   "in_playable_12": false,
+   "solver_score": 0.0,
+   "episode_count": 1,
+   "models_present": [
+    "gemini-4-argon"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.73
+   },
+   "mean_regret_by_level": {
+    "medium": 0.018476
+   },
+   "ladder_spread": 0.0,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/medium/21",
+     "key": "gemini-4-argon/medium/medium/21",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.73,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 62
+  },
+  "hard:0": {
+   "key": "hard:0",
+   "tier": "hard",
+   "seed": 0,
+   "in_playable_12": false,
+   "solver_score": 0.64,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.5,
+    "medium": 0.6,
+    "high": 0.833333,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.39,
+    "low": -0.145,
+    "medium": -0.172,
+    "high": 0.356667,
+    "xhigh": 0.6
+   },
+   "mean_regret_by_level": {
+    "minimal": 1.103642,
+    "low": 0.584136,
+    "medium": 0.774951,
+    "high": 0.325626,
+    "xhigh": 0.070694
+   },
+   "ladder_spread": 0.99,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 7,
+    "uninformative_canary": 5,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/0",
+     "key": "gemini-3.1-flash-lite/minimal/hard/0",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/hard/0",
+     "key": "gemini-3.1-flash-lite/medium/hard/0",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/0",
+     "key": "gemini-4-carbon/high/hard/0",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.64,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 9
+  },
+  "hard:1": {
+   "key": "hard:1",
+   "tier": "hard",
+   "seed": 1,
+   "in_playable_12": true,
+   "solver_score": 0.69,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.0,
+    "low": 1.0,
+    "medium": 0.8,
+    "high": 0.833333,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -1.0,
+    "low": 0.543333,
+    "medium": 0.346,
+    "high": 0.406667,
+    "xhigh": 0.66
+   },
+   "mean_regret_by_level": {
+    "minimal": 1.730017,
+    "low": 0.530549,
+    "medium": 0.449935,
+    "high": 0.347555,
+    "xhigh": 0.012532
+   },
+   "ladder_spread": 1.66,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 6,
+    "uninformative_canary": 7,
+    "ignored_delay": 0,
+    "over_restriction": 1
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/1",
+     "key": "gemini-3.1-flash-lite/minimal/hard/1",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/hard/1",
+     "key": "gemini-3.1-flash-lite/medium/hard/1",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/1",
+     "key": "gemini-4-carbon/high/hard/1",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.71,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 3
+  },
+  "hard:2": {
+   "key": "hard:2",
+   "tier": "hard",
+   "seed": 2,
+   "in_playable_12": false,
+   "solver_score": 0.58,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.833333,
+    "medium": 0.6,
+    "high": 0.666667,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.25,
+    "low": 0.22,
+    "medium": -0.062,
+    "high": -0.011667,
+    "xhigh": 0.61
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.869426,
+    "low": 0.3401,
+    "medium": 0.321419,
+    "high": 0.424261,
+    "xhigh": 0.046852
+   },
+   "ladder_spread": 0.86,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 5,
+    "uninformative_canary": 6,
+    "ignored_delay": 1,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/2",
+     "key": "gemini-3.1-flash-lite/minimal/hard/2",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/hard/2",
+     "key": "gemini-3.1-flash-lite/medium/hard/2",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/2",
+     "key": "gemini-4-carbon/high/hard/2",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.69,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 14
+  },
+  "hard:3": {
+   "key": "hard:3",
+   "tier": "hard",
+   "seed": 3,
+   "in_playable_12": true,
+   "solver_score": 0.28,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.0,
+    "low": 0.833333,
+    "medium": 0.6,
+    "high": 0.666667,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -1.0,
+    "low": 0.303333,
+    "medium": -0.094,
+    "high": 0.046667,
+    "xhigh": 0.71
+   },
+   "mean_regret_by_level": {
+    "minimal": 1.547673,
+    "low": 0.567537,
+    "medium": 0.47194,
+    "high": 0.260495,
+    "xhigh": 0.092668
+   },
+   "ladder_spread": 1.71,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 9,
+    "uninformative_canary": 7,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/3",
+     "key": "gemini-3.1-flash-lite/minimal/hard/3",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/hard/3",
+     "key": "gemini-3.1-flash-lite/medium/hard/3",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/3",
+     "key": "gemini-4-carbon/high/hard/3",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.68,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 2
+  },
+  "hard:4": {
+   "key": "hard:4",
+   "tier": "hard",
+   "seed": 4,
+   "in_playable_12": true,
+   "solver_score": 0.73,
+   "episode_count": 21,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.833333,
+    "medium": 0.6,
+    "high": 1.0,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.43,
+    "low": 0.343333,
+    "medium": -0.124,
+    "high": 0.625,
+    "xhigh": 0.75
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.953215,
+    "low": 0.364521,
+    "medium": 0.897252,
+    "high": 0.202566,
+    "xhigh": 0.022097
+   },
+   "ladder_spread": 1.18,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 8,
+    "uninformative_canary": 9,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/4",
+     "key": "gemini-3.1-flash-lite/minimal/hard/4",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/hard/4",
+     "key": "gemini-3.1-flash-lite/medium/hard/4",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/4",
+     "key": "gemini-4-carbon/high/hard/4",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.66,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 7
+  },
+  "hard:5": {
+   "key": "hard:5",
+   "tier": "hard",
+   "seed": 5,
+   "in_playable_12": false,
+   "solver_score": 0.52,
+   "episode_count": 20,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.0,
+    "low": 0.833333,
+    "medium": 0.8,
+    "high": 0.666667
+   },
+   "mean_score_by_level": {
+    "minimal": -1.0,
+    "low": 0.243333,
+    "medium": 0.142,
+    "high": 0.03
+   },
+   "mean_regret_by_level": {
+    "minimal": 1.691834,
+    "low": 0.683054,
+    "medium": 0.446996,
+    "high": 0.61504
+   },
+   "ladder_spread": 1.243333,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 9,
+    "uninformative_canary": 4,
+    "ignored_delay": 0,
+    "over_restriction": 3
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/5",
+     "key": "gemini-3.1-flash-lite/minimal/hard/5",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/hard/5",
+     "key": "gemini-3.1-flash-lite/medium/hard/5",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/5",
+     "key": "gemini-4-carbon/high/hard/5",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.48,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    }
+   ],
+   "showcase_rank": 6
+  },
+  "hard:6": {
+   "key": "hard:6",
+   "tier": "hard",
+   "seed": 6,
+   "in_playable_12": false,
+   "solver_score": 0.71,
+   "episode_count": 20,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 1.0,
+    "medium": 0.75,
+    "high": 0.666667,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.225,
+    "low": 0.55,
+    "medium": 0.145,
+    "high": 0.03,
+    "xhigh": 0.64
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.807291,
+    "low": 0.508588,
+    "medium": 0.505636,
+    "high": 0.563042,
+    "xhigh": 0.038181
+   },
+   "ladder_spread": 0.865,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 7,
+    "uninformative_canary": 7,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/6",
+     "key": "gemini-3.1-flash-lite/minimal/hard/6",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/hard/6",
+     "key": "gemini-3.1-flash-lite/medium/hard/6",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/6",
+     "key": "gemini-4-carbon/high/hard/6",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.63,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 12
+  },
+  "hard:7": {
+   "key": "hard:7",
+   "tier": "hard",
+   "seed": 7,
+   "in_playable_12": true,
+   "solver_score": 0.64,
+   "episode_count": 20,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.666667,
+    "medium": 0.75,
+    "high": 0.833333,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.265,
+    "low": -0.011667,
+    "medium": 0.22,
+    "high": 0.323333,
+    "xhigh": 0.54
+   },
+   "mean_regret_by_level": {
+    "minimal": 1.003242,
+    "low": 0.869637,
+    "medium": 0.534558,
+    "high": 0.371248,
+    "xhigh": 0.02844
+   },
+   "ladder_spread": 0.805,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 7,
+    "uninformative_canary": 9,
+    "ignored_delay": 0,
+    "over_restriction": 1
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/7",
+     "key": "gemini-3.1-flash-lite/minimal/hard/7",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/hard/7",
+     "key": "gemini-3.1-flash-lite/medium/hard/7",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/7",
+     "key": "gemini-4-carbon/high/hard/7",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.6,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 16
+  },
+  "hard:8": {
+   "key": "hard:8",
+   "tier": "hard",
+   "seed": 8,
+   "in_playable_12": false,
+   "solver_score": 0.26,
+   "episode_count": 19,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.0,
+    "low": 0.5,
+    "medium": 0.8,
+    "high": 0.8
+   },
+   "mean_score_by_level": {
+    "minimal": -1.0,
+    "low": -0.235,
+    "medium": 0.258,
+    "high": 0.138
+   },
+   "mean_regret_by_level": {
+    "minimal": 1.324019,
+    "low": 0.683327,
+    "medium": 0.526817,
+    "high": 0.686632
+   },
+   "ladder_spread": 1.258,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 9,
+    "uninformative_canary": 6,
+    "ignored_delay": 0,
+    "over_restriction": 2
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/8",
+     "key": "gemini-3.1-flash-lite/minimal/hard/8",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/hard/8",
+     "key": "gemini-3.1-flash-lite/medium/hard/8",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/8",
+     "key": "gemini-4-carbon/high/hard/8",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.2,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 5
+  },
+  "hard:9": {
+   "key": "hard:9",
+   "tier": "hard",
+   "seed": 9,
+   "in_playable_12": false,
+   "solver_score": 0.71,
+   "episode_count": 19,
+   "models_present": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "minimal": 0.5,
+    "low": 0.833333,
+    "medium": 0.6,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "minimal": -0.37,
+    "low": 0.378333,
+    "medium": -0.002,
+    "high": 0.688
+   },
+   "mean_regret_by_level": {
+    "minimal": 0.968519,
+    "low": 0.57393,
+    "medium": 0.460985,
+    "high": 0.148205
+   },
+   "ladder_spread": 1.058,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 4,
+    "uninformative_canary": 8,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/9",
+     "key": "gemini-3.1-flash-lite/minimal/hard/9",
+     "model": "gemini-3.1-flash-lite",
+     "level": "minimal",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/medium/hard/9",
+     "key": "gemini-3.1-flash-lite/medium/hard/9",
+     "model": "gemini-3.1-flash-lite",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/9",
+     "key": "gemini-4-carbon/high/hard/9",
+     "model": "gemini-4-carbon",
+     "level": "high",
+     "score": 0.79,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 8
+  },
+  "hard:10": {
+   "key": "hard:10",
+   "tier": "hard",
+   "seed": 10,
+   "in_playable_12": false,
+   "solver_score": 0.21,
+   "episode_count": 9,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 0.5,
+    "medium": 0.666667,
+    "high": 1.0,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "low": -0.125,
+    "medium": -0.006667,
+    "high": 0.61,
+    "xhigh": 0.51
+   },
+   "mean_regret_by_level": {
+    "low": 0.642188,
+    "medium": 0.111062,
+    "high": 0.494426,
+    "xhigh": 0.055412
+   },
+   "ladder_spread": 0.735,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 2,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/hard/10",
+     "key": "gemini-4-argon/low/hard/10",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/hard/10",
+     "key": "gemini-4-argon/medium/hard/10",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "budget_waste"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/hard/10",
+     "key": "gemini-3.5-flash/high/hard/10",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.67,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    }
+   ],
+   "showcase_rank": 20
+  },
+  "hard:11": {
+   "key": "hard:11",
+   "tier": "hard",
+   "seed": 11,
+   "in_playable_12": false,
+   "solver_score": 0.62,
+   "episode_count": 10,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 0.5,
+    "medium": 0.666667,
+    "high": 0.5
+   },
+   "mean_score_by_level": {
+    "low": -0.185,
+    "medium": -0.036667,
+    "high": 0.1125
+   },
+   "mean_regret_by_level": {
+    "low": 0.47723,
+    "medium": 0.060846,
+    "high": 0.288777
+   },
+   "ladder_spread": 0.2975,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 2,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-hydrogen/low/hard/11",
+     "key": "gemini-4-hydrogen/low/hard/11",
+     "model": "gemini-4-hydrogen",
+     "level": "low",
+     "score": 0.63,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/hard/11",
+     "key": "gemini-3.5-flash/medium/hard/11",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "budget_waste"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/high/hard/11",
+     "key": "gemini-4-argon/high/hard/11",
+     "model": "gemini-4-argon",
+     "level": "high",
+     "score": 0.78,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 24
+  },
+  "hard:12": {
+   "key": "hard:12",
+   "tier": "hard",
+   "seed": 12,
+   "in_playable_12": false,
+   "solver_score": 0.48,
+   "episode_count": 8,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 0.5,
+    "high": 0.666667,
+    "xhigh": 0.0
+   },
+   "mean_score_by_level": {
+    "low": 0.53,
+    "medium": -0.21,
+    "high": 0.056667,
+    "xhigh": -1.0
+   },
+   "mean_regret_by_level": {
+    "low": 0.079597,
+    "medium": 0.331952,
+    "high": 0.393519,
+    "xhigh": 0.023393
+   },
+   "ladder_spread": 1.53,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 0,
+    "ignored_delay": 1,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/hard/12",
+     "key": "gemini-4-argon/low/hard/12",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.53,
+     "correct": true,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/hard/12",
+     "key": "gemini-4-argon/medium/hard/12",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.58,
+     "correct": true,
+     "primary_failure_tag": "ignored_delay"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.8-flash/high/hard/12",
+     "key": "gemini-3.8-flash/high/hard/12",
+     "model": "gemini-3.8-flash",
+     "level": "high",
+     "score": 0.61,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 31
+  },
+  "hard:13": {
+   "key": "hard:13",
+   "tier": "hard",
+   "seed": 13,
+   "in_playable_12": false,
+   "solver_score": 0.34,
+   "episode_count": 8,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 1.0,
+    "xhigh": 1.0
+   },
+   "mean_score_by_level": {
+    "low": 0.58,
+    "medium": 0.455,
+    "high": 0.53,
+    "xhigh": 0.73
+   },
+   "mean_regret_by_level": {
+    "low": 0.065103,
+    "medium": 0.448031,
+    "high": 0.181956,
+    "xhigh": 0.040968
+   },
+   "ladder_spread": 0.275,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 3,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/hard/13",
+     "key": "gemini-4-argon/low/hard/13",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.58,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/hard/13",
+     "key": "gemini-4-argon/medium/hard/13",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.33,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-hydrogen/xhigh/hard/13",
+     "key": "gemini-4-hydrogen/xhigh/hard/13",
+     "model": "gemini-4-hydrogen",
+     "level": "xhigh",
+     "score": 0.73,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 25
+  },
+  "hard:14": {
+   "key": "hard:14",
+   "tier": "hard",
+   "seed": 14,
+   "in_playable_12": false,
+   "solver_score": 0.23,
+   "episode_count": 6,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "low": 0.26,
+    "medium": 0.44,
+    "high": 0.513333
+   },
+   "mean_regret_by_level": {
+    "low": 0.138123,
+    "medium": 0.152045,
+    "high": 0.209648
+   },
+   "ladder_spread": 0.253333,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/hard/14",
+     "key": "gemini-4-argon/low/hard/14",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.26,
+     "correct": true,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/hard/14",
+     "key": "gemini-3.5-flash/medium/hard/14",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.44,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/high/hard/14",
+     "key": "gemini-4-argon/high/hard/14",
+     "model": "gemini-4-argon",
+     "level": "high",
+     "score": 0.6,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 26
+  },
+  "hard:15": {
+   "key": "hard:15",
+   "tier": "hard",
+   "seed": 15,
+   "in_playable_12": false,
+   "solver_score": -1.0,
+   "episode_count": 5,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 1.0,
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "low": 0.47,
+    "medium": 0.45,
+    "high": 0.59
+   },
+   "mean_regret_by_level": {
+    "low": 0.729575,
+    "medium": 0.982971,
+    "high": 0.395908
+   },
+   "ladder_spread": 0.14,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 1
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/hard/15",
+     "key": "gemini-4-argon/low/hard/15",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": 0.47,
+     "correct": true,
+     "primary_failure_tag": "over_restriction"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/hard/15",
+     "key": "gemini-3.5-flash/medium/hard/15",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.45,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/hard/15",
+     "key": "gemini-3.5-flash/high/hard/15",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.61,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 28
+  },
+  "hard:16": {
+   "key": "hard:16",
+   "tier": "hard",
+   "seed": 16,
+   "in_playable_12": false,
+   "solver_score": 0.69,
+   "episode_count": 6,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 0.0,
+    "medium": 1.0,
+    "high": 0.5
+   },
+   "mean_score_by_level": {
+    "low": -1.0,
+    "medium": 0.49,
+    "high": -0.17
+   },
+   "mean_regret_by_level": {
+    "low": 0.245204,
+    "medium": 0.632859,
+    "high": 0.428539
+   },
+   "ladder_spread": 1.49,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 2,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/hard/16",
+     "key": "gemini-4-argon/low/hard/16",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/hard/16",
+     "key": "gemini-4-argon/medium/hard/16",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.69,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.8-flash/high/hard/16",
+     "key": "gemini-3.8-flash/high/hard/16",
+     "model": "gemini-3.8-flash",
+     "level": "high",
+     "score": 0.66,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 23
+  },
+  "hard:17": {
+   "key": "hard:17",
+   "tier": "hard",
+   "seed": 17,
+   "in_playable_12": false,
+   "solver_score": 0.77,
+   "episode_count": 5,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.545,
+    "high": 0.295
+   },
+   "mean_regret_by_level": {
+    "medium": 0.09304,
+    "high": 0.825538
+   },
+   "ladder_spread": 0.25,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 2,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/hard/17",
+     "key": "gemini-3.5-flash/medium/hard/17",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.64,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/hard/17",
+     "key": "gemini-4-argon/medium/hard/17",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.45,
+     "correct": true,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.8-flash/high/hard/17",
+     "key": "gemini-3.8-flash/high/hard/17",
+     "model": "gemini-3.8-flash",
+     "level": "high",
+     "score": 0.38,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    }
+   ],
+   "showcase_rank": 38
+  },
+  "hard:18": {
+   "key": "hard:18",
+   "tier": "hard",
+   "seed": 18,
+   "in_playable_12": true,
+   "solver_score": 0.52,
+   "episode_count": 6,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "low": 0.0,
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "low": -1.0,
+    "medium": 0.45,
+    "high": 0.35
+   },
+   "mean_regret_by_level": {
+    "low": 1.009659,
+    "medium": 0.291339,
+    "high": 0.058161
+   },
+   "ladder_spread": 1.45,
+   "decision_contrast": true,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 3,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/low/hard/18",
+     "key": "gemini-4-argon/low/hard/18",
+     "model": "gemini-4-argon",
+     "level": "low",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/hard/18",
+     "key": "gemini-4-argon/medium/hard/18",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.5,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/hard/18",
+     "key": "gemini-3.5-flash/high/hard/18",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.46,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 4
+  },
+  "hard:19": {
+   "key": "hard:19",
+   "tier": "hard",
+   "seed": 19,
+   "in_playable_12": false,
+   "solver_score": 0.67,
+   "episode_count": 3,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-3.8-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 0.5
+   },
+   "mean_score_by_level": {
+    "medium": 0.46,
+    "high": -0.275
+   },
+   "mean_regret_by_level": {
+    "medium": 1.023716,
+    "high": 0.101972
+   },
+   "ladder_spread": 0.735,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/hard/19",
+     "key": "gemini-3.5-flash/medium/hard/19",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.46,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/hard/19",
+     "key": "gemini-3.5-flash/high/hard/19",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.45,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    },
+    {
+     "run_id": "ladder:ladder-v14:gemini-3.8-flash/high/hard/19",
+     "key": "gemini-3.8-flash/high/hard/19",
+     "model": "gemini-3.8-flash",
+     "level": "high",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 33
+  },
+  "hard:20": {
+   "key": "hard:20",
+   "tier": "hard",
+   "seed": 20,
+   "in_playable_12": false,
+   "solver_score": 0.53,
+   "episode_count": 4,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-4-argon",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.51,
+    "high": 0.67
+   },
+   "mean_regret_by_level": {
+    "medium": 0.128859,
+    "high": 0.041629
+   },
+   "ladder_spread": 0.16,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/20",
+     "key": "gemini-3.5-flash/medium/hard/20",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.45,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/hard/20",
+     "key": "gemini-4-argon/medium/hard/20",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.57,
+     "correct": true,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/20",
+     "key": "gemini-3.5-flash/high/hard/20",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.67,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 46
+  },
+  "hard:21": {
+   "key": "hard:21",
+   "tier": "hard",
+   "seed": 21,
+   "in_playable_12": false,
+   "solver_score": 0.73,
+   "episode_count": 3,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-4-argon"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.53,
+    "high": 0.74
+   },
+   "mean_regret_by_level": {
+    "medium": 0.896307,
+    "high": 0.022408
+   },
+   "ladder_spread": 0.21,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 2,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/21",
+     "key": "gemini-3.5-flash/medium/hard/21",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.4,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-4-argon/medium/hard/21",
+     "key": "gemini-4-argon/medium/hard/21",
+     "model": "gemini-4-argon",
+     "level": "medium",
+     "score": 0.66,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/21",
+     "key": "gemini-3.5-flash/high/hard/21",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.74,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 39
+  },
+  "hard:22": {
+   "key": "hard:22",
+   "tier": "hard",
+   "seed": 22,
+   "in_playable_12": false,
+   "solver_score": 0.4,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.4,
+    "high": 0.59
+   },
+   "mean_regret_by_level": {
+    "medium": 0.721667,
+    "high": 0.031895
+   },
+   "ladder_spread": 0.19,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/22",
+     "key": "gemini-3.5-flash/medium/hard/22",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.4,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/22",
+     "key": "gemini-3.5-flash/high/hard/22",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.59,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 41
+  },
+  "hard:23": {
+   "key": "hard:23",
+   "tier": "hard",
+   "seed": 23,
+   "in_playable_12": false,
+   "solver_score": 0.32,
+   "episode_count": 3,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.57,
+    "high": 0.43
+   },
+   "mean_regret_by_level": {
+    "medium": 0.242314,
+    "high": 0.164137
+   },
+   "ladder_spread": 0.14,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/23",
+     "key": "gemini-3.5-flash/medium/hard/23",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.57,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/23",
+     "key": "gemini-3.5-flash/high/hard/23",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.43,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    }
+   ],
+   "showcase_rank": 48
+  },
+  "hard:24": {
+   "key": "hard:24",
+   "tier": "hard",
+   "seed": 24,
+   "in_playable_12": false,
+   "solver_score": 0.31,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.54,
+    "high": 0.45
+   },
+   "mean_regret_by_level": {
+    "medium": 0.035956,
+    "high": 0.982876
+   },
+   "ladder_spread": 0.09,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/24",
+     "key": "gemini-3.5-flash/medium/hard/24",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.54,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/24",
+     "key": "gemini-3.5-flash/high/hard/24",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.45,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    }
+   ],
+   "showcase_rank": 55
+  },
+  "hard:25": {
+   "key": "hard:25",
+   "tier": "hard",
+   "seed": 25,
+   "in_playable_12": false,
+   "solver_score": 0.58,
+   "episode_count": 3,
+   "models_present": [
+    "gemini-3.5-flash",
+    "gemini-4-carbon"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.69,
+    "high": 0.73
+   },
+   "mean_regret_by_level": {
+    "medium": 0.032264,
+    "high": 0.218889
+   },
+   "ladder_spread": 0.04,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/25",
+     "key": "gemini-3.5-flash/medium/hard/25",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.69,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/25",
+     "key": "gemini-3.5-flash/high/hard/25",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.73,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    }
+   ],
+   "showcase_rank": 58
+  },
+  "hard:26": {
+   "key": "hard:26",
+   "tier": "hard",
+   "seed": 26,
+   "in_playable_12": false,
+   "solver_score": 0.69,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 0.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": -1.0,
+    "high": 0.73
+   },
+   "mean_regret_by_level": {
+    "medium": 1.553117,
+    "high": 0.326853
+   },
+   "ladder_spread": 1.73,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/26",
+     "key": "gemini-3.5-flash/medium/hard/26",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/26",
+     "key": "gemini-3.5-flash/high/hard/26",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.73,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    }
+   ],
+   "showcase_rank": 29
+  },
+  "hard:27": {
+   "key": "hard:27",
+   "tier": "hard",
+   "seed": 27,
+   "in_playable_12": false,
+   "solver_score": 0.72,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.26,
+    "high": 0.6
+   },
+   "mean_regret_by_level": {
+    "medium": 0.888249,
+    "high": 0.05758
+   },
+   "ladder_spread": 0.34,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/27",
+     "key": "gemini-3.5-flash/medium/hard/27",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.26,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/27",
+     "key": "gemini-3.5-flash/high/hard/27",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.6,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 36
+  },
+  "hard:28": {
+   "key": "hard:28",
+   "tier": "hard",
+   "seed": 28,
+   "in_playable_12": false,
+   "solver_score": 0.75,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.33,
+    "high": 0.51
+   },
+   "mean_regret_by_level": {
+    "medium": 1.152591,
+    "high": 0.406971
+   },
+   "ladder_spread": 0.18,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/28",
+     "key": "gemini-3.5-flash/medium/hard/28",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.33,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/28",
+     "key": "gemini-3.5-flash/high/hard/28",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.51,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    }
+   ],
+   "showcase_rank": 42
+  },
+  "hard:29": {
+   "key": "hard:29",
+   "tier": "hard",
+   "seed": 29,
+   "in_playable_12": false,
+   "solver_score": 0.65,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.43,
+    "high": 0.4
+   },
+   "mean_regret_by_level": {
+    "medium": 0.991144,
+    "high": 0.134725
+   },
+   "ladder_spread": 0.03,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/29",
+     "key": "gemini-3.5-flash/medium/hard/29",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.43,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/29",
+     "key": "gemini-3.5-flash/high/hard/29",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.4,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    }
+   ],
+   "showcase_rank": 59
+  },
+  "hard:30": {
+   "key": "hard:30",
+   "tier": "hard",
+   "seed": 30,
+   "in_playable_12": false,
+   "solver_score": -1.0,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 0.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.68,
+    "high": -1.0
+   },
+   "mean_regret_by_level": {
+    "medium": 0.056328,
+    "high": 0.877852
+   },
+   "ladder_spread": 1.68,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/30",
+     "key": "gemini-3.5-flash/medium/hard/30",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.68,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/30",
+     "key": "gemini-3.5-flash/high/hard/30",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": -1.0,
+     "correct": false,
+     "primary_failure_tag": "premature_accusation"
+    }
+   ],
+   "showcase_rank": 30
+  },
+  "hard:31": {
+   "key": "hard:31",
+   "tier": "hard",
+   "seed": 31,
+   "in_playable_12": false,
+   "solver_score": 0.52,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.35,
+    "high": 0.45
+   },
+   "mean_regret_by_level": {
+    "medium": 0.95503,
+    "high": 1.231792
+   },
+   "ladder_spread": 0.1,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 2,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/31",
+     "key": "gemini-3.5-flash/medium/hard/31",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.35,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/31",
+     "key": "gemini-3.5-flash/high/hard/31",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.45,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    }
+   ],
+   "showcase_rank": 53
+  },
+  "hard:32": {
+   "key": "hard:32",
+   "tier": "hard",
+   "seed": 32,
+   "in_playable_12": false,
+   "solver_score": -1.0,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.66,
+    "high": 0.53
+   },
+   "mean_regret_by_level": {
+    "medium": 0.116582,
+    "high": 0.432706
+   },
+   "ladder_spread": 0.13,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/32",
+     "key": "gemini-3.5-flash/medium/hard/32",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.66,
+     "correct": true,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/32",
+     "key": "gemini-3.5-flash/high/hard/32",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.53,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 49
+  },
+  "hard:33": {
+   "key": "hard:33",
+   "tier": "hard",
+   "seed": 33,
+   "in_playable_12": false,
+   "solver_score": 0.53,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.53,
+    "high": 0.32
+   },
+   "mean_regret_by_level": {
+    "medium": 0.106047,
+    "high": 0.393657
+   },
+   "ladder_spread": 0.21,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/33",
+     "key": "gemini-3.5-flash/medium/hard/33",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.53,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/33",
+     "key": "gemini-3.5-flash/high/hard/33",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.32,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    }
+   ],
+   "showcase_rank": 40
+  },
+  "hard:34": {
+   "key": "hard:34",
+   "tier": "hard",
+   "seed": 34,
+   "in_playable_12": false,
+   "solver_score": 0.7,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.47,
+    "high": 0.47
+   },
+   "mean_regret_by_level": {
+    "medium": 0.123014,
+    "high": 0.050575
+   },
+   "ladder_spread": 0.0,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/34",
+     "key": "gemini-3.5-flash/medium/hard/34",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.47,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/34",
+     "key": "gemini-3.5-flash/high/hard/34",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.47,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 60
+  },
+  "hard:35": {
+   "key": "hard:35",
+   "tier": "hard",
+   "seed": 35,
+   "in_playable_12": false,
+   "solver_score": 0.68,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.22,
+    "high": 0.33
+   },
+   "mean_regret_by_level": {
+    "medium": 0.790345,
+    "high": 1.035804
+   },
+   "ladder_spread": 0.11,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 2,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/35",
+     "key": "gemini-3.5-flash/medium/hard/35",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.22,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/35",
+     "key": "gemini-3.5-flash/high/hard/35",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.33,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    }
+   ],
+   "showcase_rank": 50
+  },
+  "hard:36": {
+   "key": "hard:36",
+   "tier": "hard",
+   "seed": 36,
+   "in_playable_12": false,
+   "solver_score": 0.77,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.41,
+    "high": 0.47
+   },
+   "mean_regret_by_level": {
+    "medium": 1.140401,
+    "high": 0.071843
+   },
+   "ladder_spread": 0.06,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 1,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/36",
+     "key": "gemini-3.5-flash/medium/hard/36",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.41,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/36",
+     "key": "gemini-3.5-flash/high/hard/36",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.47,
+     "correct": true,
+     "primary_failure_tag": "budget_waste"
+    }
+   ],
+   "showcase_rank": 57
+  },
+  "hard:37": {
+   "key": "hard:37",
+   "tier": "hard",
+   "seed": 37,
+   "in_playable_12": false,
+   "solver_score": 0.77,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.74,
+    "high": 0.64
+   },
+   "mean_regret_by_level": {
+    "medium": 0.261519,
+    "high": 0.254055
+   },
+   "ladder_spread": 0.1,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 2,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/37",
+     "key": "gemini-3.5-flash/medium/hard/37",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.74,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/37",
+     "key": "gemini-3.5-flash/high/hard/37",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.64,
+     "correct": true,
+     "primary_failure_tag": "uninformative_canary"
+    }
+   ],
+   "showcase_rank": 52
+  },
+  "hard:38": {
+   "key": "hard:38",
+   "tier": "hard",
+   "seed": 38,
+   "in_playable_12": false,
+   "solver_score": 0.0,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.51,
+    "high": 0.21
+   },
+   "mean_regret_by_level": {
+    "medium": 1.015512,
+    "high": 0.930853
+   },
+   "ladder_spread": 0.3,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 2,
+    "uninformative_canary": 1,
+    "ignored_delay": 0,
+    "over_restriction": 1
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/38",
+     "key": "gemini-3.5-flash/medium/hard/38",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.51,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/38",
+     "key": "gemini-3.5-flash/high/hard/38",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.21,
+     "correct": true,
+     "primary_failure_tag": "premature_accusation"
+    }
+   ],
+   "showcase_rank": 37
+  },
+  "hard:39": {
+   "key": "hard:39",
+   "tier": "hard",
+   "seed": 39,
+   "in_playable_12": false,
+   "solver_score": 0.7,
+   "episode_count": 2,
+   "models_present": [
+    "gemini-3.5-flash"
+   ],
+   "accuracy_by_level": {
+    "medium": 1.0,
+    "high": 1.0
+   },
+   "mean_score_by_level": {
+    "medium": 0.49,
+    "high": 0.67
+   },
+   "mean_regret_by_level": {
+    "medium": 0.187176,
+    "high": 0.150046
+   },
+   "ladder_spread": 0.18,
+   "decision_contrast": false,
+   "dominant_failure_tags": {
+    "premature_accusation": 0,
+    "uninformative_canary": 0,
+    "ignored_delay": 0,
+    "over_restriction": 0
+   },
+   "anchor_runs": [
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/medium/hard/39",
+     "key": "gemini-3.5-flash/medium/hard/39",
+     "model": "gemini-3.5-flash",
+     "level": "medium",
+     "score": 0.49,
+     "correct": true,
+     "primary_failure_tag": null
+    },
+    {
+     "run_id": "ladder:ladder30:gemini-3.5-flash/high/hard/39",
+     "key": "gemini-3.5-flash/high/hard/39",
+     "model": "gemini-3.5-flash",
+     "level": "high",
+     "score": 0.67,
+     "correct": true,
+     "primary_failure_tag": null
+    }
+   ],
+   "showcase_rank": 43
+  }
+ },
+ "showcase_ranking": [
+  "medium:0",
+  "hard:3",
+  "hard:1",
+  "hard:18",
+  "hard:8",
+  "hard:5",
+  "hard:4",
+  "hard:9",
+  "hard:0",
+  "medium:6",
+  "medium:3",
+  "hard:6",
+  "medium:4",
+  "hard:2",
+  "medium:7",
+  "hard:7",
+  "medium:2",
+  "medium:1",
+  "medium:5",
+  "hard:10",
+  "medium:9",
+  "medium:8",
+  "hard:16",
+  "hard:11",
+  "hard:13",
+  "hard:14",
+  "medium:12",
+  "hard:15",
+  "hard:26",
+  "hard:30",
+  "hard:12",
+  "medium:18",
+  "hard:19",
+  "medium:13",
+  "medium:15",
+  "hard:27",
+  "hard:38",
+  "hard:17",
+  "hard:21",
+  "hard:33",
+  "hard:22",
+  "hard:28",
+  "hard:39",
+  "medium:14",
+  "medium:11",
+  "hard:20",
+  "medium:16",
+  "hard:23",
+  "hard:32",
+  "hard:35",
+  "medium:10",
+  "hard:37",
+  "hard:31",
+  "medium:17",
+  "hard:24",
+  "medium:19",
+  "hard:36",
+  "hard:25",
+  "hard:29",
+  "hard:34",
+  "medium:20",
+  "medium:21"
+ ]
+}

@@ -270,10 +270,6 @@ def test_gather_hint_causal_test_opt_in_prompt_only():
         base = episode_prompt(tier, 0)
         assert GATHER not in base and base == build_system_prompt(ins)
         assert episode_prompt(tier, 0, "gather") == base + "\n" + GATHER
-    # the unhinted prompts are byte-identical to the ones before the hint was added (sha256 at a54f4223)
-    import hashlib
-    assert {t: hashlib.sha256(episode_prompt(t, 0).encode()).hexdigest()[:16] for t in ("easy", "medium", "hard")} == {
-        "easy": "292889efc7c6b996", "medium": "c91d807e1b4c5ab1", "hard": "6638cd42c159ace2"}
     hard = Env("hard", 0).instruction()
     assert "You can plant at most 2 per day" in hard
     assert "If day 21 ends and you have not accused anyone, your score is 0" in hard

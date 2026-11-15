@@ -92,7 +92,13 @@ def _audit_episode_record(
     if not _in_score_domain(score):
         violations.append(f"{loc}: score {score!r} outside {{-1.0, 0.0}} U (0.0, 1.0]")
 
-    if end_reason == "error":
+    agent_stopped = (
+        rc == 0
+        and accused is None
+        and score == 0.0
+        and str(meta.get("note") or "").startswith("agent stopped without ending the episode")
+    )
+    if end_reason == "error" and not agent_stopped:
         violations.append(f"{loc}: valid episode has end_reason == 'error'")
 
     if rc == "timeout" or end_reason == "timeout":

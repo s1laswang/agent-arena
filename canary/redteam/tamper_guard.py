@@ -103,9 +103,16 @@ def valid_truncated_step(
     return len(full_json.encode("utf-8")) == int(m.group(1))
 
 
-def _is_valid_mcp_error_wrapper(want_raw: Any, want_norm: Any) -> bool:
+def _is_valid_mcp_error_wrapper(
+    want_raw: Any,
+    want_norm: Any,
+    episode: dict[str, Any] | None = None,
+    run_meta: dict[str, Any] | None = None,
+) -> bool:
     if want_norm is want_raw:
         return True
+    if run_meta is not None and str(run_meta.get("harness") or "").strip().lower() == "inproc":
+        return False
     return (
         isinstance(want_raw, dict)
         and set(want_raw) <= {"ok", "data", "error"}
@@ -125,7 +132,7 @@ def _is_opencode_post_1bc_detail_step(
 ) -> bool:
     if want_norm is want_raw or not allows_opencode_quirks(episode, run_meta):
         return False
-    if not _is_valid_mcp_error_wrapper(want_raw, want_norm):
+    if not _is_valid_mcp_error_wrapper(want_raw, want_norm, episode, run_meta):
         return False
     if not (not r.ok and isinstance(r.data, dict) and set(r.data) == {"detail"}):
         return False
@@ -232,6 +239,11 @@ def check_episode_tamper(
     emeta = episode.get("meta") if isinstance(episode.get("meta"), dict) else {}
     is_invalid = (emeta.get("valid") is False) or (episode.get("valid") is False)
     killed_note = str(emeta.get("note") or "").startswith("agent_killed_server:")
+    stopped_note = (
+        emeta.get("rc") == 0
+        and episode.get("accused") is None
+        and str(emeta.get("note") or "").startswith("agent stopped without ending the episode")
+    )
     er = episode.get("end_reason")
 
     raw_score = episode.get("score")
@@ -271,7 +283,7 @@ def check_episode_tamper(
             probs.append(
                 f"end_reason='tool_cap' mismatch (done={env.done}, env_end={vrd.get('end_reason')!r}, accused={acc!r})"
             )
-    elif er == "error" and killed_note:
+    elif er == "error" and (killed_note or stopped_note):
         if not (not env.done and acc is None and math.isfinite(score_val) and abs(score_val) <= 1e-9):
             probs.append("agent_killed_server episode state mismatch")
     else:
@@ -409,7 +421,7 @@ def replay_committed(root: Path = ROOT) -> list[dict[str, Any]]:
                     else:
                         ok = (
                             want_norm is not None
-                            and _is_valid_mcp_error_wrapper(want_raw, want_norm)
+                            and _is_valid_mcp_error_wrapper(want_raw, want_norm, e, meta)
                             and ac._canon(got_payload) == ac._canon(want_norm)
                         )
                         if ok and _is_opencode_post_1bc_detail_step(want_raw, want_norm, r, e, meta):

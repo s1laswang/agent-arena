@@ -106,7 +106,7 @@ def test_verify_integrity_branch_cli_passes(tmp_path: Path) -> None:
         "post_craft_refresh",
         "post_gpt55_refresh",
     )
-    assert g4["ledger_ids_verified"] == 20
+    assert g4["ledger_ids_verified"] == 25
     assert g4["ledger_tokens_verified"] == len(vib.REQUIRED_LEDGER_TOKENS)
 
     g5 = rep["gates"]["gate_5_env_and_detail_invariants"]
@@ -303,6 +303,7 @@ def test_panel_fix_a_honesty_and_ledger_completeness_detectors(tmp_path: Path) -
     assert g4_bad["passed"] is False
     assert any("replay-ladder-showcase" in v for v in g4_bad["violations"])
     assert any("INT-LEDGER-01" in v for v in g4_bad["violations"])
+    assert any("INT-LEDGER-25" in v for v in g4_bad["violations"])
 
 
 def test_c3_exploits_md_citations_and_cross_squad_merge_compatibility(tmp_path: Path) -> None:

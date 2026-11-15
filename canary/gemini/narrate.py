@@ -62,6 +62,23 @@ def say_score(x: float) -> str:
 
 
 # ------------------------------------------------------------- placeholder values
+def cell_values(cells: list[dict], prefix: str, model: str, level: str, tier: str) -> dict[str, str]:
+    """One named ladder cell, spoken with its n, paired CI and cost. The model is named as the API served it when that
+    differs from what we requested (gemini-3.5-flash is served as gemini-3.6-flash). Cells under FRONTIER_MIN_N are skipped."""
+    c = next((c for c in cells if c["model"] == model and c["level"] == level and c["tier"] == tier), None)
+    if not c or int(c.get("n") or 0) < FRONTIER_MIN_N or c.get("ratio_lo") is None or c.get("ratio_hi") is None:
+        return {}
+    served = [m for m in (c.get("model_versions") or []) if m]
+    name = served[0] if len(served) == 1 else model
+    cost = c.get("cost_usd_per_episode")
+    out = {f"{prefix}_model": say_model(name), f"{prefix}_level": level, f"{prefix}_n": str(int(c["n"])),
+           f"{prefix}_pct": say_pct(c["pct_solver"]), f"{prefix}_ci": f"{say_pct(c['ratio_lo'])} to {say_pct(c['ratio_hi'])}"}
+    if cost:
+        out[f"{prefix}_cost"] = f"{cost:.2f} dollars"
+        out[f"{prefix}_cost_raw"] = f"{cost}"
+    return out
+
+
 def usage_summary(results_dir: Path, ledger: list) -> dict | None:
     """The dashboard's usage summary: same ledger sources, same repricing (ladder.json prices), same summarize()."""
     if list(ledger) == ["committed"]:
@@ -150,6 +167,10 @@ def values(results_dir: Path, ledger: list) -> dict[str, str]:
                              value_cost_share=say_pct(val["cost_usd_per_episode"] / best["cost_usd_per_episode"]),
                              best_model=say_model(best["model"]), best_level=str(best["level"]))
             v.update(frontier_values(cells, tier))
+            v.update(cell_values(cells, "lead", "gemini-4-carbon", "high", tier))
+            v.update(cell_values(cells, "cheap", "gemini-3.5-flash", "high", tier))
+            if "lead_cost_raw" in v and "cheap_cost_raw" in v and float(v["cheap_cost_raw"]) > 0:
+                v["cheap_times"] = f"{float(v['lead_cost_raw']) / float(v['cheap_cost_raw']):.1f}"
     A = R.get("atlas")
     if A and A.get("modes"):
         C = A.get("corpus") or {}

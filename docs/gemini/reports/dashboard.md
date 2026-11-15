@@ -1,5 +1,43 @@
 # G5 Dashboard + demo assets: report
 
+DONE Sun 05:05. Final: gemini-dashboard-final (merge this, not gemini-dashboard, which contains PR #9). B1: PR #63.
+
+## Sun 05:05: final build (gemini-dashboard-final 5681458d, on pr2 eb7db833 + B1; the commit message says 05:25, which is wrong)
+- Merged origin/gemini-pr2 eb7db833 (no PR #9) and cherry-picked B1 (gemini-numbers 6be6ee7a, PR #63):
+  `canary.gemini.usage_union` + recursive `committed_ledgers()`, so the dashboard reads every committed ledger at any depth.
+- Usage ledger re-exported. **One total, results/gemini/usage_total.json = dashboard.html (tested): 45,692 Gemini API calls,
+  1,346M input tokens (88.0% from cache), 17.5M thinking tokens, $407.34 list.** That's 8 ledger files, 113,137 raw rows, 67,445
+  duplicates removed. 0 rows carry an API response id (ledger.py never records one), so all rows de-dup on the composite key.
+- Ladder unchanged (587 episodes, 42 cells): carbon-high 106% [94, 126] n=10; 3.6-flash high 88% [51, 138] n=40.
+- All 7 screenshots re-shot; VIDEO.md clip 05-dashboard re-narrated with the new count (Kore, 23.8 s; no --check, because
+  gemini-3.8-flash is at its daily quota). Leaderboard: still the gap.md fallback (9270883, numbers unchanged). Lab tests: see commit.
+- If more ledgers land later (xprov, final ladder), re-run usage_union → dashboard → ablations --cache-only as the last step (PR #63).
+
+## Sun 04:00: rebuilt on the n=40 canonical ladder (pr2 d165e3ec)
+- Merged origin/gemini-pr2 d165e3ec into gemini-dashboard-final (checked: no PR #9). Ladder: 587 episodes, 42 cells.
+- Usage re-exported: **42,233 calls, 1.26B input, 87.9% cached, 16.2M thinking, $377.35 list**. The growth is real (about 16.6k
+  `ladder30` calls Sun 01–03); no row is duplicated across hosts or processes.
+- ROLES Frontier row: carbon-high **106% [94, 126], n=10, $1.93/episode**; 3.6-flash (requested 3.5-flash) high **88% [51, 138],
+  n=40, $0.45/episode**, "not distinguishable from the solver, CIs wide". The VIDEO.md VO[02-frontier] dry run speaks the same.
+- All 7 screenshots re-shot. 121 lab tests pass. Leaderboard is still the gap.md fallback (b08d23c, numbers unchanged).
+- Cosmetic, left as is: the heatmap's "medium" header is cut off now that there's an xhigh column, and two frontier labels overlap slightly.
+
+## Sun 02:50: final builds move to branch gemini-dashboard-final (cut from gemini-pr2, no PR #9)
+- **Why:** per COMMON.md I merged origin/gemini-track into gemini-dashboard (23:08, 00:00), so that branch contains PR #9 (1bcf1ee7),
+  which pr2 must not. Nothing was force-pushed or reverted. gemini-dashboard-final is cut from origin/gemini-pr2 55a8e077; pr2
+  already had all my and the video session's files byte-identical. ceo lite's 05:50 freeze merges gemini-dashboard-final only.
+- **Interim final build** on pr2's results (n=20 ladder, 417 episodes):
+  - Usage ledger re-exported: **29,374 calls, 862M input, 86.5% cached, 11.5M thinking, $261.01**. The new committed
+    `ladder_gemma_ledger.jsonl.gz` adds 267 hosted-Gemma rows at $0; the rest of the growth is n=20 ladder calls.
+  - The ladder panel needed no wording change: no "matches" text anywhere, and every hard cell has n ≥ 10.
+- ROLES Frontier row: leads with the carbon hard cell (n ≥ 8) that has the narrowest CI, i.e. carbon-high **106% [94, 126], n=10,
+  $1.93/episode**, then 3.6-flash (requested 3.5-flash) high 71% [11, 158], n=20, $0.43/episode, "not distinguishable, CIs wide".
+  This matches SUBMISSION.
+- VIDEO.md VO[02-frontier] (3-min long cut) speaks those same two cells with n, CI and cost (`narrate.cell_values`, n ≥ 8 only).
+  VIDEO-2MIN.md is untouched (ceo lite's ask).
+- Leaderboard: still the gap.md fallback (now f9fb7a4, numbers unchanged); justSilas has no leaderboard_v14_hard.json yet.
+- **For the CEO:** SUBMISSION still says "24,855 calls" and "85.3%" cached. The final numbers come at 05:15.
+
 ## Sun 00:45: 00:30 rebuild pushed; VIDEO.md final shot list; leaderboard panel
 - **00:30 rebuild** (b43a859b): gemini-track had nothing new. Usage ledger re-exported: **24,855 calls, 678M input, 85.3% cached,
   9.39M thinking, $226.34 list**. The committed-only build and `auto` match. All 7 screenshots and ROLES re-shot; 106 lab tests pass.

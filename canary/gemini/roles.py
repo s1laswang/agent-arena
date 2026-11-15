@@ -378,20 +378,28 @@ def build_index(res: Path) -> list[dict]:
     L = _load(res / "ladder.json")
     if L:
         from canary.gemini.ladder_report import LEVEL_ORDER, MODEL_ORDER, display_id
-        lrows = [r for r in L.get("rows", []) if r.get("ratio") is not None]
-        cell = {(r["model"], r["level"], r["tier"]): r for r in lrows if not str(r.get("source", "")).startswith("import")}
-
-        def ci(r):
-            return (f"{_pct(r['ratio'])} [95% CI {_pct(r.get('ratio_lo'))}, {_pct(r.get('ratio_hi'))}], n={r['n']}, "
-                    f"${r['cost_per_ep']:.2f}/ep")
-        parts = [f"{display_id('gemini-3.5-flash')} {lv} reaches {ci(cell[('gemini-3.5-flash', lv, 'hard')])}"
-                 for lv in ("medium", "high") if ("gemini-3.5-flash", lv, "hard") in cell]
-        if ("gemini-4-carbon", "high", "hard") in cell:
-            parts.append(f"gemini-4-carbon high {ci(cell[('gemini-4-carbon', 'high', 'hard')])}")
-        head = ("On hard, of the solver on the same seeds: " + "; ".join(parts)) if parts else ""
         ms = {r["model"] for r in L.get("rows", [])}
         models = [m for m in MODEL_ORDER if m in ms] + sorted(ms - set(MODEL_ORDER))
         levels = [lv for lv in LEVEL_ORDER if lv != "default" and any(r["level"] == lv for r in L.get("rows", []))]
+        carb = [r for r in L.get("rows", []) if r["model"] == "gemini-4-carbon" and r["tier"] == "hard" and r.get("ratio") is not None]
+        # lead with the carbon cell (n >= 8) whose paired CI is narrowest, then the cheap flash cell, both with n, CI and cost
+        big = [r for r in carb if r["n"] >= 8 and r.get("ratio_lo") is not None and r.get("ratio_hi") is not None]
+        best = (min(big, key=lambda r: r["ratio_hi"] - r["ratio_lo"]) if big else
+                max(carb, key=lambda r: r["n"]) if carb else None)
+
+        def _cost(r):
+            return f", ${r['cost_per_ep']:.2f}/episode" if r.get("cost_per_ep") else ""
+        head = (f"gemini-4-carbon ({best['level']}) reaches {_pct(best['ratio'])} of the solver on hard "
+                f"[95% CI {_pct(best.get('ratio_lo'))}, {_pct(best.get('ratio_hi'))}], n={best['n']}{_cost(best)}") if best else ""
+        fls = [r for lv in ("medium", "high") for r in L.get("rows", []) if r["model"] == "gemini-3.5-flash"
+               and r["tier"] == "hard" and r.get("level") == lv and r["n"] >= 8 and r.get("ratio_lo") is not None
+               and not str(r.get("source", "")).startswith("import")]
+        if head and fls:
+            served = [m for m in fls[0].get("model_versions") or [] if m and m != fls[0]["model"]]
+            name = f"{served[0]} (requested {fls[0]['model']})" if len(served) == 1 else fls[0]["model"]
+            cells = "; ".join(f"{r['level']} {_pct(r['ratio'])} [{_pct(r['ratio_lo'])}, {_pct(r['ratio_hi'])}], "
+                              f"n={r['n']}{_cost(r)}" for r in fls)
+            head += f"; {name}: {cells}: not distinguishable from the solver, CIs wide"
         rows.append({"role": "Frontier subject (the agent under test)", "key": "frontier",
                      "run": "results/gemini/ladder.json (+ ladder.md, ladder_episodes.jsonl.gz, ladder_ledger.jsonl.gz)",
                      "model": f"{len(models)} Gemini models: " + ", ".join(display_id(m) for m in models),

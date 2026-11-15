@@ -25,6 +25,15 @@ def _fixture_results(tmp_path):
     S["per_tier"] = {tier: {"best_unjustified": 0.1, "best_unjustified_attempt": "x", "solver_mean_paired": 0.5}}
     S["positive_control"] = {"attempts": 2, "attackers_found": 2}
     (res / "swarm.json").write_text(json.dumps(S))
+    L = json.loads((res / "ladder.json").read_text())
+    key = "rows" if "rows" in L else "cells"
+    tier = "hard" if any(c.get("tier") == "hard" for c in L[key]) else L[key][0]["tier"]
+    L[key] = [c for c in L[key] if not (c.get("tier") == tier and c.get("model") in ("gemini-4-carbon", "gemini-3.5-flash")
+                                         and c.get("level", c.get("thinking_level")) == "high")]
+    for m, r, cost in (("gemini-4-carbon", 1.0, 2.0), ("gemini-3.5-flash", 0.7, 0.5)):
+        L[key].append({"model": m, "level": "high", "tier": tier, "n": 10, "ratio": r, "ratio_lo": r - 0.2,
+                       "ratio_hi": r + 0.2, "cost_per_ep": cost})
+    (res / "ladder.json").write_text(json.dumps(L))
     return res
 
 
@@ -55,6 +64,19 @@ def test_spoken_formats_and_wav(tmp_path):
     with wave.open(buf, "wb") as w:
         w.setnchannels(1), w.setsampwidth(2), w.setframerate(24000), w.writeframes(b"\0\0" * 12000)
     assert narrate.write_wav(tmp_path / "b.wav", buf.getvalue(), 0) == pytest.approx(0.5)
+
+
+def test_named_cells_spoken_with_n_ci_cost_and_served_name():
+    cells = [{"model": "gemini-4-carbon", "level": "high", "tier": "hard", "n": 10, "pct_solver": 1.06, "ratio_lo": 0.94,
+              "ratio_hi": 1.26, "cost_usd_per_episode": 1.931},
+             {"model": "gemini-3.5-flash", "level": "high", "tier": "hard", "n": 20, "pct_solver": 0.71, "ratio_lo": 0.11,
+              "ratio_hi": 1.58, "cost_usd_per_episode": 0.425, "model_versions": ["gemini-3.6-flash"]},
+             {"model": "gemini-4-argon", "level": "high", "tier": "hard", "n": 2, "pct_solver": 1.5, "ratio_lo": 1, "ratio_hi": 2}]
+    lead = narrate.cell_values(cells, "lead", "gemini-4-carbon", "high", "hard")
+    cheap = narrate.cell_values(cells, "cheap", "gemini-3.5-flash", "high", "hard")
+    assert (lead["lead_pct"], lead["lead_ci"], lead["lead_n"], lead["lead_cost"]) == ("106 percent", "94 percent to 126 percent", "10", "1.93 dollars")
+    assert cheap["cheap_model"] == "Gemini 3.6 Flash" and cheap["cheap_ci"] == "11 percent to 158 percent"
+    assert narrate.cell_values(cells, "x", "gemini-4-argon", "high", "hard") == {}  # n=2 is never spoken
 
 
 def test_frontier_never_speaks_small_n_cells():

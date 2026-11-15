@@ -1,0 +1,597 @@
+{
+ "generated_at": "2026-11-15T05:03:43+02:00",
+ "what": "de-duplicated union of every committed Gemini ledger under results/gemini (canary.gemini.usage_union)",
+ "dedup_key": "(ts, host, pid, feature, model, in, out); also the API response/request id when a row has one",
+ "calls": 45692,
+ "errors": 144,
+ "input_tokens": 1346251331,
+ "cached_tokens": 1185094329,
+ "thinking_tokens": 17453191,
+ "output_tokens": 2090940,
+ "cache_share_of_input": 0.8803,
+ "cost_usd_list": 407.3436,
+ "cost_unknown_calls": 702,
+ "models": [
+  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-3.8-flash",
+  "gemini-4-hydrogen",
+  "gemini-4-argon",
+  "gemini-4-carbon",
+  "gemini-embedding-2",
+  "gemini-3.8-flash-tts",
+  "gemini-3.8-live",
+  "gemini-2.5-flash",
+  "gemma-4-26b-a4b-it",
+  "gemma-4-31b-it",
+  "unknown"
+ ],
+ "features": [
+  "ladder",
+  "gateway-bench",
+  "swarm",
+  "atlas",
+  "mole",
+  "narrate",
+  "commentator",
+  "showcase",
+  "worldtext",
+  "worldtext-probe",
+  "ladder-gemma-probe",
+  "gateway-smoke",
+  "x",
+  "video_qa"
+ ],
+ "start": 1794658241.63,
+ "end": 1794711821.525,
+ "by_feature": [
+  {
+   "calls": 40093,
+   "errors": 58,
+   "in": 1242491838,
+   "out": 1441877,
+   "thinking": 13542588,
+   "cached": 1118400109,
+   "cost_usd": 329.0888,
+   "tokens": 1257476303,
+   "feature": "ladder",
+   "models": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-argon",
+    "gemini-4-carbon",
+    "gemma-4-26b-a4b-it",
+    "gemma-4-31b-it"
+   ],
+   "kinds": [
+    "generate"
+   ]
+  },
+  {
+   "calls": 2617,
+   "errors": 0,
+   "in": 85558,
+   "out": 5543,
+   "thinking": 115891,
+   "cached": 0,
+   "cost_usd": 0.5628,
+   "tokens": 206992,
+   "feature": "gateway-bench",
+   "models": [
+    "gemini-3.8-flash",
+    "gemini-4-carbon"
+   ],
+   "kinds": [
+    "generate"
+   ]
+  },
+  {
+   "calls": 2342,
+   "errors": 70,
+   "in": 39141437,
+   "out": 281056,
+   "thinking": 2410721,
+   "cached": 12109652,
+   "cost_usd": 55.3172,
+   "tokens": 41833214,
+   "feature": "swarm",
+   "models": [
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-carbon"
+   ],
+   "kinds": [
+    "cache",
+    "count",
+    "generate"
+   ]
+  },
+  {
+   "calls": 464,
+   "errors": 10,
+   "in": 64395859,
+   "out": 323973,
+   "thinking": 1339968,
+   "cached": 54584568,
+   "cost_usd": 21.7202,
+   "tokens": 66059800,
+   "feature": "atlas",
+   "models": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-4-carbon",
+    "gemini-embedding-2",
+    "gemini-2.5-flash"
+   ],
+   "kinds": [
+    "batch",
+    "cache",
+    "count",
+    "embed",
+    "generate"
+   ]
+  },
+  {
+   "calls": 64,
+   "errors": 0,
+   "in": 48117,
+   "out": 4406,
+   "thinking": 16499,
+   "cached": 0,
+   "cost_usd": 0.3053,
+   "tokens": 69022,
+   "feature": "mole",
+   "models": [
+    "gemini-4-carbon"
+   ],
+   "kinds": [
+    "generate"
+   ]
+  },
+  {
+   "calls": 63,
+   "errors": 6,
+   "in": 8448,
+   "out": 20193,
+   "thinking": 0,
+   "cached": 0,
+   "cost_usd": 0.0821,
+   "tokens": 28641,
+   "feature": "narrate",
+   "models": [
+    "gemini-3.8-flash",
+    "gemini-3.8-flash-tts"
+   ],
+   "kinds": [
+    "generate",
+    "tts"
+   ]
+  },
+  {
+   "calls": 17,
+   "errors": 0,
+   "in": 33083,
+   "out": 0,
+   "thinking": 4173,
+   "cached": 0,
+   "cost_usd": 0.0,
+   "tokens": 37256,
+   "feature": "commentator",
+   "models": [
+    "gemini-3.8-live"
+   ],
+   "kinds": [
+    "live"
+   ]
+  },
+  {
+   "calls": 15,
+   "errors": 0,
+   "in": 1748,
+   "out": 164,
+   "thinking": 1151,
+   "cached": 0,
+   "cost_usd": 0.0024,
+   "tokens": 3063,
+   "feature": "showcase",
+   "models": [
+    "gemini-3.1-flash-lite",
+    "gemini-embedding-2"
+   ],
+   "kinds": [
+    "embed",
+    "generate"
+   ]
+  },
+  {
+   "calls": 6,
+   "errors": 0,
+   "in": 7680,
+   "out": 10810,
+   "thinking": 3425,
+   "cached": 0,
+   "cost_usd": 0.1577,
+   "tokens": 21915,
+   "feature": "worldtext",
+   "models": [
+    "gemini-4-carbon"
+   ],
+   "kinds": [
+    "generate"
+   ]
+  },
+  {
+   "calls": 6,
+   "errors": 0,
+   "in": 25257,
+   "out": 78,
+   "thinking": 18354,
+   "cached": 0,
+   "cost_usd": 0.0881,
+   "tokens": 43689,
+   "feature": "worldtext-probe",
+   "models": [
+    "gemini-3.8-flash"
+   ],
+   "kinds": [
+    "generate"
+   ]
+  },
+  {
+   "calls": 2,
+   "errors": 0,
+   "in": 194,
+   "out": 32,
+   "thinking": 421,
+   "cached": 0,
+   "cost_usd": 0.0,
+   "tokens": 647,
+   "feature": "ladder-gemma-probe",
+   "models": [
+    "gemma-4-26b-a4b-it",
+    "gemma-4-31b-it"
+   ],
+   "kinds": [
+    "generate"
+   ]
+  },
+  {
+   "calls": 1,
+   "errors": 0,
+   "in": 7,
+   "out": 3,
+   "thinking": 0,
+   "cached": 0,
+   "cost_usd": 0.0,
+   "tokens": 10,
+   "feature": "gateway-smoke",
+   "models": [
+    "gemini-3.1-flash-lite"
+   ],
+   "kinds": [
+    "generate"
+   ]
+  },
+  {
+   "calls": 1,
+   "errors": 0,
+   "in": 605,
+   "out": 21,
+   "thinking": 0,
+   "cached": 0,
+   "cost_usd": 0.0,
+   "tokens": 626,
+   "feature": "x",
+   "models": [
+    "unknown"
+   ],
+   "kinds": [
+    "generate"
+   ]
+  },
+  {
+   "calls": 1,
+   "errors": 0,
+   "in": 11500,
+   "out": 2784,
+   "thinking": 0,
+   "cached": 0,
+   "cost_usd": 0.0191,
+   "tokens": 14284,
+   "feature": "video_qa",
+   "models": [
+    "gemini-3.8-flash"
+   ],
+   "kinds": [
+    "generate"
+   ]
+  }
+ ],
+ "by_model": [
+  {
+   "calls": 2968,
+   "errors": 2,
+   "in": 33649916,
+   "out": 82317,
+   "thinking": 251576,
+   "cached": 21820473,
+   "cost_usd": 4.0037,
+   "tokens": 33983809,
+   "model": "gemini-3.1-flash-lite",
+   "thinking_share": 0.7535,
+   "p50_latency_s": 1.96,
+   "p95_latency_s": 4.19,
+   "latency_n": 2966,
+   "kinds": [
+    "cache",
+    "generate"
+   ]
+  },
+  {
+   "calls": 10016,
+   "errors": 3,
+   "in": 317913499,
+   "out": 365162,
+   "thinking": 3087505,
+   "cached": 279546599,
+   "cost_usd": 62.6887,
+   "tokens": 321366166,
+   "model": "gemini-3.5-flash",
+   "thinking_share": 0.8942,
+   "p50_latency_s": 2.83,
+   "p95_latency_s": 13.28,
+   "latency_n": 10012,
+   "kinds": [
+    "batch",
+    "cache",
+    "generate"
+   ]
+  },
+  {
+   "calls": 9810,
+   "errors": 33,
+   "in": 336453607,
+   "out": 527783,
+   "thinking": 5179055,
+   "cached": 299680155,
+   "cost_usd": 71.457,
+   "tokens": 342160445,
+   "model": "gemini-3.8-flash",
+   "thinking_share": 0.9075,
+   "p50_latency_s": 3.33,
+   "p95_latency_s": 21.04,
+   "latency_n": 9754,
+   "kinds": [
+    "batch",
+    "cache",
+    "count",
+    "generate"
+   ]
+  },
+  {
+   "calls": 9050,
+   "errors": 26,
+   "in": 264090997,
+   "out": 413685,
+   "thinking": 3930937,
+   "cached": 235131791,
+   "cost_usd": 93.6584,
+   "tokens": 268435619,
+   "model": "gemini-4-hydrogen",
+   "thinking_share": 0.9048,
+   "p50_latency_s": 3.66,
+   "p95_latency_s": 37.64,
+   "latency_n": 9022,
+   "kinds": [
+    "count",
+    "generate"
+   ]
+  },
+  {
+   "calls": 8612,
+   "errors": 12,
+   "in": 237241174,
+   "out": 357783,
+   "thinking": 2412975,
+   "cached": 216093272,
+   "cost_usd": 91.6127,
+   "tokens": 240011932,
+   "model": "gemini-4-argon",
+   "thinking_share": 0.8709,
+   "p50_latency_s": 9.69,
+   "p95_latency_s": 64.03,
+   "latency_n": 8600,
+   "kinds": [
+    "generate"
+   ]
+  },
+  {
+   "calls": 4482,
+   "errors": 46,
+   "in": 152857813,
+   "out": 267442,
+   "thinking": 2377244,
+   "cached": 130691367,
+   "cost_usd": 83.8489,
+   "tokens": 155502499,
+   "model": "gemini-4-carbon",
+   "thinking_share": 0.8989,
+   "p50_latency_s": 16.78,
+   "p95_latency_s": 141.66,
+   "latency_n": 4430,
+   "kinds": [
+    "count",
+    "generate"
+   ]
+  },
+  {
+   "calls": 305,
+   "errors": 0,
+   "in": 85909,
+   "out": 0,
+   "thinking": 0,
+   "cached": 0,
+   "cost_usd": 0.0,
+   "tokens": 85909,
+   "model": "gemini-embedding-2",
+   "thinking_share": 0.0,
+   "p50_latency_s": 0.0,
+   "p95_latency_s": 0.0,
+   "latency_n": 0,
+   "kinds": [
+    "embed"
+   ]
+  },
+  {
+   "calls": 51,
+   "errors": 6,
+   "in": 2463,
+   "out": 19334,
+   "thinking": 0,
+   "cached": 0,
+   "cost_usd": 0.0743,
+   "tokens": 21797,
+   "model": "gemini-3.8-flash-tts",
+   "thinking_share": 0.0,
+   "p50_latency_s": 0.0,
+   "p95_latency_s": 0.0,
+   "latency_n": 0,
+   "kinds": [
+    "tts"
+   ]
+  },
+  {
+   "calls": 17,
+   "errors": 0,
+   "in": 33083,
+   "out": 0,
+   "thinking": 4173,
+   "cached": 0,
+   "cost_usd": 0.0,
+   "tokens": 37256,
+   "model": "gemini-3.8-live",
+   "thinking_share": 1.0,
+   "p50_latency_s": 0.0,
+   "p95_latency_s": 0.0,
+   "latency_n": 0,
+   "kinds": [
+    "live"
+   ]
+  },
+  {
+   "calls": 1,
+   "errors": 1,
+   "in": 0,
+   "out": 0,
+   "thinking": 0,
+   "cached": 0,
+   "cost_usd": 0.0,
+   "tokens": 0,
+   "model": "gemini-2.5-flash",
+   "thinking_share": 0.0,
+   "p50_latency_s": 0.0,
+   "p95_latency_s": 0.0,
+   "latency_n": 0,
+   "kinds": [
+    "cache"
+   ]
+  },
+  {
+   "calls": 73,
+   "errors": 7,
+   "in": 364907,
+   "out": 1706,
+   "thinking": 15656,
+   "cached": 237293,
+   "cost_usd": 0.0,
+   "tokens": 382269,
+   "model": "gemma-4-26b-a4b-it",
+   "thinking_share": 0.9017,
+   "p50_latency_s": 12.0,
+   "p95_latency_s": 34.01,
+   "latency_n": 66,
+   "kinds": [
+    "generate"
+   ]
+  },
+  {
+   "calls": 306,
+   "errors": 8,
+   "in": 3557358,
+   "out": 55707,
+   "thinking": 194070,
+   "cached": 1893379,
+   "cost_usd": 0.0,
+   "tokens": 3807135,
+   "model": "gemma-4-31b-it",
+   "thinking_share": 0.777,
+   "p50_latency_s": 43.18,
+   "p95_latency_s": 120.84,
+   "latency_n": 298,
+   "kinds": [
+    "generate"
+   ]
+  },
+  {
+   "calls": 1,
+   "errors": 0,
+   "in": 605,
+   "out": 21,
+   "thinking": 0,
+   "cached": 0,
+   "cost_usd": 0.0,
+   "tokens": 626,
+   "model": "unknown",
+   "thinking_share": 0.0,
+   "p50_latency_s": 0.0,
+   "p95_latency_s": 0.0,
+   "latency_n": 0,
+   "kinds": [
+    "generate"
+   ]
+  }
+ ],
+ "rows_with_response_id": 0,
+ "rows_without_response_id": 45692,
+ "response_id_note": "canary/gemini/ledger.py writes one self-written row per call (bulk ladder rows included) and records no API response id, so every row is de-duplicated by the composite key.",
+ "raw_rows_in_files": 113137,
+ "duplicates_removed": 67445,
+ "files": [
+  {
+   "file": "results/gemini/ablations_sig_off/ledger.jsonl.gz",
+   "rows": 20
+  },
+  {
+   "file": "results/gemini/ladder_gemma_ledger.jsonl.gz",
+   "rows": 332
+  },
+  {
+   "file": "results/gemini/ladder_ledger.jsonl.gz",
+   "rows": 36164
+  },
+  {
+   "file": "results/gemini/roles/mole/ledger.jsonl",
+   "rows": 64
+  },
+  {
+   "file": "results/gemini/roles/worldtext/ledger.jsonl",
+   "rows": 12
+  },
+  {
+   "file": "results/gemini/scale/ladder30/ladder_gemma_ledger.jsonl.gz",
+   "rows": 295
+  },
+  {
+   "file": "results/gemini/scale/ladder30/ladder_ledger.jsonl.gz",
+   "rows": 30558
+  },
+  {
+   "file": "results/gemini/usage_ledger.jsonl.gz",
+   "rows": 45692
+  }
+ ],
+ "headline": "45,692 Gemini API calls, 1,346M input tokens (88.0% served from cache), 17.5M thinking tokens, $407.34 at list price (results/gemini/usage_total.json)"
+}

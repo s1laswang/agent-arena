@@ -297,9 +297,14 @@ def _sdk_client():
     return genai.Client(api_key=tok or "gateway", http_options=types.HttpOptions(base_url=url, timeout=timeout_ms))
 
 
+NO_SIGNATURES = False  # set by --no-thought-signatures (ablation): LedgeredClient(drop_signatures=True)
+
+
 def default_client_factory(c: Cell, run_id: str, meta: dict):
     from canary.gemini import lab_client
     kw: dict[str, Any] = {}
+    if NO_SIGNATURES:
+        kw["drop_signatures"] = True
     if c.level != "default":
         kw["thinking_level"] = c.level
     sdk = _sdk_client()
@@ -376,6 +381,8 @@ def run_cell(out: Path, c: Cell, ladder_run: str, client_factory: Callable | Non
     (d / "RUNNING.json").write_text(_running_marker())
     run_id = f"ladder:{ladder_run}:{c.key}"
     meta = {"ladder_run": ladder_run, "model": c.model, "level": c.level, "tier": c.tier, "seed": c.seed}
+    if NO_SIGNATURES:
+        meta["thought_signatures"] = False
     client = None
     try:
         client = TallyClient((client_factory or default_client_factory)(c, run_id, meta))
@@ -399,7 +406,8 @@ def run_cell(out: Path, c: Cell, ladder_run: str, client_factory: Callable | Non
         m.update({**provenance(), "model_id": c.model, "thinking_level": c.level, "label": label["label"],
                   "feature": FEATURE, "ladder_run": ladder_run,
                   "run_id": run_id, "tokens": tally, "wall_s": round(wall, 1), "host": HOST,
-                  "seed_key": "public (dev seed)", "smoke": False})
+                  "seed_key": "public (dev seed)", "smoke": False,
+                  "thought_signatures": not NO_SIGNATURES})
         mf.write_text(json.dumps(m, indent=1, default=str))
         reason = _gemini_runner().infra_reason("inproc", d, ep)
     else:
@@ -602,7 +610,11 @@ def main(argv=None) -> int:
     ap.add_argument("--backfill-sha", action="append", default=[],
                     help="fill provenance of cells from older processes: 'gemini-3=<sha>;gemini-4=<sha>'")
     ap.add_argument("--probe", action="store_true", help="one tiny call per (model, level); writes OUT/_probe.json")
+    ap.add_argument("--no-thought-signatures", action="store_true",
+                    help="ablation: strip provider_items (thought signatures) from assistant turns before each call")
     a = ap.parse_args(argv)
+    global NO_SIGNATURES
+    NO_SIGNATURES = bool(a.no_thought_signatures)
     out = Path(os.path.expanduser(a.out))
     models = [m for m in a.models.split(",") if m]
     levels = [x for x in a.levels.split(",") if x]

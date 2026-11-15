@@ -195,31 +195,39 @@ def versus(eps: list[dict], base_label: str, B: int = 10000) -> list[dict]:
         d, lo, hi = boot_diff(a, b, B)
         ca, cb = mean([mine[s].get("cost_usd") for s in shared]), mean([base[s].get("cost_usd") for s in shared])
         verdict = "higher" if lo > 0 else "lower" if hi < 0 else "not distinguishable"
-        out.append({"label": label, "tier": tier, "base": base_label, "shared_seeds": shared, "n": len(shared),
+        out.append({"label": label, "tier": tier, "level": mine[shared[0]].get("level"), "model": mine[shared[0]].get("model"),
+                    "base": base_label, "shared_seeds": shared, "n": len(shared),
                     "score": mean(a), "base_score": mean(b), "diff": d, "diff_lo": lo, "diff_hi": hi, "verdict": verdict,
                     "correct": sum(mine[s]["correct"] for s in shared), "base_correct": sum(base[s]["correct"] for s in shared),
                     "cost_per_ep": ca, "base_cost_per_ep": cb, "base_cost_ratio": (cb / ca) if ca and ca == ca and ca > 0 else float("nan")})
     return sorted(out, key=lambda r: (TIERS.index(r["tier"]), r["label"]))
 
 
-def headline(vs: list[dict], tier: str = "hard") -> str:
-    """CI-gated sentence for the best-supported same-harness comparison on `tier` (never hand-picked: the Gemini
-    cell with the highest mean score on the shared seeds; the verdict comes from the paired bootstrap)."""
-    cand = [v for v in vs if v["tier"] == tier]
+MIN_SHARED = 5   # a comparison needs at least this many shared seeds to appear in the headline
+MATCHED_LEVEL = "medium"   # GPT-5.5 ran at reasoning effort medium
+
+
+def headline(vs: list[dict], tier: str = "hard", level: str = MATCHED_LEVEL) -> str:
+    """CI-gated sentence for a PRE-SPECIFIED comparison, so nothing is selected on the outcome: every Gemini model
+    at the matched setting (thinking `level`) against GPT-5.5 in the same harness on `tier`, for cells with at
+    least MIN_SHARED shared seeds. The verdict of each clause comes from the paired bootstrap."""
+    cand = sorted([v for v in vs if v["tier"] == tier and v.get("level") == level and v["n"] >= MIN_SHARED],
+                  key=lambda v: v["label"])
     if not cand:
         return ""
-    v = max(cand, key=lambda r: r["score"])
-    rel = {"higher": "scores higher than", "lower": "scores lower than",
-           "not distinguishable": "is not distinguishable from"}[v["verdict"]]
-    cost = ""
-    if v["base_cost_ratio"] == v["base_cost_ratio"]:
-        r = v["base_cost_ratio"]
-        cost = (f", at ${v['cost_per_ep']:.2f} vs ${v['base_cost_per_ep']:.2f} per episode "
-                f"({r:.1f}x cheaper)" if r >= 1 else f", at ${v['cost_per_ep']:.2f} vs ${v['base_cost_per_ep']:.2f} per episode")
-    return (f"On identical Canary v1.3 {tier} worlds and the same harness, {v['label']} {rel} {v['base']} "
-            f"(mean score {v['score']:+.2f} vs {v['base_score']:+.2f}, paired difference {v['diff']:+.2f} "
-            f"[{v['diff_lo']:+.2f}, {v['diff_hi']:+.2f}], n={v['n']} shared seeds, "
-            f"{v['correct']}/{v['n']} vs {v['base_correct']}/{v['n']} correct accusations){cost}.")
+    rel = {"higher": "scores higher", "lower": "scores lower", "not distinguishable": "is not distinguishable"}
+    parts = []
+    for v in cand:
+        cost = ""
+        if v["base_cost_ratio"] == v["base_cost_ratio"]:
+            r = v["base_cost_ratio"]
+            cost = (f", ${v['cost_per_ep']:.2f} vs ${v['base_cost_per_ep']:.2f} per episode"
+                    + (f" ({r:.1f}x cheaper)" if r >= 1 else f" ({1 / r:.1f}x dearer)"))
+        parts.append(f"{v['label'].split(' · ')[0]} {rel[v['verdict']]} (mean score {v['score']:+.2f} vs {v['base_score']:+.2f}, "
+                     f"paired difference {v['diff']:+.2f} [{v['diff_lo']:+.2f}, {v['diff_hi']:+.2f}], n={v['n']} shared seeds, "
+                     f"{v['correct']}/{v['n']} vs {v['base_correct']}/{v['n']} correct{cost})")
+    return (f"On identical Canary v1.3 {tier} worlds, in the same harness and at matched {level} effort, against GPT-5.5: "
+            + "; ".join(parts) + ".")
 
 
 # ----------------------------------------------------------------------------------------- checks

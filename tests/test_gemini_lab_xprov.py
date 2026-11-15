@@ -34,14 +34,24 @@ def test_versus_uses_only_shared_seeds_and_gates_the_verdict():
     assert xprov.versus(worse, xprov.GPT_SAME, B=2000)[0]["verdict"] == "lower"
 
 
-def test_headline_wording_follows_the_verdict_and_never_claims_more():
+def test_headline_is_prespecified_matched_effort_and_ci_gated():
     eps, _ = _world([0.6, 0.7, 0.6, 0.7, 0.6, 0.7], [0.1, 0.2, 0.1, 0.2, 0.1, 0.2])
     h = xprov.headline(xprov.versus(eps, xprov.GPT_SAME, B=2000))
-    assert "scores higher than" in h and "4.0x cheaper" in h and "n=6 shared seeds" in h
+    assert "gem scores higher" in h and "(4.0x cheaper)" in h and "n=6 shared seeds" in h and "matched medium effort" in h
     noisy, _ = _world([0.9, -1.0, 0.8, -1.0, 0.7, 0.6], [0.5, 0.5, -1.0, 0.6, 0.4, 0.5])
     h2 = xprov.headline(xprov.versus(noisy, xprov.GPT_SAME, B=2000))
-    assert "is not distinguishable from" in h2 and "higher" not in h2
+    assert "gem is not distinguishable" in h2 and "higher" not in h2
     assert xprov.headline([]) == ""
+
+
+def test_headline_ignores_small_cells_and_unmatched_levels():
+    few, _ = _world([0.9, 0.9, 0.9], [0.1, 0.1, 0.1])                      # n=3 < MIN_SHARED: no headline, however good
+    assert xprov.headline(xprov.versus(few, xprov.GPT_SAME, B=500)) == ""
+    eps, _ = _world([0.6, 0.7, 0.6, 0.7, 0.6, 0.7], [0.1, 0.2, 0.1, 0.2, 0.1, 0.2])
+    for e in eps:
+        if e["provider"] == "google":
+            e["level"] = "high"                                           # not the matched setting
+    assert xprov.headline(xprov.versus(eps, xprov.GPT_SAME, B=500)) == ""
 
 
 def test_same_world_check_flags_a_different_roster():

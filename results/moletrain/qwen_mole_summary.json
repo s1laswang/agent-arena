@@ -874,16 +874,16 @@
    }
   },
   "n_runs": 4,
-  "n_completed": 0,
-  "n_in_progress": 4,
+  "n_completed": 3,
+  "n_in_progress": 1,
   "claims_stronger_mole": false,
   "runs": [
    {
     "run_id": "canary-qwen-mole-v1",
     "model": "Qwen2.5-1.5B-Instruct",
     "recipe": "counterfactual_expert_sft_plus_regularized_grpo_80steps",
-    "status": "in_progress",
-    "stage": "grpo_training_logged",
+    "status": "completed",
+    "stage": "heldout_evaluated",
     "data_mix": {"carbon_sft": 0, "expert_sft": 88, "total_sft": 176, "grpo_prompts": 130},
     "sft_curve": {"logged_points": 5, "last_step": 66, "epochs": 3, "initial_loss": 0.146, "final_loss": 0.1079, "min_loss": 0.1079, "sec": 40.7},
     "validation_25seed": {
@@ -950,17 +950,47 @@
      "sampled_entropy_nats": 1.8432,
      "sampled_top_actions": {"random_seeded/most_restricted_peer": 0.3394, "oldest/random_peer": 0.2197, "newest/random_peer": 0.1137, "random_seeded/decoy": 0.1007, "most_recipients/random_peer": 0.0953}
     },
-    "eval_summary": null,
+    "eval_summary": {
+     "winner_checkpoint": "sft",
+     "sft_examples": {"carbon_transcripts": 0, "counterfactual_expert": 88, "total": 176},
+     "total_seconds": 11507.4,
+     "heldout_800k": {
+      "n": 40,
+      "qwen_solver_score": 0.5047,
+      "qwen_solver_acc": 0.925,
+      "qwen_min_regret": 0.0835,
+      "default_min_regret": 0.0835,
+      "strongest_inv": "hinted_heuristic",
+      "catchable_85": true,
+      "distinct_actions": 1,
+      "action_entropy_nats": 0.0,
+      "action_profile": {"random_seeded/most_restricted_peer": 1.0},
+      "paired_diff_solver_acc": [0.0, 0.0, 0.0],
+      "paired_diff_regret_strongest": [0.0, 0.0, 0.0]
+     },
+     "heldout_200k": {
+      "n": 40,
+      "qwen_solver_score": 0.6053,
+      "qwen_solver_acc": 1.0,
+      "qwen_min_regret": 0.22,
+      "default_min_regret": 0.235,
+      "strongest_inv": "grok_tactics",
+      "catchable_85": true,
+      "distinct_actions": 3,
+      "action_entropy_nats": 0.0096,
+      "paired_diff_vs_rl_solver_acc": [0.275, 0.15, 0.425]
+     }
+    },
     "eval_mole_400k": null,
-    "verdict": "in_progress_no_heldout_claim",
+    "verdict": "collapsed_action_space",
     "claims_stronger_mole": false
    },
    {
     "run_id": "canary-qwen3-0p6b-mole-v1",
     "model": "Qwen3-0.6B",
     "recipe": "carbon_trap_capped_plus_expert_sft_plus_regularized_grpo_80steps",
-    "status": "in_progress",
-    "stage": "grpo_training_logged",
+    "status": "completed",
+    "stage": "heldout_evaluated",
     "data_mix": {"carbon_sft": 331, "expert_sft": 88, "total_sft": 507, "grpo_prompts": 130},
     "sft_curve": {"logged_points": 13, "last_step": 192, "epochs": 3, "initial_loss": 0.1389, "final_loss": 0.0037, "min_loss": 0.0037, "sec": 92.9},
     "validation_25seed": {
@@ -995,6 +1025,20 @@
        "action_entropy_nats": 1.0289,
        "action_profile": {"random_seeded/decoy": 0.4576, "none/random_peer": 0.3757, "most_recipients/random_peer": 0.1659, "newest/random_peer": 0.0007},
        "invalid_generations": 0
+      },
+      "grpo_step80": {
+       "solver_score": 0.5552,
+       "solver_acc": 0.92,
+       "grok_tactics_score": 0.0,
+       "heuristic_score": 0.0236,
+       "hinted_heuristic_score": 0.2824,
+       "min_regret": 0.2728,
+       "strongest_inv": "hinted_heuristic",
+       "catchable_85": true,
+       "distinct_actions": 5,
+       "action_entropy_nats": 1.0466,
+       "action_profile": {"random_seeded/most_restricted_peer": 0.4307, "none/random_peer": 0.3999, "most_recipients/random_peer": 0.1665, "newest/random_peer": 0.0022, "random_seeded/decoy": 0.0007},
+       "invalid_generations": 0
       }
      }
     },
@@ -1013,17 +1057,47 @@
      "sampled_entropy_nats": 1.428,
      "sampled_top_actions": {"random_seeded/decoy": 0.3611, "random_seeded/most_restricted_peer": 0.3167, "most_recipients/random_peer": 0.1528, "newest/random_peer": 0.1292, "random_seeded/random_peer": 0.0361}
     },
-    "eval_summary": null,
+    "eval_summary": {
+     "winner_checkpoint": "grpo_step80",
+     "sft_examples": {"carbon_transcripts": 331, "counterfactual_expert": 88, "total": 507},
+     "total_seconds": 16587.0,
+     "heldout_800k": {
+      "n": 40,
+      "qwen_solver_score": 0.5523,
+      "qwen_solver_acc": 0.975,
+      "qwen_min_regret": 0.1333,
+      "default_min_regret": 0.0372,
+      "strongest_inv": "hinted_heuristic",
+      "catchable_85": true,
+      "distinct_actions": 5,
+      "action_entropy_nats": 1.0501,
+      "action_profile": {"random_seeded/most_restricted_peer": 0.4626, "none/random_peer": 0.3614, "most_recipients/random_peer": 0.1724, "newest/random_peer": 0.0022, "random_seeded/decoy": 0.0013},
+      "paired_diff_solver_acc": [0.125, 0.025, 0.225],
+      "paired_diff_regret_strongest": [0.026, -0.1652, 0.2193]
+     },
+     "heldout_200k": {
+      "n": 40,
+      "qwen_solver_score": 0.5865,
+      "qwen_solver_acc": 0.95,
+      "qwen_min_regret": 0.3695,
+      "default_min_regret": 0.235,
+      "strongest_inv": "hinted_heuristic",
+      "catchable_85": true,
+      "distinct_actions": 5,
+      "action_entropy_nats": 1.0399,
+      "paired_diff_vs_rl_solver_acc": [0.225, 0.075, 0.375]
+     }
+    },
     "eval_mole_400k": null,
-    "verdict": "in_progress_no_heldout_claim",
+    "verdict": "directional_catchable_gain_ci_includes_zero",
     "claims_stronger_mole": false
    },
    {
     "run_id": "canary-qwen3-1p7b-mole-v1",
     "model": "Qwen3-1.7B",
     "recipe": "carbon_trap_capped_plus_expert_sft_plus_regularized_grpo_80steps",
-    "status": "in_progress",
-    "stage": "grpo_training_logged",
+    "status": "completed",
+    "stage": "heldout_evaluated",
     "data_mix": {"carbon_sft": 331, "expert_sft": 88, "total_sft": 507, "grpo_prompts": 130},
     "sft_curve": {"logged_points": 13, "last_step": 192, "epochs": 3, "initial_loss": 0.1529, "final_loss": 0.0066, "min_loss": 0.0066, "sec": 128.6},
     "validation_25seed": {
@@ -1058,6 +1132,20 @@
        "action_entropy_nats": 1.0559,
        "action_profile": {"random_seeded/most_restricted_peer": 0.4111, "none/random_peer": 0.387, "most_recipients/random_peer": 0.2019},
        "invalid_generations": 0
+      },
+      "grpo_step80": {
+       "solver_score": 0.5644,
+       "solver_acc": 0.96,
+       "grok_tactics_score": 0.0116,
+       "heuristic_score": 0.0712,
+       "hinted_heuristic_score": 0.268,
+       "min_regret": 0.2964,
+       "strongest_inv": "hinted_heuristic",
+       "catchable_85": true,
+       "distinct_actions": 5,
+       "action_entropy_nats": 1.0281,
+       "action_profile": {"random_seeded/most_restricted_peer": 0.4652, "none/random_peer": 0.3839, "most_recipients/random_peer": 0.1472, "oldest/random_peer": 0.003, "random_seeded/random_peer": 0.0007},
+       "invalid_generations": 0
       }
      }
     },
@@ -1076,9 +1164,39 @@
      "sampled_entropy_nats": 1.4363,
      "sampled_top_actions": {"random_seeded/most_restricted_peer": 0.4325, "most_recipients/random_peer": 0.2256, "random_seeded/decoy": 0.1734, "oldest/random_peer": 0.1198, "random_seeded/random_peer": 0.0341}
     },
-    "eval_summary": null,
+    "eval_summary": {
+     "winner_checkpoint": "grpo_step80",
+     "sft_examples": {"carbon_transcripts": 331, "counterfactual_expert": 88, "total": 507},
+     "total_seconds": 14718.2,
+     "heldout_800k": {
+      "n": 40,
+      "qwen_solver_score": 0.5563,
+      "qwen_solver_acc": 0.975,
+      "qwen_min_regret": 0.1905,
+      "default_min_regret": 0.2456,
+      "strongest_inv": "hinted_heuristic",
+      "catchable_85": true,
+      "distinct_actions": 4,
+      "action_entropy_nats": 1.0246,
+      "action_profile": {"random_seeded/most_restricted_peer": 0.4717, "none/random_peer": 0.3824, "most_recipients/random_peer": 0.1409, "oldest/random_peer": 0.005},
+      "paired_diff_solver_acc": [-0.025, -0.075, 0.0],
+      "paired_diff_regret_strongest": [-0.1155, -0.3728, 0.1338]
+     },
+     "heldout_200k": {
+      "n": 40,
+      "qwen_solver_score": 0.5832,
+      "qwen_solver_acc": 0.95,
+      "qwen_min_regret": 0.4559,
+      "default_min_regret": 0.235,
+      "strongest_inv": "hinted_heuristic",
+      "catchable_85": true,
+      "distinct_actions": 4,
+      "action_entropy_nats": 0.9982,
+      "paired_diff_vs_rl_solver_acc": [0.225, 0.075, 0.375]
+     }
+    },
     "eval_mole_400k": null,
-    "verdict": "in_progress_no_heldout_claim",
+    "verdict": "null_or_below_default_catchable",
     "claims_stronger_mole": false
    },
    {

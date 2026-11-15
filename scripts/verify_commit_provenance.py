@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
@@ -34,7 +35,9 @@ TARGET_DOC_RELS: tuple[str, ...] = (
     "docs/PEER-REVIEW-QA.md",
     "docs/REPRODUCIBILITY.md",
     "docs/SUBMISSION.md",
+    "VERDA.md",
     "results/fresh_clone/README.md",
+    "docs/reports/CEO.md",
     "docs/reports/gap.md",
     "docs/reports/integrity.md",
 )
@@ -49,6 +52,7 @@ CANONICAL_FROZEN_TIER_HASHES: frozenset[str] = frozenset(
         "a8f99c2537c91d72",
         "8df71cf570bb48bc",
         "eb77b13554f366aa",
+        "6ebdb2489b082c77",
     }
 )
 DOCUMENTED_VERDA_INSTANCE_IDS: frozenset[str] = frozenset(
@@ -66,6 +70,7 @@ DOCUMENTED_VERDA_INSTANCE_IDS: frozenset[str] = frozenset(
 )
 
 HEX_SHA_RX = re.compile(r"^[0-9a-f]{7,40}$", re.IGNORECASE)
+HEX7_FAST_RX = re.compile(r"[0-9a-fA-F]{7}")
 VERSION_RX = re.compile(r"^v\d+(?:\.\d+)+$")
 PATH_VERSION_SEG_RX = re.compile(r"^v\d+(?:\.\d+)*$")
 FENCE_OPEN_RX = re.compile(r"^\s*(?:>\s*)*(`{3,}|~{3,})")
@@ -80,6 +85,37 @@ JUDGE_TABLE_REPORTED_NOTE_RX = re.compile(
     r"replayed,\s+(?:NON-)?judge seeds,\s+\d+\s+seeds,\s+git\s+([^()]+)\(([^()]+)\)"
 )
 SOLVER_RANGE_FILENAME_RX = re.compile(r"^([A-Za-z0-9_]+)_(easy|medium|hard)_judge40\.json$")
+HARBOR_REHEARSAL_HEADING_RX = re.compile(
+    r"Judge rehearsal on tag `([^`\n]+)` \(([0-9a-f]{7,40})\):\s*Harbor\s+([0-9][0-9A-Za-z._-]*)",
+    re.IGNORECASE,
+)
+HARBOR_REHEARSAL_COMMIT_NOTE_RX = re.compile(
+    r"\(commit\s+`?([^`\s)]+)`?\)",
+    re.IGNORECASE,
+)
+DRY_REHEARSAL_CODE_SHA_RX = re.compile(
+    r"^\s*-\s+\*\*Code:\*\*\s*`([0-9a-f]{7,40})`",
+    re.MULTILINE | re.IGNORECASE,
+)
+PAIRED_LABEL_COMMIT_RX = re.compile(
+    r"(?:\bat\s+|\bpre-)([0-9a-f]{7,40})\b",
+    re.IGNORECASE,
+)
+REDTEAM_GENERATED_RX = re.compile(
+    r"^Generated\s+(\S+)\s+at\s+`([^`\n]+)`\.",
+    re.MULTILINE,
+)
+REDTEAM_HEADLINE_ATTACKERS_RX = re.compile(
+    r"\*\*(\d+)\s+Gemini\s+attackers\*\*"
+)
+REDTEAM_EXPLOITS_LINE_RX = re.compile(
+    r"^-\s+Verified exploits:\s*\*\*(\d+)\*\*.*invariant violations:\s*(\d+)\b",
+    re.MULTILINE,
+)
+REDTEAM_COMMIT_SPLIT_HEADING_RX = re.compile(
+    r"Combined count split by commit \(SHA\)",
+    re.IGNORECASE,
+)
 
 URL_SPAN_RX = re.compile(r"https?://[^\s)\]>]+", re.IGNORECASE)
 UUID_SPAN_RX = re.compile(
@@ -98,7 +134,7 @@ LOCAL_NON_COMMIT_PREFIX_RX = re.compile(
     r"|\bpins?\s+hash\b"
     r"|\bhash\s+[`\"'(\[]*$"
     r"|\btiers_version\b|\btiers_v\d+\b"
-    r"|\bverda\b|\bfr8[/\s]+gpus?\b|\bgpus?\b|\binstances?\b"
+    r"|\bverda\s+(?:gpus?|instances?|boxes|spot|on-demand)\b|\bfr8[/\s]+gpus?\b|\bgpus?\b|\binstances?\b"
     r"|\b(?:a100|h100|v100)(?:-[0-9a-z]+)?(?:\s+(?:spot|on-demand))?\b"
     r"|default_rng)",
     re.IGNORECASE,
@@ -106,7 +142,7 @@ LOCAL_NON_COMMIT_PREFIX_RX = re.compile(
 
 EXPLICIT_DOC_COMMIT_RXES: tuple[re.Pattern[str], ...] = (
     re.compile(
-        r"\b(?:commit|commits|committed|git|fix|revision|rev)\s*:?\s*(?:\*\*|`)?([0-9a-f]{7,40})(?:\*\*|`)?(?![0-9a-fA-Z_])",
+        r"\b(?:commit|commits|committed|git|fix|fixed|merged(?:\s+as)?|verified|pre-registered(?:\s+at)?|revision|rev)\s*:?\s*(?:\*\*|`)?([0-9a-f]{7,40})(?:\*\*|`)?(?![0-9a-fA-Z_])",
         re.IGNORECASE,
     ),
     re.compile(
@@ -130,27 +166,31 @@ EXPLICIT_DOC_COMMIT_RXES: tuple[re.Pattern[str], ...] = (
         re.IGNORECASE,
     ),
     re.compile(
-        r"\b(?:justSilas(?:-[A-Za-z0-9_.-]+)?|fr8/[A-Za-z0-9_./-]+|ENV)\s+(?:\*\*|`)?([0-9a-f]{7,40})(?:\*\*|`)?(?![0-9a-fA-Z_])"
+        r"(?:`?(?:justSilas(?:-[A-Za-z0-9_.-]+)?|afterquery-(?:final|submit(?:-2)?)|fr8/[A-Za-z0-9_./-]+|ENV)`?)\s+(?:\*\*|`)?([0-9a-f]{7,40})(?:\*\*|`)?(?![0-9a-fA-Z_])"
     ),
     re.compile(
         r"\bjustSilas\s+[0-9a-f]{7,40}\s*\+\s*(?:\*\*|`)?([0-9a-f]{7,40})(?:\*\*|`)?(?![0-9a-fA-Z_])"
     ),
-    re.compile(r"(?:justSilas|afterquery_final)_([0-9a-f]{7,40})(?![0-9a-fA-Za-z])"),
+    re.compile(r"(?:justSilas|afterquery_(?:final|submit(?:_2)?))_([0-9a-f]{7,40})(?![0-9a-fA-Za-z])"),
 )
 
-PAREN_OR_BACKTICK_HEX_RX = re.compile(
-    r"(?:`([0-9a-f]{7,40})`|\((?:[^()\n]*?,\s*)?([0-9a-f]{7,40})(?:\s*,[^()\n]*)?\))"
-)
+BACKTICK_HEX_RX = re.compile(r"`([0-9a-f]{7,40})`")
+PAREN_SPAN_RX = re.compile(r"\(([^()\n]+)\)")
+PAREN_HEX_TOKEN_RX = re.compile(r"(?:^|,)\s*([0-9a-f]{7,40})(?=\s*(?:,|$))")
 
 EXTERNAL_BRANCH_CONTEXT_RX = re.compile(
     r"(?:\bjustSilas-[A-Za-z0-9_.-]+\b"
     r"|\bs\d+-[A-Za-z0-9_.-]+\b"
     r"|\bgemini-(?:pr\d+|scale/[A-Za-z0-9_.-]+|track)\b"
     r"|\borigin/(?!justSilas\b)[A-Za-z0-9_./-]+\b"
-    r"|\bon\s+branch\s+(?!justSilas\b)(?!afterquery-final\b)`?[A-Za-z0-9_./-]+`?"
+    r"|\bon\s+branch\s+(?!justSilas\b)(?!afterquery-(?:final|submit(?:-2)?)\b)`?[A-Za-z0-9_./-]+`?"
     r"|\bnot\s+(?:shipped|merged)\b"
     r"|\b(?:external|unmerged)\s+branch\b"
-    r"|\buntagged\s+build\b)",
+    r"|\buntagged\s+build\b"
+    r"|\bdry\s+rehearsal\b"
+    r"|\bBlind\s+Spot\b"
+    r"|\bivar/[A-Za-z0-9_./-]+\b"
+    r"|\bIvar\s+has\s+since\b)",
     re.IGNORECASE,
 )
 
@@ -172,15 +212,103 @@ class DocCommitCitation:
 
 
 try:
+    from pydantic_core import SchemaValidator as _SchemaValidator
+    from pydantic_core import ValidationError as _ValidationError
+    from pydantic_core import core_schema as _core_schema
     from pydantic_core import from_json as _pydantic_from_json
+
+    _EPISODE_META_PROJECTION = _core_schema.nullable_schema(
+        _core_schema.typed_dict_schema(
+            {
+                "tiers_version": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "git_sha": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "valid": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+            },
+            extra_behavior="ignore",
+        )
+    )
+    _EPISODE_FAST_SCHEMA = _core_schema.typed_dict_schema(
+        {
+            "tier": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+            "agent": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+            "seed": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+            "score": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+            "meta": _core_schema.typed_dict_field(_EPISODE_META_PROJECTION, required=False),
+            "tiers_version": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+            "git_sha": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+            "valid": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+        },
+        extra_behavior="ignore",
+    )
+    _EPISODE_LIST_VALIDATOR: Any = _SchemaValidator(
+        _core_schema.list_schema(_EPISODE_FAST_SCHEMA),
+        config={"allow_inf_nan": True},
+    )
+    _EPISODE_VALIDATOR: Any = _SchemaValidator(
+        _core_schema.typed_dict_schema(
+            {
+                "tier": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "agent": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "seed": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "score": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "meta": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "tiers_version": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "git_sha": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "valid": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+            },
+            extra_behavior="ignore",
+        ),
+        config={"allow_inf_nan": True},
+    )
+    _REDTEAM_SUMMARY_VALIDATOR: Any = _SchemaValidator(
+        _core_schema.typed_dict_schema(
+            {
+                "generated_at": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "git_sha": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "ledger_run_ids": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "counts": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+                "by_sha": _core_schema.typed_dict_field(_core_schema.any_schema(), required=False),
+            },
+            extra_behavior="ignore",
+        ),
+        config={"allow_inf_nan": True},
+    )
 except Exception:
     _pydantic_from_json = None
+    _EPISODE_LIST_VALIDATOR = None
+    _EPISODE_VALIDATOR = None
+    _REDTEAM_SUMMARY_VALIDATOR = None
+    _ValidationError = ValueError
 
 
 def _loads_json_bytes(raw: bytes) -> Any:
     if _pydantic_from_json is not None:
         return _pydantic_from_json(raw, allow_inf_nan=True)
     return json.loads(raw.decode("utf-8"))
+
+
+def _loads_episode_projection(raw: bytes) -> Any:
+    if _EPISODE_VALIDATOR is not None:
+        try:
+            return _EPISODE_VALIDATOR.validate_json(raw)
+        except _ValidationError as exc:
+            errs = exc.errors()
+            if errs and errs[0].get("type") == "json_invalid":
+                raise ValueError(str(exc)) from None
+            return None
+    return _loads_json_bytes(raw)
+
+
+def _loads_redteam_summary_projection(raw: bytes) -> Any:
+    if _REDTEAM_SUMMARY_VALIDATOR is not None:
+        try:
+            return _REDTEAM_SUMMARY_VALIDATOR.validate_json(raw)
+        except _ValidationError as exc:
+            errs = exc.errors()
+            if errs and errs[0].get("type") == "json_invalid":
+                raise ValueError(str(exc)) from None
+            return None
+    return _loads_json_bytes(raw)
 
 
 def _is_finite_number(val: Any) -> bool:
@@ -236,6 +364,9 @@ class GitCommitInspector:
         if self._shallow_loaded:
             return self._is_shallow
         self._shallow_loaded = True
+        if (self.root / ".git" / "shallow").is_file():
+            self._is_shallow = True
+            return True
         try:
             proc = subprocess.run(
                 ["git", "rev-parse", "--is-shallow-repository"],
@@ -357,6 +488,67 @@ def _expected_dir_tiers_version(rel_committed_parts: Sequence[str]) -> str:
     return LEGACY_TIERS_VERSION
 
 
+def _read_and_project_episodes_file(
+    ep_path: Path,
+) -> tuple[OSError | None, list[tuple[int, Any, Exception | None]]]:
+    try:
+        raw_ep_bytes = ep_path.read_bytes()
+    except OSError as exc:
+        return (exc, [])
+
+    if not raw_ep_bytes or not raw_ep_bytes.strip():
+        return (None, [])
+
+    if (
+        _EPISODE_LIST_VALIDATOR is not None
+        and raw_ep_bytes[0] not in b" \t\r\n"
+        and b"\n\n" not in raw_ep_bytes
+        and b"\r" not in raw_ep_bytes
+    ):
+        body = raw_ep_bytes[:-1] if raw_ep_bytes.endswith(b"\n") else raw_ep_bytes
+        if body and not body.endswith(b"\n"):
+            try:
+                expected_lines = body.count(b"\n") + 1
+                joined = b"[" + body.replace(b"\n", b",") + b"]"
+                projected = _EPISODE_LIST_VALIDATOR.validate_json(joined)
+                if len(projected) == expected_lines:
+                    return (
+                        None,
+                        [(lineno, ep, None) for lineno, ep in enumerate(projected, 1)],
+                    )
+            except _ValidationError:
+                pass
+
+    nonempty: list[tuple[int, bytes]] = [
+        (lineno, raw_line)
+        for lineno, raw_line in enumerate(raw_ep_bytes.splitlines(), 1)
+        if raw_line.strip()
+    ]
+    if not nonempty:
+        return (None, [])
+
+    if _EPISODE_LIST_VALIDATOR is not None:
+        try:
+            joined = b"[" + b",".join(raw_line for _, raw_line in nonempty) + b"]"
+            projected = _EPISODE_LIST_VALIDATOR.validate_json(joined)
+            if len(projected) == len(nonempty):
+                return (
+                    None,
+                    [(lineno, ep, None) for (lineno, _), ep in zip(nonempty, projected)],
+                )
+        except _ValidationError:
+            pass
+
+    fallback_rows: list[tuple[int, Any, Exception | None]] = []
+    for lineno, raw_line in nonempty:
+        try:
+            ep = _loads_episode_projection(raw_line)
+            fallback_rows.append((lineno, ep, None))
+        except (UnicodeDecodeError, ValueError) as exc:
+            fallback_rows.append((lineno, None, exc))
+    return (None, fallback_rows)
+
+
 def check_committed_run_provenance(
     root: Path = ROOT,
     *,
@@ -414,8 +606,8 @@ def check_committed_run_provenance(
             continue
 
         try:
-            meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
+            meta = _loads_json_bytes(meta_path.read_bytes())
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
             failures.append(f"{rel_meta}: invalid JSON ({exc})")
             continue
         if not isinstance(meta, dict):
@@ -473,20 +665,15 @@ def check_committed_run_provenance(
 
         seen_valid: dict[tuple[str, int], int] = {}
         dir_records = 0
-        try:
-            raw_ep_bytes = ep_path.read_bytes()
-        except OSError as exc:
-            failures.append(f"{rel_ep}: unreadable episodes.jsonl ({exc})")
+        io_err, parsed_rows = _read_and_project_episodes_file(ep_path)
+        if io_err is not None:
+            failures.append(f"{rel_ep}: unreadable episodes.jsonl ({io_err})")
             continue
 
-        for lineno, raw_line in enumerate(raw_ep_bytes.splitlines(), 1):
-            if not raw_line.strip():
-                continue
+        for lineno, ep, parse_exc in parsed_rows:
             loc = f"{rel_ep}:{lineno}"
-            try:
-                ep = _loads_json_bytes(raw_line)
-            except (UnicodeDecodeError, ValueError) as exc:
-                failures.append(f"{loc}: invalid JSON ({exc})")
+            if parse_exc is not None:
+                failures.append(f"{loc}: invalid JSON ({parse_exc})")
                 continue
             if not isinstance(ep, dict):
                 failures.append(f"{loc}: episode record must be a JSON object")
@@ -566,13 +753,14 @@ def check_committed_run_provenance(
         if dir_records == 0:
             failures.append(f"{rel_ep}: empty episodes.jsonl (0 episode records)")
 
-    if git_inspector.has_git and meta_sha_refs and not git_inspector.is_shallow:
+    if git_inspector.has_git and meta_sha_refs:
         resolved_meta = git_inspector.resolve_shas(sha for _, sha in meta_sha_refs)
         if not all(info[0] == "error" for info in resolved_meta.values()):
             for rel_meta, sha_val in meta_sha_refs:
                 obj_type, _ = resolved_meta.get(sha_val, ("missing", ""))
                 if obj_type == "missing":
-                    failures.append(f"{rel_meta}: git_sha {sha_val!r} does not exist in .git")
+                    if not git_inspector.is_shallow:
+                        failures.append(f"{rel_meta}: git_sha {sha_val!r} does not exist in .git")
                 elif obj_type != "commit":
                     failures.append(f"{rel_meta}: git_sha {sha_val!r} resolves to {obj_type!r}, expected 'commit'")
 
@@ -593,7 +781,11 @@ def check_committed_run_provenance(
     )
 
 
-def _audit_judge_table_provenance(root: Path, failures: list[str]) -> int:
+def _audit_judge_table_provenance(
+    root: Path,
+    failures: list[str],
+    merged_shas: list[tuple[str, str]],
+) -> int:
     rel = "results/judge_table.md"
     jt_path = root / rel
     if not jt_path.is_file():
@@ -613,6 +805,8 @@ def _audit_judge_table_provenance(root: Path, failures: list[str]) -> int:
         failures.append(f"{rel}: missing '- git: `<sha>`' provenance line in header")
     elif not _is_hex_sha(m_git.group(1)):
         failures.append(f"{rel}: malformed header git SHA {m_git.group(1)!r}")
+    else:
+        merged_shas.append((rel, m_git.group(1).strip().lower()))
 
     if JUDGE_TABLE_HEADER_FP_RX.search(text) is None:
         failures.append(f"{rel}: missing judge-world secret sha256 fingerprint provenance line")
@@ -625,6 +819,7 @@ def _audit_judge_table_provenance(root: Path, failures: list[str]) -> int:
         failures.append(f"{rel}: no reported run provenance notes found")
         return 0
 
+    referenced_dirs: set[str] = set()
     meta_sha_cache: dict[str, Any] = {}
     for match in reported_notes:
         lineno = 1 + text.count("\n", 0, match.start())
@@ -643,22 +838,26 @@ def _audit_judge_table_provenance(root: Path, failures: list[str]) -> int:
             if bad_tokens:
                 failures.append(f"{rel}:{lineno}: malformed reported git SHA token(s) {bad_tokens!r}")
                 continue
+            for tok in raw_shas:
+                merged_shas.append((f"{rel}:{lineno}", tok.lower()))
 
         for run_rel in raw_dirs:
+            referenced_dirs.add(Path(run_rel).as_posix())
             if run_rel not in meta_sha_cache:
                 meta_file = root / run_rel / "meta.json"
                 if not meta_file.is_file():
                     meta_sha_cache[run_rel] = ("missing", None)
                 else:
                     try:
-                        meta_obj = json.loads(meta_file.read_text(encoding="utf-8"))
+                        meta_obj = _loads_json_bytes(meta_file.read_bytes())
                         meta_sha_cache[run_rel] = (
                             ("ok", meta_obj.get("git_sha")) if isinstance(meta_obj, dict) else ("bad", None)
                         )
-                    except (OSError, ValueError):
+                    except (OSError, UnicodeDecodeError, ValueError):
                         meta_sha_cache[run_rel] = ("bad", None)
             state, meta_sha = meta_sha_cache[run_rel]
             if state != "ok":
+                failures.append(f"{rel}:{lineno}: referenced run dir {run_rel!r} has {state} meta.json")
                 continue
             if is_grok_row and (meta_sha is None or meta_sha == "unknown"):
                 continue
@@ -673,6 +872,17 @@ def _audit_judge_table_provenance(root: Path, failures: list[str]) -> int:
                         f"{rel}:{lineno}: reported git {raw_shas} does not match {run_rel}/meta.json git_sha {meta_sha!r}"
                     )
 
+    v14_root = root / "data" / "runs" / "committed" / CURRENT_TIERS_VERSION
+    if v14_root.is_dir():
+        for cur_root, dirnames, filenames in os.walk(v14_root):
+            dirnames[:] = sorted(d for d in dirnames if d not in {"superseded", "transcripts"})
+            if "meta.json" in filenames or "episodes.jsonl" in filenames:
+                rel_v14 = Path(cur_root).relative_to(root).as_posix()
+                if rel_v14 not in referenced_dirs:
+                    failures.append(
+                        f"{rel}: committed v1.4 run directory {rel_v14!r} missing from reported notes"
+                    )
+
     return len(reported_notes)
 
 
@@ -683,8 +893,8 @@ def _audit_failure_analysis_provenance(root: Path, failures: list[str]) -> int:
         failures.append(f"missing artifact: {rel}")
         return 0
     try:
-        data = json.loads(fa_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
+        data = _loads_json_bytes(fa_path.read_bytes())
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
         failures.append(f"{rel}: invalid JSON ({exc})")
         return 0
     if not isinstance(data, dict):
@@ -733,7 +943,7 @@ def _audit_failure_analysis_provenance(root: Path, failures: list[str]) -> int:
     oc_hard_meta = root / "data" / "runs" / "committed" / "v1.4" / "opencode-gemini-4-carbon" / "hard" / "meta.json"
     if oc_hard_meta.is_file():
         try:
-            meta_obj = json.loads(oc_hard_meta.read_text(encoding="utf-8"))
+            meta_obj = _loads_json_bytes(oc_hard_meta.read_bytes())
             if isinstance(meta_obj, dict):
                 tv = meta_obj.get("tiers_version", CURRENT_TIERS_VERSION)
                 if tv != CURRENT_TIERS_VERSION:
@@ -745,7 +955,7 @@ def _audit_failure_analysis_provenance(root: Path, failures: list[str]) -> int:
                     failures.append(
                         f"{rel}: G seed count {n_seeds} != committed opencode hard meta.json seeds {len(planned)}"
                     )
-        except (OSError, ValueError):
+        except (OSError, UnicodeDecodeError, ValueError):
             pass
 
     return n_seeds
@@ -758,8 +968,8 @@ def _audit_oracle_range_provenance(root: Path, failures: list[str]) -> int:
         failures.append(f"missing artifact: {rel}")
         return 0
     try:
-        data = json.loads(or_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
+        data = _loads_json_bytes(or_path.read_bytes())
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
         failures.append(f"{rel}: invalid JSON ({exc})")
         return 0
     if not isinstance(data, dict):
@@ -823,8 +1033,8 @@ def _audit_solver_range_provenance(root: Path, failures: list[str]) -> int:
     for sr_path in discovered:
         rel = f"results/solver_range/{sr_path.name}"
         try:
-            obj = json.loads(sr_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
+            obj = _loads_json_bytes(sr_path.read_bytes())
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
             failures.append(f"{rel}: invalid JSON ({exc})")
             continue
         if not isinstance(obj, dict):
@@ -865,15 +1075,19 @@ def _audit_solver_range_provenance(root: Path, failures: list[str]) -> int:
     return len(discovered)
 
 
-def _audit_gemini_ladder_provenance(root: Path, failures: list[str]) -> tuple[int, int]:
+def _audit_gemini_ladder_provenance(
+    root: Path,
+    failures: list[str],
+    external_shas: list[tuple[str, str]],
+) -> tuple[int, int]:
     rel = "results/gemini/ladder.json"
     lad_path = root / rel
     if not lad_path.is_file():
         failures.append(f"missing artifact: {rel}")
         return (0, 0)
     try:
-        data = json.loads(lad_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
+        data = _loads_json_bytes(lad_path.read_bytes())
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
         failures.append(f"{rel}: invalid JSON ({exc})")
         return (0, 0)
     if not isinstance(data, dict):
@@ -883,6 +1097,8 @@ def _audit_gemini_ladder_provenance(root: Path, failures: list[str]) -> tuple[in
     top_sha = data.get("git_sha")
     if not _is_hex_sha(top_sha):
         failures.append(f"{rel}: missing or malformed top-level git_sha {top_sha!r}")
+    else:
+        external_shas.append((rel, str(top_sha).strip().lower()))
 
     gen_at = data.get("generated_at")
     if not isinstance(gen_at, str) or not gen_at.strip():
@@ -941,6 +1157,9 @@ def _audit_gemini_ladder_provenance(root: Path, failures: list[str]) -> tuple[in
             bad_lshas = [s for s in launch_shas if not _is_hex_sha(s)]
             if bad_lshas:
                 failures.append(f"{rel}: rows[{idx}] malformed launch_git_shas {bad_lshas!r}")
+            else:
+                for lsha in launch_shas:
+                    external_shas.append((rel, str(lsha).strip().lower()))
 
     if episodes_int > 0 and summed_n != episodes_int:
         failures.append(
@@ -950,16 +1169,404 @@ def _audit_gemini_ladder_provenance(root: Path, failures: list[str]) -> tuple[in
     return (len(rows), episodes_int)
 
 
-def check_results_artifact_provenance(root: Path = ROOT) -> CheckResult:
+def _audit_harbor_rehearsal_provenance(
+    root: Path,
+    failures: list[str],
+    merged_shas: list[tuple[str, str]],
+    external_shas: list[tuple[str, str]],
+) -> int:
+    rel_build = "results/harbor/rehearsal/BUILD.txt"
+    rel_table = "results/harbor/rehearsal/TABLE.md"
+    build_path = root / rel_build
+    table_path = root / rel_table
+
+    kv: dict[str, str] = {}
+    build_sha = ""
+    if not build_path.is_file():
+        failures.append(f"missing artifact: {rel_build}")
+    else:
+        try:
+            build_text = build_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            failures.append(f"{rel_build}: unreadable file ({exc})")
+            build_text = ""
+        for raw_ln in build_text.splitlines():
+            if ":" in raw_ln:
+                k, v = raw_ln.split(":", 1)
+                k_clean = k.strip().lower()
+                if k_clean and k_clean not in kv:
+                    kv[k_clean] = v.strip()
+        build_sha = kv.get("sha", "")
+        if not _is_hex_sha(build_sha):
+            failures.append(f"{rel_build}: missing or malformed sha {build_sha!r}")
+        else:
+            merged_shas.append((rel_build, build_sha.lower()))
+        for req_field in ("describe", "built_utc", "harbor"):
+            if not kv.get(req_field, ""):
+                failures.append(f"{rel_build}: missing or empty provenance field {req_field!r}")
+
+    if not table_path.is_file():
+        failures.append(f"missing artifact: {rel_table}")
+        return 0
+    try:
+        table_text = table_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        failures.append(f"{rel_table}: unreadable file ({exc})")
+        return 0
+
+    m_head = HARBOR_REHEARSAL_HEADING_RX.search(table_text)
+    if m_head is None:
+        failures.append(f"{rel_table}: missing rehearsal heading with tag, short SHA, and Harbor version")
+    else:
+        tag_name = m_head.group(1).strip()
+        table_sha = m_head.group(2).strip().lower()
+        harbor_ver = m_head.group(3).strip()
+        merged_shas.append((rel_table, table_sha))
+        if _is_hex_sha(build_sha):
+            b_low = build_sha.lower()
+            if not (b_low.startswith(table_sha) or table_sha.startswith(b_low)):
+                failures.append(
+                    f"{rel_table}: heading SHA {table_sha!r} does not match {rel_build} sha {build_sha!r}"
+                )
+        if kv.get("describe") and tag_name != kv["describe"]:
+            failures.append(
+                f"{rel_table}: heading tag {tag_name!r} != {rel_build} describe {kv['describe']!r}"
+            )
+        if kv.get("harbor") and harbor_ver != kv["harbor"]:
+            failures.append(
+                f"{rel_table}: heading Harbor version {harbor_ver!r} != {rel_build} harbor {kv['harbor']!r}"
+            )
+
+    if "BUILD.txt" not in table_text:
+        failures.append(f"{rel_table}: missing BUILD.txt provenance reference")
+
+    for m_commit in HARBOR_REHEARSAL_COMMIT_NOTE_RX.finditer(table_text):
+        note_sha = m_commit.group(1).strip()
+        if not _is_hex_sha(note_sha):
+            failures.append(f"{rel_table}: malformed commit note SHA {note_sha!r}")
+        else:
+            external_shas.append((rel_table, note_sha.lower()))
+
+    expected_runs = ("opencode-1", "opencode-2", "opencode-3", "do_nothing", "stop_early")
+    found_runs: set[str] = set()
+    for raw_ln in table_text.splitlines():
+        s = raw_ln.strip()
+        if not (s.startswith("|") and s.endswith("|")):
+            continue
+        cells = [c.strip() for c in s[1:-1].split("|")]
+        if len(cells) >= 5 and cells[0] in expected_runs:
+            found_runs.add(cells[0])
+            if cells[0] in {"do_nothing", "stop_early"} and cells[4] not in {"+0.000", "0.000", "0"}:
+                failures.append(
+                    f"{rel_table}: expected 0.000 mean for {cells[0]}, got {cells[4]!r}"
+                )
+
+    for req_run in expected_runs:
+        if req_run not in found_runs:
+            failures.append(f"{rel_table}: missing summary row for {req_run!r}")
+
+    return len(found_runs)
+
+
+def _audit_redteam_1000_provenance(
+    root: Path,
+    failures: list[str],
+    merged_shas: list[tuple[str, str]],
+    external_shas: list[tuple[str, str]],
+) -> tuple[int, int]:
+    rel_md = "results/redteam_1000/summary.md"
+    rel_json = "results/redteam_1000/summary.json"
+    md_path = root / rel_md
+    if not md_path.is_file():
+        failures.append(f"missing artifact: {rel_md}")
+        return (0, 0)
+    try:
+        md_text = md_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        failures.append(f"{rel_md}: unreadable file ({exc})")
+        return (0, 0)
+
+    gen_ts = ""
+    gen_sha = ""
+    m_gen = REDTEAM_GENERATED_RX.search(md_text)
+    if m_gen is None:
+        failures.append(f"{rel_md}: missing 'Generated <timestamp> at `<sha>`.' provenance header")
+    else:
+        gen_ts = m_gen.group(1).strip()
+        gen_sha = m_gen.group(2).strip()
+        if not _is_hex_sha(gen_sha):
+            failures.append(f"{rel_md}: malformed generator git SHA {gen_sha!r}")
+        else:
+            external_shas.append((rel_md, gen_sha.lower()))
+
+    headline_attackers = 0
+    m_att = REDTEAM_HEADLINE_ATTACKERS_RX.search(md_text)
+    if m_att is None:
+        failures.append(f"{rel_md}: missing '**<N> Gemini attackers**' headline count")
+    else:
+        headline_attackers = int(m_att.group(1))
+        if headline_attackers <= 0:
+            failures.append(f"{rel_md}: expected positive Gemini attackers count, got {headline_attackers}")
+
+    m_exp = REDTEAM_EXPLOITS_LINE_RX.search(md_text)
+    if m_exp is None:
+        failures.append(f"{rel_md}: missing Verified exploits / invariant violations summary line")
+    elif int(m_exp.group(1)) != 0 or int(m_exp.group(2)) != 0:
+        failures.append(
+            f"{rel_md}: expected 0 verified exploits and 0 invariant violations, got {m_exp.group(1)} and {m_exp.group(2)}"
+        )
+
+    m_split = REDTEAM_COMMIT_SPLIT_HEADING_RX.search(md_text)
+    commit_rows = 0
+    summed_attempts = 0
+    total_attempts: int | None = None
+    md_split_by_sha: dict[str, int] = {}
+    if m_split is None:
+        failures.append(f"{rel_md}: missing 'Combined count split by commit (SHA)' table")
+    else:
+        tail_lines = md_text[m_split.end() :].splitlines()
+        col_map: dict[str, int] | None = None
+        seen_table = False
+        for raw_ln in tail_lines:
+            s = raw_ln.strip()
+            if not s:
+                if seen_table:
+                    break
+                continue
+            if not (s.startswith("|") and s.endswith("|")):
+                if seen_table:
+                    break
+                continue
+            seen_table = True
+            cells = [c.strip() for c in s[1:-1].split("|")]
+            if cells and all(TABLE_SEP_CELL_RX.match(c) for c in cells if c):
+                continue
+            if col_map is None:
+                col_map = {c.strip("`* ").lower(): idx for idx, c in enumerate(cells)}
+                for req_col in ("commit (sha)", "attempts", "ledger-verified", "invariant violations", "verified exploits"):
+                    if req_col not in col_map:
+                        failures.append(f"{rel_md}: commit-split table missing column {req_col!r}")
+                continue
+
+            if not all(
+                k in col_map
+                for k in ("commit (sha)", "attempts", "ledger-verified", "invariant violations", "verified exploits")
+            ):
+                break
+            sha_cell = cells[col_map["commit (sha)"]].strip("`* ")
+            try:
+                att_val = int(cells[col_map["attempts"]].strip("`* "))
+                ver_val = int(cells[col_map["ledger-verified"]].strip("`* "))
+                viol_val = int(cells[col_map["invariant violations"]].strip("`* "))
+                expl_val = int(cells[col_map["verified exploits"]].strip("`* "))
+            except (IndexError, ValueError) as exc:
+                failures.append(f"{rel_md}: invalid integer cell in commit-split row {sha_cell!r} ({exc})")
+                continue
+
+            if sha_cell.upper().startswith("TOTAL"):
+                total_attempts = att_val
+                if ver_val != att_val or viol_val != 0 or expl_val != 0:
+                    failures.append(
+                        f"{rel_md}: TOTAL commit-split row invariant mismatch (attempts={att_val}, verified={ver_val}, violations={viol_val}, exploits={expl_val})"
+                    )
+            else:
+                if not _is_hex_sha(sha_cell):
+                    failures.append(f"{rel_md}: malformed commit SHA {sha_cell!r} in commit-split table")
+                else:
+                    sha_low = sha_cell.lower()
+                    merged_shas.append((rel_md, sha_low))
+                    md_split_by_sha[sha_low] = att_val
+                if att_val <= 0 or ver_val != att_val or viol_val != 0 or expl_val != 0:
+                    failures.append(
+                        f"{rel_md}: commit-split row {sha_cell!r} invariant mismatch (attempts={att_val}, verified={ver_val}, violations={viol_val}, exploits={expl_val})"
+                    )
+                commit_rows += 1
+                summed_attempts += att_val
+
+        if commit_rows == 0:
+            failures.append(f"{rel_md}: commit-split table contains 0 commit rows")
+        if total_attempts is None:
+            failures.append(f"{rel_md}: commit-split table missing TOTAL row")
+        elif summed_attempts != total_attempts:
+            failures.append(
+                f"{rel_md}: commit-split dynamic sum {summed_attempts} != TOTAL row {total_attempts}"
+            )
+        if headline_attackers > 0 and summed_attempts != headline_attackers:
+            failures.append(
+                f"{rel_md}: commit-split dynamic sum {summed_attempts} != headline {headline_attackers} Gemini attackers"
+            )
+
+    json_path = root / rel_json
+    if not json_path.is_file():
+        failures.append(f"missing artifact: {rel_json}")
+    else:
+        try:
+            jdata = _loads_redteam_summary_projection(json_path.read_bytes())
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            failures.append(f"{rel_json}: invalid JSON ({exc})")
+            jdata = None
+        if jdata is not None and not isinstance(jdata, dict):
+            failures.append(f"{rel_json}: expected JSON object")
+        elif isinstance(jdata, dict):
+            j_sha = jdata.get("git_sha")
+            if not _is_hex_sha(j_sha):
+                failures.append(f"{rel_json}: missing or malformed git_sha {j_sha!r}")
+            else:
+                j_sha_l = str(j_sha).strip().lower()
+                external_shas.append((rel_json, j_sha_l))
+                if _is_hex_sha(gen_sha) and not (
+                    j_sha_l.startswith(gen_sha.lower()) or gen_sha.lower().startswith(j_sha_l)
+                ):
+                    failures.append(
+                        f"{rel_json}: git_sha {j_sha!r} does not match {rel_md} generator SHA {gen_sha!r}"
+                    )
+            j_ts = jdata.get("generated_at")
+            if not isinstance(j_ts, str) or not j_ts.strip():
+                failures.append(f"{rel_json}: missing generated_at timestamp")
+            elif gen_ts and j_ts.strip() != gen_ts:
+                failures.append(
+                    f"{rel_json}: generated_at {j_ts!r} != {rel_md} Generated timestamp {gen_ts!r}"
+                )
+            run_ids = jdata.get("ledger_run_ids")
+            if not isinstance(run_ids, list) or not run_ids:
+                failures.append(f"{rel_json}: missing non-empty ledger_run_ids list")
+
+            if "counts" in jdata:
+                counts_obj = jdata["counts"]
+                if not isinstance(counts_obj, dict):
+                    failures.append(f"{rel_json}: expected 'counts' object")
+                else:
+                    c_att = counts_obj.get("attempts")
+                    c_ver = counts_obj.get("ledger_verified")
+                    c_exp = counts_obj.get("exploits")
+                    c_viol = counts_obj.get("invariant_violations")
+                    if summed_attempts > 0 and (c_att != summed_attempts or c_ver != summed_attempts):
+                        failures.append(
+                            f"{rel_json}: counts attempts/ledger_verified ({c_att}/{c_ver}) != {rel_md} sum {summed_attempts}"
+                        )
+                    if c_exp != 0 or c_viol != 0:
+                        failures.append(
+                            f"{rel_json}: counts expected 0 exploits and 0 invariant_violations, got {c_exp!r} and {c_viol!r}"
+                        )
+
+            if "by_sha" in jdata:
+                by_sha_list = jdata["by_sha"]
+                if not isinstance(by_sha_list, list) or not by_sha_list:
+                    failures.append(f"{rel_json}: 'by_sha' must be a non-empty list when present")
+                else:
+                    json_split_by_sha: dict[str, int] = {}
+                    for idx, item in enumerate(by_sha_list):
+                        if not isinstance(item, dict):
+                            failures.append(f"{rel_json}: by_sha[{idx}] is not an object")
+                            continue
+                        item_sha = item.get("git_sha")
+                        item_att = item.get("attempts")
+                        item_ver = item.get("ledger_verified")
+                        item_viol = item.get("invariant_violations")
+                        item_exp = item.get("exploits")
+                        if not _is_hex_sha(item_sha):
+                            failures.append(f"{rel_json}: by_sha[{idx}] malformed git_sha {item_sha!r}")
+                            continue
+                        item_sha_l = str(item_sha).strip().lower()
+                        merged_shas.append((rel_json, item_sha_l))
+                        if (
+                            not _is_int(item_att)
+                            or int(item_att) <= 0
+                            or item_ver != item_att
+                            or item_viol != 0
+                            or item_exp != 0
+                        ):
+                            failures.append(
+                                f"{rel_json}: by_sha[{idx}] ({item_sha_l}) invariant mismatch"
+                            )
+                            continue
+                        json_split_by_sha[item_sha_l] = int(item_att)
+                    if md_split_by_sha and json_split_by_sha != md_split_by_sha:
+                        failures.append(
+                            f"{rel_json}: by_sha split {json_split_by_sha} != {rel_md} split {md_split_by_sha}"
+                        )
+
+    return (commit_rows, summed_attempts)
+
+
+def _audit_paired_table_provenance(
+    root: Path,
+    failures: list[str],
+    merged_shas: list[tuple[str, str]],
+) -> int:
+    rel = "data/runs/committed/v1.4/paired_table_gemini.json"
+    pt_path = root / rel
+    if not pt_path.is_file():
+        return 0
+    try:
+        rows = _loads_json_bytes(pt_path.read_bytes())
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        failures.append(f"{rel}: invalid JSON ({exc})")
+        return 0
+    if not isinstance(rows, list) or not rows:
+        failures.append(f"{rel}: expected non-empty JSON list")
+        return 0
+
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            failures.append(f"{rel}: row[{idx}] is not an object")
+            continue
+        grp = row.get("group")
+        if not isinstance(grp, str) or not grp.strip():
+            failures.append(f"{rel}: row[{idx}] missing valid 'group'")
+        elif not (root / "data" / "runs" / "committed" / grp).is_dir():
+            failures.append(f"{rel}: row[{idx}] group directory data/runs/committed/{grp} missing")
+        label = row.get("label")
+        if isinstance(label, str):
+            for m_sha in PAIRED_LABEL_COMMIT_RX.finditer(label):
+                cand = m_sha.group(1).lower()
+                if any(ch in "abcdef" for ch in cand) or len(cand) >= 7:
+                    merged_shas.append((rel, cand))
+
+    return len(rows)
+
+
+def check_results_artifact_provenance(
+    root: Path = ROOT,
+    *,
+    inspector: GitCommitInspector | None = None,
+) -> CheckResult:
     name = CHECK_RESULTS_ARTIFACTS
     root_resolved = Path(root).resolve()
+    git_inspector = inspector if inspector is not None else GitCommitInspector(root_resolved)
     failures: list[str] = []
+    merged_shas: list[tuple[str, str]] = []
+    external_shas: list[tuple[str, str]] = []
 
-    n_jt = _audit_judge_table_provenance(root_resolved, failures)
+    n_jt = _audit_judge_table_provenance(root_resolved, failures, merged_shas)
     n_fa = _audit_failure_analysis_provenance(root_resolved, failures)
     n_or = _audit_oracle_range_provenance(root_resolved, failures)
     n_sr = _audit_solver_range_provenance(root_resolved, failures)
-    n_lad_rows, n_lad_eps = _audit_gemini_ladder_provenance(root_resolved, failures)
+    n_lad_rows, n_lad_eps = _audit_gemini_ladder_provenance(root_resolved, failures, external_shas)
+    n_reh_rows = _audit_harbor_rehearsal_provenance(root_resolved, failures, merged_shas, external_shas)
+    n_rt_commits, n_rt_att = _audit_redteam_1000_provenance(
+        root_resolved,
+        failures,
+        merged_shas,
+        external_shas,
+    )
+    _audit_paired_table_provenance(root_resolved, failures, merged_shas)
+
+    if git_inspector.has_git and (merged_shas or external_shas):
+        all_req = {s for _, s in merged_shas} | {s for _, s in external_shas}
+        resolved = git_inspector.resolve_shas(all_req)
+        if not all(info[0] == "error" for info in resolved.values()):
+            for loc, sha_val in merged_shas:
+                obj_type, _ = resolved.get(sha_val, ("missing", ""))
+                if obj_type == "missing":
+                    if not git_inspector.is_shallow:
+                        failures.append(f"{loc}: commit SHA {sha_val!r} does not exist in .git")
+                elif obj_type != "commit":
+                    failures.append(f"{loc}: SHA {sha_val!r} resolves to {obj_type!r}, expected 'commit'")
+            for loc, sha_val in external_shas:
+                obj_type, _ = resolved.get(sha_val, ("missing", ""))
+                if obj_type not in {"commit", "missing"}:
+                    failures.append(f"{loc}: SHA {sha_val!r} resolves to {obj_type!r}, expected 'commit'")
 
     if failures:
         return CheckResult(
@@ -974,12 +1581,14 @@ def check_results_artifact_provenance(root: Path = ROOT) -> CheckResult:
         "PASS",
         f"judge_table ({n_jt} reported notes), failure_analysis (n={n_fa}), "
         f"oracle_range ({n_or} rows), solver_range ({n_sr} files), "
-        f"gemini/ladder ({n_lad_rows} rows, {n_lad_eps} episodes) verified",
+        f"gemini/ladder ({n_lad_rows} rows, {n_lad_eps} episodes), "
+        f"harbor/rehearsal ({n_reh_rows} rows), redteam_1000 ({n_rt_commits} commits, {n_rt_att} attacks) verified",
     )
 
 
-def known_non_commit_hex_tokens(root: Path | None = None) -> set[str]:
-    tokens: set[str] = set(CANONICAL_FROZEN_TIER_HASHES) | set(DOCUMENTED_VERDA_INSTANCE_IDS)
+@lru_cache(maxsize=1)
+def _canary_rules_tier_hashes() -> frozenset[str]:
+    computed: set[str] = set()
     try:
         from canary import rules as canary_rules
 
@@ -987,7 +1596,7 @@ def known_non_commit_hex_tokens(root: Path | None = None) -> set[str]:
             "tiers": {k: v.to_dict() for k, v in canary_rules.TIERS.items()},
             "known_v_mode": canary_rules.KNOWN_V_MODE,
         }
-        tokens.add(
+        computed.add(
             hashlib.sha256(json.dumps(current_obj, sort_keys=True, default=list).encode("utf-8")).hexdigest()[:16]
         )
         history = getattr(canary_rules, "TIERS_HISTORY", {})
@@ -999,13 +1608,20 @@ def known_non_commit_hex_tokens(root: Path | None = None) -> set[str]:
                         "tiers": {k: v.to_dict() for k, v in hist_tiers.items()},
                         "known_v_mode": known_v,
                     }
-                    tokens.add(
+                    computed.add(
                         hashlib.sha256(
                             json.dumps(hist_obj, sort_keys=True, default=list).encode("utf-8")
                         ).hexdigest()[:16]
                     )
     except Exception:
         pass
+    return frozenset(computed)
+
+
+def known_non_commit_hex_tokens(root: Path | None = None) -> set[str]:
+    tokens: set[str] = set(CANONICAL_FROZEN_TIER_HASHES) | set(DOCUMENTED_VERDA_INSTANCE_IDS)
+    if root is None or (root / "canary" / "rules.py").is_file():
+        tokens |= set(_canary_rules_tier_hashes())
 
     if root is not None:
         verda_readme = root / "fr8" / "verda" / "README.md"
@@ -1029,6 +1645,29 @@ def known_non_commit_hex_tokens(root: Path | None = None) -> set[str]:
                 pass
 
     return tokens
+
+
+def documented_external_commit_shas(root: Path) -> set[str]:
+    ext_shas: set[str] = set()
+    reh_table = root / "results" / "harbor" / "rehearsal" / "TABLE.md"
+    if reh_table.is_file():
+        try:
+            for raw_ln in reh_table.read_text(encoding="utf-8").splitlines():
+                if EXTERNAL_BRANCH_CONTEXT_RX.search(raw_ln) is not None:
+                    for m_note in HARBOR_REHEARSAL_COMMIT_NOTE_RX.finditer(raw_ln):
+                        cand = m_note.group(1).strip().lower()
+                        if _is_hex_sha(cand):
+                            ext_shas.add(cand)
+        except OSError:
+            pass
+    dry_readme = root / "results" / "harbor" / "rehearsal-dry" / "README.md"
+    if dry_readme.is_file():
+        try:
+            for m_dry in DRY_REHEARSAL_CODE_SHA_RX.finditer(dry_readme.read_text(encoding="utf-8")):
+                ext_shas.add(m_dry.group(1).strip().lower())
+        except OSError:
+            pass
+    return ext_shas
 
 
 def _clause_prefix_before(raw_line: str, start: int) -> str:
@@ -1089,7 +1728,7 @@ def extract_doc_commit_citations(
 
     for lineno, raw_line in enumerate(text.splitlines(), 1):
         stripped = raw_line.strip()
-        m_fence = FENCE_OPEN_RX.match(raw_line)
+        m_fence = FENCE_OPEN_RX.match(raw_line) if ("`" in raw_line or "~" in raw_line) else None
         if not in_fence:
             if m_fence:
                 marker = m_fence.group(1)
@@ -1108,7 +1747,8 @@ def extract_doc_commit_citations(
             continue
 
         found_on_line: set[str] = set()
-        is_ext = EXTERNAL_BRANCH_CONTEXT_RX.search(raw_line) is not None
+        ext_checked = False
+        is_ext = False
 
         if stripped.startswith("|") and stripped.endswith("|"):
             cells = [c.strip() for c in stripped[1:-1].split("|")]
@@ -1126,6 +1766,9 @@ def extract_doc_commit_citations(
                     if _is_hex_sha(clean_cell):
                         sha_l = clean_cell.lower()
                         if sha_l not in found_on_line:
+                            if not ext_checked:
+                                is_ext = EXTERNAL_BRANCH_CONTEXT_RX.search(raw_line) is not None
+                                ext_checked = True
                             found_on_line.add(sha_l)
                             citations.append(DocCommitCitation(doc_rel, lineno, sha_l, is_ext))
                     else:
@@ -1134,6 +1777,11 @@ def extract_doc_commit_citations(
                         )
         else:
             headers = None
+
+        if HEX7_FAST_RX.search(raw_line) is None:
+            continue
+        if not ext_checked:
+            is_ext = EXTERNAL_BRANCH_CONTEXT_RX.search(raw_line) is not None
 
         for rx_idx, rx in enumerate(EXPLICIT_DOC_COMMIT_RXES):
             check_instance_ctx = rx_idx in {5, 6}
@@ -1153,15 +1801,14 @@ def extract_doc_commit_citations(
                 found_on_line.add(sha_l)
                 citations.append(DocCommitCitation(doc_rel, lineno, sha_l, is_ext))
 
-        for match in PAREN_OR_BACKTICK_HEX_RX.finditer(raw_line):
-            grp_idx = 1 if match.group(1) is not None else 2
-            cand = (match.group(grp_idx) or "").lower()
-            if not cand or cand in found_on_line:
+        for match in BACKTICK_HEX_RX.finditer(raw_line):
+            cand = match.group(1).lower()
+            if cand in found_on_line:
                 continue
             if _is_non_commit_span(
                 raw_line,
-                match.start(grp_idx),
-                match.end(grp_idx),
+                match.start(1),
+                match.end(1),
                 cand,
                 known_non_commits,
                 allow_instance_lookup=True,
@@ -1171,6 +1818,32 @@ def extract_doc_commit_citations(
             if has_hex_alpha or cand.startswith("0") or len(cand) in {7, 8}:
                 found_on_line.add(cand)
                 citations.append(DocCommitCitation(doc_rel, lineno, cand, is_ext))
+
+        if "(" in raw_line and ")" in raw_line:
+            for p_match in PAREN_SPAN_RX.finditer(raw_line):
+                inner = p_match.group(1)
+                if HEX7_FAST_RX.search(inner) is None:
+                    continue
+                base_offset = p_match.start(1)
+                for h_match in PAREN_HEX_TOKEN_RX.finditer(inner):
+                    cand = h_match.group(1).lower()
+                    if cand in found_on_line:
+                        continue
+                    abs_start = base_offset + h_match.start(1)
+                    abs_end = base_offset + h_match.end(1)
+                    if _is_non_commit_span(
+                        raw_line,
+                        abs_start,
+                        abs_end,
+                        cand,
+                        known_non_commits,
+                        allow_instance_lookup=True,
+                    ):
+                        continue
+                    has_hex_alpha = any(ch in "abcdef" for ch in cand)
+                    if has_hex_alpha or cand.startswith("0") or len(cand) in {7, 8}:
+                        found_on_line.add(cand)
+                        citations.append(DocCommitCitation(doc_rel, lineno, cand, is_ext))
 
     return citations, malformed_errors
 
@@ -1266,18 +1939,24 @@ def check_doc_commit_references(
         )
 
     head_set = git_inspector.head_commits()
+    doc_ext_shas = documented_external_commit_shas(root_resolved)
     warnings: list[str] = []
     verified_count = 0
+    shallow_omitted = 0
 
     for cit in all_citations:
         obj_type, full_sha = resolved_map.get(cit.sha, ("missing", ""))
         loc = f"{cit.doc}:{cit.line}"
+        known_ext = cit.external_branch or any(
+            cit.sha.startswith(ext_s) or ext_s.startswith(cit.sha) for ext_s in doc_ext_shas
+        )
         if obj_type == "missing":
-            if cit.external_branch:
+            if known_ext:
                 warnings.append(
                     f"{loc}: external-branch/unmerged commit SHA '{cit.sha}' is not fetched in local .git"
                 )
             elif git_inspector.is_shallow:
+                shallow_omitted += 1
                 warnings.append(
                     f"{loc}: shallow .git clone omits historical commit SHA '{cit.sha}'"
                 )
@@ -1294,7 +1973,7 @@ def check_doc_commit_references(
         else:
             is_merged = (head_set is not None) and (full_sha in head_set)
             if head_set is None:
-                if cit.external_branch:
+                if known_ext:
                     warnings.append(
                         f"{loc}: commit SHA '{cit.sha}' ({full_sha[:12]}) resolves to valid commit on external/unmerged branch"
                     )
@@ -1315,11 +1994,16 @@ def check_doc_commit_references(
             failures + warnings,
         )
     if warnings:
+        warn_kind = (
+            "shallow/external commit warning(s)"
+            if shallow_omitted > 0
+            else "external-branch/unmerged commit warning(s)"
+        )
         return CheckResult(
             name,
             "WARN",
             f"verified {verified_count} merged commit citation(s) across {len(present_docs)} doc(s); "
-            f"{len(warnings)} external-branch/unmerged commit warning(s)",
+            f"{len(warnings)} {warn_kind}",
             warnings,
         )
     return CheckResult(
@@ -1338,7 +2022,7 @@ def verify_repo(
     inspector = GitCommitInspector(resolved)
     return [
         check_committed_run_provenance(resolved, inspector=inspector),
-        check_results_artifact_provenance(resolved),
+        check_results_artifact_provenance(resolved, inspector=inspector),
         check_doc_commit_references(resolved, docs=docs, inspector=inspector),
     ]
 

@@ -42,3 +42,5 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 02:12: v2 extra-n pulled (n=90; pooled v2 n=172 −0.457 ± 0.086). 02:17: backup base eval on A100 18acfa5d. Burn €15.75/h → projected ≈ €108 by 07:30 (cap €300).
 
 02:39: v3-4k s0 eval pulled (−0.103 ± 0.081, n=90; vs v2 +0.306 ± 0.136; vs base −0.062 ± 0.122). v3-8k s0 started on the H100 at 02:20 (chain). v3-4k s1 replicate on A100 spot 714d8144. Burn €16.83/h → projected ≈ €112 by 07:30.
+
+02:45: Meta PaliGemma 2 3B LoRA DONE on shared A100 f4378173: train 23:35:34Z → 00:12:18Z incl. eval (1,766 s training, 2 epochs), peak ~15.5 GB (capped at 0.58 of the card); an earlier batch-8 attempt OOM-exited (~69 GB) without affecting v3-8k s3. Results copied off by Meta; nothing of theirs is running. No extra cost.

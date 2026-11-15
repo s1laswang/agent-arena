@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,20 @@ COHORT_SPECS: tuple[tuple[str, str, str, str], ...] = (
     ("v1.3_solver", "v1.3", "solver", "Reference Solver (v1.3, seeds 0-19)"),
 )
 
+COHORT_AGENTS: frozenset[str] = frozenset(ag for _, _, ag, _ in COHORT_SPECS)
+
+PRIMARY_COHORT_DIRS: dict[str, frozenset[str]] = {
+    "v1.4": frozenset({"opencode-gemini-4-carbon", "inproc-gemini-4-carbon", "reference"}),
+    "v1.3": frozenset({"codex-gpt-5.5-full", "gpt-5.5-full", "reference"}),
+}
+
+PRIMARY_SEED_MAX: dict[str, int] = {
+    "v1.4": 29,
+    "v1.3": 19,
+}
+
+HEADLINE_TIERS: tuple[str, ...] = ("hard", "medium")
+
 KEY_TOOLS: tuple[str, ...] = (
     "interview",
     "read_access_logs",
@@ -55,33 +70,84 @@ def _is_valid_episode(ep: dict[str, Any]) -> bool:
     return meta.get("valid") is not False and ep.get("valid") is not False
 
 
-def _load_version_episodes(committed_root: Path, version: str) -> tuple[list[dict[str, Any]], dict[str, Path]]:
+def _run_meta(run_dir: Path) -> dict[str, Any]:
+    meta_path = run_dir / "meta.json"
+    if not meta_path.is_file():
+        return {}
+    try:
+        parsed = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _should_skip_rel_parts(rel_parts: tuple[str, ...]) -> bool:
+    for part in rel_parts:
+        low = part.lower()
+        if (
+            "superseded" in low
+            or low.endswith(("-smoke", "-ext"))
+            or "hint" in low
+            or "seeds30to59" in low
+        ):
+            return True
+    return False
+
+
+def _load_version_episodes(
+    committed_root: Path,
+    version: str,
+) -> tuple[list[tuple[tuple[str, str], dict[str, Any]]], dict[str, Path], list[tuple[str, str, int]]]:
     ver_dir = committed_root / version
     if not ver_dir.is_dir():
-        return [], {}
-    episodes: list[dict[str, Any]] = []
+        return [], {}, []
+    allowed_dirs = PRIMARY_COHORT_DIRS.get(version, frozenset())
+    max_seed = PRIMARY_SEED_MAX.get(version, 29)
+    episodes: list[tuple[tuple[str, str], dict[str, Any]]] = []
     accuse_files: dict[str, Path] = {}
+    invalid_records: list[tuple[str, str, int]] = []
     for md_path in sorted(ver_dir.rglob("accuse.md")):
-        if "superseded" in md_path.parts:
+        rel_md_parts = md_path.relative_to(ver_dir).parts
+        if _should_skip_rel_parts(rel_md_parts):
+            continue
+        if len(rel_md_parts) >= 2 and rel_md_parts[0] not in allowed_dirs:
             continue
         accuse_files[str(md_path.parent.relative_to(ver_dir))] = md_path
     for fpath in sorted(ver_dir.rglob("episodes.jsonl")):
         rel_parts = fpath.relative_to(ver_dir).parts
-        if "superseded" in rel_parts or any(part.endswith("-smoke") for part in rel_parts):
+        if len(rel_parts) < 2 or rel_parts[0] not in allowed_dirs:
             continue
+        if _should_skip_rel_parts(rel_parts):
+            continue
+        rmeta = _run_meta(fpath.parent)
+        mver = rmeta.get("tiers_version")
+        if isinstance(mver, str) and mver.strip() and mver.strip() != version:
+            continue
+        magent = rmeta.get("agent")
+        if isinstance(magent, str) and magent.strip() and magent.strip() not in COHORT_AGENTS:
+            continue
+        rel_dir = str(fpath.parent.relative_to(committed_root))
+        recency = (str(rmeta.get("timestamp") or ""), rel_dir)
         for raw_line in fpath.read_text(encoding="utf-8").splitlines():
             line = raw_line.strip()
             if not line:
                 continue
             ep = json.loads(line)
+            tier = str(ep.get("tier") or "")
+            if tier not in HEADLINE_TIERS:
+                continue
+            seed = int(ep.get("seed", -1))
+            if not (0 <= seed <= max_seed):
+                continue
             if not _is_valid_episode(ep):
+                invalid_records.append((tier, str(ep.get("agent") or ""), seed))
                 continue
             ep = dict(ep)
             meta = dict(ep.get("meta") or {})
             meta.setdefault("source_file", str(fpath.relative_to(committed_root)))
             ep["meta"] = meta
-            episodes.append(ep)
-    return episodes, accuse_files
+            episodes.append((recency, ep))
+    return episodes, accuse_files, invalid_records
 
 
 def detect_angry_decoy(ep: EpisodeResult) -> str | None:
@@ -177,6 +243,7 @@ def analyze_single_episode(
         it for it in sp.obs.feed
         if sp.obs.docs.get(it.doc_id) is not None and not sp.obs.docs[it.doc_id].is_canary
     ]
+    unlisted_feed_items = sum(1 for it in sp.obs.feed if sp.obs.docs.get(it.doc_id) is None)
 
     candidate_cell = set(sp.obs.employees)
     for it in surfaced_regular:
@@ -236,10 +303,17 @@ def analyze_single_episode(
     failure_mechanisms: list[str] = []
     if not ep.correct and accused:
         if params.fingerprint_accuracy < 1.0 and separating_canaries <= 1 and len(surfaced_canaries) >= 1:
-            if accused_canary_hits <= 1:
+            if accused_canary_hits == 0 and len(cell_ah) == 0:
+                failure_mechanisms.append("fp95_conflicting_canaries_fallback")
+            elif accused_canary_hits <= 1:
                 failure_mechanisms.append("fp95_single_canary_hit")
             else:
                 failure_mechanisms.append("fp95_single_separating_canary")
+        if known_decoy and accused == known_decoy:
+            if agent_detected_decoy is None:
+                failure_mechanisms.append("unidentified_decoy_framed_log_fallback")
+            else:
+                failure_mechanisms.append("angry_decoy_accused")
         if non_decoy_framed_tiebreak:
             failure_mechanisms.append("non_decoy_framed_log_tiebreak")
         if horizon_gamble:
@@ -296,6 +370,7 @@ def analyze_single_episode(
         "two_canary_days": two_canary_days,
         "active_days": active_days,
         "surfaced_canaries": len(surfaced_canaries),
+        "unlisted_feed_items": unlisted_feed_items,
         "accused_canary_hits": accused_canary_hits,
         "separating_canaries": separating_canaries,
         "runner_up": runner_up,
@@ -394,7 +469,9 @@ def aggregate_records(
     )
 
     decoy_eps = [r for r in records if r["known_decoy"] is not None]
-    decoy_detected = sum(1 for r in decoy_eps if r["agent_detected_decoy"] is not None)
+    decoy_detected_eps = [r for r in decoy_eps if r["agent_detected_decoy"] is not None]
+    decoy_detected = len(decoy_detected_eps)
+    decoy_detected_accused = sum(1 for r in decoy_detected_eps if r["decoy_accused"])
     decoy_max_ah = sum(1 for r in decoy_eps if r["decoy_has_max_after_hours"])
     decoy_accused = sum(1 for r in decoy_eps if r["decoy_accused"])
     decoy_restricted = sum(1 for r in decoy_eps if r["decoy_restricted"])
@@ -459,6 +536,8 @@ def aggregate_records(
             "failed_calls_mean": round(sum(r["failed_calls"] for r in records) / n, 2),
             "investigative_calls_mean": round(inv_total / n, 2),
             "interview_investigative_share": round(_safe_div(tool_sums["interview"], inv_total), 3),
+            "unlisted_feed_episodes": sum(1 for r in records if r["unlisted_feed_items"] > 0),
+            "unlisted_feed_items_total": sum(r["unlisted_feed_items"] for r in records),
         },
         "failure_anatomy": {
             "single_canary_hit_accusations": len(single_hit_all),
@@ -493,6 +572,10 @@ def aggregate_records(
             "decoy_accused_count": decoy_accused,
             "decoy_restricted_count": decoy_restricted,
             "decoy_dismissal_rate": round(_safe_div(len(decoy_eps) - decoy_accused, len(decoy_eps)), 4) if decoy_eps else 1.0,
+            "decoy_dismissal_when_detected_rate": (
+                round(_safe_div(decoy_detected - decoy_detected_accused, decoy_detected), 4)
+                if decoy_detected else 1.0
+            ),
             "non_decoy_framed_tiebreak_wrong": sum(1 for r in wrong_recs if r["non_decoy_framed_tiebreak"]),
         },
     }
@@ -569,6 +652,8 @@ def _build_strategy_levers(cohorts: dict[str, Any], cross: dict[str, Any]) -> li
         _cm(t, "canary_metrics", "recipient_bins", "le_3_share")
         for t in (cx_hard, cx_med, g5_hard, g5_med) if t
     ] or [0.0]
+    decoy_acc_total = cross["frontier_decoy_accused_total"]
+    decoy_acc_word = "accusation" if decoy_acc_total == 1 else "accusations"
 
     levers = [
         {
@@ -638,7 +723,7 @@ def _build_strategy_levers(cohorts: dict[str, Any], cross: dict[str, Any]) -> li
             "mole_view_features": ["day", "newest_doc_age_days", "n_leakable"],
             "mole_strategy_selectors": {"leak": "oldest", "frame": "random_peer"},
             "target_weakness": (
-                f"Gemini delays first canary on Hard to day {_fmt_opt(_cm(oc_hard, 'canary_metrics', 'first_canary_day_mean', default=None))}-"
+                f"Gemini-4-carbon delays first canary on Hard to day {_fmt_opt(_cm(oc_hard, 'canary_metrics', 'first_canary_day_mean', default=None))}-"
                 f"{_fmt_opt(_cm(ip_hard, 'canary_metrics', 'first_canary_day_mean', default=None))} "
                 f"(vs Solver day {_fmt_opt(_cm(sol14_hard, 'canary_metrics', 'first_canary_day_mean', default=None))}), "
                 f"plants reactive age-0 canaries after leaks surface, and accuses with <=1 separating canary under 0.95 fingerprint noise."
@@ -671,13 +756,14 @@ def _build_strategy_levers(cohorts: dict[str, Any], cross: dict[str, Any]) -> li
             "mole_strategy_selectors": {"leak": "random_seeded", "frame": "most_restricted_peer"},
             "target_weakness": (
                 f"Frontier models dismissed the angry decoy in {_fmt_pct(cross['frontier_decoy_dismissal_rate'])} "
-                f"of {cross['frontier_decoy_episodes_total']} episodes ({cross['frontier_decoy_accused_total']} decoy accusations), "
-                f"but non-decoy framed after-hours logs broke 0-separation canary ties into -1.0 wrong accusations "
+                f"of {cross['frontier_decoy_episodes_total']} episodes ({decoy_acc_total} decoy {decoy_acc_word}), "
+                f"while non-decoy framed after-hours logs broke <=1-separation canary ties into -1.0 wrong accusations "
                 f"({cross['wrong_non_decoy_framed_tiebreak']}/{cross['frontier_wrong_accusations_total']} wrong accusations)."
             ),
             "empirical_evidence": {
                 "frontier_decoy_dismissal_rate": cross["frontier_decoy_dismissal_rate"],
-                "frontier_decoy_accused_total": cross["frontier_decoy_accused_total"],
+                "frontier_decoy_dismissal_when_detected_rate": cross["frontier_decoy_dismissal_when_detected_rate"],
+                "frontier_decoy_accused_total": decoy_acc_total,
                 "wrong_non_decoy_framed_tiebreak": cross["wrong_non_decoy_framed_tiebreak"],
                 "wrong_with_zero_separating_canary": cross["wrong_with_zero_separating_canary"],
                 "gemini_opencode_hard_log_calls": _cm(oc_hard, "tool_budget", "read_access_logs_mean"),
@@ -702,13 +788,14 @@ def _build_strategy_levers(cohorts: dict[str, Any], cross: dict[str, Any]) -> li
             "mole_view_features": ["day", "days_since_last_leak"],
             "mole_strategy_selectors": {"leak": "none", "frame": "random_peer"},
             "target_weakness": (
-                f"Gemini spends {_fmt_pct(_cm(ip_hard, 'tool_budget', 'interview_investigative_share'))}-"
+                f"Gemini-4-carbon spends {_fmt_pct(_cm(ip_hard, 'tool_budget', 'interview_investigative_share'))}-"
                 f"{_fmt_pct(_cm(oc_hard, 'tool_budget', 'interview_investigative_share'))} of Hard investigative calls "
                 f"on low-LR interviews ({_fmt_opt(_cm(ip_hard, 'tool_budget', 'interview_mean'))}-"
-                f"{_fmt_opt(_cm(oc_hard, 'tool_budget', 'interview_mean'))}/episode), starts canaries late, "
-                f"lags Solver by {_fmt_opt(_cm(ip_hard, 'failure_anatomy', 'accuse_day_lag_vs_solver_mean', default=None), signed=True)} to "
+                f"{_fmt_opt(_cm(oc_hard, 'tool_budget', 'interview_mean'))}/episode), lags Solver by "
+                f"{_fmt_opt(_cm(ip_hard, 'failure_anatomy', 'accuse_day_lag_vs_solver_mean', default=None), signed=True)} to "
                 f"{_fmt_opt(_cm(oc_hard, 'failure_anatomy', 'accuse_day_lag_vs_solver_mean', default=None), signed=True)} days, "
-                f"and makes {cross['frontier_horizon_gambles_total']} horizon gambles below 1/(1+V)."
+                f"and frontier models make {cross['frontier_below_breakeven_gambles_total']} gambles below 1/(1+V) "
+                f"({cross['frontier_horizon_gambles_total']} at the horizon)."
             ),
             "empirical_evidence": {
                 "gemini_opencode_hard_interviews": _cm(oc_hard, "tool_budget", "interview_mean"),
@@ -746,44 +833,55 @@ def _build_strategy_levers(cohorts: dict[str, Any], cross: dict[str, Any]) -> li
 
 def mine_committed_runs(root: str | Path = Path("data/runs/committed")) -> dict[str, Any]:
     committed_root = resolve_committed_root(root)
-    loaded_by_ver: dict[str, tuple[list[dict[str, Any]], dict[str, Path]]] = {}
+    loaded_by_ver: dict[
+        str,
+        tuple[list[tuple[tuple[str, str], dict[str, Any]]], dict[str, Path], list[tuple[str, str, int]]],
+    ] = {}
     for ver in ("v1.4", "v1.3"):
         loaded_by_ver[ver] = _load_version_episodes(committed_root, ver)
 
     raw_by_cohort: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    invalid_by_cohort: dict[str, int] = {}
     for cohort_id, ver, agent_name, _ in COHORT_SPECS:
-        eps, _ = loaded_by_ver[ver]
-        seen_keys: set[tuple[str, int]] = set()
-        for ep in sorted(eps, key=lambda e: (str(e.get("tier")), int(e.get("seed", 0)))):
+        rec_eps, _, inv_list = loaded_by_ver[ver]
+        invalid_by_cohort[cohort_id] = sum(1 for _, ag, _ in inv_list if ag == agent_name)
+        max_seed = PRIMARY_SEED_MAX.get(ver, 29)
+        by_key: dict[tuple[str, int], tuple[tuple[str, str], dict[str, Any]]] = {}
+        for recency, ep in rec_eps:
             if ep.get("agent") != agent_name:
                 continue
             seed = int(ep["seed"])
-            if cohort_id == "v1.4_solver" and not (0 <= seed <= 29):
+            if not (0 <= seed <= max_seed):
                 continue
             key = (str(ep["tier"]), seed)
-            if key in seen_keys:
-                continue
-            seen_keys.add(key)
-            raw_by_cohort[cohort_id].append(ep)
+            prev = by_key.get(key)
+            if prev is None or recency > prev[0]:
+                by_key[key] = (recency, ep)
+        for key in sorted(by_key):
+            raw_by_cohort[cohort_id].append(by_key[key][1])
 
+    results_by_cohort: dict[str, list[EpisodeResult]] = {}
     public_decoy_by_ver: dict[str, dict[tuple[str, int], str]] = {"v1.4": {}, "v1.3": {}}
     for cohort_id, ver, _, _ in COHORT_SPECS:
+        cohort_ers: list[EpisodeResult] = []
         for ep in raw_by_cohort.get(cohort_id, []):
             er = to_result(ep)
+            cohort_ers.append(er)
             dec = detect_angry_decoy(er)
             if dec:
                 public_decoy_by_ver[ver][(er.tier, er.seed)] = dec
+        results_by_cohort[cohort_id] = cohort_ers
 
     analyzed_by_cohort: dict[str, list[dict[str, Any]]] = {}
     for cohort_id, ver, _, _ in COHORT_SPECS:
-        eps = raw_by_cohort.get(cohort_id, [])
-        if not eps:
+        ers = results_by_cohort.get(cohort_id, [])
+        if not ers:
             analyzed_by_cohort[cohort_id] = []
             continue
         with tiers_version(ver):
             analyzed_by_cohort[cohort_id] = [
-                analyze_single_episode(to_result(ep), public_decoy_by_ver[ver])
-                for ep in eps
+                analyze_single_episode(er, public_decoy_by_ver[ver])
+                for er in ers
             ]
 
     solver_lookup: dict[str, dict[tuple[str, int], dict[str, Any]]] = {
@@ -798,7 +896,7 @@ def mine_committed_runs(root: str | Path = Path("data/runs/committed")) -> dict[
         recs = analyzed_by_cohort.get(cohort_id, [])
         if not recs:
             continue
-        _, accuse_files = loaded_by_ver[ver]
+        _, accuse_files, _ = loaded_by_ver[ver]
         verified = _verify_accuse_md(recs, accuse_files, agent_name) if agent_name != "solver" else True
         sol_map = solver_lookup[ver] if agent_name != "solver" else None
         by_tier: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -813,6 +911,7 @@ def mine_committed_runs(root: str | Path = Path("data/runs/committed")) -> dict[
             "agent": agent_name,
             "label": label,
             "accuse_md_verified": verified,
+            "invalid_excluded_count": invalid_by_cohort.get(cohort_id, 0),
             "tiers": tiers_dict,
             "pooled": aggregate_records(recs, sol_map),
         }
@@ -856,24 +955,36 @@ def mine_committed_runs(root: str | Path = Path("data/runs/committed")) -> dict[
     ]
     frontier_wrong = [r for r in frontier_recs if r["accused"] is not None and not r["correct"]]
     frontier_decoy_eps = [r for r in frontier_recs if r["known_decoy"] is not None]
+    frontier_decoy_det_eps = [r for r in frontier_decoy_eps if r["agent_detected_decoy"] is not None]
     frontier_decoy_acc = sum(1 for r in frontier_decoy_eps if r["decoy_accused"])
+    frontier_decoy_det_acc = sum(1 for r in frontier_decoy_det_eps if r["decoy_accused"])
     frontier_decoy_rst = sum(1 for r in frontier_decoy_eps if r["decoy_restricted"])
+    frontier_invalid_excl = sum(
+        invalid_by_cohort.get(cid, 0)
+        for cid, _, agent_name, _ in COHORT_SPECS
+        if agent_name != "solver"
+    )
 
     cross_summary = {
         "frontier_episodes_total": len(frontier_recs),
+        "frontier_invalid_excluded_total": frontier_invalid_excl,
         "frontier_wrong_accusations_total": len(frontier_wrong),
         "frontier_horizon_abstentions_total": sum(1 for r in frontier_recs if r["accused"] is None),
         "frontier_below_breakeven_gambles_total": sum(1 for r in frontier_recs if r["below_breakeven_expected"]),
         "frontier_horizon_gambles_total": sum(1 for r in frontier_recs if r["horizon_gamble"]),
+        "frontier_premature_midgame_gambles_total": sum(1 for r in frontier_recs if r["premature_midgame_gamble"]),
+        "frontier_unlisted_feed_episodes_total": sum(1 for r in frontier_recs if r["unlisted_feed_items"] > 0),
+        "frontier_unlisted_feed_items_total": sum(r["unlisted_feed_items"] for r in frontier_recs),
         "frontier_decoy_episodes_total": len(frontier_decoy_eps),
-        "frontier_decoy_detected_in_messages_total": sum(
-            1 for r in frontier_decoy_eps if r["agent_detected_decoy"] is not None
-        ),
+        "frontier_decoy_detected_in_messages_total": len(frontier_decoy_det_eps),
         "frontier_decoy_accused_total": frontier_decoy_acc,
         "frontier_decoy_restricted_total": frontier_decoy_rst,
         "frontier_decoy_dismissal_rate": round(
             _safe_div(len(frontier_decoy_eps) - frontier_decoy_acc, len(frontier_decoy_eps)), 4
         ) if frontier_decoy_eps else 1.0,
+        "frontier_decoy_dismissal_when_detected_rate": round(
+            _safe_div(len(frontier_decoy_det_eps) - frontier_decoy_det_acc, len(frontier_decoy_det_eps)), 4
+        ) if frontier_decoy_det_eps else 1.0,
         "wrong_with_le_1_separating_canary": sum(1 for r in frontier_wrong if r["separating_canaries"] <= 1),
         "wrong_with_zero_separating_canary": sum(1 for r in frontier_wrong if r["separating_canaries"] == 0),
         "wrong_non_decoy_framed_tiebreak": sum(1 for r in frontier_wrong if r["non_decoy_framed_tiebreak"]),
@@ -986,26 +1097,34 @@ def render_report(data: dict[str, Any]) -> str:
     oc_exd = _fmt_opt(_get("v1.4_gemini_opencode", "hard", "failure_anatomy", "extra_leak_v_drain_vs_solver"), 3, signed=True)
     ip_exd = _fmt_opt(_get("v1.4_gemini_inproc", "hard", "failure_anatomy", "extra_leak_v_drain_vs_solver"), 3, signed=True)
 
+    dec_acc = cross["frontier_decoy_accused_total"]
+    dec_acc_times = "time" if dec_acc == 1 else "times"
+    dec_rst = cross["frontier_decoy_restricted_total"]
+    dec_rst_times = "time" if dec_rst == 1 else "times"
+
     lines: list[str] = [
         f"{h1} Empirical Transcript Mining: Frontier Investigator Failure Modes and Fair Mole Levers",
         "",
-        "Generated offline from committed JSONL transcripts (`data/runs/committed/v1.4/` and `data/runs/committed/v1.3/`) "
-        "via `python -m canary.mole.transcript_miner --out docs/reports/mole_transcript_mining.md`. "
+        "Generated offline from committed Known-V JSONL transcripts (`data/runs/committed/v1.4/` and `data/runs/committed/v1.3/`; "
+        "legacy pre-Known-V `v1.2` runs excluded because `status` exposed unsurfaced `true V`) "
+        "via `python -m canary.mole.transcript_miner --out docs/reports/mole_transcript_mining.md` "
+        "(verified offline via `python -m canary.mole.transcript_miner --check docs/reports/mole_transcript_mining.md`). "
         "All posteriors are replayed from public tool observations through `canary.solver.policy.SolverPolicy` "
         "(`canary.solver.belief.posterior`) and cross-verified against committed `accuse.md` tables.",
         "",
         f"{h2} 1. Headline Empirical Findings",
         "",
-        f"- **Frontier corpus audited**: {cross['frontier_episodes_total']} valid frontier episodes "
-        f"({n_oc} `opencode:google/gemini-4-carbon` on v1.4, {n_ip} `gemini:gemini-4-carbon` in-proc on v1.4, "
+        f"- **Frontier corpus audited**: {cross['frontier_episodes_total']} valid primary frontier episodes "
+        f"({n_oc} `opencode:google/gemini-4-carbon` on v1.4 seeds 0-29, {n_ip} `gemini:gemini-4-carbon` in-proc on v1.4 seeds 0-29, "
         f"{n_cx} `codex:gpt-5.5` on v1.3, {n_g5} `openai:gpt-5.5` in-proc on v1.3) paired against "
         f"{n_s14 + n_s13} reference `solver` episodes ({n_s14} on v1.4 seeds 0-29, {n_s13} on v1.3 seeds 0-19).",
-        f"- **100% angry-decoy dismissal vs non-decoy framing susceptibility**: Across {cross['frontier_decoy_episodes_total']} "
-        f"decoy-enabled frontier episodes, the angry decoy was accused **{cross['frontier_decoy_accused_total']}** times "
-        f"and restricted **{cross['frontier_decoy_restricted_total']}** times "
-        f"({_fmt_pct(cross['frontier_decoy_dismissal_rate'])} dismissal rate; angry decoy messages were retrieved in "
-        f"{cross['frontier_decoy_detected_in_messages_total']}/{cross['frontier_decoy_episodes_total']} episodes). "
-        "In contrast, non-decoy framed after-hours logs broke 0-separation canary ties into -1.0 wrong accusations in "
+        f"- **Angry-decoy dismissal ({_fmt_pct(cross['frontier_decoy_dismissal_rate'])}) vs non-decoy framing susceptibility**: "
+        f"Across {cross['frontier_decoy_episodes_total']} decoy-enabled frontier episodes, the angry decoy was accused "
+        f"**{dec_acc}** {dec_acc_times} and restricted **{dec_rst}** {dec_rst_times} "
+        f"({_fmt_pct(cross['frontier_decoy_dismissal_rate'])} overall dismissal; "
+        f"{_fmt_pct(cross['frontier_decoy_dismissal_when_detected_rate'])} across all "
+        f"{cross['frontier_decoy_detected_in_messages_total']}/{cross['frontier_decoy_episodes_total']} episodes where angry decoy messages were retrieved). "
+        "In contrast, non-decoy framed after-hours logs broke <=1-separation canary ties into -1.0 wrong accusations in "
         f"**{cross['wrong_non_decoy_framed_tiebreak']}/{cross['frontier_wrong_accusations_total']}** "
         "total frontier wrong accusations.",
         f"- **Single-separating-canary fragility under `fingerprint_accuracy=0.95`**: All "
@@ -1014,19 +1133,20 @@ def render_report(data: dict[str, Any]) -> str:
         f"{cross['wrong_with_zero_separating_canary']}/{cross['frontier_wrong_accusations_total']}` with 0 separating "
         f"canaries), including **{cross['wrong_fp95_single_separating_canary']}** Hard-tier wrong accusations where a "
         "5% fingerprint flip or single unconfirmed canary was treated as proof.",
-        f"- **Sharp architectural split in canary sizing**: Codex/GPT-5.5 favor surgical `<=3`-recipient traps "
-        f"({_fmt_pct(min(gpt_le3))}-{_fmt_pct(max(gpt_le3))} of planted canaries), whereas Gemini-4-carbon almost never "
-        f"uses `<=3` recipients ({_fmt_pct(min(gem_le3))}-{_fmt_pct(max(gem_le3))}), putting "
+        f"- **Sharp architectural split in canary sizing**: Codex and GPT-5.5 favor surgical `<=3`-recipient traps "
+        f"({_fmt_pct(min(gpt_le3))}-{_fmt_pct(max(gpt_le3))} of planted canaries), "
+        f"whereas Gemini-4-carbon almost never uses `<=3` recipients ({_fmt_pct(min(gem_le3))}-{_fmt_pct(max(gem_le3))}), putting "
         f"{_fmt_pct(min(gem_v3))}-{_fmt_pct(max(gem_v3))} of canaries into 3 variants across 4-8 "
         f"({_fmt_pct(min(gem_48))}-{_fmt_pct(max(gem_48))}) or >=9 ({_fmt_pct(min(gem_ge9))}-{_fmt_pct(max(gem_ge9))}) recipients.",
-        f"- **Gemini interview budget sink and delayed Day-1 canary start**: On v1.4 Hard (`canaries_per_day=2`), "
-        f"Gemini spends {ip_iv}-{oc_iv} calls/episode on low-LR interviews (`interview_lr=1.2`), delays its first canary "
+        f"- **Gemini-4-carbon interview budget sink and delayed Day-1 canary start**: On v1.4 Hard (`canaries_per_day=2`), "
+        f"Gemini-4-carbon spends {ip_iv}-{oc_iv} calls/episode on low-LR interviews (`interview_lr=1.2`), delays its first canary "
         f"until mean day {oc_d1} (OpenCode) and {ip_d1} (in-proc) vs Solver day {sol_d1}, plants {oc_cpd}-{ip_cpd} "
         f"canaries/day vs Solver {sol_cpd}/day, and accuses {ip_lag} to {oc_lag} days later than Solver "
         f"({oc_exd} V to {ip_exd} V extra pure leak drain on correct Hard episodes).",
-        f"- **Below-breakeven horizon gambling**: Frontier agents made **{cross['frontier_below_breakeven_gambles_total']}** "
+        f"- **Below-breakeven midgame and horizon gambling**: Frontier agents made **{cross['frontier_below_breakeven_gambles_total']}** "
         "accusations below the exact break-even bar `P(accused) < 1 / (1 + E[true V])`, including "
-        f"**{cross['frontier_horizon_gambles_total']}** final-day horizon gambles where abstaining (0.0) had higher EV.",
+        f"**{cross['frontier_horizon_gambles_total']}** final-day horizon gambles and "
+        f"**{cross['frontier_premature_midgame_gambles_total']}** premature midgame gambles where waiting or abstaining had higher EV.",
         "",
         f"{h2} 2. Canary Planting Rate, Recipient Distribution, and Variant Count",
         "",
@@ -1170,15 +1290,117 @@ def render_report(data: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+_TOKEN_RE = re.compile(
+    r"[A-Za-z_][A-Za-z0-9_]*(?:[.-][A-Za-z0-9_]+)*"
+    r"|\d+_[A-Za-z0-9_]+"
+    r"|(?P<num>(?:(?<![0-9%])[+-])?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)"
+)
+
+
+def approx_equal(a: Any, b: Any, tol: float = 1e-9) -> bool:
+    if isinstance(a, bool) or isinstance(b, bool):
+        return a is b
+    if isinstance(a, int) and isinstance(b, int):
+        return a == b
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return math.isclose(float(a), float(b), rel_tol=tol, abs_tol=tol)
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(approx_equal(a[k], b[k], tol) for k in a)
+    if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
+        return len(a) == len(b) and all(approx_equal(x, y, tol) for x, y in zip(a, b))
+    return a == b
+
+
+def _tokenize_report_line(line: str) -> tuple[tuple[str, ...], list[str]]:
+    literals: list[str] = []
+    numbers: list[str] = []
+    last_end = 0
+    for match in _TOKEN_RE.finditer(line):
+        num = match.group("num")
+        if num is None:
+            continue
+        literals.append(line[last_end:match.start()])
+        numbers.append(num)
+        last_end = match.end()
+    literals.append(line[last_end:])
+    return tuple(literals), numbers
+
+
+def _is_int_token(tok: str) -> bool:
+    return "." not in tok and "e" not in tok and "E" not in tok
+
+
+def reports_agree(actual_md: str, expected_md: str, tol: float = 1e-9) -> tuple[bool, str]:
+    if actual_md == expected_md:
+        return True, "exact match"
+    if actual_md.endswith("\n") != expected_md.endswith("\n"):
+        return False, "trailing newline mismatch"
+    act_lines = actual_md.splitlines()
+    exp_lines = expected_md.splitlines()
+    if len(act_lines) != len(exp_lines):
+        return False, f"line count mismatch: {len(act_lines)} vs {len(exp_lines)}"
+    for idx, (act_ln, exp_ln) in enumerate(zip(act_lines, exp_lines), 1):
+        if act_ln == exp_ln:
+            continue
+        act_lit, act_nums = _tokenize_report_line(act_ln)
+        exp_lit, exp_nums = _tokenize_report_line(exp_ln)
+        if act_lit != exp_lit or len(act_nums) != len(exp_nums):
+            return False, f"text mismatch on line {idx}"
+        for tok_a, tok_b in zip(act_nums, exp_nums):
+            int_a = _is_int_token(tok_a)
+            int_b = _is_int_token(tok_b)
+            if int_a and int_b:
+                if int(tok_a) != int(tok_b):
+                    return False, f"integer mismatch on line {idx}: {tok_a} vs {tok_b}"
+            elif int_a != int_b:
+                return False, f"numeric type mismatch on line {idx}: {tok_a} vs {tok_b}"
+            elif not math.isclose(float(tok_a), float(tok_b), rel_tol=tol, abs_tol=tol):
+                return False, f"float mismatch on line {idx}: {tok_a} vs {tok_b} (tol={tol:g})"
+    return True, f"numerical agreement within {tol:g}"
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Deterministic offline miner for committed Canary frontier transcripts.")
     ap.add_argument("--runs", type=Path, default=Path("data/runs/committed"), help="Path to committed runs root")
     ap.add_argument("--out", type=Path, default=None, help="Markdown output file path")
+    ap.add_argument(
+        "--check",
+        nargs="?",
+        const=Path("docs/reports/mole_transcript_mining.md"),
+        default=None,
+        type=Path,
+        help="Recompute offline and verify numerical agreement within 1e-9 float tolerance",
+    )
+    ap.add_argument("--tol", type=float, default=1e-9, help="Float tolerance for --check")
     ap.add_argument("--json", action="store_true", help="Print JSON summary to stdout")
     args = ap.parse_args(argv)
 
     mined = mine_committed_runs(args.runs)
     md = render_report(mined)
+
+    if args.check is not None:
+        if not args.check.is_file():
+            print(f"{args.check} does not exist")
+            return 1
+        actual_txt = args.check.read_text(encoding="utf-8")
+        if args.check.suffix == ".json":
+            try:
+                actual_json = json.loads(actual_txt)
+            except ValueError as exc:
+                print(f"{args.check} invalid JSON: {exc}")
+                return 1
+            fresh_json = json.loads(json.dumps(mined))
+            if not approx_equal(actual_json, fresh_json, tol=args.tol):
+                print(f"{args.check} differs from fresh offline computation beyond tol={args.tol:g}")
+                return 1
+            print(f"verified {args.check} (tol={args.tol:g})")
+            return 0
+        ok_agree, reason = reports_agree(actual_txt, md, tol=args.tol)
+        if not ok_agree:
+            print(f"{args.check} differs from fresh offline computation: {reason}")
+            return 1
+        print(f"verified {args.check} ({reason})")
+        return 0
 
     if args.out is not None:
         args.out.parent.mkdir(parents=True, exist_ok=True)

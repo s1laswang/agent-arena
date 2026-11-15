@@ -1,0 +1,94 @@
+{
+ "opencode:google/gemini-4-argon": {
+  "episodes": 30,
+  "tiers": {
+   "hard": 30
+  },
+  "regret_total": 6.6131,
+  "tags": {
+   "premature_accusation": {
+    "count": 4,
+    "episodes_with": 4,
+    "regret_sum": 2.8284,
+    "worst": {
+     "run_id": "hard",
+     "seed": 27,
+     "t": 180,
+     "day": 18,
+     "tool": "accuse",
+     "args": {
+      "employee": "e31"
+     },
+     "regret": 0.9481,
+     "p_best": 0.2586,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.26 < 0.6)"
+    },
+    "rate": 0.133
+   },
+   "ignored_delay": {
+    "count": 1,
+    "episodes_with": 1,
+    "regret_sum": 0.9481,
+    "worst": {
+     "run_id": "hard",
+     "seed": 27,
+     "t": 180,
+     "day": 18,
+     "tool": "accuse",
+     "args": {
+      "employee": "e31"
+     },
+     "regret": 0.9481,
+     "p_best": 0.2586,
+     "why": "accused while a leak could still surface in the feed"
+    },
+    "rate": 0.033
+   },
+   "budget_waste": {
+    "count": 24,
+    "episodes_with": 23,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 0,
+     "t": 2,
+     "day": 1,
+     "tool": "search_messages",
+     "args": {
+      "query": " "
+     },
+     "regret": 0.0,
+     "p_best": 0.025,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 0.767
+   },
+   "uninformative_canary": {
+    "count": 2,
+    "episodes_with": 1,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 11,
+     "t": 144,
+     "day": 15,
+     "tool": "plant_canary",
+     "args": {
+      "doc_title": "Legal M&A review Q4",
+      "assignment": {
+       "e23": "v2",
+       "e09": "v3",
+       "e37": "v1",
+       "e32": "v2"
+      }
+     },
+     "regret": 0.0,
+     "p_best": 0.9012,
+     "why": "canary variants split the suspects poorly (low information)"
+    },
+    "rate": 0.033
+   }
+  },
+  "score_mean": 0.512
+ }
+}

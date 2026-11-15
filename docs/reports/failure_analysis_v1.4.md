@@ -209,3 +209,33 @@ On day 18 it accuses e29 at P 0.63. EV is -0.08 by the formula in the instructio
 - **Information and tools available:** the solver posterior is computed from Gemini's own observations, and the solver reaches decisive evidence with the same tools and budgets on the same seeds.
 - **Not withheld info or trick wording:** two of the four wrong accusations come from the disclosed 5% fingerprint noise, which hits any investigator. The instruction audit (`docs/DIFFICULTY.md`) finds no hidden rule.
 - **Caveat:** n = 30 and the raw ratio's CI is wide (gap.md). The decomposition is exact for these 30 episodes, but the shares carry sampling noise. This is one model (gemini-4-carbon). A second family is a PLAN-95 item.
+
+## 10. Causal hint test (pre-registered in gap.md)
+
+**Setup.** Same harness and model (OpenCode + `gemini-4-carbon` over MCP, v1.4 hard) with one added prompt line (`--hint gather`, opt-in, never part of the judged instruction), which restates rules already on the instruction page: *"Evidence first: you may plant up to the stated number of canaries every day; plant them every day, and accuse only when exactly one employee is consistent with every leak you have seen (otherwise abstain, which scores 0)."* Seeds were run in the fixed order 0→29, at most 3 in parallel, on an API quota shared with other runs. Launches stopped and episodes still in flight were killed at the hard stop, 05:40 Helsinki, and dropped unscored (the amendments in gap.md). **n = 2** (seeds 0–1) finished in time, and all of them are reported. Infra-invalid attempts were retried and never scored. Each hinted episode is paired with the unhinted primary episode and the solver on the same seed. The hinted run used OpenCode 1.19.5 and the unhinted run used 1.18.29.
+
+| same 2 seeds | **Gemini + hint** | Gemini, no hint | reference solver |
+|---|---|---|---|
+| mean score | 0.59 | -0.21 | 0.67 |
+| % of solver | **89%** | -31% | – |
+| luck-adjusted score (% of solver) | 0.56 (92%) | 0.43 (71%) | 0.61 |
+| canaries planted before the accusation | **18.0** | 10.5 | 11.0 |
+| canary capacity used / days with ≥1 canary | 90% / 90% | 35% / 47% | 69% / 88% |
+| interviews per episode | 1 | 74 | 0 |
+| premature commits (accused while ≥2 consistent) | **0 / 2 (0%)** | 0 / 2 (0%) | 1 / 2 (50%) |
+| accusations with EV < 0 | 0 | 0 | 0 |
+| wrong accusations (expected) / abstentions | 0 (0.0) / 0 | 1 (0.0) / 0 | 0 (0.1) / 0 |
+| accusation day (abstention = 21) | 10.0 | 15.0 | 8.0 |
+
+**Paired, hint − no hint (same 2 seeds):** score +0.800, luck-adjusted +0.131, canaries +7.5, accusation day -5.0. With n = 2 there is no confidence interval, so these are observations, not a test of the hint.
+
+| seed | hint score | no-hint score | solver | hint canaries | no-hint canaries | hint: # consistent at accusation |
+|---|---|---|---|---|---|---|
+| 0 | +0.67 | +0.59 | +0.64 | 18 | 6 | 1 |
+| 1 | +0.52 | -1.00 | +0.69 | 18 | 15 | 1 |
+
+Wrong accusations (score −1) dominate the raw means at this n: the no-hint run's on seed 1 (see §3 for how it arose). The luck-adjusted row prices every accusation at the solver posterior instead, so it is the fairer comparison.
+
+Infra-invalid attempts excluded and retried (never scored): 69 (cli_error_event 1, provider_quota 65, stopped_at_key_switch 3); per seed: seed 0: 24, seed 1: 19, seed 2: 23, seed 3: 3. *stopped_at_key_switch* = attempts we stopped, before any result existed, when the run moved between API keys to escape a saturated quota.
+
+Reproduce: `uv run python scripts/failure_analysis_v14.py` (the hinted episodes are in `results/causal_hint/opencode-gemini-4-carbon-hint-gather/hard/`, replay-verified). n = 2 is far too small to test the hint. It is reported because the pre-registration requires reporting every completed seed. A rerun on the full 30 seeds needs an API quota not shared with other runs.

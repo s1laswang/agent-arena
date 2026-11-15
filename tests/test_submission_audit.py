@@ -276,6 +276,22 @@ def test_committed_runs_catches_score_invariant_violations(tmp_path, bad_ep):
     assert res.status == "FAIL"
 
 
+@pytest.mark.parametrize("rc,note,score,accused,expected", [
+    (0, "agent stopped without ending the episode: final text only", 0.0, None, "PASS"),
+    ("timeout", "agent stopped without ending the episode", 0.0, None, "FAIL"),
+    (1, "agent stopped without ending the episode", 0.0, None, "FAIL"),
+    (0, "provider request failed", 0.0, None, "FAIL"),
+    (0, "agent stopped without ending the episode", 0.5, None, "FAIL"),
+    (0, "agent stopped without ending the episode", 0.0, "e00", "FAIL"),
+])
+def test_clean_agent_stop_is_not_an_infrastructure_failure(tmp_path, rc, note, score, accused, expected):
+    ep = {"tier": "hard", "seed": 1, "agent": "x", "score": score,
+          "accused": accused, "correct": False, "end_reason": "error",
+          "meta": {"rc": rc, "note": note, "valid": True}}
+    _write_committed_run(tmp_path, "v1.4/agent/hard", [ep], meta={"tiers_version": "v1.4"})
+    assert audit.check_committed_runs(tmp_path).status == expected
+
+
 def test_harbor_package_audit_and_synthetic_failures(tmp_path):
     base_out = tmp_path / "harbor_ok"
     base_out.mkdir()

@@ -13,6 +13,16 @@ ROOT=data/runs/committed/$V
 $PY scripts/merge_staging.py --staging data/runs/staging-gemini-$V --root $ROOT --planned $SEEDS --tiers-version $V \
   --map opencode=opencode-gemini-4-carbon,inproc=inproc-gemini-4-carbon --pricing "$PRICING" \
   --provenance "scripts/gemini_runner.py (one episode per process, resumable; infra-invalid attempts excluded and retried), merged by scripts/merge_staging.py"
+if [ -d data/runs/staging-gemini-4-argon-$V ]; then
+  $PY scripts/merge_staging.py --staging data/runs/staging-gemini-4-argon-$V --root $ROOT --planned $SEEDS --tiers-version $V \
+    --map opencode=opencode-gemini-4-argon --pricing "gemini-4-argon list prices per 1M tokens: input \$2.00, cached input \$0.10, output (incl. thinking) \$10.00 through 2026-11-30 (aistudio.google.com/docs/pricing, checked 2026-11-14; served modelVersion: gemini-4-argon). cost_usd_est bills cached input at \$0.10; the upper bound bills all input at \$2.00." \
+    --provenance "scripts/gemini_runner.py --model gemini-4-argon (one episode per process, resumable; infra-invalid attempts excluded and retried), merged by scripts/merge_staging.py"
+fi
+if [ -d data/runs/staging-gemini-4-hydrogen-$V ]; then
+  $PY scripts/merge_staging.py --staging data/runs/staging-gemini-4-hydrogen-$V --root $ROOT --planned $SEEDS --tiers-version $V \
+    --map opencode=opencode-gemini-4-hydrogen --pricing "gemini-4-hydrogen list prices per 1M tokens: input \$1.50, cached input \$0.075, output (incl. thinking) \$7.50 (aistudio.google.com/docs/pricing, checked 2026-11-14; served modelVersion: gemini-4-hydrogen). cost_usd_est bills cached input at \$0.075; the upper bound bills all input at \$1.50." \
+    --provenance "scripts/gemini_runner.py --model gemini-4-hydrogen (one episode per process, resumable; infra-invalid attempts excluded and retried), merged by scripts/merge_staging.py"
+fi
 if [ -d data/runs/staging-gemini-3.5-flash-$V ]; then
   $PY scripts/merge_staging.py --staging data/runs/staging-gemini-3.5-flash-$V --root $ROOT --planned $SEEDS --tiers-version $V \
     --map opencode=opencode-gemini-3.5-flash --pricing "gemini-3.5-flash: not on the pricing page (2026-11-14); see opencode_reported_cost_usd" \

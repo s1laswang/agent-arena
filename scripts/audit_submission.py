@@ -260,12 +260,8 @@ def check_committed_runs(
 
             ep_meta = ep.get("meta") if isinstance(ep.get("meta"), dict) else {}
             is_invalid = (ep_meta.get("valid") is False) or (ep.get("valid") is False)
-            # A clean agent exit (rc=0) that never called accuse is a VALID outcome: the agent chose to stop, the env
-            # scores 0 (no accusation). The importer labels it end_reason="error" with this note. Timeouts and any
-            # other "error" end still have to be marked invalid.
-            agent_stopped = (ep_meta.get("rc") == 0 and ep.get("accused") is None and float(ep.get("score") or 0.0) == 0.0
-                             and str(ep_meta.get("note") or "").startswith("agent stopped without ending the episode"))
-            if not is_invalid and not agent_stopped and (ep_meta.get("rc") == "timeout" or ep.get("end_reason") == "error"):
+            from canary.analysis.outcomes import is_clean_agent_stop
+            if not is_invalid and not is_clean_agent_stop(ep) and (ep_meta.get("rc") == "timeout" or ep.get("end_reason") == "error"):
                 failures.append(
                     f"{loc}: episode has rc={ep_meta.get('rc')!r} end_reason={ep.get('end_reason')!r} without meta.valid=False"
                 )

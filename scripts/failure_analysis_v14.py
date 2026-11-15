@@ -319,6 +319,19 @@ def compute() -> dict:
         h = load([HINT_RUN])
         data["H"] = {s: episode(h[s], with_trace=True) for s in sorted(h) if s in SEEDS}
     data["summary"] = summarize(data)
+    if data.get("H"):
+        mf = HINT_RUN.parent / "meta.json"
+        exc = json.loads(mf.read_text()).get("infra_invalid_attempts_excluded", []) if mf.exists() else []
+        per: dict[str, int] = {}
+        reasons: dict[str, int] = {}
+        for x in exc:   # "opencode-hard-<seed>-<HHMMSS>: <reason>"
+            sd = x.split(":", 1)[0].split("-")[2]
+            per[sd] = per.get(sd, 0) + 1
+            r = "provider_quota" if "quota" in x else "empty_model_response" if "empty_model" in x else \
+                "cli_error_event" if "cli_error" in x else "provider_unavailable" if "unavailable" in x else "other"
+            reasons[r] = reasons.get(r, 0) + 1
+        data["summary"]["hint"]["infra_invalid"] = {"total": len(exc), "per_seed": dict(sorted(per.items(), key=lambda kv: int(kv[0]))),
+                                                    "by_reason": dict(sorted(reasons.items()))}
     return data
 
 

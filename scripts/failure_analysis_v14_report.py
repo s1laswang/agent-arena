@@ -405,8 +405,9 @@ def _hint_section(H: dict) -> list[str]:
          f"(`--hint gather`, opt-in, never part of the judged instruction), which restates rules already on the instruction page: "
          f"*\"Evidence first: you may plant up to the stated number of canaries every day; plant them every day, and accuse only "
          f"when exactly one employee is consistent with every leak you have seen (otherwise abstain, which scores 0).\"* "
-         f"Seeds were run in the fixed order 0→29, at most 3 in parallel, and launches stopped at 06:00 Helsinki (the amendment "
-         f"in gap.md). **n = {n}** (seeds {rng}) finished in time, and all of them are reported. Infra-invalid attempts were "
+         f"Seeds were run in the fixed order 0→29, at most 3 in parallel, on an API quota shared with other runs. Launches stopped "
+         f"at 05:40 Helsinki, and episodes still in flight at 05:45 were dropped unscored (the amendments in gap.md). "
+         f"**n = {n}** (seeds {rng}) finished in time, and all of them are reported. Infra-invalid attempts were "
          f"retried and never scored. Each hinted episode is paired with the unhinted primary episode and the solver on the same seed. "
          f"The hinted run used OpenCode 1.19.5 and the unhinted run used 1.18.29.",
          "",
@@ -437,6 +438,11 @@ def _hint_section(H: dict) -> list[str]:
         cons = "abstained" if not r["hint_accused"] else str(r["hint_consistent"])
         L.append(f"| {r['seed']} | {r['hint']:+.2f}{mark} | {r['unhinted']:+.2f} | {r['solver']:+.2f} | {r['hint_canaries']} | "
                  f"{r['unhinted_canaries']} | {cons} |")
+    inv = H.get("infra_invalid") or {"total": 0, "per_seed": {}, "by_reason": {}}
+    per = ", ".join(f"seed {k}: {v}" for k, v in inv["per_seed"].items()) or "none"
+    why = ", ".join(f"{k} {v}" for k, v in inv["by_reason"].items())
+    L += ["", f"Infra-invalid attempts excluded and retried (never scored): {inv['total']}"
+          + (f" ({why}); per seed: {per}." if inv["total"] else ".")]
     L += ["", f"Reproduce: `uv run python scripts/failure_analysis_v14.py` (the hinted episodes are in "
           f"`data/runs/committed/v1.4/opencode-gemini-4-carbon-hint-gather/hard/`, replay-verified). n = {n} is small: read the "
           f"CIs, not the point estimates.", ""]

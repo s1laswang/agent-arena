@@ -97,6 +97,10 @@ OPTIONAL_FILENAMES: tuple[str, ...] = (
     "tiebreak_compact_distillation_quantization_audit.py",
     "tiebreak_online_hyperprior_adaptation_audit.py",
     "tiebreak_sequential_sprt_martingale_audit.py",
+    "tiebreak_canary_budget_allocation_audit.py",
+    "tiebreak_posterior_entropy_trajectory_audit.py",
+    "tiebreak_leave_one_tier_out_audit.py",
+    "tiebreak_adversarial_prompt_injection_audit.py",
 )
 
 PREREG_RE = re.compile(r"\bpre[-\s]?regist(?:er(?:ed|ing|s)?|ration)\b", re.IGNORECASE)
@@ -658,6 +662,7 @@ GATE_COST_ESTIMATE_MS: dict[str, int] = {
     "tiebreak_byzantine_stress_audit": 140,
     "tiebreak_pareto_efficiency": 140,
     "tiebreak_canary_split_design_audit": 120,
+    "tiebreak_covariate_shift_audit": 120,
     "tiebreak_stopping_counterfactual_audit": 115,
     "tiebreak_dagger_mechanism_audit": 130,
     "build_tiebreak_viewer": 120,

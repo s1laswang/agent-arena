@@ -136,6 +136,10 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_compact_distillation_quantization_audit.py",
         "tiebreak_online_hyperprior_adaptation_audit.py",
         "tiebreak_sequential_sprt_martingale_audit.py",
+        "tiebreak_canary_budget_allocation_audit.py",
+        "tiebreak_posterior_entropy_trajectory_audit.py",
+        "tiebreak_leave_one_tier_out_audit.py",
+        "tiebreak_adversarial_prompt_injection_audit.py",
     )
     assert rta.OPTIONAL_FILENAMES == expected_optional_files
 
@@ -236,6 +240,10 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_compact_distillation_quantization_audit.py",
         "tiebreak_online_hyperprior_adaptation_audit.py",
         "tiebreak_sequential_sprt_martingale_audit.py",
+        "tiebreak_canary_budget_allocation_audit.py",
+        "tiebreak_posterior_entropy_trajectory_audit.py",
+        "tiebreak_leave_one_tier_out_audit.py",
+        "tiebreak_adversarial_prompt_injection_audit.py",
     ]
     assert payload_ok["gates_passed"] == 3
     assert payload_ok["gates_total"] == 3

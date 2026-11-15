@@ -30,11 +30,15 @@ EXPECTED_STRATEGIES = (
 
 @pytest.fixture(scope="module")
 def v15_runtime():
+    if diff_sweep.try_resolve_git_commit() is None:
+        pytest.skip("v1.5 git ref origin/justSilas-v15 (de9cc50e) not fetched in shallow checkout")
     return diff_sweep.load_v15_runtime()
 
 
 @pytest.fixture(scope="module")
 def fast_audit_report():
+    if diff_sweep.try_resolve_git_commit() is None:
+        pytest.skip("v1.5 git ref origin/justSilas-v15 (de9cc50e) not fetched in shallow checkout")
     t0 = time.perf_counter()
     report = diff_sweep.run_differential_audit(
         tiers=["easy", "medium"],
@@ -132,6 +136,60 @@ def test_lexical_hygiene_zero_knob_parity_and_interview_audit(fast_audit_report)
         assert tlex["secret_hygiene"]["social_messages_scanned"] > 0
 
 
+def test_shallow_safe_head_git_show_v14_sweep_and_fallback(tmp_path: Path) -> None:
+    from canary import env as env_v14
+    from canary import rules as rules_v14
+
+    head_iso = diff_sweep.load_head_isolated_v14()
+    assert head_iso["pkg_name"] == "_canary_head_isolated"
+    assert head_iso["pkg_name"] in sys.modules
+    assert len(head_iso["finder"].git_show_paths) >= 10
+    assert "canary/env.py" in head_iso["finder"].git_show_paths
+    assert head_iso["status_unchanged"] is True
+    assert env_v14.Env is not head_iso["env_mod"].Env
+    assert rules_v14.TIERS is not head_iso["rules"].TIERS
+    assert diff_sweep.compute_tier_hash(rules_v14.TIERS, rules_v14.KNOWN_V_MODE) == "a8f99c2537c91d72"
+
+    assert diff_sweep.try_resolve_git_commit(ref="refs/heads/missing-v15-ref", fallback=None) is None
+    with pytest.raises(RuntimeError):
+        diff_sweep.resolve_git_commit(ref="refs/heads/missing-v15-ref", fallback=None)
+
+    fallback_rep = diff_sweep.run_v14_shallow_fallback_audit(tiers=["easy", "medium"], seeds=[0])
+    assert fallback_rep["shallow_checkout_fallback"] is True
+    assert fallback_rep["v15_available"] is False
+    assert fallback_rep["v14_tier_hash_preserved"] is True
+    assert fallback_rep["working_tree_unchanged"] is True
+    assert fallback_rep["total_invariant_violations"] == 0
+    assert fallback_rep["total_strategy_episodes"] == 20
+    for tier in ("easy", "medium"):
+        strats = fallback_rep["v14_strategy_sweep"][tier]["strategies"]
+        assert set(strats) == set(EXPECTED_STRATEGIES)
+        assert strats["do_nothing"]["mean_score"] == 0.0
+        assert strats["stop_early"]["mean_score"] == 0.0
+        assert strats["reference_solver"]["mean_score"] > 0.4
+
+    iv = fallback_rep["interview_template_audit"]
+    assert iv["evasive_templates_total"] == 16
+    assert iv["cooperative_templates_total"] == 16
+    assert iv["cooperative_hedge_false_positive_rate"] == 0.0
+    assert iv["evasive_hedge_recall"] >= 0.80
+    assert iv["solver_v14_marks_template_evasive"] is False
+    assert iv["solver_v15_marks_template_evasive"] is None
+
+    se_ep_14 = diff_sweep.run_single_episode(env_v14.Env("easy", 0), diff_sweep.make_strategy("stop_early", 0, "v1.4"))
+    assert se_ep_14["quit_early"] is True and se_ep_14["done"] is False and se_ep_14["score"] == 0.0
+
+    fb_json = tmp_path / "shallow_fallback.json"
+    rc_fb = diff_sweep.main(
+        ["--fast", "--seeds", "0", "--tiers", "easy", "--v15-ref", "refs/heads/missing-v15-ref", "--json-out", str(fb_json)]
+    )
+    assert rc_fb == 0
+    fb_payload = json.loads(fb_json.read_text(encoding="utf-8"))
+    assert fb_payload["shallow_checkout_fallback"] is True
+    assert fb_payload["total_strategy_episodes"] == 10
+    assert fb_payload["total_invariant_violations"] == 0
+
+
 def test_cli_fast_json_smoke(tmp_path: Path) -> None:
     out_file = tmp_path / "fast_diff.json"
     t0 = time.perf_counter()
@@ -140,7 +198,9 @@ def test_cli_fast_json_smoke(tmp_path: Path) -> None:
     assert rc == 0
     assert elapsed < 5.0
     payload = json.loads(out_file.read_text(encoding="utf-8"))
-    assert payload["total_strategy_episodes"] == 20
+    expected_eps = 10 if payload["shallow_checkout_fallback"] else 20
+    assert payload["total_strategy_episodes"] == expected_eps
+    assert payload["total_invariant_violations"] == 0
     assert payload["v14_tier_hash_preserved"] is True
     assert payload["working_tree_unchanged"] is True
 

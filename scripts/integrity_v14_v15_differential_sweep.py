@@ -29,6 +29,7 @@ if str(REPO_ROOT) not in sys.path:
 EXPECTED_V14_TIER_HASH = "a8f99c2537c91d72"
 EXPECTED_V15_COMMIT_PREFIX = "de9cc50e"
 ISOLATED_V15_PKG = "_canary_v15_isolated"
+ISOLATED_HEAD_PKG = "_canary_head_isolated"
 
 STRATEGY_NAMES: tuple[str, ...] = (
     "do_nothing",
@@ -153,17 +154,46 @@ def git_status_porcelain(repo_root: Path = REPO_ROOT) -> str:
     return proc.stdout
 
 
-def resolve_git_commit(ref: str, fallback: str = EXPECTED_V15_COMMIT_PREFIX, repo_root: Path = REPO_ROOT) -> str:
-    for candidate in (ref, fallback):
+def try_resolve_git_commit(
+    ref: str = "origin/justSilas-v15",
+    fallback: str | None = EXPECTED_V15_COMMIT_PREFIX,
+    repo_root: Path = REPO_ROOT,
+) -> str | None:
+    candidates: list[str] = []
+    extra_local = "justSilas-v15" if ref == "origin/justSilas-v15" else None
+    for cand in (ref, extra_local, fallback):
+        if cand and cand not in candidates:
+            candidates.append(cand)
+    for candidate in candidates:
         proc = subprocess.run(
-            ["git", "rev-parse", "--verify", f"{candidate}^{{commit}}"],
+            ["git", "rev-parse", "--verify", "--quiet", f"{candidate}^{{commit}}"],
             cwd=repo_root,
             capture_output=True,
             text=True,
             timeout=15,
         )
-        if proc.returncode == 0 and proc.stdout.strip():
-            return proc.stdout.strip()
+        sha = proc.stdout.strip()
+        if proc.returncode == 0 and sha:
+            blob_check = subprocess.run(
+                ["git", "cat-file", "-e", f"{sha}:canary/env.py"],
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if blob_check.returncode == 0:
+                return sha
+    return None
+
+
+def resolve_git_commit(
+    ref: str,
+    fallback: str | None = EXPECTED_V15_COMMIT_PREFIX,
+    repo_root: Path = REPO_ROOT,
+) -> str:
+    sha = try_resolve_git_commit(ref=ref, fallback=fallback, repo_root=repo_root)
+    if sha is not None:
+        return sha
     raise RuntimeError(f"Unable to resolve git commit for {ref!r} or fallback {fallback!r}")
 
 
@@ -321,6 +351,7 @@ class IsolatedV15Runtime:
 
 
 _RUNTIME_CACHE: dict[tuple[str, str], IsolatedV15Runtime] = {}
+_HEAD_ISO_CACHE: dict[tuple[str, str], dict[str, Any]] = {}
 
 
 def load_v15_runtime(
@@ -328,7 +359,8 @@ def load_v15_runtime(
     pkg_name: str = ISOLATED_V15_PKG,
     repo_root: Path = REPO_ROOT,
 ) -> IsolatedV15Runtime:
-    commit_sha = resolve_git_commit(ref, repo_root=repo_root)
+    fallback = EXPECTED_V15_COMMIT_PREFIX if ref == "origin/justSilas-v15" else None
+    commit_sha = resolve_git_commit(ref, fallback=fallback, repo_root=repo_root)
     cache_key = (commit_sha, pkg_name)
     if cache_key in _RUNTIME_CACHE:
         return _RUNTIME_CACHE[cache_key]
@@ -349,6 +381,42 @@ def load_v15_runtime(
     rt.status_unchanged = rt.status_unchanged and (before_status == post_import_status)
     _RUNTIME_CACHE[cache_key] = rt
     return rt
+
+
+def load_head_isolated_v14(
+    pkg_name: str = ISOLATED_HEAD_PKG,
+    repo_root: Path = REPO_ROOT,
+) -> dict[str, Any]:
+    commit_sha = resolve_head_commit(repo_root)
+    cache_key = (commit_sha, pkg_name)
+    if cache_key in _HEAD_ISO_CACHE:
+        return _HEAD_ISO_CACHE[cache_key]
+
+    before_status = git_status_porcelain(repo_root)
+    for mod_key in list(sys.modules):
+        if mod_key == pkg_name or mod_key.startswith(pkg_name + "."):
+            sys.modules.pop(mod_key, None)
+    sys.meta_path[:] = [
+        f for f in sys.meta_path
+        if not (isinstance(f, GitShowNamespaceFinder) and f.pkg_name == pkg_name)
+    ]
+    finder = GitShowNamespaceFinder(repo_root=repo_root, commit_sha=commit_sha, pkg_name=pkg_name)
+    sys.meta_path.insert(0, finder)
+    rules_mod = importlib.import_module(f"{pkg_name}.rules")
+    env_mod = importlib.import_module(f"{pkg_name}.env")
+    solver_mod = importlib.import_module(f"{pkg_name}.solver.policy")
+    after_status = git_status_porcelain(repo_root)
+    bundle = {
+        "commit_sha": commit_sha,
+        "pkg_name": pkg_name,
+        "finder": finder,
+        "rules": rules_mod,
+        "env_mod": env_mod,
+        "solver_mod": solver_mod,
+        "status_unchanged": before_status == after_status,
+    }
+    _HEAD_ISO_CACHE[cache_key] = bundle
+    return bundle
 
 
 def _extract_list(result: dict[str, Any] | None, key: str | None = None) -> list[Any]:
@@ -939,7 +1007,7 @@ def _passive_full_horizon(env: Any) -> dict[str, Any]:
     }
 
 
-def audit_interview_template_separability(v15_rt: IsolatedV15Runtime) -> dict[str, Any]:
+def audit_interview_template_separability(v15_rt: IsolatedV15Runtime | None = None) -> dict[str, Any]:
     from canary.solver.policy import SolverPolicy as SolverV14
     from canary.text import template as tpl_v14
     from canary.types import Step
@@ -979,11 +1047,13 @@ def audit_interview_template_separability(v15_rt: IsolatedV15Runtime) -> dict[st
                       result={"ok": True, "data": {"employee": "e00", "topic": "recent_documents", "answer": sample_evasive}, "error": None}))
     solver_v14_ingested_evasive = bool(sp14.obs.interviews and sp14.obs.interviews[0][1])
 
-    sp15 = v15_rt.make_solver()
-    sp15.reset([], "")
-    sp15._ingest(Step(t=0, day=1, tool="interview", args={"employee": "e00", "topic": "recent_documents"},
-                      result={"ok": True, "data": {"employee": "e00", "topic": "recent_documents", "answer": sample_evasive}, "error": None}))
-    solver_v15_ingested_evasive = bool(sp15.obs.interviews and sp15.obs.interviews[0][1])
+    solver_v15_ingested_evasive: bool | None = None
+    if v15_rt is not None:
+        sp15 = v15_rt.make_solver()
+        sp15.reset([], "")
+        sp15._ingest(Step(t=0, day=1, tool="interview", args={"employee": "e00", "topic": "recent_documents"},
+                          result={"ok": True, "data": {"employee": "e00", "topic": "recent_documents", "answer": sample_evasive}, "error": None}))
+        solver_v15_ingested_evasive = bool(sp15.obs.interviews and sp15.obs.interviews[0][1])
 
     return {
         "evasive_templates_total": evasive_total,
@@ -1258,6 +1328,80 @@ def audit_lexical_and_stream_differentials(
     }
 
 
+def run_v14_shallow_fallback_audit(
+    tiers: list[str],
+    seeds: list[int],
+    repo_root: Path = REPO_ROOT,
+) -> dict[str, Any]:
+    from canary import rules as rules_v14
+    from canary.env import Env as EnvV14
+
+    t0 = time.perf_counter()
+    before_git_status = git_status_porcelain(repo_root)
+    head_iso = load_head_isolated_v14(repo_root=repo_root)
+
+    by_tier: dict[str, Any] = {}
+    total_episodes = 0
+    total_violations = 0
+    for tier in tiers:
+        sample_env = EnvV14(tier, seeds[0])
+        has_decoy = bool(sample_env.p.decoy)
+        n_emp = int(sample_env.p.n_employees)
+        strat_summaries: dict[str, Any] = {}
+        for strat_name in STRATEGY_NAMES:
+            ep_rows = [
+                run_single_episode(EnvV14(tier, seed), make_strategy(strat_name, seed, "v1.4"))
+                for seed in seeds
+            ]
+            total_episodes += len(ep_rows)
+            v14_sum = summarize_version_episodes(ep_rows, has_decoy)
+            total_violations += v14_sum["invariant_violations"]
+            strat_summaries[strat_name] = v14_sum
+        by_tier[tier] = {
+            "tier": tier,
+            "n_employees": n_emp,
+            "prior_mole": round(1.0 / n_emp, 6),
+            "has_decoy": has_decoy,
+            "n_seeds": len(seeds),
+            "strategies": strat_summaries,
+        }
+
+    iv_audit = audit_interview_template_separability(v15_rt=None)
+    v14_hash_after = compute_tier_hash(rules_v14.TIERS, rules_v14.KNOWN_V_MODE)
+    after_git_status = git_status_porcelain(repo_root)
+    elapsed = round(time.perf_counter() - t0, 3)
+
+    return {
+        "shallow_checkout_fallback": True,
+        "v15_available": False,
+        "v14_head_sha": head_iso["commit_sha"][:8],
+        "v14_tiers_version": rules_v14.TIERS_VERSION,
+        "v14_tier_hash": v14_hash_after,
+        "v14_tier_hash_preserved": v14_hash_after == EXPECTED_V14_TIER_HASH,
+        "v15_commit_sha": None,
+        "v15_commit_full": None,
+        "v15_isolated_namespace": None,
+        "v15_git_show_modules_loaded": 0,
+        "v15_git_show_sample_paths": [],
+        "head_isolated_namespace": head_iso["pkg_name"],
+        "head_git_show_modules_loaded": len(head_iso["finder"].git_show_paths),
+        "working_tree_unchanged": (before_git_status == after_git_status) and head_iso["status_unchanged"],
+        "llm_api_calls": 0,
+        "tiers_tested": tiers,
+        "seed_range": [seeds[0], seeds[-1]] if seeds else [],
+        "n_seeds": len(seeds),
+        "n_strategies": len(STRATEGY_NAMES),
+        "strategy_names": list(STRATEGY_NAMES),
+        "total_strategy_episodes": total_episodes,
+        "total_passive_scan_episodes": 0,
+        "total_episodes": total_episodes,
+        "total_invariant_violations": total_violations,
+        "elapsed_seconds": elapsed,
+        "v14_strategy_sweep": by_tier,
+        "interview_template_audit": iv_audit,
+    }
+
+
 def run_differential_audit(
     tiers: list[str],
     seeds: list[int],
@@ -1284,6 +1428,8 @@ def run_differential_audit(
     elapsed = round(time.perf_counter() - t0, 3)
 
     return {
+        "shallow_checkout_fallback": False,
+        "v15_available": True,
         "v14_head_sha": resolve_head_commit(REPO_ROOT)[:8],
         "v14_tiers_version": rules_v14.TIERS_VERSION,
         "v14_tier_hash": v14_hash_after,
@@ -1311,6 +1457,29 @@ def run_differential_audit(
 
 
 def format_console_summary(report: dict[str, Any]) -> str:
+    if report.get("shallow_checkout_fallback"):
+        lines = [
+            f"Shallow Checkout Fallback Sweep: v1.4 ({report['v14_tiers_version']} @ {report['v14_head_sha']}) "
+            f"| v1.5 git ref unavailable in shallow clone | HEAD git show -> {report['head_isolated_namespace']}",
+            f"Episodes: {report['total_strategy_episodes']} v1.4 strategy "
+            f"| Seeds: {report['n_seeds']} ({report['seed_range'][0]}..{report['seed_range'][1]}) "
+            f"| Invariant violations: {report['total_invariant_violations']} | Working tree unchanged: {report['working_tree_unchanged']} "
+            f"| Time: {report['elapsed_seconds']:.2f}s",
+        ]
+        for tier in report["tiers_tested"]:
+            tdata = report["v14_strategy_sweep"][tier]
+            lines.append(f"\n[{tier.upper()} | n_emp={tdata['n_employees']} | prior={tdata['prior_mole']:.4f}]")
+            lines.append(f"{'strategy':<26} {'v1.4 score':>18} {'v14 acc':>8} {'v14 dec':>8}")
+            for sname in report["strategy_names"]:
+                v14s = tdata["strategies"][sname]
+                lines.append(
+                    f"{sname:<26} "
+                    f"{v14s['mean_score']:+7.4f}+-{v14s['ci95']:6.4f} "
+                    f"{100.0 * v14s['acc']:6.1f}% "
+                    f"{100.0 * v14s['decoy_hit_rate']:6.1f}%"
+                )
+        return "\n".join(lines)
+
     lines = [
         f"Paired Differential Sweep: v1.4 ({report['v14_tiers_version']} @ {report['v14_head_sha']}) "
         f"vs v1.5 (v1.5-candidate @ {report['v15_commit_sha']} via git show -> {report['v15_isolated_namespace']})",
@@ -1368,7 +1537,12 @@ def main(argv: list[str] | None = None) -> int:
         tiers = ["easy", "medium"] if is_fast else ["easy", "medium", "hard"]
 
     workers = args.workers if args.workers is not None else (1 if is_fast else 2)
-    report = run_differential_audit(tiers=tiers, seeds=seeds, v15_ref=args.v15_ref, workers=workers)
+    fallback = EXPECTED_V15_COMMIT_PREFIX if args.v15_ref == "origin/justSilas-v15" else None
+    v15_sha = try_resolve_git_commit(ref=args.v15_ref, fallback=fallback, repo_root=REPO_ROOT)
+    if v15_sha is None and is_fast:
+        report = run_v14_shallow_fallback_audit(tiers=tiers, seeds=seeds, repo_root=REPO_ROOT)
+    else:
+        report = run_differential_audit(tiers=tiers, seeds=seeds, v15_ref=args.v15_ref, workers=workers)
     print(format_console_summary(report))
 
     if args.json_out is not None:

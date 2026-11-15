@@ -21,7 +21,7 @@
 
 ## 2. Reproduce Commands (Keyless, Zero API Calls)
 
-Fast subset (`<2s`, `88` episodes, used by `pytest`):
+Fast subset (`<2s`, `88` episodes in full clones; automatic `v1.4` `HEAD` `git show` fallback in `fetch-depth=1` shallow CI checkouts where `de9cc50e` is not fetched):
 
 ```bash
 /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/integrity_v14_v15_differential_sweep.py --fast

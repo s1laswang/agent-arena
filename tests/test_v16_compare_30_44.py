@@ -452,3 +452,50 @@ def test_live_shared_v16_runs_checkpoints(tmp_path: Path) -> None:
         assert all(30 <= s <= 44 for s in rep["paired_seeds"])
         assert rep["do_nothing_mean"] == 0.0
         assert rep["stop_early_mean"] == 0.0
+
+
+def test_committed_partial_v16_artifacts(tmp_path: Path) -> None:
+    partial_root = ROOT / "results" / "v16_social" / "partial"
+    summary_path = ROOT / "results" / "v16_social" / "partial_summary.json"
+    report_path = ROOT / "docs" / "reports" / "v16_social_eval.md"
+
+    assert partial_root.is_dir()
+    assert summary_path.is_file()
+    assert report_path.is_file()
+
+    raw_summary = summary_path.read_text(encoding="utf-8")
+    raw_report = report_path.read_text(encoding="utf-8")
+    for forbidden in ("\u2014", "\u2013"):
+        assert forbidden not in raw_summary
+        assert forbidden not in raw_report
+    assert CMP.EMP_ID_PATTERN.search(raw_report) is None
+    for rx in CMP.KEY_PATTERNS:
+        assert rx.search(raw_report) is None
+
+    summary = json.loads(raw_summary)
+    CMP.assert_clean_output(summary)
+    assert summary["gap_widening_gate_met"] is False
+    assert summary["sample_size_gate_met"] is False
+    assert summary["control"]["valid_seeds"] == [30, 31, 32, 33]
+    assert summary["variants"]["v5_full9_cocktail"]["paired_seeds"] == [30, 31, 32]
+    assert (
+        summary["variants"]["v5_full9_cocktail"]["variant_raw_mean"]
+        > summary["variants"]["v5_full9_cocktail"]["control_raw_mean"]
+    )
+    assert "HIGHER" in raw_report
+    assert "NOT met" in raw_report
+
+    out_json = tmp_path / "partial_recheck.json"
+    rc = CMP.main([
+        "--runs-root",
+        str(partial_root),
+        "--n-boot",
+        "200",
+        "--out-json",
+        str(out_json),
+    ])
+    assert rc == 0
+    recheck = json.loads(out_json.read_text(encoding="utf-8"))
+    assert recheck["gates"]["all_passed"] is True
+    assert len(summary["per_variant_seed_table"]) == 10
+

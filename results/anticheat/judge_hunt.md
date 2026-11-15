@@ -1,7 +1,3 @@
-# Judge-protocol hunt on the real MCP server (`python scripts/judge_hunt.py`)
-
-Run on s3-integrity d3e7629 (= justSilas 0f379cd + integrity changes; the server code is unchanged from justSilas), Sat 14 Nov ~23:55 EET.
-
 | attack | how | observed (server ledger) | held |
 |---|---|---|---|
 | J1 second MCP session | accuse in session A, then accuse a different id from a fresh session B | 2nd session's accuse ok=False (episode over); healthy=True accusations=1 score=-1.00 | yes |

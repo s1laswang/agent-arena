@@ -472,9 +472,11 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
     )
     solver_rep_hard_5 = [e for e in solver_rep_hard_30 if int(e["seed"]) in rep_hard_seed_set]
 
+    rep_seeds_txt = ", ".join(str(s) for s in rep_hard_seeds)
+    n_rep = len(carbon_rep_hard)
     cohort_a_5_rows: list[dict[str, Any]] = [
         build_paired_row(
-            "OpenCode + gemini-4-carbon over MCP (replication seeds 30, 34, 42, 45, 57)",
+            f"OpenCode + gemini-4-carbon over MCP (replication seeds {rep_seeds_txt})",
             "frontier_replication/v1.4/opencode-gemini-4-carbon",
             "opencode:google/gemini-4-carbon",
             "hard",
@@ -482,7 +484,7 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
             solver_30_59,
         ),
         build_paired_row(
-            "reference solver (same 5 seeds)",
+            f"reference solver (same {n_rep} seeds)",
             "frontier_replication/v1.4/reference",
             "solver",
             "hard",
@@ -497,7 +499,7 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
         ]
         cohort_a_5_rows.append(
             build_paired_row(
-                f"{base} (same 5 seeds)",
+                f"{base} (same {n_rep} seeds)",
                 "frontier_replication/v1.4/reference",
                 base,
                 "hard",
@@ -564,9 +566,10 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
 
     pooled_carbon_35 = sorted(carbon_oc_hard_0_29 + carbon_rep_hard, key=lambda e: int(e["seed"]))
     pooled_solver_35 = sorted(solver_hard_0_29 + solver_rep_hard_5, key=lambda e: int(e["seed"]))
+    n_pool = len(pooled_carbon_35)
     cohort_b_rows: list[dict[str, Any]] = [
         build_paired_row(
-            "SECONDARY sensitivity: OpenCode + gemini-4-carbon hard pooled (0-29 primary + 30,34,42,45,57 replication)",
+            f"SECONDARY sensitivity: OpenCode + gemini-4-carbon hard pooled (0-29 primary + {rep_seeds_txt} replication)",
             "secondary_pooled_0_29_plus_rep5",
             "opencode:google/gemini-4-carbon",
             "hard",
@@ -574,7 +577,7 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
             solver_pooled,
         ),
         build_paired_row(
-            "reference solver (same 35 seeds)",
+            f"reference solver (same {n_pool} seeds)",
             "secondary_pooled_0_29_plus_rep5",
             "solver",
             "hard",
@@ -588,6 +591,14 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
         key=lambda e: int(e["seed"]),
     )
     flash_med_seed_set = {int(e["seed"]) for e in flash_rep_med_29}
+    flash_med_missing = sorted(seeds_0_29 - flash_med_seed_set)
+    flash_med_n = len(flash_rep_med_29)
+    flash_med_seeds_txt = "0-29" if not flash_med_missing else ", ".join(str(s) for s in sorted(flash_med_seed_set))
+    flash_med_row_label = (
+        "OpenCode + gemini-3.5-flash over MCP (seeds 0-29, complete n=30)"
+        if not flash_med_missing
+        else f"OpenCode + gemini-3.5-flash over MCP (seeds {flash_med_seeds_txt}; missing {flash_med_missing})"
+    )
 
     gt_med_0_29 = simulate_grok_tactics("medium", list(range(30)))
     gt_hard_0_29 = simulate_grok_tactics("hard", list(range(30)))
@@ -601,7 +612,7 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
 
     cross_model_med_29_rows: list[dict[str, Any]] = [
         build_paired_row(
-            "OpenCode + gemini-4-carbon over MCP (shared 29 seeds)",
+            f"OpenCode + gemini-4-carbon over MCP (shared {flash_med_n} seeds)",
             "v1.4/opencode-gemini-4-carbon",
             "opencode:google/gemini-4-carbon",
             "medium",
@@ -609,7 +620,7 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
             solver_0_29,
         ),
         build_paired_row(
-            "reference solver (shared 29 seeds)",
+            f"reference solver (shared {flash_med_n} seeds)",
             "v1.4/reference",
             "solver",
             "medium",
@@ -617,7 +628,7 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
             solver_0_29,
         ),
         build_paired_row(
-            "in-process gemini-4-carbon (shared 29 seeds)",
+            f"in-process gemini-4-carbon (shared {flash_med_n} seeds)",
             "v1.4/inproc-gemini-4-carbon",
             "gemini:gemini-4-carbon",
             "medium",
@@ -625,7 +636,7 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
             solver_0_29,
         ),
         build_paired_row(
-            "grok_tactics (deterministic scripted policy, shared 29 seeds)",
+            f"grok_tactics (deterministic scripted policy, shared {flash_med_n} seeds)",
             "deterministic_policy_v1.4",
             "grok_tactics",
             "medium",
@@ -633,7 +644,7 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
             solver_0_29,
         ),
         build_paired_row(
-            "OpenCode + gemini-3.5-flash over MCP (seeds 0-27, 29; seed 28 pending)",
+            flash_med_row_label,
             "frontier_replication/v1.4/opencode-gemini-3.5-flash",
             "opencode:google/gemini-3.5-flash",
             "medium",
@@ -695,7 +706,7 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
     )
 
     h2h_med = head_to_head_diff(
-        "OpenCode gemini-4-carbon minus gemini-3.5-flash on medium (shared seeds 0-27, 29)",
+        f"OpenCode gemini-4-carbon minus gemini-3.5-flash on medium (shared seeds {flash_med_seeds_txt})",
         "medium",
         carbon_oc_med_29,
         flash_rep_med_29,
@@ -849,6 +860,10 @@ def render_markdown(summary: dict[str, Any]) -> str:
     h2h_med = cc["head_to_head_carbon_vs_flash"]["medium_n29"]
     h2h_hard = cc["head_to_head_carbon_vs_flash"]["hard_n30"]
 
+    rep_seeds_str = ", ".join(str(s) for s in ca["seeds"])
+    med_seeds_str = "0-29" if not cc["flash_medium_missing_seeds_in_0_29"] else ", ".join(str(s) for s in f_med_rep["seeds"])
+    rep_correct = round(c_rep_5["accuracy"] * c_rep_5["n"])
+
     lines: list[str] = [
         _md_heading(1, "Canary v1.4 Frontier Replication and Cross-Model Capability Report"),
         "",
@@ -880,15 +895,15 @@ def render_markdown(summary: dict[str, Any]) -> str:
         f"`{_num(c_hard_prim['mean'])} +/- {_num(c_hard_prim['ci'])}` vs solver `{_num(c_hard_prim['solver_same_seeds'])}`, "
         f"giving **{_ratio_cell(c_hard_prim)}** raw and **{_luck_cell(c_hard_prim, bold=False)}** luck-adjusted; on medium (`n=30`) "
         f"it reaches `{_ratio_cell(c_med_prim)}` raw and `{_luck_cell(c_med_prim, bold=False)}` luck-adjusted.",
-        f"  - **Replication hard (`seeds 30, 34, 42, 45, 57`, `n=5`, separate cohort):** `opencode:google/gemini-4-carbon` "
-        f"scores `{_num(c_rep_5['mean'])} +/- {_num(c_rep_5['ci'])}` (5/5 correct, mean `P(accused) = {_num(c_rep_5['p_accused'], 2)}`, "
+        f"  - **Replication hard (`seeds {rep_seeds_str}`, `n={c_rep_5['n']}`, separate cohort):** `opencode:google/gemini-4-carbon` "
+        f"scores `{_num(c_rep_5['mean'])} +/- {_num(c_rep_5['ci'])}` ({rep_correct}/{c_rep_5['n']} correct, mean `P(accused) = {_num(c_rep_5['p_accused'], 2)}`, "
         f"luck-adjusted `{_num(c_rep_5['post_expected'])}`) vs solver `{_num(c_rep_5['solver_same_seeds'])}` raw "
         f"(luck-adjusted `{_num(c_rep_5['solver_post_expected'])}`, ratio `{_luck_cell(c_rep_5, bold=False)}`).",
-        f"  - **Secondary pooled sensitivity (`n=35`, secondary per pre-registered rule):** Pooling primary `0-29` with "
-        f"replication `30, 34, 42, 45, 57` yields `{_ratio_cell(c_pool_35)}` raw and **{_luck_cell(c_pool_35, bold=False)}** "
+        f"  - **Secondary pooled sensitivity (`n={c_pool_35['n']}`, secondary per pre-registered rule):** Pooling primary `0-29` with "
+        f"replication `{rep_seeds_str}` yields `{_ratio_cell(c_pool_35)}` raw and **{_luck_cell(c_pool_35, bold=False)}** "
         f"luck-adjusted, where the luck-adjusted 95% CI `[{c_pool_35['post_expected_lo']:.0%}, {c_pool_35['post_expected_hi']:.0%}]` continues to exclude parity.",
         f"  - **Cross-model ordering (`gemini-4-carbon` vs `gemini-3.5-flash` vs `grok_tactics` vs `solver`):** "
-        f"On medium (`n=29` shared seeds `0-27, 29`), `opencode:google/gemini-3.5-flash` drops to `{_ratio_cell(f_med_rep)}` raw / "
+        f"On medium (`n={f_med_rep['n']}` shared seeds `{med_seeds_str}`), `opencode:google/gemini-3.5-flash` drops to `{_ratio_cell(f_med_rep)}` raw / "
         f"`{_luck_cell(f_med_rep, bold=False)}` luck-adjusted (`gemini-4-carbon - gemini-3.5-flash = "
         f"{_signed(h2h_med['raw_diff'])} +/- {_num(h2h_med['raw_diff_ci'])}` V raw, "
         f"`{_signed(h2h_med['luck_adjusted_diff'])} +/- {_num(h2h_med['luck_adjusted_diff_ci'])}` V luck-adjusted). "
@@ -909,12 +924,12 @@ def render_markdown(summary: dict[str, Any]) -> str:
             "were recorded under the earlier day-1 random accusation baseline (now named `guess_day1`), whereas current "
             "`stop_early` (`StopEarlyQuit` in `canary/baselines.py`, used in `seeds 30-59` below) stops on day 1 without accusing and scores `0.000`.",
             "",
-            _md_heading(2, "3. Cohort (a): gemini-4-carbon Hard Replication (Seeds 30, 34, 42, 45, 57) and Seeds 30-59 Baselines"),
+            _md_heading(2, f"3. Cohort (a): gemini-4-carbon Hard Replication (Seeds {rep_seeds_str}) and Seeds 30-59 Baselines"),
             "",
-            _md_heading(3, "3.1 Paired 5-Seed Hard Replication Cohort (`seeds 30, 34, 42, 45, 57`, `n=5`)"),
+            _md_heading(3, f"3.1 Paired {c_rep_5['n']}-Seed Hard Replication Cohort (`seeds {rep_seeds_str}`, `n={c_rep_5['n']}`)"),
             "",
-            f"Five completed `opencode:google/gemini-4-carbon` episodes in `results/frontier_replication/v1.4/opencode-gemini-4-carbon/` "
-            f"({len(ca['pending_seeds_in_30_59'])} seeds in `30-59` remain pending), paired on the exact same 5 seeds against "
+            f"`{c_rep_5['n']}` completed `opencode:google/gemini-4-carbon` episodes in `results/frontier_replication/v1.4/opencode-gemini-4-carbon/` "
+            f"({len(ca['pending_seeds_in_30_59'])} seeds in `30-59` remain pending), paired on the exact same {c_rep_5['n']} seeds against "
             "`results/frontier_replication/v1.4/reference/solver-hard-seeds30to59` and all 8 non-solver baselines:",
             "",
         ]
@@ -923,10 +938,10 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            f"Per-seed inspection on `{ca['seeds']}` explains why the raw 5-seed ratio (`{c_rep_5['ratio']:.0%}`) is much higher than the "
+            f"Per-seed inspection on `{ca['seeds']}` explains why the raw {c_rep_5['n']}-seed ratio (`{c_rep_5['ratio']:.0%}`) is much higher than the "
             f"luck-adjusted ratio (`{_luck_cell(c_rep_5, bold=False)}`): on seed `{seed30_detail['seed']}` the reference solver suffered a "
             f"`{_signed(seed30_detail['solver_score'])}` wrong accusation on day `{seed30_detail['solver_day']}` "
-            f"(pulling the 5-seed raw solver mean down to `{_num(c_rep_5['solver_same_seeds'])}`), while under posterior expectation "
+            f"(pulling the {c_rep_5['n']}-seed raw solver mean down to `{_num(c_rep_5['solver_same_seeds'])}`), while under posterior expectation "
             f"the two agents are close (`{_num(c_rep_5['post_expected'])}` vs `{_num(c_rep_5['solver_post_expected'])}`):",
             "",
             "| seed | carbon score | carbon correct | carbon day | carbon P(accused) | carbon luck-adj. | solver score | solver correct | solver day | solver P(accused) | solver luck-adj. | grok_tactics score | grok_tactics luck-adj. |",
@@ -956,12 +971,12 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            _md_heading(2, "4. Cohort (b): Secondary Pooled Hard Sensitivity Row (`n=35`)"),
+            _md_heading(2, f"4. Cohort (b): Secondary Pooled Hard Sensitivity Row (`n={c_pool_35['n']}`)"),
             "",
             f"**SECONDARY SENSITIVITY ONLY (NOT THE HEADLINE):** Per the pre-registered seed rule (`docs/reports/gap.md`), "
             f"the `n={c_hard_prim['n']}` (`seeds 0-29`) result remains the primary headline (`{_ratio_cell(c_hard_prim)}` raw, "
             f"`{_luck_cell(c_hard_prim, bold=False)}` luck-adjusted). Pooling the {c_hard_prim['n']} primary episodes with the "
-            f"{c_rep_5['n']} non-overlapping replication episodes (`seeds 30, 34, 42, 45, 57`, total `n={c_pool_35['n']}`) "
+            f"{c_rep_5['n']} non-overlapping replication episodes (`seeds {rep_seeds_str}`, total `n={c_pool_35['n']}`) "
             "provides a secondary sensitivity check:",
             "",
         ]
@@ -970,12 +985,12 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            _md_heading(2, "5. Cohort (c): gemini-3.5-flash Medium (`n=29`) + Hard (`n=30`) and Cross-Model Capability Ordering"),
+            _md_heading(2, f"5. Cohort (c): gemini-3.5-flash Medium (`n={f_med_rep['n']}`) + Hard (`n=30`) and Cross-Model Capability Ordering"),
             "",
-            _md_heading(3, "5.1 Cross-Model Capability Ordering on Medium (`seeds 0-27, 29`, `n=29` Shared Seeds)"),
+            _md_heading(3, f"5.1 Cross-Model Capability Ordering on Medium (`seeds {med_seeds_str}`, `n={f_med_rep['n']}` Shared Seeds)"),
             "",
             f"`results/frontier_replication/v1.4/opencode-gemini-3.5-flash` contains `{f_med_rep['n']}` replay-verified medium episodes "
-            f"(`seeds 0-27, 29`; missing seeds in `0-29`: `{cc['flash_medium_missing_seeds_in_0_29']}`). Pairing all agents on those exact "
+            f"(`seeds {med_seeds_str}`; missing seeds in `0-29`: `{cc['flash_medium_missing_seeds_in_0_29']}`). Pairing all agents on those exact "
             f"`{f_med_rep['n']}` seeds against `data/runs/committed/v1.4/reference/solver-medium*` "
             "(with deterministic `GrokTactics` included for baseline context; on full `0-29` `grok_tactics` scores "
             f"`{_num(cc['grok_tactics_medium_0_29_row']['mean'])} +/- {_num(cc['grok_tactics_medium_0_29_row']['ci'])}`, "
@@ -1002,7 +1017,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
             "",
             "| tier | shared seeds (n) | gemini-4-carbon raw | gemini-3.5-flash raw | paired raw diff +/- 95% CI | gemini-4-carbon luck-adj. | gemini-3.5-flash luck-adj. | paired luck-adj. diff +/- 95% CI |",
             "|---|---:|---:|---:|---|---:|---:|---|",
-            f"| medium | {h2h_med['n']} (`0-27, 29`) | {_num(h2h_med['mean_a'])} | {_num(h2h_med['mean_b'])} | "
+            f"| medium | {h2h_med['n']} (`{med_seeds_str}`) | {_num(h2h_med['mean_a'])} | {_num(h2h_med['mean_b'])} | "
             f"**{_signed(h2h_med['raw_diff'])} +/- {_num(h2h_med['raw_diff_ci'])}** | {_num(h2h_med['luck_adjusted_a'])} | "
             f"{_num(h2h_med['luck_adjusted_b'])} | **{_signed(h2h_med['luck_adjusted_diff'])} +/- {_num(h2h_med['luck_adjusted_diff_ci'])}** |",
             f"| hard | {h2h_hard['n']} (`0-29`) | {_num(h2h_hard['mean_a'])} | {_num(h2h_hard['mean_b'])} | "

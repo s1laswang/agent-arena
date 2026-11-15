@@ -12,12 +12,12 @@
   },
   "summary": {
     "passed": true,
-    "replication_total_episodes": 304,
-    "replication_replay_verified_episodes": 304,
+    "replication_total_episodes": 305,
+    "replication_replay_verified_episodes": 305,
     "target_frontier_episodes": 90,
-    "landed_frontier_episodes": 34,
-    "missing_frontier_episodes": 56,
-    "wave_count": 20,
+    "landed_frontier_episodes": 35,
+    "missing_frontier_episodes": 55,
+    "wave_count": 19,
     "max_workers_in_any_wave": 3
   },
   "cohorts": [
@@ -84,8 +84,8 @@
         29
       ],
       "target_count": 30,
-      "landed_count": 29,
-      "missing_count": 1,
+      "landed_count": 30,
+      "missing_count": 0,
       "landed_seeds": [
         0,
         1,
@@ -115,11 +115,10 @@
         25,
         26,
         27,
+        28,
         29
       ],
-      "missing_seeds": [
-        28
-      ],
+      "missing_seeds": [],
       "invalid_seeds": [],
       "baseline_landed_verified": true
     },
@@ -229,7 +228,7 @@
       "transcript_redaction_infra_and_steps": {
         "passed": true,
         "synthetic_cases_verified": 9,
-        "real_transcripts_checked": 34,
+        "real_transcripts_checked": 35,
         "carbon_hard_step_counts": {
           "30": 112,
           "34": 83,
@@ -241,7 +240,7 @@
       },
       "cli_command_validation": {
         "passed": true,
-        "commands_validated": 56,
+        "commands_validated": 55,
         "max_workers_per_wave": 3,
         "timeout_s": 3600,
         "jobs_per_worker": 1,
@@ -770,35 +769,6 @@
     },
     {
       "wave_id": 10,
-      "cohort_id": "opencode-gemini-3.5-flash-medium-0-29",
-      "cohort_wave": 1,
-      "model": "google/gemini-3.5-flash",
-      "tier": "medium",
-      "worker_count": 1,
-      "ram_safe": true,
-      "seeds": [
-        28
-      ],
-      "jobs": [
-        {
-          "worker_slot": 1,
-          "cohort_id": "opencode-gemini-3.5-flash-medium-0-29",
-          "model": "google/gemini-3.5-flash",
-          "tier": "medium",
-          "seed": 28,
-          "seeds": [
-            28
-          ],
-          "timeout_s": 3600,
-          "jobs": 1,
-          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/medium-s28",
-          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier medium --seeds 28 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/medium-s28",
-          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/medium-s28"
-        }
-      ]
-    },
-    {
-      "wave_id": 11,
       "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
       "cohort_wave": 1,
       "model": "google/gemini-3.5-flash",
@@ -859,7 +829,7 @@
       ]
     },
     {
-      "wave_id": 12,
+      "wave_id": 11,
       "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
       "cohort_wave": 2,
       "model": "google/gemini-3.5-flash",
@@ -920,7 +890,7 @@
       ]
     },
     {
-      "wave_id": 13,
+      "wave_id": 12,
       "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
       "cohort_wave": 3,
       "model": "google/gemini-3.5-flash",
@@ -981,7 +951,7 @@
       ]
     },
     {
-      "wave_id": 14,
+      "wave_id": 13,
       "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
       "cohort_wave": 4,
       "model": "google/gemini-3.5-flash",
@@ -1042,7 +1012,7 @@
       ]
     },
     {
-      "wave_id": 15,
+      "wave_id": 14,
       "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
       "cohort_wave": 5,
       "model": "google/gemini-3.5-flash",
@@ -1103,7 +1073,7 @@
       ]
     },
     {
-      "wave_id": 16,
+      "wave_id": 15,
       "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
       "cohort_wave": 6,
       "model": "google/gemini-3.5-flash",
@@ -1164,7 +1134,7 @@
       ]
     },
     {
-      "wave_id": 17,
+      "wave_id": 16,
       "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
       "cohort_wave": 7,
       "model": "google/gemini-3.5-flash",
@@ -1225,7 +1195,7 @@
       ]
     },
     {
-      "wave_id": 18,
+      "wave_id": 17,
       "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
       "cohort_wave": 8,
       "model": "google/gemini-3.5-flash",
@@ -1286,7 +1256,7 @@
       ]
     },
     {
-      "wave_id": 19,
+      "wave_id": 18,
       "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
       "cohort_wave": 9,
       "model": "google/gemini-3.5-flash",
@@ -1347,7 +1317,7 @@
       ]
     },
     {
-      "wave_id": 20,
+      "wave_id": 19,
       "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
       "cohort_wave": 10,
       "model": "google/gemini-3.5-flash",

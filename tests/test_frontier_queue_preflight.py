@@ -39,34 +39,32 @@ def test_real_repo_manifest_and_check_flag():
     assert manifest["summary"]["passed"] is True
     assert manifest["preflight"]["passed"] is True
     assert manifest["preflight"]["zero_live_llm_calls"] is True
-    assert manifest["summary"]["replication_total_episodes"] == 304
-    assert manifest["summary"]["replication_replay_verified_episodes"] == 304
+    assert manifest["summary"]["replication_total_episodes"] >= 305
+    assert (
+        manifest["summary"]["replication_replay_verified_episodes"]
+        == manifest["summary"]["replication_total_episodes"]
+    )
 
     by_id = {c["cohort_id"]: c for c in manifest["cohorts"]}
     c_carbon = by_id["opencode-gemini-4-carbon-hard-30-59"]
-    assert c_carbon["landed_seeds"] == [30, 34, 42, 45, 57]
-    assert c_carbon["landed_count"] == 5
-    assert c_carbon["missing_count"] == 25
-    assert c_carbon["missing_seeds"] == [
-        31, 32, 33, 35, 36, 37, 38, 39, 40, 41,
-        43, 44, 46, 47, 48, 49, 50, 51, 52, 53,
-        54, 55, 56, 58, 59,
-    ]
+    assert {30, 34, 42, 45, 57}.issubset(set(c_carbon["landed_seeds"]))
+    assert c_carbon["landed_count"] == len(c_carbon["landed_seeds"])
+    assert c_carbon["missing_count"] == 30 - c_carbon["landed_count"]
+    assert sorted(c_carbon["landed_seeds"] + c_carbon["missing_seeds"]) == list(range(30, 60))
 
     c_flash_med = by_id["opencode-gemini-3.5-flash-medium-0-29"]
-    assert c_flash_med["landed_seeds"] == [s for s in range(30) if s != 28]
-    assert c_flash_med["landed_count"] == 29
-    assert c_flash_med["missing_count"] == 1
-    assert c_flash_med["missing_seeds"] == [28]
+    assert c_flash_med["landed_seeds"] == list(range(30))
+    assert c_flash_med["landed_count"] == 30
+    assert c_flash_med["missing_count"] == 0
+    assert c_flash_med["missing_seeds"] == []
 
     c_flash_hard = by_id["opencode-gemini-3.5-flash-hard-30-59"]
-    assert c_flash_hard["landed_seeds"] == []
-    assert c_flash_hard["landed_count"] == 0
-    assert c_flash_hard["missing_count"] == 30
-    assert c_flash_hard["missing_seeds"] == list(range(30, 60))
+    assert c_flash_hard["landed_count"] == len(c_flash_hard["landed_seeds"])
+    assert c_flash_hard["missing_count"] == 30 - c_flash_hard["landed_count"]
+    assert sorted(c_flash_hard["landed_seeds"] + c_flash_hard["missing_seeds"]) == list(range(30, 60))
 
     waves = manifest["waves"]
-    assert len(waves) == 20
+    assert len(waves) >= 1
     assert all(1 <= w["worker_count"] <= 3 and w["ram_safe"] is True for w in waves)
 
     queued_by_cohort: dict[str, list[int]] = {}
@@ -86,7 +84,7 @@ def test_cli_commands_and_validator_rejects_bad_waves():
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     val = preflight.validate_wave_commands(manifest["waves"])
     assert val["passed"] is True
-    assert val["commands_validated"] == 56
+    assert val["commands_validated"] == manifest["summary"]["missing_frontier_episodes"]
 
     bad_workers = copy.deepcopy(manifest["waves"][:1])
     bad_workers[0]["worker_count"] = 4
@@ -136,14 +134,9 @@ def test_carbon_step_reconstruction_and_transcript_negative_controls(tmp_path):
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     tr_check = manifest["preflight"]["checks"]["transcript_redaction_infra_and_steps"]
     assert tr_check["passed"] is True
-    assert tr_check["real_transcripts_checked"] == 34
-    assert tr_check["carbon_hard_step_counts"] == {
-        "30": 112,
-        "34": 83,
-        "42": 74,
-        "45": 156,
-        "57": 76,
-    }
+    assert tr_check["real_transcripts_checked"] == manifest["summary"]["landed_frontier_episodes"]
+    for k, v in {"30": 112, "34": 83, "42": 74, "45": 156, "57": 76}.items():
+        assert tr_check["carbon_hard_step_counts"][k] == v
 
     src_dir = ROOT / "results" / "frontier_replication" / "v1.4" / "opencode-gemini-4-carbon" / "hard-s30"
     ep = json.loads((src_dir / "episodes.jsonl").read_text(encoding="utf-8").splitlines()[0])

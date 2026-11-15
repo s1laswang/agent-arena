@@ -9,18 +9,11 @@ import random
 import struct
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
+import os
 from pathlib import Path
 from typing import Any
-
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-from matplotlib.patches import Patch, Rectangle
-import numpy as np
-from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -29,10 +22,18 @@ if str(ROOT) not in sys.path:
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from canary import rules
-from canary.analysis.gap import load_runs, mean_ci
-from canary.eval import make_env, make_policy_factory, run_episode
-import paired_v13
+
+def _get_paired_v13() -> Any:
+    import paired_v13 as mod
+
+    globals()["paired_v13"] = mod
+    return mod
+
+
+def __getattr__(name: str) -> Any:
+    if name == "paired_v13":
+        return _get_paired_v13()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 SEEDS_0_29: tuple[int, ...] = tuple(range(30))
 BOOTSTRAP_RESAMPLES = 10000
@@ -160,10 +161,12 @@ CALIBRATION_KEYS: tuple[str, ...] = (
     "opencode_flash",
 )
 
-_BOOT_CACHE: dict[tuple[int, int, int], np.ndarray] = {}
+_BOOT_CACHE: dict[tuple[int, int, int], Any] = {}
 
 
-def _boot_index_matrix(n: int, b_resamples: int, rng_seed: int) -> np.ndarray:
+def _boot_index_matrix(n: int, b_resamples: int, rng_seed: int) -> Any:
+    import numpy as np
+
     cache_key = (n, b_resamples, rng_seed)
     if cache_key not in _BOOT_CACHE:
         rng = random.Random(rng_seed)
@@ -180,6 +183,8 @@ def fast_boot_ratio(
     b_resamples: int = BOOTSTRAP_RESAMPLES,
     rng_seed: int = COMMITTED_BOOT_SEED,
 ) -> tuple[float, float]:
+    import numpy as np
+
     n = len(num_vals)
     idx = _boot_index_matrix(n, b_resamples, rng_seed)
     num_arr = np.asarray(num_vals, dtype=np.float64)[idx].sum(axis=1) / n
@@ -207,6 +212,8 @@ def _load_committed_by_tier_seed(
     agent_name: str,
     seeds: set[int],
 ) -> dict[tuple[str, int], dict[str, Any]]:
+    from canary.analysis.gap import load_runs
+
     run_dir = committed_root / subdir
     out: dict[tuple[str, int], dict[str, Any]] = {}
     for ep in load_runs(run_dir):
@@ -226,6 +233,9 @@ def _replay_baseline_by_tier_seed(
     tiers: tuple[str, ...],
     seeds: tuple[int, ...],
 ) -> dict[tuple[str, int], dict[str, Any]]:
+    from canary import rules
+    from canary.eval import make_env, make_policy_factory, run_episode
+
     out: dict[tuple[str, int], dict[str, Any]] = {}
     with rules.tiers_version("v1.4"):
         factory = make_policy_factory(agent_name)
@@ -243,6 +253,9 @@ def compute_chart_data(
     committed_boot_seed: int = COMMITTED_BOOT_SEED,
     baseline_boot_seed: int = BASELINE_BOOT_SEED,
 ) -> dict[str, Any]:
+    from canary.analysis.gap import mean_ci
+
+    paired_v13 = _get_paired_v13()
     committed_root = root / "data" / "runs" / "committed"
     seed_set = set(seeds)
     seeds_sorted = tuple(sorted(seeds))
@@ -430,11 +443,16 @@ def compute_chart_data(
 
 
 def _configure_matplotlib_defaults() -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
     matplotlib.rcParams["axes.unicode_minus"] = False
     matplotlib.rcParams["font.family"] = "DejaVu Sans"
 
 
 def _save_figure_png(fig: Any, out_path: Path, dpi: int) -> None:
+    from PIL import Image
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=dpi, facecolor=SURFACE)
@@ -447,6 +465,9 @@ def _save_figure_png(fig: Any, out_path: Path, dpi: int) -> None:
 
 def render_headline_gap_chart(data: dict[str, Any], out_path: Path, dpi: int = TARGET_DPI) -> None:
     _configure_matplotlib_defaults()
+    from matplotlib.lines import Line2D
+    import matplotlib.pyplot as plt
+
     spec_color = {s["key"]: s["color"] for s in FOREST_SPECS}
     n_rows = len(FOREST_SPECS)
     y_positions = [float(n_rows - 1 - i) for i in range(n_rows)]
@@ -796,6 +817,11 @@ def render_headline_gap_chart(data: dict[str, Any], out_path: Path, dpi: int = T
 
 def render_posterior_calibration_chart(data: dict[str, Any], out_path: Path, dpi: int = TARGET_DPI) -> None:
     _configure_matplotlib_defaults()
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    import matplotlib.pyplot as plt
+    import numpy as np
+
     cal = data["calibration"]
 
     fig, (ax_left, ax_right) = plt.subplots(
@@ -1247,8 +1273,11 @@ def validate_summary_invariants(data: dict[str, Any]) -> list[str]:
     return errs
 
 
-def _validate_png_files(out_dir: Path) -> list[str]:
+def _validate_png_files(out_dir: Path, decode_pixels: bool = False) -> list[str]:
     errs: list[str] = []
+    if decode_pixels:
+        _configure_matplotlib_defaults()
+        from PIL import Image
     for fname in (HEADLINE_PNG_NAME, CALIBRATION_PNG_NAME):
         fpath = out_dir / fname
         meta = inspect_png(fpath)
@@ -1258,19 +1287,29 @@ def _validate_png_files(out_dir: Path) -> list[str]:
         if not meta["valid_png"]:
             errs.append(f"invalid PNG header: {fpath}")
             continue
+        file_errs: list[str] = []
         if meta["size_bytes"] <= 1024:
-            errs.append(f"PNG unexpectedly tiny ({meta['size_bytes']} bytes): {fpath}")
+            file_errs.append(f"PNG unexpectedly tiny ({meta['size_bytes']} bytes): {fpath}")
         if meta["size_bytes"] >= MAX_PNG_BYTES:
-            errs.append(f"PNG exceeds 200 KB cap ({meta['size_bytes']} bytes): {fpath}")
+            file_errs.append(f"PNG exceeds 200 KB cap ({meta['size_bytes']} bytes): {fpath}")
         if meta["dpi_x"] != TARGET_DPI or meta["dpi_y"] != TARGET_DPI:
-            errs.append(f"PNG DPI mismatch on {fpath}: got ({meta['dpi_x']}, {meta['dpi_y']}), expected {TARGET_DPI}")
+            file_errs.append(f"PNG DPI mismatch on {fpath}: got ({meta['dpi_x']}, {meta['dpi_y']}), expected {TARGET_DPI}")
+        if decode_pixels and not file_errs:
+            try:
+                with Image.open(fpath) as img:
+                    img.load()
+                    if (img.width, img.height) != (meta["width"], meta["height"]):
+                        file_errs.append(f"PNG decoded size mismatch on {fpath}")
+            except Exception as exc:
+                file_errs.append(f"PNG decode error on {fpath}: {exc}")
+        errs.extend(file_errs)
     return errs
 
 
 def check_outputs(out_dir: Path, root: Path = ROOT) -> tuple[bool, list[str], dict[str, Any]]:
     data = compute_chart_data(root=root)
     errs = validate_summary_invariants(data)
-    errs.extend(_validate_png_files(out_dir))
+    errs.extend(_validate_png_files(out_dir, decode_pixels=True))
     return (not errs), errs, data
 
 
@@ -1284,7 +1323,7 @@ def build_all(out_dir: Path, root: Path = ROOT, dpi: int = TARGET_DPI) -> dict[s
     p2 = out_dir / CALIBRATION_PNG_NAME
     render_headline_gap_chart(data, p1, dpi=dpi)
     render_posterior_calibration_chart(data, p2, dpi=dpi)
-    png_errs = _validate_png_files(out_dir)
+    png_errs = _validate_png_files(out_dir, decode_pixels=True)
     if png_errs:
         raise RuntimeError("PNG validation failure: " + "; ".join(png_errs))
     return {
@@ -1296,34 +1335,46 @@ def build_all(out_dir: Path, root: Path = ROOT, dpi: int = TARGET_DPI) -> dict[s
     }
 
 
-EXPECTED_INPUTS_SHA256 = "d6768adedeab1047f8fb18c145afee896338cb21609686a17361400838c9678d"
+EXPECTED_INPUTS_SHA256 = "1ed3eb72b072ee49e07c30be39da72df507077deabd0b698d732a6c3df1827e4"
 EXPECTED_HEADLINE_PNG_SHA256 = "7231ee82960b7fde80724d4a022ea82226f6068effd15004cd9f51a9dcd3a9e6"
 EXPECTED_CALIBRATION_PNG_SHA256 = "127b66a4b05403803b03ca98a07a306e463e9cc5ea836fba7edea34d731c0393"
 
 
 def _repo_inputs_sha256(root: Path) -> str:
     rels: list[str] = []
-    for base in ("data/runs/committed/v1.4", "canary/solver", "results/solver_range"):
-        d = root / base
-        if d.is_dir():
-            for p in sorted(d.rglob("*")):
-                if p.is_file() and p.suffix in (".jsonl", ".json", ".py", ".md", ".txt"):
-                    rels.append(p.relative_to(root).as_posix())
-    for extra in (
-        "canary/rules.py",
-        "canary/env.py",
-        "canary/baselines.py",
-        "results/oracle_range_v1.4.json",
-        "results/harbor/rehearsal/TABLE.md",
-        "results/harbor/rehearsal/BUILD.txt",
-        "docs/reports/gap.md",
+    for sub in (
+        "v1.4/reference",
+        "v1.4/opencode-gemini-4-carbon",
+        "v1.4/opencode-gemini-3.5-flash",
+        "v1.4/inproc-gemini-4-carbon",
     ):
+        d = root / "data/runs/committed" / sub
+        if d.is_dir():
+            for dirpath, dirnames, filenames in os.walk(d):
+                dirnames[:] = [
+                    dn
+                    for dn in dirnames
+                    if dn != "transcripts"
+                    and not (sub == "v1.4/reference" and (not dn.startswith("solver-") or "seeds30to59" in dn))
+                ]
+                for fn in filenames:
+                    if fn in ("episodes.jsonl", "meta.json"):
+                        rels.append((Path(dirpath) / fn).relative_to(root).as_posix())
+    solver_dir = root / "canary/solver"
+    if solver_dir.is_dir():
+        for p in sorted(solver_dir.glob("*.py")):
+            if p.is_file():
+                rels.append(p.relative_to(root).as_posix())
+    for extra in ("canary/rules.py", "canary/env.py", "canary/baselines.py", "scripts/paired_v13.py"):
         if (root / extra).is_file():
             rels.append(extra)
+    dedup = sorted(set(rels))
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        digests = list(ex.map(lambda r: hashlib.sha256((root / r).read_bytes()).digest(), dedup))
     h = hashlib.sha256()
-    for r in sorted(set(rels)):
+    for r, dg in zip(dedup, digests):
         h.update(r.encode("ascii") + b"\0")
-        h.update(hashlib.sha256((root / r).read_bytes()).digest())
+        h.update(dg)
     return h.hexdigest()
 
 

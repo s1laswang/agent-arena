@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
+import ast
 import copy
 import importlib.util
 import json
 import shutil
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
-import matplotlib.pyplot as plt
-from PIL import Image
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -431,6 +431,9 @@ def test_png_generation_into_tmp_path(
     monkeypatch: pytest.MonkeyPatch,
     chart_data: dict[str, Any],
 ) -> None:
+    import matplotlib.pyplot as plt
+    from PIL import Image
+
     sm_path = tmp_path / "small_real.png"
     fig_sm, ax_sm = plt.subplots(1, 1, figsize=(2.0, 1.0), dpi=charts.TARGET_DPI)
     ax_sm.plot([0.0, 1.0], [0.2, 0.8])
@@ -475,6 +478,8 @@ def test_cli_check_on_real_dir_and_failure_modes(
     capsys: pytest.CaptureFixture[str],
     chart_data: dict[str, Any],
 ) -> None:
+    from PIL import Image
+
     monkeypatch.setattr(charts, "compute_chart_data", lambda *a, **kw: copy.deepcopy(chart_data))
 
     rc_real = charts.main(["--check"])
@@ -521,3 +526,52 @@ def test_cli_check_on_real_dir_and_failure_modes(
     captured_dpi = capsys.readouterr()
     assert rc_dpi == 1
     assert "PNG DPI mismatch" in captured_dpi.err
+
+
+def test_fast_sha256_check_timing_lazy_imports_and_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    chart_data: dict[str, Any],
+) -> None:
+    tree = ast.parse(SCRIPT_PATH.read_text(encoding="utf-8"))
+    top_roots: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                top_roots.add(alias.name.split(".")[0])
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            top_roots.add(node.module.split(".")[0])
+    for forbidden in ("matplotlib", "numpy", "PIL", "canary", "paired_v13"):
+        assert forbidden not in top_roots, f"top-level heavy import {forbidden} in {SCRIPT_PATH}"
+
+    calls = {"n": 0}
+
+    def _fake_compute(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+        calls["n"] += 1
+        return copy.deepcopy(chart_data)
+
+    monkeypatch.setattr(charts, "compute_chart_data", _fake_compute)
+    t0 = time.perf_counter()
+    assert charts.main(["--check"]) == 0
+    elapsed = time.perf_counter() - t0
+    assert calls["n"] == 0
+    assert elapsed < 1.5, f"fast --check took {elapsed:.2f}s >= 1.5s"
+    assert "PASS:" in capsys.readouterr().out
+
+    assert charts.main(["--check", "--full-check"]) == 0
+    assert calls["n"] == 1
+    assert "PASS:" in capsys.readouterr().out
+
+    monkeypatch.setattr(charts, "EXPECTED_INPUTS_SHA256", "0" * 64)
+    assert charts.main(["--check"]) == 0
+    assert calls["n"] == 2
+    assert "PASS:" in capsys.readouterr().out
+
+    tampered = copy.deepcopy(chart_data)
+    for row in tampered["forest"]["hard"]:
+        if row["key"] == "opencode_carbon":
+            row["raw_label"] = "99% [90%, 105%]"
+            row["raw_hi"] = 1.05
+    monkeypatch.setattr(charts, "compute_chart_data", lambda *_a, **_kw: copy.deepcopy(tampered))
+    assert charts.main(["--check"]) == 1
+    assert "FAIL:" in capsys.readouterr().err

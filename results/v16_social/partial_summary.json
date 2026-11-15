@@ -1,0 +1,1175 @@
+{
+  "bootstrap_seed": 42,
+  "control": {
+    "excluded_invalid_seeds": [],
+    "invalid_attempt_count": 0,
+    "n_valid": 4,
+    "rejected_out_of_range_seeds": [],
+    "replay_verified_count": 4,
+    "sources": [
+      "results/v16_social/partial/v0_v14_control/hard/episodes.jsonl"
+    ],
+    "valid_seeds": [
+      30,
+      31,
+      32,
+      33
+    ],
+    "variant": "v0_v14_control"
+  },
+  "gap_widening_gate_met": false,
+  "gates": {
+    "all_do_nothing_zero": true,
+    "all_passed": true,
+    "all_reference_consistent": true,
+    "all_replay_verified": true,
+    "all_solver_calibration_zero": true,
+    "all_stop_early_zero": true
+  },
+  "headline_verdict": "GATE NOT MET: On partial hard-tier checkpoints collected before quota halt, V1.6 social variants score HIGHER for gemini-4-carbon than V1.4 template control on paired seeds: v5_full9_cocktail mean 0.616667 vs v0_v14_control 0.523333 on seeds 30..32 (n=3, 117.83% of control, delta +0.093333); v3_grudge_falsemem_misforward mean 0.645 vs 0.545 on seeds 30..31 (n=2, 118.35% of control, delta +0.100); v1_anchoring_authority_confirmation 0.650 vs 0.540 on seed 30 (n=1, 120.37% of control, delta +0.110); v2 and v4 have n=0 valid episodes. Neither the n>=15 sample-size gate nor the gap-widening gate is met.",
+  "n_boot": 2000,
+  "per_variant_seed_table": [
+    {
+      "gemini_correct": true,
+      "gemini_final_day": 11,
+      "gemini_luck_adj": 0.5169,
+      "gemini_p_accused": 0.985,
+      "gemini_score": 0.54,
+      "n_valid": 4,
+      "ratio_vs_solver_luck_adj": 2.945971,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": 1.0,
+      "replay_verified": true,
+      "seed": 30,
+      "solver_correct": false,
+      "solver_final_day": 18,
+      "solver_luck_adj": 0.17546,
+      "solver_p_accused": 0.858,
+      "solver_score": -1.0,
+      "v0_control_luck_adj": 0.5169,
+      "v0_control_score": 0.54,
+      "variant": "v0_v14_control"
+    },
+    {
+      "gemini_correct": true,
+      "gemini_final_day": 10,
+      "gemini_luck_adj": 0.5314,
+      "gemini_p_accused": 0.988,
+      "gemini_score": 0.55,
+      "n_valid": 4,
+      "ratio_vs_solver_luck_adj": 1.021923,
+      "ratio_vs_solver_raw": 1.057692,
+      "ratio_vs_v0_control": 1.0,
+      "replay_verified": true,
+      "seed": 31,
+      "solver_correct": true,
+      "solver_final_day": 9,
+      "solver_luck_adj": 0.52,
+      "solver_p_accused": 1.0,
+      "solver_score": 0.52,
+      "v0_control_luck_adj": 0.5314,
+      "v0_control_score": 0.55,
+      "variant": "v0_v14_control"
+    },
+    {
+      "gemini_correct": true,
+      "gemini_final_day": 13,
+      "gemini_luck_adj": 0.42968,
+      "gemini_p_accused": 0.966,
+      "gemini_score": 0.48,
+      "n_valid": 4,
+      "ratio_vs_solver_luck_adj": 0.803861,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": 1.0,
+      "replay_verified": true,
+      "seed": 32,
+      "solver_correct": false,
+      "solver_final_day": 9,
+      "solver_luck_adj": 0.53452,
+      "solver_p_accused": 0.908,
+      "solver_score": -1.0,
+      "v0_control_luck_adj": 0.42968,
+      "v0_control_score": 0.48,
+      "variant": "v0_v14_control"
+    },
+    {
+      "gemini_correct": true,
+      "gemini_final_day": 20,
+      "gemini_luck_adj": -0.33686,
+      "gemini_p_accused": 0.467,
+      "gemini_score": 0.42,
+      "n_valid": 4,
+      "ratio_vs_solver_luck_adj": -0.662354,
+      "ratio_vs_solver_raw": 0.792453,
+      "ratio_vs_v0_control": 1.0,
+      "replay_verified": true,
+      "seed": 33,
+      "solver_correct": true,
+      "solver_final_day": 10,
+      "solver_luck_adj": 0.50858,
+      "solver_p_accused": 0.986,
+      "solver_score": 0.53,
+      "v0_control_luck_adj": -0.33686,
+      "v0_control_score": 0.42,
+      "variant": "v0_v14_control"
+    },
+    {
+      "gemini_correct": true,
+      "gemini_final_day": 9,
+      "gemini_luck_adj": 0.5939,
+      "gemini_p_accused": 0.966,
+      "gemini_score": 0.65,
+      "n_valid": 1,
+      "ratio_vs_solver_luck_adj": 3.384817,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": 1.203704,
+      "replay_verified": true,
+      "seed": 30,
+      "solver_correct": false,
+      "solver_final_day": 18,
+      "solver_luck_adj": 0.17546,
+      "solver_p_accused": 0.858,
+      "solver_score": -1.0,
+      "v0_control_luck_adj": 0.5169,
+      "v0_control_score": 0.54,
+      "variant": "v1_anchoring_authority_confirmation"
+    },
+    {
+      "gemini_correct": true,
+      "gemini_final_day": 8,
+      "gemini_luck_adj": 0.65,
+      "gemini_p_accused": 1.0,
+      "gemini_score": 0.65,
+      "n_valid": 2,
+      "ratio_vs_solver_luck_adj": 3.704548,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": 1.203704,
+      "replay_verified": true,
+      "seed": 30,
+      "solver_correct": false,
+      "solver_final_day": 18,
+      "solver_luck_adj": 0.17546,
+      "solver_p_accused": 0.858,
+      "solver_score": -1.0,
+      "v0_control_luck_adj": 0.5169,
+      "v0_control_score": 0.54,
+      "variant": "v3_grudge_falsemem_misforward"
+    },
+    {
+      "gemini_correct": true,
+      "gemini_final_day": 8,
+      "gemini_luck_adj": 0.558,
+      "gemini_p_accused": 0.95,
+      "gemini_score": 0.64,
+      "n_valid": 2,
+      "ratio_vs_solver_luck_adj": 1.073077,
+      "ratio_vs_solver_raw": 1.230769,
+      "ratio_vs_v0_control": 1.163636,
+      "replay_verified": true,
+      "seed": 31,
+      "solver_correct": true,
+      "solver_final_day": 9,
+      "solver_luck_adj": 0.52,
+      "solver_p_accused": 1.0,
+      "solver_score": 0.52,
+      "v0_control_luck_adj": 0.5314,
+      "v0_control_score": 0.55,
+      "variant": "v3_grudge_falsemem_misforward"
+    },
+    {
+      "gemini_correct": true,
+      "gemini_final_day": 11,
+      "gemini_luck_adj": 0.4175,
+      "gemini_p_accused": 0.945,
+      "gemini_score": 0.5,
+      "n_valid": 3,
+      "ratio_vs_solver_luck_adj": 2.37946,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": 0.925926,
+      "replay_verified": true,
+      "seed": 30,
+      "solver_correct": false,
+      "solver_final_day": 18,
+      "solver_luck_adj": 0.17546,
+      "solver_p_accused": 0.858,
+      "solver_score": -1.0,
+      "v0_control_luck_adj": 0.5169,
+      "v0_control_score": 0.54,
+      "variant": "v5_full9_cocktail"
+    },
+    {
+      "gemini_correct": true,
+      "gemini_final_day": 8,
+      "gemini_luck_adj": 0.57604,
+      "gemini_p_accused": 0.961,
+      "gemini_score": 0.64,
+      "n_valid": 3,
+      "ratio_vs_solver_luck_adj": 1.107769,
+      "ratio_vs_solver_raw": 1.230769,
+      "ratio_vs_v0_control": 1.163636,
+      "replay_verified": true,
+      "seed": 31,
+      "solver_correct": true,
+      "solver_final_day": 9,
+      "solver_luck_adj": 0.52,
+      "solver_p_accused": 1.0,
+      "solver_score": 0.52,
+      "v0_control_luck_adj": 0.5314,
+      "v0_control_score": 0.55,
+      "variant": "v5_full9_cocktail"
+    },
+    {
+      "gemini_correct": true,
+      "gemini_final_day": 10,
+      "gemini_luck_adj": 0.36116,
+      "gemini_p_accused": 0.796,
+      "gemini_score": 0.71,
+      "n_valid": 3,
+      "ratio_vs_solver_luck_adj": 0.675672,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": 1.479167,
+      "replay_verified": true,
+      "seed": 32,
+      "solver_correct": false,
+      "solver_final_day": 9,
+      "solver_luck_adj": 0.53452,
+      "solver_p_accused": 0.908,
+      "solver_score": -1.0,
+      "v0_control_luck_adj": 0.42968,
+      "v0_control_score": 0.48,
+      "variant": "v5_full9_cocktail"
+    }
+  ],
+  "reference_json": "results/v16_social/reference_seeds_30_49.json",
+  "reference_seeds_loaded": [
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44
+  ],
+  "reference_seeds_rejected_out_of_range": [
+    45,
+    46,
+    47,
+    48,
+    49
+  ],
+  "runs_root": "results/v16_social/partial",
+  "sample_size_gate_met": false,
+  "schema_version": "v16_compare_30_44.v1",
+  "seed_window": [
+    30,
+    44
+  ],
+  "tier": "hard",
+  "tiers_version": "v1.4",
+  "variant_table": [
+    {
+      "gap_widening_gate_met": false,
+      "gemini_luck_adj_mean": 0.28528,
+      "gemini_mean": 0.4975,
+      "n_paired_with_v0": 4,
+      "n_valid": 4,
+      "paired_delta_vs_v0_luck_adj": 0.0,
+      "paired_delta_vs_v0_raw": 0.0,
+      "paired_seeds": [
+        30,
+        31,
+        32,
+        33
+      ],
+      "ratio_vs_solver_luck_adj": 0.656359,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": 1.0,
+      "ratio_vs_v0_control_luck_adj": 1.0,
+      "replay_verified_count": 4,
+      "sample_size_gate_met": false,
+      "solver_luck_adj_mean": 0.43464,
+      "solver_mean": -0.2375,
+      "v0_control_luck_adj_mean_on_paired": 0.28528,
+      "v0_control_mean_on_paired": 0.4975,
+      "valid_seeds": [
+        30,
+        31,
+        32,
+        33
+      ],
+      "variant": "v0_v14_control"
+    },
+    {
+      "gap_widening_gate_met": false,
+      "gemini_luck_adj_mean": 0.5939,
+      "gemini_mean": 0.65,
+      "n_paired_with_v0": 1,
+      "n_valid": 1,
+      "paired_delta_vs_v0_luck_adj": 0.077,
+      "paired_delta_vs_v0_raw": 0.11,
+      "paired_seeds": [
+        30
+      ],
+      "ratio_vs_solver_luck_adj": 3.384817,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": 1.203704,
+      "ratio_vs_v0_control_luck_adj": 1.148965,
+      "replay_verified_count": 1,
+      "sample_size_gate_met": false,
+      "solver_luck_adj_mean": 0.17546,
+      "solver_mean": -1.0,
+      "v0_control_luck_adj_mean_on_paired": 0.5169,
+      "v0_control_mean_on_paired": 0.54,
+      "valid_seeds": [
+        30
+      ],
+      "variant": "v1_anchoring_authority_confirmation"
+    },
+    {
+      "gap_widening_gate_met": false,
+      "gemini_luck_adj_mean": null,
+      "gemini_mean": null,
+      "n_paired_with_v0": 0,
+      "n_valid": 0,
+      "paired_delta_vs_v0_luck_adj": null,
+      "paired_delta_vs_v0_raw": null,
+      "paired_seeds": [],
+      "ratio_vs_solver_luck_adj": null,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": null,
+      "ratio_vs_v0_control_luck_adj": null,
+      "replay_verified_count": 0,
+      "sample_size_gate_met": false,
+      "solver_luck_adj_mean": null,
+      "solver_mean": null,
+      "v0_control_luck_adj_mean_on_paired": null,
+      "v0_control_mean_on_paired": null,
+      "valid_seeds": [],
+      "variant": "v2_recency_bandwagon_sycophancy"
+    },
+    {
+      "gap_widening_gate_met": false,
+      "gemini_luck_adj_mean": 0.604,
+      "gemini_mean": 0.645,
+      "n_paired_with_v0": 2,
+      "n_valid": 2,
+      "paired_delta_vs_v0_luck_adj": 0.07985,
+      "paired_delta_vs_v0_raw": 0.1,
+      "paired_seeds": [
+        30,
+        31
+      ],
+      "ratio_vs_solver_luck_adj": 1.73698,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": 1.183486,
+      "ratio_vs_v0_control_luck_adj": 1.152342,
+      "replay_verified_count": 2,
+      "sample_size_gate_met": false,
+      "solver_luck_adj_mean": 0.34773,
+      "solver_mean": -0.24,
+      "v0_control_luck_adj_mean_on_paired": 0.52415,
+      "v0_control_mean_on_paired": 0.545,
+      "valid_seeds": [
+        30,
+        31
+      ],
+      "variant": "v3_grudge_falsemem_misforward"
+    },
+    {
+      "gap_widening_gate_met": false,
+      "gemini_luck_adj_mean": null,
+      "gemini_mean": null,
+      "n_paired_with_v0": 0,
+      "n_valid": 0,
+      "paired_delta_vs_v0_luck_adj": null,
+      "paired_delta_vs_v0_raw": null,
+      "paired_seeds": [],
+      "ratio_vs_solver_luck_adj": null,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": null,
+      "ratio_vs_v0_control_luck_adj": null,
+      "replay_verified_count": 0,
+      "sample_size_gate_met": false,
+      "solver_luck_adj_mean": null,
+      "solver_mean": null,
+      "v0_control_luck_adj_mean_on_paired": null,
+      "v0_control_mean_on_paired": null,
+      "valid_seeds": [],
+      "variant": "v4_triad_authority_recency_grudge"
+    },
+    {
+      "gap_widening_gate_met": false,
+      "gemini_luck_adj_mean": 0.451567,
+      "gemini_mean": 0.616667,
+      "n_paired_with_v0": 3,
+      "n_valid": 3,
+      "paired_delta_vs_v0_luck_adj": -0.041093,
+      "paired_delta_vs_v0_raw": 0.093333,
+      "paired_seeds": [
+        30,
+        31,
+        32
+      ],
+      "ratio_vs_solver_luck_adj": 1.1014,
+      "ratio_vs_solver_raw": null,
+      "ratio_vs_v0_control": 1.178344,
+      "ratio_vs_v0_control_luck_adj": 0.916589,
+      "replay_verified_count": 3,
+      "sample_size_gate_met": false,
+      "solver_luck_adj_mean": 0.409993,
+      "solver_mean": -0.493333,
+      "v0_control_luck_adj_mean_on_paired": 0.49266,
+      "v0_control_mean_on_paired": 0.523333,
+      "valid_seeds": [
+        30,
+        31,
+        32
+      ],
+      "variant": "v5_full9_cocktail"
+    }
+  ],
+  "variants": {
+    "v1_anchoring_authority_confirmation": {
+      "control_accuracy": 1.0,
+      "control_accused_rate": 1.0,
+      "control_luck_adj_ci_95": [
+        0.5169,
+        0.5169
+      ],
+      "control_luck_adj_mean": 0.5169,
+      "control_mean_accuse_day": 11.0,
+      "control_mean_p_accused": 0.985,
+      "control_only_seeds": [
+        31,
+        32,
+        33
+      ],
+      "control_raw_ci_95": [
+        0.54,
+        0.54
+      ],
+      "control_raw_mean": 0.54,
+      "control_replay_verified_count": 1,
+      "control_valid_seeds": [
+        30,
+        31,
+        32,
+        33
+      ],
+      "control_vs_solver_luck_adj_diff_ci_95": [
+        0.34144,
+        0.34144
+      ],
+      "control_vs_solver_luck_adj_diff_mean": 0.34144,
+      "control_vs_solver_luck_adj_ratio": 2.945971,
+      "control_vs_solver_luck_adj_ratio_ci_95": [
+        2.945971,
+        2.945971
+      ],
+      "control_vs_solver_raw_diff_ci_95": [
+        1.54,
+        1.54
+      ],
+      "control_vs_solver_raw_diff_mean": 1.54,
+      "control_vs_solver_raw_ratio": null,
+      "control_vs_solver_raw_ratio_ci_95": [
+        null,
+        null
+      ],
+      "do_nothing_control_mean": 0.0,
+      "do_nothing_mean": 0.0,
+      "excluded_invalid_seeds": [],
+      "gates": {
+        "all_passed": true,
+        "do_nothing_zero": true,
+        "reference_consistent": true,
+        "replay_verified": true,
+        "solver_calibration_zero": true,
+        "stop_early_zero": true
+      },
+      "invalid_attempt_count": 0,
+      "n_paired": 1,
+      "paired_delta_luck_adj_ci_95": [
+        0.077,
+        0.077
+      ],
+      "paired_delta_luck_adj_mean": 0.077,
+      "paired_delta_raw_ci_95": [
+        0.11,
+        0.11
+      ],
+      "paired_delta_raw_mean": 0.11,
+      "paired_seeds": [
+        30
+      ],
+      "per_seed": [
+        {
+          "control_accused_bool": true,
+          "control_correct": true,
+          "control_final_day": 11,
+          "control_luck_adj": 0.5169,
+          "control_p_accused": 0.985,
+          "control_replay_verified": true,
+          "control_score": 0.54,
+          "control_v_accuse": 0.54,
+          "do_nothing_score": 0.0,
+          "paired_delta_luck_adj": 0.077,
+          "paired_delta_raw": 0.11,
+          "seed": 30,
+          "solver_accused_bool": true,
+          "solver_correct": false,
+          "solver_day": 18,
+          "solver_luck_adj": 0.17546,
+          "solver_p_accused": 0.858,
+          "solver_score": -1.0,
+          "stop_early_score": 0.0,
+          "variant_accused_bool": true,
+          "variant_correct": true,
+          "variant_final_day": 9,
+          "variant_luck_adj": 0.5939,
+          "variant_p_accused": 0.966,
+          "variant_replay_verified": true,
+          "variant_score": 0.65,
+          "variant_v_accuse": 0.65
+        }
+      ],
+      "provider_spec": "v16:v1_anchoring_authority_confirmation",
+      "rejected_out_of_range_seeds": [],
+      "solver_accuracy": 0.0,
+      "solver_accused_rate": 1.0,
+      "solver_calibration_diff": 0.0,
+      "solver_luck_adj_ci_95": [
+        0.17546,
+        0.17546
+      ],
+      "solver_luck_adj_mean": 0.17546,
+      "solver_mean_accuse_day": 18.0,
+      "solver_mean_p_accused": 0.858,
+      "solver_raw_ci_95": [
+        -1.0,
+        -1.0
+      ],
+      "solver_raw_mean": -1.0,
+      "solver_reference_max_abs_diff": 0.0,
+      "sources": [
+        "results/v16_social/partial/v1_anchoring_authority_confirmation/hard/episodes.jsonl"
+      ],
+      "stop_early_control_mean": 0.0,
+      "stop_early_mean": 0.0,
+      "variant": "v1_anchoring_authority_confirmation",
+      "variant_accuracy": 1.0,
+      "variant_accused_rate": 1.0,
+      "variant_luck_adj_ci_95": [
+        0.5939,
+        0.5939
+      ],
+      "variant_luck_adj_mean": 0.5939,
+      "variant_mean_accuse_day": 9.0,
+      "variant_mean_p_accused": 0.966,
+      "variant_only_seeds": [],
+      "variant_raw_ci_95": [
+        0.65,
+        0.65
+      ],
+      "variant_raw_mean": 0.65,
+      "variant_replay_verified_count": 1,
+      "variant_valid_seeds": [
+        30
+      ],
+      "variant_vs_solver_luck_adj_diff_ci_95": [
+        0.41844,
+        0.41844
+      ],
+      "variant_vs_solver_luck_adj_diff_mean": 0.41844,
+      "variant_vs_solver_luck_adj_ratio": 3.384817,
+      "variant_vs_solver_luck_adj_ratio_ci_95": [
+        3.384817,
+        3.384817
+      ],
+      "variant_vs_solver_raw_diff_ci_95": [
+        1.65,
+        1.65
+      ],
+      "variant_vs_solver_raw_diff_mean": 1.65,
+      "variant_vs_solver_raw_ratio": null,
+      "variant_vs_solver_raw_ratio_ci_95": [
+        null,
+        null
+      ]
+    },
+    "v2_recency_bandwagon_sycophancy": {
+      "control_luck_adj_mean": null,
+      "control_raw_ci_95": [
+        null,
+        null
+      ],
+      "control_raw_mean": null,
+      "control_replay_verified_count": 0,
+      "control_valid_seeds": [
+        30,
+        31,
+        32,
+        33
+      ],
+      "control_vs_solver_luck_adj_ratio": null,
+      "control_vs_solver_raw_ratio": null,
+      "control_vs_solver_raw_ratio_ci_95": [
+        null,
+        null
+      ],
+      "do_nothing_mean": 0.0,
+      "excluded_invalid_seeds": [],
+      "gates": {
+        "all_passed": true,
+        "do_nothing_zero": true,
+        "reference_consistent": true,
+        "replay_verified": true,
+        "solver_calibration_zero": true,
+        "stop_early_zero": true
+      },
+      "invalid_attempt_count": 1,
+      "n_control_valid": 4,
+      "n_paired": 0,
+      "n_variant_valid": 0,
+      "paired_delta_luck_adj_mean": null,
+      "paired_delta_raw_ci_95": [
+        null,
+        null
+      ],
+      "paired_delta_raw_mean": null,
+      "paired_seeds": [],
+      "per_seed": [],
+      "provider_spec": "v16:v2_recency_bandwagon_sycophancy",
+      "rejected_non_hard_count": 0,
+      "rejected_out_of_range_seeds": [],
+      "solver_calibration_diff": 0.0,
+      "solver_luck_adj_mean": null,
+      "solver_raw_ci_95": [
+        null,
+        null
+      ],
+      "solver_raw_mean": null,
+      "sources": [],
+      "stop_early_mean": 0.0,
+      "variant": "v2_recency_bandwagon_sycophancy",
+      "variant_luck_adj_mean": null,
+      "variant_raw_ci_95": [
+        null,
+        null
+      ],
+      "variant_raw_mean": null,
+      "variant_replay_verified_count": 0,
+      "variant_valid_seeds": [],
+      "variant_vs_solver_luck_adj_ratio": null,
+      "variant_vs_solver_raw_ratio": null,
+      "variant_vs_solver_raw_ratio_ci_95": [
+        null,
+        null
+      ]
+    },
+    "v3_grudge_falsemem_misforward": {
+      "control_accuracy": 1.0,
+      "control_accused_rate": 1.0,
+      "control_luck_adj_ci_95": [
+        0.5169,
+        0.5314
+      ],
+      "control_luck_adj_mean": 0.52415,
+      "control_mean_accuse_day": 10.5,
+      "control_mean_p_accused": 0.9865,
+      "control_only_seeds": [
+        32,
+        33
+      ],
+      "control_raw_ci_95": [
+        0.54,
+        0.55
+      ],
+      "control_raw_mean": 0.545,
+      "control_replay_verified_count": 2,
+      "control_valid_seeds": [
+        30,
+        31,
+        32,
+        33
+      ],
+      "control_vs_solver_luck_adj_diff_ci_95": [
+        0.0114,
+        0.34144
+      ],
+      "control_vs_solver_luck_adj_diff_mean": 0.17642,
+      "control_vs_solver_luck_adj_ratio": 1.507348,
+      "control_vs_solver_luck_adj_ratio_ci_95": [
+        1.021923,
+        2.945971
+      ],
+      "control_vs_solver_raw_diff_ci_95": [
+        0.03,
+        1.54
+      ],
+      "control_vs_solver_raw_diff_mean": 0.785,
+      "control_vs_solver_raw_ratio": null,
+      "control_vs_solver_raw_ratio_ci_95": [
+        null,
+        null
+      ],
+      "do_nothing_control_mean": 0.0,
+      "do_nothing_mean": 0.0,
+      "excluded_invalid_seeds": [],
+      "gates": {
+        "all_passed": true,
+        "do_nothing_zero": true,
+        "reference_consistent": true,
+        "replay_verified": true,
+        "solver_calibration_zero": true,
+        "stop_early_zero": true
+      },
+      "invalid_attempt_count": 0,
+      "n_paired": 2,
+      "paired_delta_luck_adj_ci_95": [
+        0.0266,
+        0.1331
+      ],
+      "paired_delta_luck_adj_mean": 0.07985,
+      "paired_delta_raw_ci_95": [
+        0.09,
+        0.11
+      ],
+      "paired_delta_raw_mean": 0.1,
+      "paired_seeds": [
+        30,
+        31
+      ],
+      "per_seed": [
+        {
+          "control_accused_bool": true,
+          "control_correct": true,
+          "control_final_day": 11,
+          "control_luck_adj": 0.5169,
+          "control_p_accused": 0.985,
+          "control_replay_verified": true,
+          "control_score": 0.54,
+          "control_v_accuse": 0.54,
+          "do_nothing_score": 0.0,
+          "paired_delta_luck_adj": 0.1331,
+          "paired_delta_raw": 0.11,
+          "seed": 30,
+          "solver_accused_bool": true,
+          "solver_correct": false,
+          "solver_day": 18,
+          "solver_luck_adj": 0.17546,
+          "solver_p_accused": 0.858,
+          "solver_score": -1.0,
+          "stop_early_score": 0.0,
+          "variant_accused_bool": true,
+          "variant_correct": true,
+          "variant_final_day": 8,
+          "variant_luck_adj": 0.65,
+          "variant_p_accused": 1.0,
+          "variant_replay_verified": true,
+          "variant_score": 0.65,
+          "variant_v_accuse": 0.65
+        },
+        {
+          "control_accused_bool": true,
+          "control_correct": true,
+          "control_final_day": 10,
+          "control_luck_adj": 0.5314,
+          "control_p_accused": 0.988,
+          "control_replay_verified": true,
+          "control_score": 0.55,
+          "control_v_accuse": 0.55,
+          "do_nothing_score": 0.0,
+          "paired_delta_luck_adj": 0.0266,
+          "paired_delta_raw": 0.09,
+          "seed": 31,
+          "solver_accused_bool": true,
+          "solver_correct": true,
+          "solver_day": 9,
+          "solver_luck_adj": 0.52,
+          "solver_p_accused": 1.0,
+          "solver_score": 0.52,
+          "stop_early_score": 0.0,
+          "variant_accused_bool": true,
+          "variant_correct": true,
+          "variant_final_day": 8,
+          "variant_luck_adj": 0.558,
+          "variant_p_accused": 0.95,
+          "variant_replay_verified": true,
+          "variant_score": 0.64,
+          "variant_v_accuse": 0.64
+        }
+      ],
+      "provider_spec": "v16:v3_grudge_falsemem_misforward",
+      "rejected_out_of_range_seeds": [],
+      "solver_accuracy": 0.5,
+      "solver_accused_rate": 1.0,
+      "solver_calibration_diff": 0.0,
+      "solver_luck_adj_ci_95": [
+        0.17546,
+        0.52
+      ],
+      "solver_luck_adj_mean": 0.34773,
+      "solver_mean_accuse_day": 13.5,
+      "solver_mean_p_accused": 0.929,
+      "solver_raw_ci_95": [
+        -1.0,
+        0.52
+      ],
+      "solver_raw_mean": -0.24,
+      "solver_reference_max_abs_diff": 0.0,
+      "sources": [
+        "results/v16_social/partial/v3_grudge_falsemem_misforward/hard/episodes.jsonl"
+      ],
+      "stop_early_control_mean": 0.0,
+      "stop_early_mean": 0.0,
+      "variant": "v3_grudge_falsemem_misforward",
+      "variant_accuracy": 1.0,
+      "variant_accused_rate": 1.0,
+      "variant_luck_adj_ci_95": [
+        0.558,
+        0.65
+      ],
+      "variant_luck_adj_mean": 0.604,
+      "variant_mean_accuse_day": 8.0,
+      "variant_mean_p_accused": 0.975,
+      "variant_only_seeds": [],
+      "variant_raw_ci_95": [
+        0.64,
+        0.65
+      ],
+      "variant_raw_mean": 0.645,
+      "variant_replay_verified_count": 2,
+      "variant_valid_seeds": [
+        30,
+        31
+      ],
+      "variant_vs_solver_luck_adj_diff_ci_95": [
+        0.038,
+        0.47454
+      ],
+      "variant_vs_solver_luck_adj_diff_mean": 0.25627,
+      "variant_vs_solver_luck_adj_ratio": 1.73698,
+      "variant_vs_solver_luck_adj_ratio_ci_95": [
+        1.073077,
+        3.704548
+      ],
+      "variant_vs_solver_raw_diff_ci_95": [
+        0.12,
+        1.65
+      ],
+      "variant_vs_solver_raw_diff_mean": 0.885,
+      "variant_vs_solver_raw_ratio": null,
+      "variant_vs_solver_raw_ratio_ci_95": [
+        null,
+        null
+      ]
+    },
+    "v4_triad_authority_recency_grudge": {
+      "control_luck_adj_mean": null,
+      "control_raw_ci_95": [
+        null,
+        null
+      ],
+      "control_raw_mean": null,
+      "control_replay_verified_count": 0,
+      "control_valid_seeds": [
+        30,
+        31,
+        32,
+        33
+      ],
+      "control_vs_solver_luck_adj_ratio": null,
+      "control_vs_solver_raw_ratio": null,
+      "control_vs_solver_raw_ratio_ci_95": [
+        null,
+        null
+      ],
+      "do_nothing_mean": 0.0,
+      "excluded_invalid_seeds": [],
+      "gates": {
+        "all_passed": true,
+        "do_nothing_zero": true,
+        "reference_consistent": true,
+        "replay_verified": true,
+        "solver_calibration_zero": true,
+        "stop_early_zero": true
+      },
+      "invalid_attempt_count": 1,
+      "n_control_valid": 4,
+      "n_paired": 0,
+      "n_variant_valid": 0,
+      "paired_delta_luck_adj_mean": null,
+      "paired_delta_raw_ci_95": [
+        null,
+        null
+      ],
+      "paired_delta_raw_mean": null,
+      "paired_seeds": [],
+      "per_seed": [],
+      "provider_spec": "v16:v4_triad_authority_recency_grudge",
+      "rejected_non_hard_count": 0,
+      "rejected_out_of_range_seeds": [],
+      "solver_calibration_diff": 0.0,
+      "solver_luck_adj_mean": null,
+      "solver_raw_ci_95": [
+        null,
+        null
+      ],
+      "solver_raw_mean": null,
+      "sources": [],
+      "stop_early_mean": 0.0,
+      "variant": "v4_triad_authority_recency_grudge",
+      "variant_luck_adj_mean": null,
+      "variant_raw_ci_95": [
+        null,
+        null
+      ],
+      "variant_raw_mean": null,
+      "variant_replay_verified_count": 0,
+      "variant_valid_seeds": [],
+      "variant_vs_solver_luck_adj_ratio": null,
+      "variant_vs_solver_raw_ratio": null,
+      "variant_vs_solver_raw_ratio_ci_95": [
+        null,
+        null
+      ]
+    },
+    "v5_full9_cocktail": {
+      "control_accuracy": 1.0,
+      "control_accused_rate": 1.0,
+      "control_luck_adj_ci_95": [
+        0.42968,
+        0.5314
+      ],
+      "control_luck_adj_mean": 0.49266,
+      "control_mean_accuse_day": 11.333333,
+      "control_mean_p_accused": 0.979667,
+      "control_only_seeds": [
+        33
+      ],
+      "control_raw_ci_95": [
+        0.48,
+        0.55
+      ],
+      "control_raw_mean": 0.523333,
+      "control_replay_verified_count": 3,
+      "control_valid_seeds": [
+        30,
+        31,
+        32,
+        33
+      ],
+      "control_vs_solver_luck_adj_diff_ci_95": [
+        -0.10484,
+        0.34144
+      ],
+      "control_vs_solver_luck_adj_diff_mean": 0.082667,
+      "control_vs_solver_luck_adj_ratio": 1.201629,
+      "control_vs_solver_luck_adj_ratio_ci_95": [
+        0.803861,
+        2.945971
+      ],
+      "control_vs_solver_raw_diff_ci_95": [
+        0.03,
+        1.54
+      ],
+      "control_vs_solver_raw_diff_mean": 1.016667,
+      "control_vs_solver_raw_ratio": null,
+      "control_vs_solver_raw_ratio_ci_95": [
+        null,
+        null
+      ],
+      "do_nothing_control_mean": 0.0,
+      "do_nothing_mean": 0.0,
+      "excluded_invalid_seeds": [],
+      "gates": {
+        "all_passed": true,
+        "do_nothing_zero": true,
+        "reference_consistent": true,
+        "replay_verified": true,
+        "solver_calibration_zero": true,
+        "stop_early_zero": true
+      },
+      "invalid_attempt_count": 0,
+      "n_paired": 3,
+      "paired_delta_luck_adj_ci_95": [
+        -0.0994,
+        0.04464
+      ],
+      "paired_delta_luck_adj_mean": -0.041093,
+      "paired_delta_raw_ci_95": [
+        -0.04,
+        0.23
+      ],
+      "paired_delta_raw_mean": 0.093333,
+      "paired_seeds": [
+        30,
+        31,
+        32
+      ],
+      "per_seed": [
+        {
+          "control_accused_bool": true,
+          "control_correct": true,
+          "control_final_day": 11,
+          "control_luck_adj": 0.5169,
+          "control_p_accused": 0.985,
+          "control_replay_verified": true,
+          "control_score": 0.54,
+          "control_v_accuse": 0.54,
+          "do_nothing_score": 0.0,
+          "paired_delta_luck_adj": -0.0994,
+          "paired_delta_raw": -0.04,
+          "seed": 30,
+          "solver_accused_bool": true,
+          "solver_correct": false,
+          "solver_day": 18,
+          "solver_luck_adj": 0.17546,
+          "solver_p_accused": 0.858,
+          "solver_score": -1.0,
+          "stop_early_score": 0.0,
+          "variant_accused_bool": true,
+          "variant_correct": true,
+          "variant_final_day": 11,
+          "variant_luck_adj": 0.4175,
+          "variant_p_accused": 0.945,
+          "variant_replay_verified": true,
+          "variant_score": 0.5,
+          "variant_v_accuse": 0.5
+        },
+        {
+          "control_accused_bool": true,
+          "control_correct": true,
+          "control_final_day": 10,
+          "control_luck_adj": 0.5314,
+          "control_p_accused": 0.988,
+          "control_replay_verified": true,
+          "control_score": 0.55,
+          "control_v_accuse": 0.55,
+          "do_nothing_score": 0.0,
+          "paired_delta_luck_adj": 0.04464,
+          "paired_delta_raw": 0.09,
+          "seed": 31,
+          "solver_accused_bool": true,
+          "solver_correct": true,
+          "solver_day": 9,
+          "solver_luck_adj": 0.52,
+          "solver_p_accused": 1.0,
+          "solver_score": 0.52,
+          "stop_early_score": 0.0,
+          "variant_accused_bool": true,
+          "variant_correct": true,
+          "variant_final_day": 8,
+          "variant_luck_adj": 0.57604,
+          "variant_p_accused": 0.961,
+          "variant_replay_verified": true,
+          "variant_score": 0.64,
+          "variant_v_accuse": 0.64
+        },
+        {
+          "control_accused_bool": true,
+          "control_correct": true,
+          "control_final_day": 13,
+          "control_luck_adj": 0.42968,
+          "control_p_accused": 0.966,
+          "control_replay_verified": true,
+          "control_score": 0.48,
+          "control_v_accuse": 0.48,
+          "do_nothing_score": 0.0,
+          "paired_delta_luck_adj": -0.06852,
+          "paired_delta_raw": 0.23,
+          "seed": 32,
+          "solver_accused_bool": true,
+          "solver_correct": false,
+          "solver_day": 9,
+          "solver_luck_adj": 0.53452,
+          "solver_p_accused": 0.908,
+          "solver_score": -1.0,
+          "stop_early_score": 0.0,
+          "variant_accused_bool": true,
+          "variant_correct": true,
+          "variant_final_day": 10,
+          "variant_luck_adj": 0.36116,
+          "variant_p_accused": 0.796,
+          "variant_replay_verified": true,
+          "variant_score": 0.71,
+          "variant_v_accuse": 0.71
+        }
+      ],
+      "provider_spec": "v16:v5_full9_cocktail",
+      "rejected_out_of_range_seeds": [],
+      "solver_accuracy": 0.333333,
+      "solver_accused_rate": 1.0,
+      "solver_calibration_diff": 0.0,
+      "solver_luck_adj_ci_95": [
+        0.17546,
+        0.53452
+      ],
+      "solver_luck_adj_mean": 0.409993,
+      "solver_mean_accuse_day": 12.0,
+      "solver_mean_p_accused": 0.922,
+      "solver_raw_ci_95": [
+        -1.0,
+        0.52
+      ],
+      "solver_raw_mean": -0.493333,
+      "solver_reference_max_abs_diff": 0.0,
+      "sources": [
+        "results/v16_social/partial/v5_full9_cocktail/hard/episodes.jsonl"
+      ],
+      "stop_early_control_mean": 0.0,
+      "stop_early_mean": 0.0,
+      "variant": "v5_full9_cocktail",
+      "variant_accuracy": 1.0,
+      "variant_accused_rate": 1.0,
+      "variant_luck_adj_ci_95": [
+        0.36116,
+        0.57604
+      ],
+      "variant_luck_adj_mean": 0.451567,
+      "variant_mean_accuse_day": 9.666667,
+      "variant_mean_p_accused": 0.900667,
+      "variant_only_seeds": [],
+      "variant_raw_ci_95": [
+        0.5,
+        0.71
+      ],
+      "variant_raw_mean": 0.616667,
+      "variant_replay_verified_count": 3,
+      "variant_valid_seeds": [
+        30,
+        31,
+        32
+      ],
+      "variant_vs_solver_luck_adj_diff_ci_95": [
+        -0.17336,
+        0.24204
+      ],
+      "variant_vs_solver_luck_adj_diff_mean": 0.041573,
+      "variant_vs_solver_luck_adj_ratio": 1.1014,
+      "variant_vs_solver_luck_adj_ratio_ci_95": [
+        0.675672,
+        2.37946
+      ],
+      "variant_vs_solver_raw_diff_ci_95": [
+        0.12,
+        1.71
+      ],
+      "variant_vs_solver_raw_diff_mean": 1.11,
+      "variant_vs_solver_raw_ratio": null,
+      "variant_vs_solver_raw_ratio_ci_95": [
+        null,
+        null
+      ]
+    }
+  }
+}

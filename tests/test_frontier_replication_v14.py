@@ -8,7 +8,6 @@ import sys
 from collections import Counter
 from multiprocessing import get_all_start_methods, get_context
 from pathlib import Path
-import sys
 
 from canary.analysis.accuse import audit_episode
 from canary.analysis.gap import load_runs, mean_ci
@@ -277,6 +276,10 @@ def test_frontier_replication_v14_readme_and_committed_g1_replay(monkeypatch):
         "paired_table_ext8_combined.json",
         "paired_table_pooled38.md",
         "paired_table_pooled38.json",
+        "accuse_ext8_combined.md",
+        "tags_ext8_combined.json",
+        "frontier_ext30to59_trajectories.md",
+        "check_frontier_ext_replication.py",
         "30, 34, 42, 45, 48, 57, 58",
         "30, 34, 37, 42, 45, 48, 57, 58",
         "0-29, 30, 34, 37, 42, 45, 48, 57, 58",

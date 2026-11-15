@@ -25,6 +25,6 @@ export PYTHONPATH=$CODE PYTHONUNBUFFERED=1 HF_HOME=$HOME/agent-arena-data/cache 
 cd "$CODE"
 echo "[j4-eval] $(date) host=$(hostname) model=$MODEL run=$RUN_ID"
 pytorch-exec python -m train.eval_hf --model "$MODEL" --tiers "${TIERS:-easy,medium,hard}" \
-  --seeds heldout --n "${N:-30}" --max-calls "${MAX_CALLS:-120}" --max-new-tokens "${MAX_NEW:-96}" \
+  --seeds heldout --n "${N:-30}" --seed-offset "${SEED_OFFSET:-0}" --max-calls "${MAX_CALLS:-120}" --max-new-tokens "${MAX_NEW:-96}" \
   --max-minutes "${EVAL_MIN:-75}" --out "$OUT" --run-id "$RUN_ID"
 echo "[j4-eval] done $(date) -> $OUT/$RUN_ID"

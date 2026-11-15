@@ -70,7 +70,7 @@ Qwen2.5-1.5B with LoRA, held-out seeds, the model plays every episode alone; ful
 
 - **What was learned:** reward training fixed v2's reckless accusations (v3-4k vs v2: +0.310 ± 0.107, two-sample). It learned to play the protocol (100% valid calls), and on training states it learned to name the mole from evidence (0.19 → 0.89).
 - **What was not:** the bar (above the untrained base, with the CI excluding 0) is **not met**. The model never learned to gather evidence in its own games: the same decision gemini-4-carbon gets wrong (fewer canaries, earlier commitment; [failure analysis](docs/reports/failure_analysis_v1.4.md)).
-- **Final (08:55 on 15 Nov, `fr8/analysis/out/ws4_table_final.md` on branch `justSilas-fr8`):** seven trained runs, none above the base. v3-4k: −0.147 and −0.209; v3-8k: −0.060, −0.777, −0.050, −0.788 (the two ~650-step runs abstain, the two ~350-step runs over-accuse). Reward training (GRPO) beats imitation (v2) by +0.31 to +0.41. A DAgger round trained on the model's own states was at −0.54 (8k) and −0.10 (4k) at its interim readout: not above the base either.
+- **Final (08:55 on 15 Nov, `fr8/analysis/out/ws4_table_final.md` on branch `justSilas-fr8`):** seven trained runs, none above the base. v3-4k: −0.147 and −0.209; v3-8k: −0.060, −0.777, −0.050, −0.788 (the two ~650-step runs abstain, the two ~350-step runs over-accuse). Reward training (GRPO) beats imitation (v2) by +0.31 to +0.41. A DAgger round trained on the model's own states ended as an honest null (PR #90, not merged before the deadline): −0.542 ± 0.214 at 8k context (n=50, partial), level with v3-4k at 4k context; not above the base either.
 
 ## Links
 

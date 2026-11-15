@@ -41,6 +41,8 @@ SELF_CODE_RELS: tuple[str, ...] = (
     "tests/test_audit_transcript_biases.py",
     "scripts/audit_blackwell_channel_capacity.py",
     "tests/test_audit_blackwell_channel_capacity.py",
+    "scripts/benchmark_research_moles.py",
+    "tests/test_benchmark_research_moles.py",
 )
 
 FENCE_RX = re.compile(r"^\s*(?:>\s*)*(`{3,}|~{3,})([^\n`]*)?$")

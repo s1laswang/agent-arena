@@ -1,0 +1,5587 @@
+{
+  "schema": "canary.tiebreak.dagger_mechanism_audit.v1",
+  "tiers_version": "v1.4",
+  "tiers": [
+    "easy",
+    "medium",
+    "hard"
+  ],
+  "train_seed_range": "108000..108044",
+  "train_seeds_unique_count": 45,
+  "episodes_per_tier": 15,
+  "heldout_seed_range": "800000..800059",
+  "seed_isolation": {
+    "train_only_verified": true,
+    "easy_train_range": "108000..108014",
+    "medium_train_range": "108015..108029",
+    "hard_train_range": "108030..108044",
+    "heldout_episodes_touched_in_train_measurement": 0,
+    "dev_episodes_touched": 0,
+    "judge_episodes_touched": 0,
+    "panel_fix_a_disclosure": "Zero DEV_SEEDS or JUDGE_SEEDS touched; where DEV_SEEDS 0..29 appear in Canary frontier tables they are post-hoc locked, not pre-registered.",
+    "panel_fix_e_disclosure": "CompactLinearDAggerPolicy and TinyMLPPolicy are non-LLM structured policies (is_open_weight_llm=False) and are strictly separated from open-weight Qwen2.5 LoRA runs."
+  },
+  "token_cap_audit": {
+    "default_eval_hf_cap": 96,
+    "required_raw_dagger_cap": 256,
+    "qwen25_token_formula": "28 + 8 * n_assigned + digits(doc_title) + (2 if '(' in doc_title else 0); any plant_canary call with n_assigned >= 9 emits >= 101 Qwen2.5 tokens and truncates under max_new_tokens=96",
+    "min_employees_exceeding_cap96": 9,
+    "by_tier": {
+      "easy": {
+        "n_employees": 12,
+        "episodes_measured": 15,
+        "full_roster_template": {
+          "n_assigned": 12,
+          "bare_json_chars": 234,
+          "chat_turn_chars": 269,
+          "qwen_tokens": 125,
+          "exceeds_cap96": true,
+          "exceeds_cap256": false,
+          "cap96_ratio": 1.3021
+        },
+        "balanced_uniform_template": {
+          "n_assigned": 9,
+          "bare_json_chars": 198,
+          "chat_turn_chars": 233,
+          "qwen_tokens": 101,
+          "exceeds_cap96": true,
+          "exceeds_cap256": false,
+          "cap96_ratio": 1.0521
+        },
+        "dagger_student_state_relabel": {
+          "n_calls": 90,
+          "exceed_cap96_count": 17,
+          "exceed_cap96_rate": 0.188889,
+          "at_or_above_cap96_count": 17,
+          "at_or_above_cap96_rate": 0.188889,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 4.6,
+          "min_assigned_employees": 2,
+          "median_assigned_employees": 3.0,
+          "max_assigned_employees": 9,
+          "mean_bare_json_chars": 145.2,
+          "max_bare_json_chars": 198,
+          "mean_chat_turn_chars": 180.2,
+          "max_chat_turn_chars": 233,
+          "mean_qwen_tokens": 65.8,
+          "min_qwen_tokens": 45,
+          "median_qwen_tokens": 53.0,
+          "p90_qwen_tokens": 101.0,
+          "max_qwen_tokens": 101
+        },
+        "solver_trajectory_days_1_to_5": {
+          "n_calls": 56,
+          "exceed_cap96_count": 15,
+          "exceed_cap96_rate": 0.267857,
+          "at_or_above_cap96_count": 15,
+          "at_or_above_cap96_rate": 0.267857,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 5.1964,
+          "min_assigned_employees": 2,
+          "median_assigned_employees": 4.0,
+          "max_assigned_employees": 9,
+          "mean_bare_json_chars": 152.36,
+          "max_bare_json_chars": 198,
+          "mean_chat_turn_chars": 187.36,
+          "max_chat_turn_chars": 233,
+          "mean_qwen_tokens": 70.57,
+          "min_qwen_tokens": 45,
+          "median_qwen_tokens": 61.0,
+          "p90_qwen_tokens": 101.0,
+          "max_qwen_tokens": 101
+        },
+        "solver_trajectory_days_1_to_3": {
+          "n_calls": 43,
+          "exceed_cap96_count": 15,
+          "exceed_cap96_rate": 0.348837,
+          "at_or_above_cap96_count": 15,
+          "at_or_above_cap96_rate": 0.348837,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 5.8837,
+          "min_assigned_employees": 2,
+          "median_assigned_employees": 5.0,
+          "max_assigned_employees": 9,
+          "mean_bare_json_chars": 160.6,
+          "max_bare_json_chars": 198,
+          "mean_chat_turn_chars": 195.6,
+          "max_chat_turn_chars": 233,
+          "mean_qwen_tokens": 76.07,
+          "min_qwen_tokens": 45,
+          "median_qwen_tokens": 69.0,
+          "p90_qwen_tokens": 101.0,
+          "max_qwen_tokens": 101
+        },
+        "solver_trajectory_all_days": {
+          "n_calls": 58,
+          "exceed_cap96_count": 15,
+          "exceed_cap96_rate": 0.258621,
+          "at_or_above_cap96_count": 15,
+          "at_or_above_cap96_rate": 0.258621,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 5.0862,
+          "min_assigned_employees": 2,
+          "median_assigned_employees": 4.0,
+          "max_assigned_employees": 9,
+          "mean_bare_json_chars": 151.03,
+          "max_bare_json_chars": 198,
+          "mean_chat_turn_chars": 186.03,
+          "max_chat_turn_chars": 233,
+          "mean_qwen_tokens": 69.69,
+          "min_qwen_tokens": 45,
+          "median_qwen_tokens": 61.0,
+          "p90_qwen_tokens": 101.0,
+          "max_qwen_tokens": 101
+        }
+      },
+      "medium": {
+        "n_employees": 20,
+        "episodes_measured": 15,
+        "full_roster_template": {
+          "n_assigned": 20,
+          "bare_json_chars": 330,
+          "chat_turn_chars": 365,
+          "qwen_tokens": 189,
+          "exceeds_cap96": true,
+          "exceeds_cap256": false,
+          "cap96_ratio": 1.9688
+        },
+        "balanced_uniform_template": {
+          "n_assigned": 15,
+          "bare_json_chars": 270,
+          "chat_turn_chars": 305,
+          "qwen_tokens": 149,
+          "exceeds_cap96": true,
+          "exceeds_cap256": false,
+          "cap96_ratio": 1.5521
+        },
+        "dagger_student_state_relabel": {
+          "n_calls": 90,
+          "exceed_cap96_count": 6,
+          "exceed_cap96_rate": 0.066667,
+          "at_or_above_cap96_count": 6,
+          "at_or_above_cap96_rate": 0.066667,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 5.6111,
+          "min_assigned_employees": 3,
+          "median_assigned_employees": 6.0,
+          "max_assigned_employees": 11,
+          "mean_bare_json_chars": 157.33,
+          "max_bare_json_chars": 222,
+          "mean_chat_turn_chars": 192.33,
+          "max_chat_turn_chars": 257,
+          "mean_qwen_tokens": 73.89,
+          "min_qwen_tokens": 53,
+          "median_qwen_tokens": 77.0,
+          "p90_qwen_tokens": 93.0,
+          "max_qwen_tokens": 117
+        },
+        "solver_trajectory_days_1_to_5": {
+          "n_calls": 69,
+          "exceed_cap96_count": 6,
+          "exceed_cap96_rate": 0.086957,
+          "at_or_above_cap96_count": 6,
+          "at_or_above_cap96_rate": 0.086957,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 5.8986,
+          "min_assigned_employees": 2,
+          "median_assigned_employees": 6.0,
+          "max_assigned_employees": 11,
+          "mean_bare_json_chars": 160.78,
+          "max_bare_json_chars": 222,
+          "mean_chat_turn_chars": 195.78,
+          "max_chat_turn_chars": 257,
+          "mean_qwen_tokens": 76.19,
+          "min_qwen_tokens": 45,
+          "median_qwen_tokens": 77.0,
+          "p90_qwen_tokens": 93.0,
+          "max_qwen_tokens": 117
+        },
+        "solver_trajectory_days_1_to_3": {
+          "n_calls": 44,
+          "exceed_cap96_count": 6,
+          "exceed_cap96_rate": 0.136364,
+          "at_or_above_cap96_count": 6,
+          "at_or_above_cap96_rate": 0.136364,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 6.7045,
+          "min_assigned_employees": 3,
+          "median_assigned_employees": 8.0,
+          "max_assigned_employees": 11,
+          "mean_bare_json_chars": 170.45,
+          "max_bare_json_chars": 222,
+          "mean_chat_turn_chars": 205.45,
+          "max_chat_turn_chars": 257,
+          "mean_qwen_tokens": 82.64,
+          "min_qwen_tokens": 53,
+          "median_qwen_tokens": 93.0,
+          "p90_qwen_tokens": 101.0,
+          "max_qwen_tokens": 117
+        },
+        "solver_trajectory_all_days": {
+          "n_calls": 105,
+          "exceed_cap96_count": 6,
+          "exceed_cap96_rate": 0.057143,
+          "at_or_above_cap96_count": 6,
+          "at_or_above_cap96_rate": 0.057143,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 5.1429,
+          "min_assigned_employees": 2,
+          "median_assigned_employees": 5.0,
+          "max_assigned_employees": 11,
+          "mean_bare_json_chars": 151.85,
+          "max_bare_json_chars": 222,
+          "mean_chat_turn_chars": 186.85,
+          "max_chat_turn_chars": 257,
+          "mean_qwen_tokens": 70.28,
+          "min_qwen_tokens": 45,
+          "median_qwen_tokens": 69.0,
+          "p90_qwen_tokens": 93.0,
+          "max_qwen_tokens": 117
+        }
+      },
+      "hard": {
+        "n_employees": 40,
+        "episodes_measured": 15,
+        "full_roster_template": {
+          "n_assigned": 40,
+          "bare_json_chars": 570,
+          "chat_turn_chars": 605,
+          "qwen_tokens": 349,
+          "exceeds_cap96": true,
+          "exceeds_cap256": true,
+          "cap96_ratio": 3.6354
+        },
+        "balanced_uniform_template": {
+          "n_assigned": 30,
+          "bare_json_chars": 450,
+          "chat_turn_chars": 485,
+          "qwen_tokens": 269,
+          "exceeds_cap96": true,
+          "exceeds_cap256": true,
+          "cap96_ratio": 2.8021
+        },
+        "dagger_student_state_relabel": {
+          "n_calls": 180,
+          "exceed_cap96_count": 133,
+          "exceed_cap96_rate": 0.738889,
+          "at_or_above_cap96_count": 138,
+          "at_or_above_cap96_rate": 0.766667,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 11.7222,
+          "min_assigned_employees": 4,
+          "median_assigned_employees": 11.0,
+          "max_assigned_employees": 22,
+          "mean_bare_json_chars": 232.67,
+          "max_bare_json_chars": 358,
+          "mean_chat_turn_chars": 267.67,
+          "max_chat_turn_chars": 393,
+          "mean_qwen_tokens": 124.28,
+          "min_qwen_tokens": 61,
+          "median_qwen_tokens": 120.0,
+          "p90_qwen_tokens": 165.0,
+          "max_qwen_tokens": 208
+        },
+        "solver_trajectory_days_1_to_5": {
+          "n_calls": 130,
+          "exceed_cap96_count": 95,
+          "exceed_cap96_rate": 0.730769,
+          "at_or_above_cap96_count": 97,
+          "at_or_above_cap96_rate": 0.746154,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 11.4385,
+          "min_assigned_employees": 3,
+          "median_assigned_employees": 12.0,
+          "max_assigned_employees": 17,
+          "mean_bare_json_chars": 229.02,
+          "max_bare_json_chars": 294,
+          "mean_chat_turn_chars": 264.02,
+          "max_chat_turn_chars": 329,
+          "mean_qwen_tokens": 121.82,
+          "min_qwen_tokens": 53,
+          "median_qwen_tokens": 128.0,
+          "p90_qwen_tokens": 160.0,
+          "max_qwen_tokens": 165
+        },
+        "solver_trajectory_days_1_to_3": {
+          "n_calls": 89,
+          "exceed_cap96_count": 81,
+          "exceed_cap96_rate": 0.910112,
+          "at_or_above_cap96_count": 81,
+          "at_or_above_cap96_rate": 0.910112,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 13.573,
+          "min_assigned_employees": 3,
+          "median_assigned_employees": 16.0,
+          "max_assigned_employees": 17,
+          "mean_bare_json_chars": 254.85,
+          "max_bare_json_chars": 294,
+          "mean_chat_turn_chars": 289.85,
+          "max_chat_turn_chars": 329,
+          "mean_qwen_tokens": 139.07,
+          "min_qwen_tokens": 53,
+          "median_qwen_tokens": 157.0,
+          "p90_qwen_tokens": 160.0,
+          "max_qwen_tokens": 165
+        },
+        "solver_trajectory_all_days": {
+          "n_calls": 176,
+          "exceed_cap96_count": 98,
+          "exceed_cap96_rate": 0.556818,
+          "at_or_above_cap96_count": 101,
+          "at_or_above_cap96_rate": 0.573864,
+          "exceed_cap256_count": 0,
+          "exceed_cap256_rate": 0.0,
+          "mean_assigned_employees": 9.6307,
+          "min_assigned_employees": 2,
+          "median_assigned_employees": 10.0,
+          "max_assigned_employees": 17,
+          "mean_bare_json_chars": 207.0,
+          "max_bare_json_chars": 294,
+          "mean_chat_turn_chars": 242.0,
+          "max_chat_turn_chars": 329,
+          "mean_qwen_tokens": 107.14,
+          "min_qwen_tokens": 45,
+          "median_qwen_tokens": 109.0,
+          "p90_qwen_tokens": 160.0,
+          "max_qwen_tokens": 165
+        }
+      }
+    },
+    "overall_solver_trajectory": {
+      "n_calls": 339,
+      "exceed_cap96_count": 119,
+      "exceed_cap96_rate": 0.351032,
+      "at_or_above_cap96_count": 122,
+      "at_or_above_cap96_rate": 0.359882,
+      "exceed_cap256_count": 0,
+      "exceed_cap256_rate": 0.0,
+      "mean_assigned_employees": 7.4631,
+      "min_assigned_employees": 2,
+      "median_assigned_employees": 6.0,
+      "max_assigned_employees": 17,
+      "mean_bare_json_chars": 180.34,
+      "max_bare_json_chars": 294,
+      "mean_chat_turn_chars": 215.34,
+      "max_chat_turn_chars": 329,
+      "mean_qwen_tokens": 89.31,
+      "min_qwen_tokens": 45,
+      "median_qwen_tokens": 77.0,
+      "p90_qwen_tokens": 157.0,
+      "max_qwen_tokens": 165
+    },
+    "overall_dagger_student_relabel": {
+      "n_calls": 360,
+      "exceed_cap96_count": 156,
+      "exceed_cap96_rate": 0.433333,
+      "at_or_above_cap96_count": 161,
+      "at_or_above_cap96_rate": 0.447222,
+      "exceed_cap256_count": 0,
+      "exceed_cap256_rate": 0.0,
+      "mean_assigned_employees": 8.4139,
+      "min_assigned_employees": 2,
+      "median_assigned_employees": 8.0,
+      "max_assigned_employees": 22,
+      "mean_bare_json_chars": 191.97,
+      "max_bare_json_chars": 358,
+      "mean_chat_turn_chars": 226.97,
+      "max_chat_turn_chars": 393,
+      "mean_qwen_tokens": 97.06,
+      "min_qwen_tokens": 45,
+      "median_qwen_tokens": 93.0,
+      "p90_qwen_tokens": 160.0,
+      "max_qwen_tokens": 208
+    },
+    "compact_action_parameterization_contrast": {
+      "raw_qwen_hard_full_roster_tokens": 349,
+      "raw_qwen_hard_dagger_mean_tokens": 124.28,
+      "compact_linear_dagger_generated_json_tokens": 0,
+      "tiny_mlp_dagger_generated_json_tokens": 0,
+      "compact_lora_macro_max_new_tokens": 72
+    },
+    "call_records_compact": {
+      "solver_trajectory": [
+        [
+          "easy",
+          0,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          0,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "easy",
+          0,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "easy",
+          1,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          1,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "easy",
+          2,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          2,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "easy",
+          2,
+          3,
+          "Board memo draft 3",
+          2
+        ],
+        [
+          "easy",
+          3,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          3,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "easy",
+          4,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          4,
+          2,
+          "Board memo draft 2",
+          8
+        ],
+        [
+          "easy",
+          4,
+          3,
+          "Board memo draft 3",
+          7
+        ],
+        [
+          "easy",
+          4,
+          4,
+          "Board memo draft 4",
+          2
+        ],
+        [
+          "easy",
+          5,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          5,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "easy",
+          5,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "easy",
+          5,
+          4,
+          "Board memo draft 4",
+          2
+        ],
+        [
+          "easy",
+          5,
+          5,
+          "Board memo draft 5",
+          2
+        ],
+        [
+          "easy",
+          5,
+          6,
+          "Board memo draft 6",
+          2
+        ],
+        [
+          "easy",
+          6,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          6,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "easy",
+          6,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "easy",
+          7,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          7,
+          2,
+          "Board memo draft 2",
+          8
+        ],
+        [
+          "easy",
+          7,
+          3,
+          "Board memo draft 3",
+          8
+        ],
+        [
+          "easy",
+          7,
+          4,
+          "Board memo draft 4",
+          5
+        ],
+        [
+          "easy",
+          7,
+          5,
+          "Board memo draft 5",
+          5
+        ],
+        [
+          "easy",
+          8,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          8,
+          2,
+          "Board memo draft 2",
+          5
+        ],
+        [
+          "easy",
+          8,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "easy",
+          8,
+          4,
+          "Board memo draft 4",
+          4
+        ],
+        [
+          "easy",
+          9,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          9,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "easy",
+          9,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "easy",
+          10,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          10,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "easy",
+          10,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "easy",
+          11,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          11,
+          2,
+          "Board memo draft 2",
+          5
+        ],
+        [
+          "easy",
+          11,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "easy",
+          11,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "easy",
+          11,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          12,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          12,
+          2,
+          "Board memo draft 2",
+          6
+        ],
+        [
+          "easy",
+          12,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "easy",
+          12,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "easy",
+          13,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          13,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "easy",
+          13,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "easy",
+          13,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "easy",
+          13,
+          5,
+          "Board memo draft 5",
+          2
+        ],
+        [
+          "easy",
+          13,
+          6,
+          "Board memo draft 6",
+          2
+        ],
+        [
+          "easy",
+          14,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          14,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "easy",
+          14,
+          3,
+          "Board memo draft 3",
+          2
+        ],
+        [
+          "easy",
+          14,
+          4,
+          "Board memo draft 4",
+          2
+        ],
+        [
+          "easy",
+          14,
+          5,
+          "Board memo draft 5",
+          2
+        ],
+        [
+          "medium",
+          15,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          15,
+          2,
+          "Board memo draft 2",
+          5
+        ],
+        [
+          "medium",
+          15,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "medium",
+          15,
+          4,
+          "Board memo draft 4",
+          6
+        ],
+        [
+          "medium",
+          15,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "medium",
+          16,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          16,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "medium",
+          16,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "medium",
+          16,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "medium",
+          16,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "medium",
+          17,
+          1,
+          "Board memo draft 1",
+          11
+        ],
+        [
+          "medium",
+          17,
+          2,
+          "Board memo draft 2",
+          9
+        ],
+        [
+          "medium",
+          17,
+          3,
+          "Board memo draft 3",
+          5
+        ],
+        [
+          "medium",
+          17,
+          4,
+          "Board memo draft 4",
+          6
+        ],
+        [
+          "medium",
+          17,
+          5,
+          "Board memo draft 5",
+          6
+        ],
+        [
+          "medium",
+          17,
+          6,
+          "Board memo draft 6",
+          6
+        ],
+        [
+          "medium",
+          17,
+          7,
+          "Board memo draft 7",
+          2
+        ],
+        [
+          "medium",
+          17,
+          8,
+          "Board memo draft 8",
+          2
+        ],
+        [
+          "medium",
+          17,
+          9,
+          "Board memo draft 9",
+          2
+        ],
+        [
+          "medium",
+          18,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          18,
+          2,
+          "Board memo draft 2",
+          8
+        ],
+        [
+          "medium",
+          18,
+          3,
+          "Board memo draft 3",
+          8
+        ],
+        [
+          "medium",
+          18,
+          4,
+          "Board memo draft 4",
+          6
+        ],
+        [
+          "medium",
+          18,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "medium",
+          18,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "medium",
+          18,
+          7,
+          "Board memo draft 7",
+          3
+        ],
+        [
+          "medium",
+          18,
+          8,
+          "Board memo draft 8",
+          3
+        ],
+        [
+          "medium",
+          18,
+          9,
+          "Board memo draft 9",
+          3
+        ],
+        [
+          "medium",
+          19,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          19,
+          2,
+          "Board memo draft 2",
+          8
+        ],
+        [
+          "medium",
+          19,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "medium",
+          19,
+          4,
+          "Board memo draft 4",
+          5
+        ],
+        [
+          "medium",
+          19,
+          5,
+          "Board memo draft 5",
+          5
+        ],
+        [
+          "medium",
+          20,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          20,
+          2,
+          "Board memo draft 2",
+          8
+        ],
+        [
+          "medium",
+          20,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "medium",
+          21,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          21,
+          2,
+          "Board memo draft 2",
+          6
+        ],
+        [
+          "medium",
+          21,
+          3,
+          "Board memo draft 3",
+          5
+        ],
+        [
+          "medium",
+          21,
+          4,
+          "Board memo draft 4",
+          6
+        ],
+        [
+          "medium",
+          21,
+          5,
+          "Board memo draft 5",
+          5
+        ],
+        [
+          "medium",
+          22,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          22,
+          2,
+          "Board memo draft 2",
+          6
+        ],
+        [
+          "medium",
+          22,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "medium",
+          22,
+          4,
+          "Board memo draft 4",
+          6
+        ],
+        [
+          "medium",
+          22,
+          5,
+          "Board memo draft 5",
+          6
+        ],
+        [
+          "medium",
+          22,
+          6,
+          "Board memo draft 6",
+          2
+        ],
+        [
+          "medium",
+          23,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          23,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "medium",
+          23,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "medium",
+          23,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "medium",
+          23,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "medium",
+          23,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "medium",
+          23,
+          7,
+          "Board memo draft 7",
+          3
+        ],
+        [
+          "medium",
+          23,
+          8,
+          "Board memo draft 8",
+          3
+        ],
+        [
+          "medium",
+          23,
+          9,
+          "Board memo draft 9",
+          3
+        ],
+        [
+          "medium",
+          23,
+          10,
+          "Board memo draft 10",
+          3
+        ],
+        [
+          "medium",
+          23,
+          11,
+          "Board memo draft 11",
+          3
+        ],
+        [
+          "medium",
+          23,
+          12,
+          "Board memo draft 12",
+          3
+        ],
+        [
+          "medium",
+          23,
+          13,
+          "Board memo draft 13",
+          3
+        ],
+        [
+          "medium",
+          24,
+          1,
+          "Board memo draft 1",
+          11
+        ],
+        [
+          "medium",
+          24,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "medium",
+          24,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "medium",
+          24,
+          4,
+          "Board memo draft 4",
+          5
+        ],
+        [
+          "medium",
+          24,
+          5,
+          "Board memo draft 5",
+          6
+        ],
+        [
+          "medium",
+          24,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "medium",
+          24,
+          7,
+          "Board memo draft 7",
+          6
+        ],
+        [
+          "medium",
+          24,
+          8,
+          "Board memo draft 8",
+          6
+        ],
+        [
+          "medium",
+          24,
+          9,
+          "Board memo draft 9",
+          6
+        ],
+        [
+          "medium",
+          24,
+          10,
+          "Board memo draft 10",
+          6
+        ],
+        [
+          "medium",
+          24,
+          11,
+          "Board memo draft 11",
+          6
+        ],
+        [
+          "medium",
+          24,
+          12,
+          "Board memo draft 12",
+          6
+        ],
+        [
+          "medium",
+          24,
+          13,
+          "Board memo draft 13",
+          6
+        ],
+        [
+          "medium",
+          24,
+          14,
+          "Board memo draft 14",
+          5
+        ],
+        [
+          "medium",
+          25,
+          1,
+          "Board memo draft 1",
+          11
+        ],
+        [
+          "medium",
+          25,
+          2,
+          "Board memo draft 2",
+          6
+        ],
+        [
+          "medium",
+          25,
+          3,
+          "Board memo draft 3",
+          8
+        ],
+        [
+          "medium",
+          25,
+          4,
+          "Board memo draft 4",
+          5
+        ],
+        [
+          "medium",
+          25,
+          5,
+          "Board memo draft 5",
+          2
+        ],
+        [
+          "medium",
+          26,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          26,
+          2,
+          "Board memo draft 2",
+          9
+        ],
+        [
+          "medium",
+          27,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          27,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "medium",
+          27,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "medium",
+          27,
+          4,
+          "Board memo draft 4",
+          2
+        ],
+        [
+          "medium",
+          28,
+          1,
+          "Board memo draft 1",
+          11
+        ],
+        [
+          "medium",
+          28,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "medium",
+          28,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "medium",
+          28,
+          4,
+          "Board memo draft 4",
+          6
+        ],
+        [
+          "medium",
+          28,
+          5,
+          "Board memo draft 5",
+          4
+        ],
+        [
+          "medium",
+          28,
+          6,
+          "Board memo draft 6",
+          4
+        ],
+        [
+          "medium",
+          29,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          29,
+          2,
+          "Board memo draft 2",
+          8
+        ],
+        [
+          "medium",
+          29,
+          3,
+          "Board memo draft 3",
+          8
+        ],
+        [
+          "medium",
+          29,
+          4,
+          "Board memo draft 4",
+          4
+        ],
+        [
+          "medium",
+          29,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "medium",
+          29,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "medium",
+          29,
+          7,
+          "Board memo draft 7",
+          3
+        ],
+        [
+          "medium",
+          29,
+          8,
+          "Board memo draft 8",
+          3
+        ],
+        [
+          "medium",
+          29,
+          9,
+          "Board memo draft 9",
+          3
+        ],
+        [
+          "medium",
+          29,
+          10,
+          "Board memo draft 10",
+          3
+        ],
+        [
+          "medium",
+          29,
+          11,
+          "Board memo draft 11",
+          3
+        ],
+        [
+          "medium",
+          29,
+          12,
+          "Board memo draft 12",
+          3
+        ],
+        [
+          "medium",
+          29,
+          13,
+          "Board memo draft 13",
+          3
+        ],
+        [
+          "medium",
+          29,
+          14,
+          "Board memo draft 14",
+          3
+        ],
+        [
+          "hard",
+          30,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          30,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          30,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          30,
+          2,
+          "Board memo draft 2 (2)",
+          11
+        ],
+        [
+          "hard",
+          30,
+          3,
+          "Board memo draft 3",
+          14
+        ],
+        [
+          "hard",
+          30,
+          3,
+          "Board memo draft 3 (2)",
+          11
+        ],
+        [
+          "hard",
+          30,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "hard",
+          30,
+          4,
+          "Board memo draft 4 (2)",
+          8
+        ],
+        [
+          "hard",
+          31,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          31,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          31,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          31,
+          2,
+          "Board memo draft 2 (2)",
+          16
+        ],
+        [
+          "hard",
+          31,
+          3,
+          "Board memo draft 3",
+          11
+        ],
+        [
+          "hard",
+          31,
+          3,
+          "Board memo draft 3 (2)",
+          15
+        ],
+        [
+          "hard",
+          31,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "hard",
+          31,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "hard",
+          31,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "hard",
+          31,
+          7,
+          "Board memo draft 7",
+          4
+        ],
+        [
+          "hard",
+          31,
+          8,
+          "Board memo draft 8",
+          3
+        ],
+        [
+          "hard",
+          32,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          32,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          32,
+          2,
+          "Board memo draft 2",
+          17
+        ],
+        [
+          "hard",
+          32,
+          2,
+          "Board memo draft 2 (2)",
+          16
+        ],
+        [
+          "hard",
+          32,
+          3,
+          "Board memo draft 3",
+          9
+        ],
+        [
+          "hard",
+          32,
+          3,
+          "Board memo draft 3 (2)",
+          9
+        ],
+        [
+          "hard",
+          32,
+          4,
+          "Board memo draft 4",
+          11
+        ],
+        [
+          "hard",
+          32,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "hard",
+          32,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "hard",
+          32,
+          7,
+          "Board memo draft 7",
+          6
+        ],
+        [
+          "hard",
+          32,
+          8,
+          "Board memo draft 8",
+          2
+        ],
+        [
+          "hard",
+          33,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          33,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          33,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          33,
+          2,
+          "Board memo draft 2 (2)",
+          14
+        ],
+        [
+          "hard",
+          33,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "hard",
+          33,
+          3,
+          "Board memo draft 3 (2)",
+          7
+        ],
+        [
+          "hard",
+          33,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "hard",
+          33,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "hard",
+          33,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "hard",
+          33,
+          7,
+          "Board memo draft 7",
+          3
+        ],
+        [
+          "hard",
+          34,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          34,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          34,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          34,
+          2,
+          "Board memo draft 2 (2)",
+          12
+        ],
+        [
+          "hard",
+          34,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "hard",
+          34,
+          3,
+          "Board memo draft 3 (2)",
+          9
+        ],
+        [
+          "hard",
+          34,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "hard",
+          34,
+          5,
+          "Board memo draft 5",
+          6
+        ],
+        [
+          "hard",
+          34,
+          6,
+          "Board memo draft 6",
+          6
+        ],
+        [
+          "hard",
+          35,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          35,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          35,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          35,
+          2,
+          "Board memo draft 2 (2)",
+          16
+        ],
+        [
+          "hard",
+          35,
+          3,
+          "Board memo draft 3",
+          11
+        ],
+        [
+          "hard",
+          35,
+          3,
+          "Board memo draft 3 (2)",
+          15
+        ],
+        [
+          "hard",
+          35,
+          4,
+          "Board memo draft 4",
+          10
+        ],
+        [
+          "hard",
+          35,
+          4,
+          "Board memo draft 4 (2)",
+          9
+        ],
+        [
+          "hard",
+          35,
+          5,
+          "Board memo draft 5",
+          4
+        ],
+        [
+          "hard",
+          35,
+          5,
+          "Board memo draft 5 (2)",
+          3
+        ],
+        [
+          "hard",
+          35,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "hard",
+          35,
+          7,
+          "Board memo draft 7",
+          3
+        ],
+        [
+          "hard",
+          35,
+          8,
+          "Board memo draft 8",
+          3
+        ],
+        [
+          "hard",
+          35,
+          9,
+          "Board memo draft 9",
+          3
+        ],
+        [
+          "hard",
+          36,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          36,
+          1,
+          "Board memo draft 1 (2)",
+          10
+        ],
+        [
+          "hard",
+          36,
+          2,
+          "Board memo draft 2",
+          17
+        ],
+        [
+          "hard",
+          36,
+          2,
+          "Board memo draft 2 (2)",
+          12
+        ],
+        [
+          "hard",
+          36,
+          3,
+          "Board memo draft 3",
+          9
+        ],
+        [
+          "hard",
+          36,
+          3,
+          "Board memo draft 3 (2)",
+          13
+        ],
+        [
+          "hard",
+          36,
+          4,
+          "Board memo draft 4",
+          5
+        ],
+        [
+          "hard",
+          36,
+          4,
+          "Board memo draft 4 (2)",
+          4
+        ],
+        [
+          "hard",
+          36,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "hard",
+          36,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "hard",
+          36,
+          7,
+          "Board memo draft 7",
+          3
+        ],
+        [
+          "hard",
+          37,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          37,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          37,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          37,
+          2,
+          "Board memo draft 2 (2)",
+          11
+        ],
+        [
+          "hard",
+          37,
+          3,
+          "Board memo draft 3",
+          15
+        ],
+        [
+          "hard",
+          37,
+          3,
+          "Board memo draft 3 (2)",
+          11
+        ],
+        [
+          "hard",
+          37,
+          4,
+          "Board memo draft 4",
+          11
+        ],
+        [
+          "hard",
+          37,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "hard",
+          37,
+          5,
+          "Board memo draft 5 (2)",
+          6
+        ],
+        [
+          "hard",
+          37,
+          6,
+          "Board memo draft 6",
+          4
+        ],
+        [
+          "hard",
+          37,
+          7,
+          "Board memo draft 7",
+          3
+        ],
+        [
+          "hard",
+          37,
+          8,
+          "Board memo draft 8",
+          3
+        ],
+        [
+          "hard",
+          37,
+          9,
+          "Board memo draft 9",
+          3
+        ],
+        [
+          "hard",
+          37,
+          10,
+          "Board memo draft 10",
+          3
+        ],
+        [
+          "hard",
+          37,
+          11,
+          "Board memo draft 11",
+          3
+        ],
+        [
+          "hard",
+          37,
+          12,
+          "Board memo draft 12",
+          3
+        ],
+        [
+          "hard",
+          38,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          38,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          38,
+          2,
+          "Board memo draft 2",
+          15
+        ],
+        [
+          "hard",
+          38,
+          2,
+          "Board memo draft 2 (2)",
+          12
+        ],
+        [
+          "hard",
+          38,
+          3,
+          "Board memo draft 3",
+          5
+        ],
+        [
+          "hard",
+          38,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "hard",
+          39,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          39,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          39,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          39,
+          2,
+          "Board memo draft 2 (2)",
+          15
+        ],
+        [
+          "hard",
+          39,
+          3,
+          "Board memo draft 3",
+          5
+        ],
+        [
+          "hard",
+          39,
+          3,
+          "Board memo draft 3 (2)",
+          9
+        ],
+        [
+          "hard",
+          39,
+          4,
+          "Board memo draft 4",
+          8
+        ],
+        [
+          "hard",
+          39,
+          5,
+          "Board memo draft 5",
+          11
+        ],
+        [
+          "hard",
+          39,
+          5,
+          "Board memo draft 5 (2)",
+          13
+        ],
+        [
+          "hard",
+          39,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "hard",
+          39,
+          7,
+          "Board memo draft 7",
+          8
+        ],
+        [
+          "hard",
+          40,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          40,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          40,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          40,
+          2,
+          "Board memo draft 2 (2)",
+          16
+        ],
+        [
+          "hard",
+          40,
+          3,
+          "Board memo draft 3",
+          11
+        ],
+        [
+          "hard",
+          40,
+          3,
+          "Board memo draft 3 (2)",
+          16
+        ],
+        [
+          "hard",
+          40,
+          4,
+          "Board memo draft 4",
+          12
+        ],
+        [
+          "hard",
+          40,
+          4,
+          "Board memo draft 4 (2)",
+          15
+        ],
+        [
+          "hard",
+          40,
+          5,
+          "Board memo draft 5",
+          10
+        ],
+        [
+          "hard",
+          40,
+          5,
+          "Board memo draft 5 (2)",
+          8
+        ],
+        [
+          "hard",
+          40,
+          6,
+          "Board memo draft 6",
+          6
+        ],
+        [
+          "hard",
+          41,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          41,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          41,
+          2,
+          "Board memo draft 2",
+          17
+        ],
+        [
+          "hard",
+          41,
+          2,
+          "Board memo draft 2 (2)",
+          15
+        ],
+        [
+          "hard",
+          41,
+          3,
+          "Board memo draft 3",
+          14
+        ],
+        [
+          "hard",
+          41,
+          3,
+          "Board memo draft 3 (2)",
+          14
+        ],
+        [
+          "hard",
+          41,
+          4,
+          "Board memo draft 4",
+          8
+        ],
+        [
+          "hard",
+          41,
+          4,
+          "Board memo draft 4 (2)",
+          6
+        ],
+        [
+          "hard",
+          41,
+          5,
+          "Board memo draft 5",
+          7
+        ],
+        [
+          "hard",
+          41,
+          5,
+          "Board memo draft 5 (2)",
+          9
+        ],
+        [
+          "hard",
+          41,
+          6,
+          "Board memo draft 6",
+          10
+        ],
+        [
+          "hard",
+          41,
+          7,
+          "Board memo draft 7",
+          6
+        ],
+        [
+          "hard",
+          41,
+          8,
+          "Board memo draft 8",
+          9
+        ],
+        [
+          "hard",
+          41,
+          8,
+          "Board memo draft 8 (2)",
+          7
+        ],
+        [
+          "hard",
+          41,
+          9,
+          "Board memo draft 9",
+          8
+        ],
+        [
+          "hard",
+          41,
+          9,
+          "Board memo draft 9 (2)",
+          8
+        ],
+        [
+          "hard",
+          41,
+          10,
+          "Board memo draft 10",
+          5
+        ],
+        [
+          "hard",
+          42,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          42,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          42,
+          2,
+          "Board memo draft 2",
+          13
+        ],
+        [
+          "hard",
+          42,
+          2,
+          "Board memo draft 2 (2)",
+          16
+        ],
+        [
+          "hard",
+          42,
+          3,
+          "Board memo draft 3",
+          8
+        ],
+        [
+          "hard",
+          42,
+          3,
+          "Board memo draft 3 (2)",
+          10
+        ],
+        [
+          "hard",
+          42,
+          4,
+          "Board memo draft 4",
+          10
+        ],
+        [
+          "hard",
+          42,
+          4,
+          "Board memo draft 4 (2)",
+          7
+        ],
+        [
+          "hard",
+          42,
+          5,
+          "Board memo draft 5",
+          10
+        ],
+        [
+          "hard",
+          42,
+          6,
+          "Board memo draft 6",
+          9
+        ],
+        [
+          "hard",
+          42,
+          6,
+          "Board memo draft 6 (2)",
+          6
+        ],
+        [
+          "hard",
+          42,
+          7,
+          "Board memo draft 7",
+          6
+        ],
+        [
+          "hard",
+          42,
+          8,
+          "Board memo draft 8",
+          3
+        ],
+        [
+          "hard",
+          42,
+          9,
+          "Board memo draft 9",
+          3
+        ],
+        [
+          "hard",
+          42,
+          10,
+          "Board memo draft 10",
+          3
+        ],
+        [
+          "hard",
+          42,
+          11,
+          "Board memo draft 11",
+          3
+        ],
+        [
+          "hard",
+          42,
+          12,
+          "Board memo draft 12",
+          3
+        ],
+        [
+          "hard",
+          42,
+          13,
+          "Board memo draft 13",
+          3
+        ],
+        [
+          "hard",
+          42,
+          14,
+          "Board memo draft 14",
+          7
+        ],
+        [
+          "hard",
+          42,
+          15,
+          "Board memo draft 15",
+          4
+        ],
+        [
+          "hard",
+          42,
+          16,
+          "Board memo draft 16",
+          4
+        ],
+        [
+          "hard",
+          42,
+          17,
+          "Board memo draft 17",
+          3
+        ],
+        [
+          "hard",
+          43,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          43,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          43,
+          2,
+          "Board memo draft 2",
+          17
+        ],
+        [
+          "hard",
+          43,
+          2,
+          "Board memo draft 2 (2)",
+          13
+        ],
+        [
+          "hard",
+          43,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "hard",
+          43,
+          3,
+          "Board memo draft 3 (2)",
+          7
+        ],
+        [
+          "hard",
+          43,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "hard",
+          43,
+          5,
+          "Board memo draft 5",
+          6
+        ],
+        [
+          "hard",
+          44,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          44,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          44,
+          2,
+          "Board memo draft 2",
+          15
+        ],
+        [
+          "hard",
+          44,
+          2,
+          "Board memo draft 2 (2)",
+          11
+        ],
+        [
+          "hard",
+          44,
+          3,
+          "Board memo draft 3",
+          10
+        ],
+        [
+          "hard",
+          44,
+          3,
+          "Board memo draft 3 (2)",
+          11
+        ],
+        [
+          "hard",
+          44,
+          4,
+          "Board memo draft 4",
+          10
+        ],
+        [
+          "hard",
+          44,
+          4,
+          "Board memo draft 4 (2)",
+          11
+        ],
+        [
+          "hard",
+          44,
+          5,
+          "Board memo draft 5",
+          4
+        ],
+        [
+          "hard",
+          44,
+          5,
+          "Board memo draft 5 (2)",
+          4
+        ],
+        [
+          "hard",
+          44,
+          6,
+          "Board memo draft 6",
+          4
+        ]
+      ],
+      "dagger_student_relabel": [
+        [
+          "easy",
+          0,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          0,
+          2,
+          "Board memo draft 2",
+          5
+        ],
+        [
+          "easy",
+          0,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "easy",
+          0,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "easy",
+          0,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          0,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          1,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          1,
+          2,
+          "Board memo draft 2",
+          5
+        ],
+        [
+          "easy",
+          1,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "easy",
+          1,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "easy",
+          1,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          1,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          2,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          2,
+          2,
+          "Board memo draft 2",
+          5
+        ],
+        [
+          "easy",
+          2,
+          3,
+          "Board memo draft 3",
+          2
+        ],
+        [
+          "easy",
+          2,
+          4,
+          "Board memo draft 4",
+          2
+        ],
+        [
+          "easy",
+          2,
+          5,
+          "Board memo draft 5",
+          2
+        ],
+        [
+          "easy",
+          2,
+          6,
+          "Board memo draft 6",
+          2
+        ],
+        [
+          "easy",
+          3,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          3,
+          2,
+          "Board memo draft 2",
+          8
+        ],
+        [
+          "easy",
+          3,
+          3,
+          "Board memo draft 3",
+          8
+        ],
+        [
+          "easy",
+          3,
+          4,
+          "Board memo draft 4",
+          5
+        ],
+        [
+          "easy",
+          3,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          3,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          4,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          4,
+          2,
+          "Board memo draft 2",
+          9
+        ],
+        [
+          "easy",
+          4,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "easy",
+          4,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "easy",
+          4,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          4,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          5,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          5,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "easy",
+          5,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "easy",
+          5,
+          4,
+          "Board memo draft 4",
+          4
+        ],
+        [
+          "easy",
+          5,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          5,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          6,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          6,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "easy",
+          6,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "easy",
+          6,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "easy",
+          6,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          6,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          7,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          7,
+          2,
+          "Board memo draft 2",
+          9
+        ],
+        [
+          "easy",
+          7,
+          3,
+          "Board memo draft 3",
+          5
+        ],
+        [
+          "easy",
+          7,
+          4,
+          "Board memo draft 4",
+          4
+        ],
+        [
+          "easy",
+          7,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          7,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          8,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          8,
+          2,
+          "Board memo draft 2",
+          5
+        ],
+        [
+          "easy",
+          8,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "easy",
+          8,
+          4,
+          "Board memo draft 4",
+          4
+        ],
+        [
+          "easy",
+          8,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          8,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          9,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          9,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "easy",
+          9,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "easy",
+          9,
+          4,
+          "Board memo draft 4",
+          4
+        ],
+        [
+          "easy",
+          9,
+          5,
+          "Board memo draft 5",
+          2
+        ],
+        [
+          "easy",
+          9,
+          6,
+          "Board memo draft 6",
+          2
+        ],
+        [
+          "easy",
+          10,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          10,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "easy",
+          10,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "easy",
+          10,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "easy",
+          10,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          10,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          11,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          11,
+          2,
+          "Board memo draft 2",
+          5
+        ],
+        [
+          "easy",
+          11,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "easy",
+          11,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "easy",
+          11,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          11,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          12,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          12,
+          2,
+          "Board memo draft 2",
+          6
+        ],
+        [
+          "easy",
+          12,
+          3,
+          "Board memo draft 3",
+          5
+        ],
+        [
+          "easy",
+          12,
+          4,
+          "Board memo draft 4",
+          5
+        ],
+        [
+          "easy",
+          12,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          12,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          13,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          13,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "easy",
+          13,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "easy",
+          13,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "easy",
+          13,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          13,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "easy",
+          14,
+          1,
+          "Board memo draft 1",
+          9
+        ],
+        [
+          "easy",
+          14,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "easy",
+          14,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "easy",
+          14,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "easy",
+          14,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "easy",
+          14,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "medium",
+          15,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          15,
+          2,
+          "Board memo draft 2",
+          5
+        ],
+        [
+          "medium",
+          15,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "medium",
+          15,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "medium",
+          15,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "medium",
+          15,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "medium",
+          16,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          16,
+          2,
+          "Board memo draft 2",
+          6
+        ],
+        [
+          "medium",
+          16,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "medium",
+          16,
+          4,
+          "Board memo draft 4",
+          6
+        ],
+        [
+          "medium",
+          16,
+          5,
+          "Board memo draft 5",
+          4
+        ],
+        [
+          "medium",
+          16,
+          6,
+          "Board memo draft 6",
+          4
+        ],
+        [
+          "medium",
+          17,
+          1,
+          "Board memo draft 1",
+          11
+        ],
+        [
+          "medium",
+          17,
+          2,
+          "Board memo draft 2",
+          8
+        ],
+        [
+          "medium",
+          17,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "medium",
+          17,
+          4,
+          "Board memo draft 4",
+          9
+        ],
+        [
+          "medium",
+          17,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "medium",
+          17,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "medium",
+          18,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          18,
+          2,
+          "Board memo draft 2",
+          6
+        ],
+        [
+          "medium",
+          18,
+          3,
+          "Board memo draft 3",
+          7
+        ],
+        [
+          "medium",
+          18,
+          4,
+          "Board memo draft 4",
+          4
+        ],
+        [
+          "medium",
+          18,
+          5,
+          "Board memo draft 5",
+          4
+        ],
+        [
+          "medium",
+          18,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "medium",
+          19,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          19,
+          2,
+          "Board memo draft 2",
+          8
+        ],
+        [
+          "medium",
+          19,
+          3,
+          "Board memo draft 3",
+          5
+        ],
+        [
+          "medium",
+          19,
+          4,
+          "Board memo draft 4",
+          5
+        ],
+        [
+          "medium",
+          19,
+          5,
+          "Board memo draft 5",
+          5
+        ],
+        [
+          "medium",
+          19,
+          6,
+          "Board memo draft 6",
+          6
+        ],
+        [
+          "medium",
+          20,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          20,
+          2,
+          "Board memo draft 2",
+          8
+        ],
+        [
+          "medium",
+          20,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "medium",
+          20,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "medium",
+          20,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "medium",
+          20,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "medium",
+          21,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          21,
+          2,
+          "Board memo draft 2",
+          6
+        ],
+        [
+          "medium",
+          21,
+          3,
+          "Board memo draft 3",
+          7
+        ],
+        [
+          "medium",
+          21,
+          4,
+          "Board memo draft 4",
+          5
+        ],
+        [
+          "medium",
+          21,
+          5,
+          "Board memo draft 5",
+          5
+        ],
+        [
+          "medium",
+          21,
+          6,
+          "Board memo draft 6",
+          6
+        ],
+        [
+          "medium",
+          22,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          22,
+          2,
+          "Board memo draft 2",
+          6
+        ],
+        [
+          "medium",
+          22,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "medium",
+          22,
+          4,
+          "Board memo draft 4",
+          6
+        ],
+        [
+          "medium",
+          22,
+          5,
+          "Board memo draft 5",
+          6
+        ],
+        [
+          "medium",
+          22,
+          6,
+          "Board memo draft 6",
+          6
+        ],
+        [
+          "medium",
+          23,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          23,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "medium",
+          23,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "medium",
+          23,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "medium",
+          23,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "medium",
+          23,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "medium",
+          24,
+          1,
+          "Board memo draft 1",
+          11
+        ],
+        [
+          "medium",
+          24,
+          2,
+          "Board memo draft 2",
+          3
+        ],
+        [
+          "medium",
+          24,
+          3,
+          "Board memo draft 3",
+          3
+        ],
+        [
+          "medium",
+          24,
+          4,
+          "Board memo draft 4",
+          5
+        ],
+        [
+          "medium",
+          24,
+          5,
+          "Board memo draft 5",
+          6
+        ],
+        [
+          "medium",
+          24,
+          6,
+          "Board memo draft 6",
+          6
+        ],
+        [
+          "medium",
+          25,
+          1,
+          "Board memo draft 1",
+          11
+        ],
+        [
+          "medium",
+          25,
+          2,
+          "Board memo draft 2",
+          6
+        ],
+        [
+          "medium",
+          25,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "medium",
+          25,
+          4,
+          "Board memo draft 4",
+          5
+        ],
+        [
+          "medium",
+          25,
+          5,
+          "Board memo draft 5",
+          5
+        ],
+        [
+          "medium",
+          25,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "medium",
+          26,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          26,
+          2,
+          "Board memo draft 2",
+          9
+        ],
+        [
+          "medium",
+          26,
+          3,
+          "Board memo draft 3",
+          4
+        ],
+        [
+          "medium",
+          26,
+          4,
+          "Board memo draft 4",
+          3
+        ],
+        [
+          "medium",
+          26,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "medium",
+          26,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "medium",
+          27,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          27,
+          2,
+          "Board memo draft 2",
+          6
+        ],
+        [
+          "medium",
+          27,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "medium",
+          27,
+          4,
+          "Board memo draft 4",
+          4
+        ],
+        [
+          "medium",
+          27,
+          5,
+          "Board memo draft 5",
+          4
+        ],
+        [
+          "medium",
+          27,
+          6,
+          "Board memo draft 6",
+          4
+        ],
+        [
+          "medium",
+          28,
+          1,
+          "Board memo draft 1",
+          11
+        ],
+        [
+          "medium",
+          28,
+          2,
+          "Board memo draft 2",
+          4
+        ],
+        [
+          "medium",
+          28,
+          3,
+          "Board memo draft 3",
+          6
+        ],
+        [
+          "medium",
+          28,
+          4,
+          "Board memo draft 4",
+          6
+        ],
+        [
+          "medium",
+          28,
+          5,
+          "Board memo draft 5",
+          5
+        ],
+        [
+          "medium",
+          28,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "medium",
+          29,
+          1,
+          "Board memo draft 1",
+          8
+        ],
+        [
+          "medium",
+          29,
+          2,
+          "Board memo draft 2",
+          8
+        ],
+        [
+          "medium",
+          29,
+          3,
+          "Board memo draft 3",
+          8
+        ],
+        [
+          "medium",
+          29,
+          4,
+          "Board memo draft 4",
+          4
+        ],
+        [
+          "medium",
+          29,
+          5,
+          "Board memo draft 5",
+          3
+        ],
+        [
+          "medium",
+          29,
+          6,
+          "Board memo draft 6",
+          3
+        ],
+        [
+          "hard",
+          30,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          30,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          30,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          30,
+          2,
+          "Board memo draft 2 (2)",
+          17
+        ],
+        [
+          "hard",
+          30,
+          3,
+          "Board memo draft 3",
+          12
+        ],
+        [
+          "hard",
+          30,
+          3,
+          "Board memo draft 3 (2)",
+          16
+        ],
+        [
+          "hard",
+          30,
+          4,
+          "Board memo draft 4",
+          9
+        ],
+        [
+          "hard",
+          30,
+          4,
+          "Board memo draft 4 (2)",
+          9
+        ],
+        [
+          "hard",
+          30,
+          5,
+          "Board memo draft 5",
+          5
+        ],
+        [
+          "hard",
+          30,
+          5,
+          "Board memo draft 5 (2)",
+          6
+        ],
+        [
+          "hard",
+          30,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "hard",
+          30,
+          6,
+          "Board memo draft 6 (2)",
+          8
+        ],
+        [
+          "hard",
+          31,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          31,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          31,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          31,
+          2,
+          "Board memo draft 2 (2)",
+          16
+        ],
+        [
+          "hard",
+          31,
+          3,
+          "Board memo draft 3",
+          17
+        ],
+        [
+          "hard",
+          31,
+          3,
+          "Board memo draft 3 (2)",
+          12
+        ],
+        [
+          "hard",
+          31,
+          4,
+          "Board memo draft 4",
+          10
+        ],
+        [
+          "hard",
+          31,
+          4,
+          "Board memo draft 4 (2)",
+          10
+        ],
+        [
+          "hard",
+          31,
+          5,
+          "Board memo draft 5",
+          7
+        ],
+        [
+          "hard",
+          31,
+          5,
+          "Board memo draft 5 (2)",
+          10
+        ],
+        [
+          "hard",
+          31,
+          6,
+          "Board memo draft 6",
+          9
+        ],
+        [
+          "hard",
+          31,
+          6,
+          "Board memo draft 6 (2)",
+          10
+        ],
+        [
+          "hard",
+          32,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          32,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          32,
+          2,
+          "Board memo draft 2",
+          17
+        ],
+        [
+          "hard",
+          32,
+          2,
+          "Board memo draft 2 (2)",
+          18
+        ],
+        [
+          "hard",
+          32,
+          3,
+          "Board memo draft 3",
+          9
+        ],
+        [
+          "hard",
+          32,
+          3,
+          "Board memo draft 3 (2)",
+          11
+        ],
+        [
+          "hard",
+          32,
+          4,
+          "Board memo draft 4",
+          9
+        ],
+        [
+          "hard",
+          32,
+          4,
+          "Board memo draft 4 (2)",
+          10
+        ],
+        [
+          "hard",
+          32,
+          5,
+          "Board memo draft 5",
+          7
+        ],
+        [
+          "hard",
+          32,
+          5,
+          "Board memo draft 5 (2)",
+          9
+        ],
+        [
+          "hard",
+          32,
+          6,
+          "Board memo draft 6",
+          6
+        ],
+        [
+          "hard",
+          32,
+          6,
+          "Board memo draft 6 (2)",
+          8
+        ],
+        [
+          "hard",
+          33,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          33,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          33,
+          2,
+          "Board memo draft 2",
+          14
+        ],
+        [
+          "hard",
+          33,
+          2,
+          "Board memo draft 2 (2)",
+          17
+        ],
+        [
+          "hard",
+          33,
+          3,
+          "Board memo draft 3",
+          11
+        ],
+        [
+          "hard",
+          33,
+          3,
+          "Board memo draft 3 (2)",
+          9
+        ],
+        [
+          "hard",
+          33,
+          4,
+          "Board memo draft 4",
+          9
+        ],
+        [
+          "hard",
+          33,
+          4,
+          "Board memo draft 4 (2)",
+          9
+        ],
+        [
+          "hard",
+          33,
+          5,
+          "Board memo draft 5",
+          11
+        ],
+        [
+          "hard",
+          33,
+          5,
+          "Board memo draft 5 (2)",
+          11
+        ],
+        [
+          "hard",
+          33,
+          6,
+          "Board memo draft 6",
+          6
+        ],
+        [
+          "hard",
+          33,
+          6,
+          "Board memo draft 6 (2)",
+          6
+        ],
+        [
+          "hard",
+          34,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          34,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          34,
+          2,
+          "Board memo draft 2",
+          17
+        ],
+        [
+          "hard",
+          34,
+          2,
+          "Board memo draft 2 (2)",
+          11
+        ],
+        [
+          "hard",
+          34,
+          3,
+          "Board memo draft 3",
+          18
+        ],
+        [
+          "hard",
+          34,
+          3,
+          "Board memo draft 3 (2)",
+          16
+        ],
+        [
+          "hard",
+          34,
+          4,
+          "Board memo draft 4",
+          8
+        ],
+        [
+          "hard",
+          34,
+          4,
+          "Board memo draft 4 (2)",
+          7
+        ],
+        [
+          "hard",
+          34,
+          5,
+          "Board memo draft 5",
+          7
+        ],
+        [
+          "hard",
+          34,
+          5,
+          "Board memo draft 5 (2)",
+          11
+        ],
+        [
+          "hard",
+          34,
+          6,
+          "Board memo draft 6",
+          4
+        ],
+        [
+          "hard",
+          34,
+          6,
+          "Board memo draft 6 (2)",
+          7
+        ],
+        [
+          "hard",
+          35,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          35,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          35,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          35,
+          2,
+          "Board memo draft 2 (2)",
+          17
+        ],
+        [
+          "hard",
+          35,
+          3,
+          "Board memo draft 3",
+          12
+        ],
+        [
+          "hard",
+          35,
+          3,
+          "Board memo draft 3 (2)",
+          18
+        ],
+        [
+          "hard",
+          35,
+          4,
+          "Board memo draft 4",
+          9
+        ],
+        [
+          "hard",
+          35,
+          4,
+          "Board memo draft 4 (2)",
+          11
+        ],
+        [
+          "hard",
+          35,
+          5,
+          "Board memo draft 5",
+          8
+        ],
+        [
+          "hard",
+          35,
+          5,
+          "Board memo draft 5 (2)",
+          9
+        ],
+        [
+          "hard",
+          35,
+          6,
+          "Board memo draft 6",
+          7
+        ],
+        [
+          "hard",
+          35,
+          6,
+          "Board memo draft 6 (2)",
+          7
+        ],
+        [
+          "hard",
+          36,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          36,
+          1,
+          "Board memo draft 1 (2)",
+          10
+        ],
+        [
+          "hard",
+          36,
+          2,
+          "Board memo draft 2",
+          13
+        ],
+        [
+          "hard",
+          36,
+          2,
+          "Board memo draft 2 (2)",
+          12
+        ],
+        [
+          "hard",
+          36,
+          3,
+          "Board memo draft 3",
+          16
+        ],
+        [
+          "hard",
+          36,
+          3,
+          "Board memo draft 3 (2)",
+          16
+        ],
+        [
+          "hard",
+          36,
+          4,
+          "Board memo draft 4",
+          11
+        ],
+        [
+          "hard",
+          36,
+          4,
+          "Board memo draft 4 (2)",
+          11
+        ],
+        [
+          "hard",
+          36,
+          5,
+          "Board memo draft 5",
+          4
+        ],
+        [
+          "hard",
+          36,
+          5,
+          "Board memo draft 5 (2)",
+          4
+        ],
+        [
+          "hard",
+          36,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "hard",
+          36,
+          6,
+          "Board memo draft 6 (2)",
+          6
+        ],
+        [
+          "hard",
+          37,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          37,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          37,
+          2,
+          "Board memo draft 2",
+          17
+        ],
+        [
+          "hard",
+          37,
+          2,
+          "Board memo draft 2 (2)",
+          11
+        ],
+        [
+          "hard",
+          37,
+          3,
+          "Board memo draft 3",
+          17
+        ],
+        [
+          "hard",
+          37,
+          3,
+          "Board memo draft 3 (2)",
+          11
+        ],
+        [
+          "hard",
+          37,
+          4,
+          "Board memo draft 4",
+          10
+        ],
+        [
+          "hard",
+          37,
+          4,
+          "Board memo draft 4 (2)",
+          10
+        ],
+        [
+          "hard",
+          37,
+          5,
+          "Board memo draft 5",
+          6
+        ],
+        [
+          "hard",
+          37,
+          5,
+          "Board memo draft 5 (2)",
+          8
+        ],
+        [
+          "hard",
+          37,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "hard",
+          37,
+          6,
+          "Board memo draft 6 (2)",
+          7
+        ],
+        [
+          "hard",
+          38,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          38,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          38,
+          2,
+          "Board memo draft 2",
+          18
+        ],
+        [
+          "hard",
+          38,
+          2,
+          "Board memo draft 2 (2)",
+          17
+        ],
+        [
+          "hard",
+          38,
+          3,
+          "Board memo draft 3",
+          19
+        ],
+        [
+          "hard",
+          38,
+          3,
+          "Board memo draft 3 (2)",
+          18
+        ],
+        [
+          "hard",
+          38,
+          4,
+          "Board memo draft 4",
+          12
+        ],
+        [
+          "hard",
+          38,
+          4,
+          "Board memo draft 4 (2)",
+          14
+        ],
+        [
+          "hard",
+          38,
+          5,
+          "Board memo draft 5",
+          8
+        ],
+        [
+          "hard",
+          38,
+          5,
+          "Board memo draft 5 (2)",
+          8
+        ],
+        [
+          "hard",
+          38,
+          6,
+          "Board memo draft 6",
+          9
+        ],
+        [
+          "hard",
+          38,
+          6,
+          "Board memo draft 6 (2)",
+          9
+        ],
+        [
+          "hard",
+          39,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          39,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          39,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          39,
+          2,
+          "Board memo draft 2 (2)",
+          17
+        ],
+        [
+          "hard",
+          39,
+          3,
+          "Board memo draft 3",
+          7
+        ],
+        [
+          "hard",
+          39,
+          3,
+          "Board memo draft 3 (2)",
+          12
+        ],
+        [
+          "hard",
+          39,
+          4,
+          "Board memo draft 4",
+          7
+        ],
+        [
+          "hard",
+          39,
+          4,
+          "Board memo draft 4 (2)",
+          10
+        ],
+        [
+          "hard",
+          39,
+          5,
+          "Board memo draft 5",
+          6
+        ],
+        [
+          "hard",
+          39,
+          5,
+          "Board memo draft 5 (2)",
+          10
+        ],
+        [
+          "hard",
+          39,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "hard",
+          39,
+          6,
+          "Board memo draft 6 (2)",
+          6
+        ],
+        [
+          "hard",
+          40,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          40,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          40,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          40,
+          2,
+          "Board memo draft 2 (2)",
+          17
+        ],
+        [
+          "hard",
+          40,
+          3,
+          "Board memo draft 3",
+          16
+        ],
+        [
+          "hard",
+          40,
+          3,
+          "Board memo draft 3 (2)",
+          10
+        ],
+        [
+          "hard",
+          40,
+          4,
+          "Board memo draft 4",
+          10
+        ],
+        [
+          "hard",
+          40,
+          4,
+          "Board memo draft 4 (2)",
+          10
+        ],
+        [
+          "hard",
+          40,
+          5,
+          "Board memo draft 5",
+          11
+        ],
+        [
+          "hard",
+          40,
+          5,
+          "Board memo draft 5 (2)",
+          10
+        ],
+        [
+          "hard",
+          40,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "hard",
+          40,
+          6,
+          "Board memo draft 6 (2)",
+          7
+        ],
+        [
+          "hard",
+          41,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          41,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          41,
+          2,
+          "Board memo draft 2",
+          15
+        ],
+        [
+          "hard",
+          41,
+          2,
+          "Board memo draft 2 (2)",
+          17
+        ],
+        [
+          "hard",
+          41,
+          3,
+          "Board memo draft 3",
+          17
+        ],
+        [
+          "hard",
+          41,
+          3,
+          "Board memo draft 3 (2)",
+          22
+        ],
+        [
+          "hard",
+          41,
+          4,
+          "Board memo draft 4",
+          15
+        ],
+        [
+          "hard",
+          41,
+          4,
+          "Board memo draft 4 (2)",
+          15
+        ],
+        [
+          "hard",
+          41,
+          5,
+          "Board memo draft 5",
+          8
+        ],
+        [
+          "hard",
+          41,
+          5,
+          "Board memo draft 5 (2)",
+          8
+        ],
+        [
+          "hard",
+          41,
+          6,
+          "Board memo draft 6",
+          12
+        ],
+        [
+          "hard",
+          41,
+          6,
+          "Board memo draft 6 (2)",
+          12
+        ],
+        [
+          "hard",
+          42,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          42,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          42,
+          2,
+          "Board memo draft 2",
+          17
+        ],
+        [
+          "hard",
+          42,
+          2,
+          "Board memo draft 2 (2)",
+          15
+        ],
+        [
+          "hard",
+          42,
+          3,
+          "Board memo draft 3",
+          9
+        ],
+        [
+          "hard",
+          42,
+          3,
+          "Board memo draft 3 (2)",
+          10
+        ],
+        [
+          "hard",
+          42,
+          4,
+          "Board memo draft 4",
+          8
+        ],
+        [
+          "hard",
+          42,
+          4,
+          "Board memo draft 4 (2)",
+          9
+        ],
+        [
+          "hard",
+          42,
+          5,
+          "Board memo draft 5",
+          8
+        ],
+        [
+          "hard",
+          42,
+          5,
+          "Board memo draft 5 (2)",
+          10
+        ],
+        [
+          "hard",
+          42,
+          6,
+          "Board memo draft 6",
+          8
+        ],
+        [
+          "hard",
+          42,
+          6,
+          "Board memo draft 6 (2)",
+          9
+        ],
+        [
+          "hard",
+          43,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          43,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          43,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          43,
+          2,
+          "Board memo draft 2 (2)",
+          16
+        ],
+        [
+          "hard",
+          43,
+          3,
+          "Board memo draft 3",
+          10
+        ],
+        [
+          "hard",
+          43,
+          3,
+          "Board memo draft 3 (2)",
+          10
+        ],
+        [
+          "hard",
+          43,
+          4,
+          "Board memo draft 4",
+          10
+        ],
+        [
+          "hard",
+          43,
+          4,
+          "Board memo draft 4 (2)",
+          7
+        ],
+        [
+          "hard",
+          43,
+          5,
+          "Board memo draft 5",
+          7
+        ],
+        [
+          "hard",
+          43,
+          5,
+          "Board memo draft 5 (2)",
+          10
+        ],
+        [
+          "hard",
+          43,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "hard",
+          43,
+          6,
+          "Board memo draft 6 (2)",
+          9
+        ],
+        [
+          "hard",
+          44,
+          1,
+          "Board memo draft 1",
+          16
+        ],
+        [
+          "hard",
+          44,
+          1,
+          "Board memo draft 1 (2)",
+          16
+        ],
+        [
+          "hard",
+          44,
+          2,
+          "Board memo draft 2",
+          16
+        ],
+        [
+          "hard",
+          44,
+          2,
+          "Board memo draft 2 (2)",
+          17
+        ],
+        [
+          "hard",
+          44,
+          3,
+          "Board memo draft 3",
+          12
+        ],
+        [
+          "hard",
+          44,
+          3,
+          "Board memo draft 3 (2)",
+          11
+        ],
+        [
+          "hard",
+          44,
+          4,
+          "Board memo draft 4",
+          10
+        ],
+        [
+          "hard",
+          44,
+          4,
+          "Board memo draft 4 (2)",
+          16
+        ],
+        [
+          "hard",
+          44,
+          5,
+          "Board memo draft 5",
+          6
+        ],
+        [
+          "hard",
+          44,
+          5,
+          "Board memo draft 5 (2)",
+          6
+        ],
+        [
+          "hard",
+          44,
+          6,
+          "Board memo draft 6",
+          5
+        ],
+        [
+          "hard",
+          44,
+          6,
+          "Board memo draft 6 (2)",
+          6
+        ]
+      ]
+    }
+  },
+  "stopping_calibration_contrast": {
+    "easy": {
+      "n_episodes": 15,
+      "solver_wins": 15,
+      "solver_natural_abstentions": 0,
+      "daily_decision_states": 73,
+      "below_breakeven_states": 50,
+      "below_breakeven_rate": 0.684932,
+      "mean_breakeven_p": 0.528096,
+      "mean_known_v": 0.897534,
+      "mean_top_p_continue": 0.311553,
+      "mean_top_p_accuse": 0.994046,
+      "uncalibrated_sft": {
+        "survivorship_kept_episodes": 15,
+        "natural_abstentions_kept": 0,
+        "ending_oversample_multiplier": 4,
+        "commit_threshold_rule": "is_end or top_p >= 0.32",
+        "weighted_instances": 118,
+        "positive_commit_instances": 87,
+        "positive_commit_rate": 0.737288,
+        "negative_ev_commit_instances": 19,
+        "negative_ev_commit_share_of_positives": 0.218391
+      },
+      "ev_calibrated_breakeven": {
+        "all_episodes_kept": 15,
+        "natural_abstentions_kept": 0,
+        "commit_threshold_rule": "top_p >= 1/(1+V_known) and accuse_value > 0 and (top_p >= thr or last_day)",
+        "decision_instances": 73,
+        "positive_commit_instances": 15,
+        "positive_commit_rate": 0.205479,
+        "negative_ev_commit_instances": 0,
+        "dagger_wrong_commit_penalty_weight": 3.0
+      }
+    },
+    "medium": {
+      "n_episodes": 15,
+      "solver_wins": 13,
+      "solver_natural_abstentions": 2,
+      "daily_decision_states": 118,
+      "below_breakeven_states": 103,
+      "below_breakeven_rate": 0.872881,
+      "mean_breakeven_p": 0.540087,
+      "mean_known_v": 0.861102,
+      "mean_top_p_continue": 0.200132,
+      "mean_top_p_accuse": 1.0,
+      "uncalibrated_sft": {
+        "survivorship_kept_episodes": 13,
+        "natural_abstentions_kept": 0,
+        "ending_oversample_multiplier": 4,
+        "commit_threshold_rule": "is_end or top_p >= 0.32",
+        "weighted_instances": 129,
+        "positive_commit_instances": 74,
+        "positive_commit_rate": 0.573643,
+        "negative_ev_commit_instances": 20,
+        "negative_ev_commit_share_of_positives": 0.27027
+      },
+      "ev_calibrated_breakeven": {
+        "all_episodes_kept": 15,
+        "natural_abstentions_kept": 2,
+        "commit_threshold_rule": "top_p >= 1/(1+V_known) and accuse_value > 0 and (top_p >= thr or last_day)",
+        "decision_instances": 118,
+        "positive_commit_instances": 13,
+        "positive_commit_rate": 0.110169,
+        "negative_ev_commit_instances": 0,
+        "dagger_wrong_commit_penalty_weight": 3.0
+      }
+    },
+    "hard": {
+      "n_episodes": 15,
+      "solver_wins": 14,
+      "solver_natural_abstentions": 0,
+      "daily_decision_states": 131,
+      "below_breakeven_states": 97,
+      "below_breakeven_rate": 0.740458,
+      "mean_breakeven_p": 0.554776,
+      "mean_known_v": 0.818931,
+      "mean_top_p_continue": 0.266639,
+      "mean_top_p_accuse": 0.97478,
+      "uncalibrated_sft": {
+        "survivorship_kept_episodes": 14,
+        "natural_abstentions_kept": 0,
+        "ending_oversample_multiplier": 4,
+        "commit_threshold_rule": "is_end or top_p >= 0.32",
+        "weighted_instances": 155,
+        "positive_commit_instances": 91,
+        "positive_commit_rate": 0.587097,
+        "negative_ev_commit_instances": 16,
+        "negative_ev_commit_share_of_positives": 0.175824
+      },
+      "ev_calibrated_breakeven": {
+        "all_episodes_kept": 15,
+        "natural_abstentions_kept": 0,
+        "commit_threshold_rule": "top_p >= 1/(1+V_known) and accuse_value > 0 and (top_p >= thr or last_day)",
+        "decision_instances": 131,
+        "positive_commit_instances": 15,
+        "positive_commit_rate": 0.114504,
+        "negative_ev_commit_instances": 0,
+        "dagger_wrong_commit_penalty_weight": 3.0
+      }
+    },
+    "all": {
+      "n_episodes": 45,
+      "solver_wins": 42,
+      "solver_natural_abstentions": 2,
+      "daily_decision_states": 322,
+      "below_breakeven_states": 250,
+      "below_breakeven_rate": 0.776398,
+      "mean_breakeven_p": 0.543344,
+      "mean_known_v": 0.852205,
+      "mean_top_p_continue": 0.250946,
+      "mean_top_p_accuse": 0.989125,
+      "uncalibrated_sft": {
+        "survivorship_kept_episodes": 42,
+        "natural_abstentions_kept": 0,
+        "ending_oversample_multiplier": 4,
+        "commit_threshold_rule": "is_end or top_p >= 0.32",
+        "weighted_instances": 402,
+        "positive_commit_instances": 252,
+        "positive_commit_rate": 0.626866,
+        "negative_ev_commit_instances": 55,
+        "negative_ev_commit_share_of_positives": 0.218254
+      },
+      "ev_calibrated_breakeven": {
+        "all_episodes_kept": 45,
+        "natural_abstentions_kept": 2,
+        "commit_threshold_rule": "top_p >= 1/(1+V_known) and accuse_value > 0 and (top_p >= thr or last_day)",
+        "decision_instances": 322,
+        "positive_commit_instances": 43,
+        "positive_commit_rate": 0.13354,
+        "negative_ev_commit_instances": 0,
+        "dagger_wrong_commit_penalty_weight": 3.0
+      }
+    }
+  },
+  "cross_track_dagger_comparison": {
+    "raw_qwen_dagger_r1": {
+      "run_8k_id": "WS4-dagger-r1-8k-verda",
+      "run_4k_id": "WS4-dagger-r1-4k-verda",
+      "status": "NEGATIVE_DAGGER_HONEST_NULL",
+      "is_open_weight_llm": true,
+      "dagger_seed_range": "170000..170099",
+      "vllm_rollout_episodes": 300,
+      "relabelled_states": 24074,
+      "solver_match_checked": 2603,
+      "solver_match_equal": 2603,
+      "expert_state_agreement_before": 0.43,
+      "expert_state_agreement_after": 0.68,
+      "sft_examples": 4000,
+      "sft_steps": 250,
+      "sft_label_counts": {
+        "plant_canary": 1595,
+        "search_messages": 922,
+        "read_access_logs": 421,
+        "list_documents": 371,
+        "status": 255,
+        "check_leak_feed": 174,
+        "accuse": 159,
+        "list_employees": 62,
+        "advance_day": 41
+      },
+      "sft_accuse_label_fraction": 0.03975,
+      "sft_plant_canary_label_fraction": 0.39875,
+      "accuse_call_tokens": 23,
+      "max_new_tokens_eval": 256,
+      "eval_8k": {
+        "n": 50,
+        "mean_score": -0.542,
+        "ci95": 0.214,
+        "accused_rate": 0.92,
+        "abstain_rate": 0.08,
+        "accuracy": 0.2,
+        "whom_precision_before_8k": 0.1,
+        "whom_precision_after_8k": 0.22,
+        "whom_precision_ratio": "10/46",
+        "paired_vs_v3_4k_s0_ctx8k_mean_delta": 0.242,
+        "paired_vs_v3_4k_s0_ctx8k_ci95": 0.304,
+        "paired_n": 43,
+        "world_secret_tag": "1ca0c2a64d",
+        "implied_ev_per_accuse_at_v085": -0.5978
+      },
+      "eval_4k": {
+        "n": 41,
+        "mean_score": -0.101,
+        "ci95": 0.112,
+        "accused_rate": 0.15,
+        "abstain_rate": 0.85,
+        "accuracy": 0.02,
+        "paired_vs_v3_4k_s0_ctx4k_mean_delta": -0.031,
+        "paired_vs_v3_4k_s0_ctx4k_ci95": 0.139,
+        "paired_n": 32,
+        "world_secret_tag": "1ca0c2a64d"
+      }
+    },
+    "structured_compact_dagger": {
+      "heldout_seed_range": "800000..800059",
+      "world_secret_tag": "sha256:ebf2f09716cf76d3",
+      "compact_linear_dagger": {
+        "run_id": "compact-linear-dagger-v14",
+        "is_open_weight_llm": false,
+        "param_count": 785,
+        "train_seed_range": "109000..109509",
+        "n": 180,
+        "stage0_mean_score": 0.0,
+        "stage1_sft_mean_score": 0.5175,
+        "stage2_bc_mean_score": 0.4762,
+        "stage3_dagger_r2_mean_score": 0.6267,
+        "stage3_accuracy": 0.9444,
+        "stage3_wrong_accuse_rate": 0.0278,
+        "dagger_r2_minus_calibrated_bc": {
+          "mean_delta": 0.1505,
+          "ci95_low": 0.0869,
+          "ci95_high": 0.2141
+        },
+        "dagger_r2_minus_survivorship_sft": {
+          "mean_delta": 0.1092,
+          "ci95_low": 0.0478,
+          "ci95_high": 0.1707
+        },
+        "dagger_r2_minus_untrained": {
+          "mean_delta": 0.6267,
+          "ci95_low": 0.5775,
+          "ci95_high": 0.6759
+        },
+        "student_state_agreement_bc": 0.7435,
+        "student_state_agreement_dagger_r2": 0.9805
+      },
+      "tiny_mlp_dagger": {
+        "run_id": "tiny-mlp-dagger-v14",
+        "is_open_weight_llm": false,
+        "architecture": "28 -> 128 -> 64 -> 5",
+        "param_count": 12293,
+        "train_seed_range": "107000..107599",
+        "n": 180,
+        "stage0_mean_score": -0.8556,
+        "stage1_uncalibrated_sft_mean_score": -0.2781,
+        "stage1_wrong_accuse_rate": 0.6111,
+        "stage2_calibrated_bc_mean_score": 0.6106,
+        "stage3_dagger_r2_mean_score": 0.6141,
+        "stage3_accuracy": 0.9333,
+        "stage3_wrong_accuse_rate": 0.0278,
+        "dagger_r2_minus_uncalibrated_sft": {
+          "mean_delta": 0.8922,
+          "ci95_low": 0.7556,
+          "ci95_high": 1.0288
+        },
+        "calibrated_bc_minus_uncalibrated_sft": {
+          "mean_delta": 0.8887,
+          "ci95_low": 0.7568,
+          "ci95_high": 1.0206
+        },
+        "dagger_r2_minus_untrained": {
+          "mean_delta": 1.4696,
+          "ci95_low": 1.385,
+          "ci95_high": 1.5542
+        }
+      }
+    }
+  },
+  "mechanism_pillars": [
+    {
+      "id": "pillar1_action_token_cap_truncation",
+      "title": "Action-serialization bottleneck and cap=96 truncation on multi-employee plant_canary",
+      "summary": "Each assigned employee in raw Qwen2.5 <tool_call> JSON consumes 12 characters and 8 BPE tokens, so >=9 assigned employees (101+ tokens) truncates under max_new_tokens=96: 100% of full-roster calls (125/189/349 tokens on easy/medium/hard), 73.9% (133/180) of hard DAgger student-state relabels, and 73.1% (95/130) of Days 1..5 hard SolverPolicy calls."
+    },
+    {
+      "id": "pillar2_implicit_vs_ev_calibrated_stopping",
+      "title": "Implicit next-token SFT stopping dilution vs explicit EV-calibrated breakeven stopping",
+      "summary": "Across 322 daily decision states on TRAIN_SEEDS 108000..108044, 77.6% (250/322) lie below breakeven 1/(1+V_known). Uncalibrated SFT labels 62.7% (252/402) positive including 55 negative-EV states, while raw-8k DAgger r1 had only 159/4,000 accuse targets and relied on implicit 100-165-token continuation targets that failed to override the 4k->8k over-accuse prior (92% accused at 8k, -0.542 +/- 0.214). EV-calibrated breakeven labels 13.4% (43/322) positive with 0 negative-EV commits and 3.0x explicit negative-commit DAgger weight."
+    },
+    {
+      "id": "pillar3_lossless_state_vs_sliding_window_eviction",
+      "title": "Lossless sufficient-statistic state vs 4k/8k raw transcript eviction and context shift",
+      "summary": "Evaluating the same adapter at 4k vs 8k flips DAgger r1 from 85% abstention (-0.101 +/- 0.112, n=41) to 92% premature accusation (-0.542 +/- 0.214, n=50), whereas lossless public-ledger features let CompactLinearDAggerPolicy (+0.1505 [+0.0869, +0.2141] over calibrated BC) and TinyMLPPolicy (+0.8922 [+0.7556, +1.0288] over uncalibrated SFT) retain canary maps across all 21 hard days."
+    }
+  ]
+}

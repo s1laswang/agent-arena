@@ -2,35 +2,35 @@
 
 Canary is a Bayesian insider-threat RL benchmark where a security-lead agent investigates a simulated company bleeding value to a mole. Across the merged Canary repository, `gemini-4-carbon` is integrated into six distinct, load-bearing roles: synthesizing leak-free company worlds (`world_text`), playing and evolving catchable adversaries (`adaptive_mole`), acting as the frontier security investigator (`investigators`), diagnosing multi-episode failure modes in long context (`failure_analyst`), red-teaming the reward and MCP server (`exploit_hunter`), and reading pixel-only evidence scans and forensic rasters (`multimodal_evidence`).
 
-Every metric in this document is extracted deterministically from the 81 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
+Every metric in this document is extracted deterministically from the 83 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
 
 ## Provenance & Aggregate Ledger Summary
 
 - Provenance status: **VERIFIED** (`python -m canary.gemini.provenance --root . --strict`)
 - Target model: `gemini-4-carbon`
 - Verified roles: **6 / 6** (`world_text`, `adaptive_mole`, `investigators`, `failure_analyst`, `exploit_hunter`, `multimodal_evidence`)
-- Verified `gemini-4-carbon` run folders: **81** (6 canonical headline runs + 75 supporting runs; scanned 81 folders)
-- Total verified episodes and evaluated samples: **795**
-- Total Gemini API calls: **6,371**
-- Total tokens (input / output / thinking / cached): **180,224,002 / 2,120,885 / 1,199,677 / 164,235,078** (**91.1%** cache hit rate)
-- Total estimated API cost (USD): **$77.8467**
+- Verified `gemini-4-carbon` run folders: **83** (6 canonical headline runs + 77 supporting runs; scanned 83 folders)
+- Total verified episodes and evaluated samples: **883**
+- Total Gemini API calls: **6,459**
+- Total tokens (input / output / thinking / cached): **180,310,774 / 2,127,291 / 1,224,612 / 164,235,078** (**91.1%** cache hit rate)
+- Total estimated API cost (USD): **$78.3337**
 - Secret leaks detected: **0**
 
 | Role | Stage | Verified Runs | Episodes / Samples | API Calls | Tokens In | Tokens Out | Thinking Tokens | Cached Tokens | Cost (USD) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `world_text` | Company Construction | 13 | 133 | 1,038 | 27,780,671 | 519,569 | 530,761 | 25,362,601 | $14.2643 |
+| `world_text` | Company Construction | 15 | 221 | 1,126 | 27,867,443 | 525,975 | 555,696 | 25,362,601 | $14.7513 |
 | `adaptive_mole` | Adversarial Evolution | 26 | 320 | 1,632 | 25,564,117 | 118,318 | 384,007 | 23,015,724 | $12.4216 |
 | `investigators` | Bayesian Investigation | 25 | 38 | 3,333 | 122,547,175 | 1,388,566 | 157,797 | 114,113,778 | $43.7418 |
 | `failure_analyst` | Trajectory Forensics | 3 | 222 | 5 | 918,030 | 26,204 | 39,025 | 0 | $2.3395 |
 | `exploit_hunter` | Reward & Protocol Red-Team | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
 | `multimodal_evidence` | Pixel & Chart Inspection | 12 | 71 | 148 | 320,087 | 31,397 | 88,087 | 0 | $1.8350 |
-| **Total** | **All 6 Roles** | **81** | **795** | **6,371** | **180,224,002** | **2,120,885** | **1,199,677** | **164,235,078** | **$77.8467** |
+| **Total** | **All 6 Roles** | **83** | **883** | **6,459** | **180,310,774** | **2,127,291** | **1,224,612** | **164,235,078** | **$78.3337** |
 
 ## Canonical Headline Runs (One Labelled Real Run per Role)
 
 | Role | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Verified Headline Result |
 | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| `world_text` | `persona_interviews` | `results/gemini_roles/world_text/persona-interviews-carbon` | `gemini-4-carbon` | `dbe9569fcc44abf8bc0665e0533dd1d1b677c6e9` | 32 | 32 | 31,496 | 2,345 | 6,957 | 0 | $0.1560 | 32 live interviews (4 worlds), 0 leaks, signal acc 100%, solver +0.645 vs +0.642 |
+| `world_text` | `persona_interviews` | `results/gemini_roles/world_text/persona-interviews-easy03-hard79-carbon` | `gemini-4-carbon` | `3567c70ebcff5fe5c296b5978c39d4a7fe2d04da` | 56 | 56 | 55,164 | 4,030 | 16,025 | 0 | $0.3109 | 56 live interviews (7 worlds), 0 leaks, signal acc 100%, solver +0.687 vs +0.687 |
 | `adaptive_mole` | `mole_forge` | `results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep` | `gemini-4-carbon` | `9b8858381c99a4b94ea3d989fcd0d232fc5411ca` | 49 | 8 | 12,133 | 13,031 | 4,958 | 0 | $0.2042 | fitness 0.374, solver acc 90%, 49 LLM children |
 | `investigators` | `thinking_level_ablation` | `results/gemini_roles/investigators/thinking-ladder-carbon-med01` | `gemini-4-carbon` | `2cb207f51c44d3069e2101c4849a21965b606f92` | 4 | 318 | 9,240,098 | 10,672 | 104,829 | 8,471,482 | $3.5394 | low +0.655 -> high +0.655 (vs solver +0.565, n=4) |
 | `failure_analyst` | `failure_atlas_carbon` | `results/gemini_roles/failure_analyst/atlas-carbon` | `gemini-4-carbon` | `26ab62d` | 101 | 2 | 596,862 | 3,191 | 13,356 | 0 | $1.3592 | 101 eps, 6 modes, 100% verified quotes, 93% solver agreement |
@@ -44,10 +44,12 @@ Every metric in this document is extracted deterministically from the 81 committ
 ### Role 01: `world_text` - World Text & Persona Synthesis
 
 - **Gemini API capabilities:** Structured JSON output (`response_schema`), strict public-facts-only prompt isolation (zero access to `mole`, `decoy`, or private HMAC `world_seed`), deterministic disk caching, `thinking_level` calibration, live persona interview synthesis, and dynamic mid-episode events.
-- **Why it is essential:** Across 13 verified `gemini-4-carbon` runs (1,038 API calls, 27,780,671 input tokens), `gemini-4-carbon` synthesizes workplace personas, biased department chatter, live suspect interviews, and mid-episode incidents strictly from public facts with **0 ground-truth mole leaks**. Generated artifacts span 24 `v1.4` company worlds (648 personas), 32 live interviews, and 33 mid-episode incidents while preserving `SolverPolicy` parity.
+- **Why it is essential:** Across 15 verified `gemini-4-carbon` runs (1,126 API calls, 27,867,443 input tokens), `gemini-4-carbon` synthesizes workplace personas, biased department chatter, live suspect interviews, and mid-episode incidents strictly from public facts with **0 ground-truth mole leaks**. Generated artifacts span 24 `v1.4` company worlds (648 personas), 120 live interviews, and 33 mid-episode incidents while preserving `SolverPolicy` parity.
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Verified Result |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `persona_interviews` | `results/gemini_roles/world_text/persona-interviews-easy03-hard79-carbon` | `gemini-4-carbon` | `3567c70ebcff5fe5c296b5978c39d4a7fe2d04da` | 56 | 56 | 55,164 | 4,030 | 16,025 | 0 | $0.3109 | 56 live interviews (7 worlds), 0 leaks, signal acc 100%, solver +0.687 vs +0.687 |
+| `persona_interviews` | `results/gemini_roles/world_text/persona-interviews-hard14-carbon` | `gemini-4-carbon` | `e742ebe31e5a03cb2bf10faccae93e5989b8a1d6` | 32 | 32 | 31,608 | 2,376 | 8,910 | 0 | $0.1761 | 32 live interviews (4 worlds), 0 leaks, signal acc 100%, solver +0.605 vs +0.570 |
 | `persona_interviews` | `results/gemini_roles/world_text/persona-interviews-carbon` | `gemini-4-carbon` | `dbe9569fcc44abf8bc0665e0533dd1d1b677c6e9` | 32 | 32 | 31,496 | 2,345 | 6,957 | 0 | $0.1560 | 32 live interviews (4 worlds), 0 leaks, signal acc 100%, solver +0.645 vs +0.642 |
 | `dynamic_mid_episode_events` | `results/gemini_roles/world_text/dynamic-events-hard37-carbon` | `gemini-4-carbon` | `1bcf1ee7479814921d0aa506dc9b1af5a3f6ad22` | 15 | 15 | 84,590 | 5,333 | 8,032 | 3,817 | $0.3028 | 15 events (5 hard seeds, 56 msgs), 0 leaks, solver +0.576 vs base +0.576 (pooled n=8: +0.599 +/- 0.101) |
 | `biased_chatter_investigator_ablation` | `results/gemini_roles/world_text/biased-chatter-ablation-hard01` | `gemini-4-carbon` | `c3ebb075397b09cb837375b079836c020aed779e` | 12 | 407 | 14,584,848 | 191,726 | 168,412 | 13,565,234 | $5.3130 | 12 eps, carbon +0.620 (biased) vs +0.645 (template), solver +0.665 |
@@ -220,7 +222,7 @@ Across all **30** committed `v1.4` frontier episodes (`easy` seeds `0..3` (`n=4`
 
 ## Keyless Offline Verification Commands
 
-Judges can verify all 81 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
+Judges can verify all 83 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
 
 ```bash
 GEMINI_API_KEY="" GOOGLE_GENERATIVE_AI_API_KEY="" PYTHONPATH=. python scripts/sync_six_roles_docs.py --root . --check

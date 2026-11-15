@@ -441,12 +441,12 @@
     },
     "persona_interviews": {
       "cached": 0,
-      "calls": 32,
-      "cost_usd": 0.156012,
-      "in": 31496,
-      "out": 2345,
-      "thinking": 6957,
-      "verified_folders": 1
+      "calls": 120,
+      "cost_usd": 0.642966,
+      "in": 118268,
+      "out": 8751,
+      "thinking": 31892,
+      "verified_folders": 3
     },
     "thinking_level_calibration": {
       "cached": 0,
@@ -829,7 +829,7 @@
     "secret_leaks_detected": 0,
     "stego_encoding_violations": 0,
     "truth_leak_violations": 0,
-    "verified_folders_audited": 13
+    "verified_folders_audited": 15
   },
   "model_id": "gemini-4-carbon",
   "persona_interviews_suite": {
@@ -854,41 +854,83 @@
           "out": 2345,
           "thinking": 6957
         }
+      },
+      {
+        "commit": "3567c70ebc",
+        "counterfactual_invariance_rate": 1.0,
+        "n_interviews": 56,
+        "n_worlds": 7,
+        "pairwise_ordering_rate": 1.0,
+        "run_dir": "results/gemini_roles/world_text/persona-interviews-easy03-hard79-carbon",
+        "signal_calibration_accuracy": 1.0,
+        "solver_mean_score": 0.6871,
+        "stego_leaks": 0,
+        "template_mean_score": 0.6871,
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 56,
+          "cost_usd": 0.310878,
+          "in": 55164,
+          "out": 4030,
+          "thinking": 16025
+        }
+      },
+      {
+        "commit": "e742ebe31e",
+        "counterfactual_invariance_rate": 1.0,
+        "n_interviews": 32,
+        "n_worlds": 4,
+        "pairwise_ordering_rate": 1.0,
+        "run_dir": "results/gemini_roles/world_text/persona-interviews-hard14-carbon",
+        "signal_calibration_accuracy": 1.0,
+        "solver_mean_score": 0.605,
+        "stego_leaks": 0,
+        "template_mean_score": 0.57,
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 32,
+          "cost_usd": 0.176076,
+          "in": 31608,
+          "out": 2376,
+          "thinking": 8910
+        }
       }
     ],
     "counterfactual_invariance_ci95": [
-      0.9615,
+      0.9894,
       1.0
     ],
     "counterfactual_invariance_rate": 1.0,
-    "n_batches": 1,
+    "n_batches": 3,
     "paired_delta_ci95": [
       0.0,
-      0.0075
+      0.0287
     ],
-    "paired_delta_mean": 0.0025,
+    "paired_delta_mean": 0.01,
     "persona_solver_accuracy": 1.0,
     "persona_solver_accuracy_ci95": [
-      0.5101,
+      0.7961,
       1.0
     ],
     "persona_solver_ci95": [
-      0.48,
-      0.775
+      0.5513,
+      0.74
     ],
-    "persona_solver_mean": 0.645,
+    "persona_solver_mean": 0.654,
     "signal_calibration_accuracy": 1.0,
     "signal_calibration_ci95": [
-      0.8928,
+      0.969,
       1.0
     ],
     "template_solver_ci95": [
-      0.4775,
-      0.77
+      0.544,
+      0.7327
     ],
-    "template_solver_mean": 0.6425,
-    "total_interviews": 32,
-    "unique_worlds": 4
+    "template_solver_mean": 0.644,
+    "total_interviews": 120,
+    "unique_worlds": 15
   },
   "role": "world_text",
   "thinking_calibration_suite": {
@@ -947,12 +989,12 @@
   },
   "totals": {
     "cached": 25362601,
-    "calls": 1038,
-    "cost_usd": 14.264328,
-    "in": 27780671,
-    "out": 519569,
-    "thinking": 530761,
-    "verified_folders": 13
+    "calls": 1126,
+    "cost_usd": 14.751282,
+    "in": 27867443,
+    "out": 525975,
+    "thinking": 555696,
+    "verified_folders": 15
   },
   "verified_run_folders": [
     "results/gemini_roles/world_text/biased-chatter-ablation-carbon",
@@ -967,6 +1009,8 @@
     "results/gemini_roles/world_text/dynamic-events-hard-carbon",
     "results/gemini_roles/world_text/dynamic-events-hard37-carbon",
     "results/gemini_roles/world_text/persona-interviews-carbon",
+    "results/gemini_roles/world_text/persona-interviews-easy03-hard79-carbon",
+    "results/gemini_roles/world_text/persona-interviews-hard14-carbon",
     "results/gemini_roles/world_text/thinking-calibration-carbon"
   ]
 }

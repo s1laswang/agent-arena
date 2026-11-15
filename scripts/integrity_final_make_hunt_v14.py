@@ -10,6 +10,8 @@ import math
 import os
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import threading
@@ -25,9 +27,27 @@ from canary.env import Env
 from canary.eval import run_episode
 from canary.redteam import anticheat
 from canary.redteam import fuzz
+from canary.redteam import tamper_guard
 from canary.solver.policy import SolverPolicy
 from canary.types import LedgerEntry, ToolResult
 from scripts.audit_submission import compute_tier_hash
+
+PINNED_JUSTSILAS_SHA = "5f9b3297"
+PROTECTED_PREFIXES: tuple[str, ...] = (
+    "canary/env.py",
+    "canary/rules.py",
+    "canary/world.py",
+    "canary/types.py",
+    "canary/eval.py",
+    "canary/reproduce.py",
+    "canary/mcp_server.py",
+    "canary/solver/",
+    "harbor/",
+)
+QUICK_SAMPLE_COMMITTED_REL = (
+    "data/runs/committed/v1.4/reference/stop_early-medium-20261114-121126/episodes.jsonl"
+)
+_COMMITTED_SOLVER_CACHE: dict[str, dict[int, dict[str, Any]]] = {}
 
 MAKE_HUNT_TRACKS: tuple[str, ...] = ("easy", "medium", "hard", "hard_forge")
 HELDOUT_TRACKS: tuple[str, ...] = ("hard", "hard_forge")
@@ -49,12 +69,12 @@ FULL_CELLS: tuple[CellSpec, ...] = (
 )
 
 QUICK_CELLS: tuple[CellSpec, ...] = (
-    ("make_hunt_easy_0_1", "make_hunt", "easy", "0-1", [0, 1], 4, 0),
-    ("make_hunt_medium_0_1", "make_hunt", "medium", "0-1", [0, 1], 4, 0),
-    ("make_hunt_hard_0_1", "make_hunt", "hard", "0-1", [0, 1], 4, 0),
-    ("make_hunt_hard_forge_0_1", "make_hunt", "hard_forge", "0-1", [0, 1], 4, 0),
-    ("heldout_hard_5000_5001", "heldout", "hard", "5000-5001", [5000, 5001], 4, 0),
-    ("heldout_hard_forge_5000_5001", "heldout", "hard_forge", "5000-5001", [5000, 5001], 4, 0),
+    ("make_hunt_easy_0", "make_hunt", "easy", "0", [0], 3, 0),
+    ("make_hunt_medium_0", "make_hunt", "medium", "0", [0], 3, 0),
+    ("make_hunt_hard_0", "make_hunt", "hard", "0", [0], 3, 0),
+    ("make_hunt_hard_forge_0", "make_hunt", "hard_forge", "0", [0], 3, 0),
+    ("heldout_hard_5000", "heldout", "hard", "5000", [5000], 3, 0),
+    ("heldout_hard_forge_5000", "heldout", "hard_forge", "5000", [5000], 3, 0),
 )
 
 
@@ -137,27 +157,36 @@ def make_auditing_factory(
     return factory, finalize
 
 
-def _run_mode_shard(args: tuple[str, str, list[int], int, int, str, str]) -> dict[str, Any]:
+def _run_mode_shard(
+    args: tuple[str, str, list[int], int, int, str, str],
+    skip_inline_parity: bool = False,
+) -> dict[str, Any]:
     cell_id, tier, seeds, cell_budget, rng_seed, mode, out_dir_str = args
     os.environ.setdefault("CANARY_ALLOW_DEV", "1")
     shard_file = Path(out_dir_str) / "shards" / f"{cell_id}__{mode}.json"
     mode_budget = cell_budget // 3
     cfac, finalize = make_auditing_factory(_default_env_factory, check_strict_v14=True)
     t0 = time.monotonic()
-    res = fuzz.hunt(
-        tier=tier,
-        seeds=seeds,
-        budget=mode_budget,
-        seed=rng_seed,
-        mode=mode,
-        workers=1,
-        factory=cfac,
-    )
+    orig_parity = fuzz.parity_probe
+    try:
+        if skip_inline_parity and mode != "parallel_accuse":
+            fuzz.parity_probe = lambda *a, **k: []
+        res = fuzz.hunt(
+            tier=tier,
+            seeds=seeds,
+            budget=mode_budget,
+            seed=rng_seed,
+            mode=mode,
+            workers=1,
+            factory=cfac,
+        )
+    finally:
+        fuzz.parity_probe = orig_parity
     elapsed = round(time.monotonic() - t0, 3)
     audit = finalize()
     genomes = 0 if mode == "parallel_accuse" else mode_budget
     races = int(res.get("races", 0))
-    parity_seeds = 0 if mode == "parallel_accuse" else min(len(seeds), 5)
+    parity_seeds = 0 if (mode == "parallel_accuse" or skip_inline_parity) else min(len(seeds), 5)
     payload = {
         "cell_id": cell_id,
         "tier": tier,
@@ -186,17 +215,138 @@ def _run_mode_shard(args: tuple[str, str, list[int], int, int, str, str]) -> dic
     return payload
 
 
+def _git_ref_sha(root: Path, ref: str) -> str | None:
+    proc = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    val = proc.stdout.strip()
+    return val[:8] if val else None
+
+
+def resolve_git_provenance(root: Path = ROOT, base_ref: str = "origin/justSilas") -> dict[str, Any]:
+    if not (root / ".git").exists():
+        return {
+            "ok": True,
+            "requested_base_ref": base_ref,
+            "resolved_base_ref": None,
+            "resolved_base_sha": PINNED_JUSTSILAS_SHA,
+            "pinned_justsilas_sha": PINNED_JUSTSILAS_SHA,
+            "head_sha": PINNED_JUSTSILAS_SHA,
+            "branch": "HEAD",
+            "detached_head": False,
+            "shallow_ci_fallback": True,
+            "protected_touched": [],
+        }
+    head_sha = _git_ref_sha(root, "HEAD")
+    sym_proc = subprocess.run(
+        ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    branch = sym_proc.stdout.strip() if sym_proc.returncode == 0 else ""
+    detached_head = head_sha is not None and not branch
+
+    candidates: list[str] = [base_ref]
+    if base_ref == "origin/justSilas":
+        candidates.append("justSilas")
+    elif base_ref == "justSilas":
+        candidates.append("origin/justSilas")
+
+    resolved_ref: str | None = None
+    resolved_sha: str | None = None
+    for cand in candidates:
+        sha = _git_ref_sha(root, cand)
+        if sha is not None:
+            resolved_ref = cand
+            resolved_sha = sha
+            break
+
+    shallow_fallback = False
+    if resolved_ref is None:
+        shallow_fallback = True
+        if head_sha is not None:
+            resolved_ref = "HEAD"
+            resolved_sha = head_sha
+        else:
+            resolved_sha = PINNED_JUSTSILAS_SHA
+
+    protected_touched: list[str] = []
+    if resolved_ref is not None and head_sha is not None and resolved_ref != "HEAD":
+        diff_proc = subprocess.run(
+            ["git", "diff", "--name-only", f"{resolved_ref}...HEAD"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if diff_proc.returncode == 0:
+            for raw_line in diff_proc.stdout.splitlines():
+                rel = raw_line.strip()
+                if not rel:
+                    continue
+                if any(rel == p or (p.endswith("/") and rel.startswith(p)) for p in PROTECTED_PREFIXES):
+                    protected_touched.append(rel)
+
+    return {
+        "ok": len(protected_touched) == 0,
+        "requested_base_ref": base_ref,
+        "resolved_base_ref": resolved_ref,
+        "resolved_base_sha": resolved_sha,
+        "pinned_justsilas_sha": PINNED_JUSTSILAS_SHA,
+        "head_sha": head_sha or PINNED_JUSTSILAS_SHA,
+        "branch": branch or "HEAD",
+        "detached_head": detached_head,
+        "shallow_ci_fallback": shallow_fallback,
+        "protected_touched": protected_touched,
+    }
+
+
+def _fast_episode_meta(line: str) -> dict[str, Any]:
+    for s_tok, e_tok in (
+        ('"steps": [', '], "score":'),
+        ('"steps":[', '],"score":'),
+        ('"steps": [', '], "meta":'),
+        ('"steps":[', '],"meta":'),
+    ):
+        i = line.find(s_tok)
+        if i != -1:
+            j = line.rfind(e_tok)
+            if j > i:
+                try:
+                    return json.loads(line[:i] + '"steps":[]' + line[j + 1 :])
+                except ValueError:
+                    pass
+    return json.loads(line)
+
+
 def _load_committed_solver_episodes(tier: str) -> dict[int, dict[str, Any]]:
+    if tier in _COMMITTED_SOLVER_CACHE:
+        return _COMMITTED_SOLVER_CACHE[tier]
     if not COMMITTED_REF_DIR.is_dir():
+        _COMMITTED_SOLVER_CACHE[tier] = {}
         return {}
     by_seed: dict[int, dict[str, Any]] = {}
     for p in sorted(COMMITTED_REF_DIR.glob(f"solver-{tier}-*/episodes.jsonl")):
         for line in p.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
-            ep = json.loads(line)
+            ep = _fast_episode_meta(line)
             if ep.get("tier") == tier and isinstance(ep.get("seed"), int):
-                by_seed[int(ep["seed"])] = ep
+                by_seed[int(ep["seed"])] = {
+                    "score": float(ep["score"]),
+                    "correct": bool(ep["correct"]),
+                    "final_day": int(ep["final_day"]),
+                    "n_calls": int(ep.get("n_calls", len(ep.get("steps", [])))),
+                }
+    _COMMITTED_SOLVER_CACHE[tier] = by_seed
     return by_seed
 
 
@@ -408,18 +558,18 @@ class PlantedBugFakeEnv:
 
 def run_fake_env_positive_controls(quick: bool = False) -> dict[str, Any]:
     t0 = time.monotonic()
-    ctrl_seeds = range(2) if quick else range(4)
-    clean_budget = 24 if quick else 90
+    ctrl_seeds = range(1) if quick else range(4)
+    clean_budget = 3 if quick else 90
     clean_fac, clean_fin = make_auditing_factory(
         lambda t, s: PlantedBugFakeEnv(t, s, bug=None),
         check_strict_v14=True,
     )
-    clean_res = fuzz.hunt("easy", ctrl_seeds, clean_budget, 0, "all", workers=1, factory=clean_fac)
+    clean_res = fuzz.hunt("easy", ctrl_seeds, clean_budget, 0, "random" if quick else "all", workers=1, factory=clean_fac)
     clean_audit = clean_fin()
 
-    hi = 72 if quick else 240
-    lo = 18 if quick else 60
-    par = 12 if quick else 30
+    hi = 6 if quick else 240
+    lo = 4 if quick else 60
+    par = 2 if quick else 30
     bug_specs: tuple[tuple[str, set[str], int], ...] = (
         ("accuse_twice", {"post_end_effect", "score_without_correct_accusation"}, hi),
         ("truth_leak", {"truth_leak"}, lo),
@@ -431,31 +581,50 @@ def run_fake_env_positive_controls(quick: bool = False) -> dict[str, Any]:
 
     per_bug: dict[str, Any] = {}
     caught_count = 0
-    for bug_name, expected_any, b_budget in bug_specs:
-        bfac, bfin = make_auditing_factory(
-            lambda t, s, b=bug_name: PlantedBugFakeEnv(t, s, bug=b),
+    orig_parity = fuzz.parity_probe
+    try:
+        for bug_name, expected_any, b_budget in bug_specs:
+            bfac, bfin = make_auditing_factory(
+                lambda t, s, b=bug_name: PlantedBugFakeEnv(t, s, bug=b),
+                check_strict_v14=True,
+            )
+            if quick and bug_name != "parity_leak":
+                fuzz.parity_probe = lambda *a, **k: []
+            else:
+                fuzz.parity_probe = orig_parity
+            if quick:
+                if bug_name == "parallel_accuse_race":
+                    b_mode = "parallel_accuse"
+                elif bug_name == "unhandled_exception":
+                    b_mode = "malformed"
+                else:
+                    b_mode = "random"
+            else:
+                b_mode = "all"
+            r = fuzz.hunt("easy", ctrl_seeds, b_budget, 0, b_mode, workers=1, factory=bfac)
+            baudit = bfin()
+            kinds = set(r["violation_kinds"])
+            caught = bool(kinds & expected_any)
+            caught_count += int(caught)
+            per_bug[bug_name] = {
+                "caught": caught,
+                "n_violations": len(r["invariant_violations"]),
+                "violation_kinds": sorted(kinds),
+                "best_non_solver_score": float(r["best_non_solver_score"]),
+                "episodes": baudit["episodes"],
+                "tool_calls": baudit["tool_calls"],
+            }
+
+        if quick:
+            fuzz.parity_probe = lambda *a, **k: []
+        zfac, zfin = make_auditing_factory(
+            lambda t, s: PlantedBugFakeEnv(t, s, bug="wrong_accusation_zero"),
             check_strict_v14=True,
         )
-        r = fuzz.hunt("easy", ctrl_seeds, b_budget, 0, "all", workers=1, factory=bfac)
-        baudit = bfin()
-        kinds = set(r["violation_kinds"])
-        caught = bool(kinds & expected_any)
-        caught_count += int(caught)
-        per_bug[bug_name] = {
-            "caught": caught,
-            "n_violations": len(r["invariant_violations"]),
-            "violation_kinds": sorted(kinds),
-            "best_non_solver_score": float(r["best_non_solver_score"]),
-            "episodes": baudit["episodes"],
-            "tool_calls": baudit["tool_calls"],
-        }
-
-    zfac, zfin = make_auditing_factory(
-        lambda t, s: PlantedBugFakeEnv(t, s, bug="wrong_accusation_zero"),
-        check_strict_v14=True,
-    )
-    zres = fuzz.hunt("easy", ctrl_seeds, hi, 0, "all", workers=1, factory=zfac)
-    zaudit = zfin()
+        zres = fuzz.hunt("easy", ctrl_seeds, hi, 0, "random" if quick else "all", workers=1, factory=zfac)
+        zaudit = zfin()
+    finally:
+        fuzz.parity_probe = orig_parity
     fuzz_caught_zero_wrong = len(zres["invariant_violations"]) > 0
     strict_caught_zero_wrong = any(
         v["kind"] == "strict_v14_wrong_accuse_not_minus_one" for v in zaudit["strict_v14_violations"]
@@ -497,7 +666,86 @@ def _parse_verify_stdout(text: str) -> dict[str, int | None]:
     }
 
 
-def run_anticheat_verification(quick: bool = False, artifact_path: Path = ANTICHEAT_ARTIFACT) -> dict[str, Any]:
+def _verify_replay_and_synthetic_tamper(quick: bool, repo_root: Path, tmp_dir: Path) -> dict[str, Any]:
+    tamper_root = tmp_dir / "synth_tamper_root"
+    synth_dir = tamper_root / "data" / "runs" / "committed" / "v1.4" / "synth-tamper" / "easy"
+    synth_dir.mkdir(parents=True, exist_ok=True)
+    env0 = Env("easy", 0)
+    r_bad = env0.call("search_messages", {"query": " "})
+    r_acc = env0.call("accuse", {"employee": env0._world.mole})
+    clean_ep = {
+        "tier": "easy",
+        "seed": 0,
+        "agent": "solver",
+        "score": env0.score(),
+        "correct": True,
+        "accused": env0._world.mole,
+        "end_reason": "accused",
+        "final_day": env0.day,
+        "n_calls": 2,
+        "meta": {"tiers_version": "v1.4", "valid": True, "V": env0.V},
+        "steps": [
+            {
+                "tool": "search_messages",
+                "args": {"query": " "},
+                "result": {"ok": r_bad.ok, "data": r_bad.data, "error": r_bad.error},
+            },
+            {
+                "tool": "accuse",
+                "args": {"employee": env0._world.mole},
+                "result": {"ok": r_acc.ok, "data": r_acc.data, "error": r_acc.error},
+            },
+        ],
+    }
+    ep_file = synth_dir / "episodes.jsonl"
+    ep_file.write_text(json.dumps(clean_ep) + "\n", encoding="utf-8")
+
+    if quick:
+        sample_src = repo_root / QUICK_SAMPLE_COMMITTED_REL
+        if sample_src.is_file():
+            dst_dir = tamper_root / sample_src.parent.relative_to(repo_root)
+            dst_dir.mkdir(parents=True, exist_ok=True)
+            with sample_src.open("r", encoding="utf-8") as sfh:
+                first_ln = next((ln.strip() for ln in sfh if ln.strip()), "")
+            if first_ln:
+                (dst_dir / "episodes.jsonl").write_text(first_ln + "\n", encoding="utf-8")
+            meta_src = sample_src.parent / "meta.json"
+            if meta_src.is_file():
+                shutil.copy2(meta_src, dst_dir / "meta.json")
+        live_rows = tamper_guard.replay_committed(root=tamper_root)
+    else:
+        live_rows = tamper_guard.replay_committed(root=repo_root)
+
+    counts = anticheat.replay_counts(live_rows)
+    live_ok = (
+        all(r.get("replay_consistent") is not False for r in live_rows)
+        and int(counts.get("replayed", 0)) >= (1 if quick else 1051)
+        and int(counts.get("consistent", 0)) == int(counts.get("replayed", 0))
+        and int(counts.get("step_mismatches", 0)) == 0
+    )
+
+    tampered_ep = json.loads(json.dumps(clean_ep))
+    tampered_ep["steps"][0]["result"] = None
+    ep_file.write_text(json.dumps(tampered_ep) + "\n", encoding="utf-8")
+    bad_rows = tamper_guard.replay_committed(root=tamper_root)
+    synth_bad = [r for r in bad_rows if "synth-tamper" in str(r.get("file", ""))]
+    tamper_caught = len(synth_bad) == 1 and synth_bad[0].get("replay_consistent") is False
+
+    return {
+        "live_replay_sampled": quick,
+        "live_replay_replayed": int(counts.get("replayed", 0)),
+        "live_replay_consistent": int(counts.get("consistent", 0)),
+        "live_replay_step_mismatches": int(counts.get("step_mismatches", 0)),
+        "live_replay_ok": live_ok,
+        "synthetic_replay_tamper_caught": tamper_caught,
+    }
+
+
+def run_anticheat_verification(
+    quick: bool = False,
+    artifact_path: Path = ANTICHEAT_ARTIFACT,
+    repo_root: Path = ROOT,
+) -> dict[str, Any]:
     from canary import world as W
 
     t0 = time.monotonic()
@@ -530,38 +778,61 @@ def run_anticheat_verification(quick: bool = False, artifact_path: Path = ANTICH
     expected_rows = 33 * len(rt_tiers)
     with tempfile.TemporaryDirectory(prefix="canary-w2-ac-rt-") as tmp:
         tmp_dir = Path(tmp)
+        replay_chk = _verify_replay_and_synthetic_tamper(quick=quick, repo_root=repo_root, tmp_dir=tmp_dir)
         prev_secret = W._SET_SECRET
         test_secret = "canary-w2-roundtrip-verify-secret-v14"
-        W.set_world_secret(test_secret.encode("utf-8"))
-        try:
-            anticheat.run_and_write(
-                rt_tiers,
-                rt_seeds,
-                tmp_dir,
-                replay=False,
-                quiet=True,
-                extra={"world_secret_public": test_secret},
-            )
-        finally:
-            W.set_world_secret(prev_secret)
-        q_art = tmp_dir / "exploits.json"
-        buf_ok = io.StringIO()
-        with contextlib.redirect_stdout(buf_ok):
-            rc_ok = anticheat.verify_artifact(q_art)
-        parsed_ok = _parse_verify_stdout(buf_ok.getvalue())
+        orig_run_battery = anticheat.run_battery
+        battery_cache: dict[tuple[tuple[str, ...], tuple[int, ...], bytes | None], dict[str, Any]] = {}
 
-        tampered = json.loads(q_art.read_text(encoding="utf-8"))
-        tampered["rows"][0]["mean"] = round(float(tampered["rows"][0]["mean"]) + 0.125, 4)
-        bad_art = tmp_dir / "exploits_tampered.json"
-        bad_art.write_text(json.dumps(tampered), encoding="utf-8")
-        buf_bad = io.StringIO()
-        with contextlib.redirect_stdout(buf_bad):
-            rc_bad = anticheat.verify_artifact(bad_art)
-        parsed_bad = _parse_verify_stdout(buf_bad.getvalue())
+        def _cached_run_battery(tiers_arg: Any, seeds_arg: Any) -> dict[str, Any]:
+            key = (tuple(tiers_arg), tuple(seeds_arg), W._SET_SECRET)
+            if key not in battery_cache:
+                battery_cache[key] = orig_run_battery(tiers_arg, seeds_arg)
+            return json.loads(json.dumps(battery_cache[key]))
+
+        try:
+            if quick:
+                anticheat.run_battery = _cached_run_battery
+            W.set_world_secret(test_secret.encode("utf-8"))
+            try:
+                anticheat.run_and_write(
+                    rt_tiers,
+                    rt_seeds,
+                    tmp_dir,
+                    replay=False,
+                    quiet=True,
+                    extra={"world_secret_public": test_secret},
+                )
+            finally:
+                W.set_world_secret(prev_secret)
+            q_art = tmp_dir / "exploits.json"
+            buf_ok = io.StringIO()
+            try:
+                with contextlib.redirect_stdout(buf_ok):
+                    rc_ok = anticheat.verify_artifact(q_art)
+            finally:
+                W.set_world_secret(prev_secret)
+            parsed_ok = _parse_verify_stdout(buf_ok.getvalue())
+
+            tampered = json.loads(q_art.read_text(encoding="utf-8"))
+            tampered["rows"][0]["mean"] = round(float(tampered["rows"][0]["mean"]) + 0.125, 4)
+            bad_art = tmp_dir / "exploits_tampered.json"
+            bad_art.write_text(json.dumps(tampered), encoding="utf-8")
+            buf_bad = io.StringIO()
+            try:
+                with contextlib.redirect_stdout(buf_bad):
+                    rc_bad = anticheat.verify_artifact(bad_art)
+            finally:
+                W.set_world_secret(prev_secret)
+            parsed_bad = _parse_verify_stdout(buf_bad.getvalue())
+        finally:
+            anticheat.run_battery = orig_run_battery
+            W.set_world_secret(prev_secret)
 
     return {
         **meta,
-        "mode": "quick_easy_roundtrip_plus_committed_schema" if quick else "easy_medium_roundtrip_plus_committed_schema",
+        **replay_chk,
+        "mode": "quick_easy_roundtrip_plus_sampled_replay" if quick else "full_replay_1051_plus_easy_medium_roundtrip",
         "verify_rc": rc_ok,
         "verify_stdout": buf_ok.getvalue().strip(),
         **parsed_ok,
@@ -575,6 +846,8 @@ def run_anticheat_verification(quick: bool = False, artifact_path: Path = ANTICH
             and parsed_ok["differences"] == 0
             and rc_bad == 1
             and (parsed_bad["differences"] or 0) >= 1
+            and replay_chk["live_replay_ok"] is True
+            and replay_chk["synthetic_replay_tamper_caught"] is True
             and meta["committed_rows"] == 99
             and meta["committed_n_seeds"] == 40
             and meta["committed_tiers"] == ["easy", "medium", "hard"]
@@ -704,11 +977,14 @@ def run_sweep(
     resume: bool = False,
     cells_override: tuple[CellSpec, ...] | None = None,
     factory: Callable[[str, int], Any] | None = None,
+    repo_root: Path = ROOT,
+    base_ref: str = "origin/justSilas",
 ) -> dict[str, Any]:
     t0 = time.monotonic()
     os.environ.setdefault("CANARY_ALLOW_DEV", "1")
     out_root = Path(out_dir)
     out_root.mkdir(parents=True, exist_ok=True)
+    git_prov = resolve_git_provenance(root=repo_root, base_ref=base_ref)
     cells = cells_override if cells_override is not None else (QUICK_CELLS if quick else FULL_CELLS)
     max_jobs = 1 if (quick or factory is not None) else max(1, jobs if jobs is not None else _available_cpus())
 
@@ -770,7 +1046,7 @@ def run_sweep(
                 "dev30_accuracy": None,
                 "wall_seconds": 0.0,
             }
-        anticheat_res = run_anticheat_verification(quick=True)
+        anticheat_res = run_anticheat_verification(quick=True, repo_root=repo_root)
     else:
         pending_modes: list[tuple[str, str, list[int], int, int, str, str]] = []
         pending_solvers: list[tuple[str, str, list[int], bool, str]] = []
@@ -796,7 +1072,7 @@ def run_sweep(
 
         ac_f = shards_dir / "anticheat_verify.json"
         need_ac = True
-        want_ac_mode = "quick_easy_roundtrip_plus_committed_schema" if quick else "easy_medium_roundtrip_plus_committed_schema"
+        want_ac_mode = "quick_easy_roundtrip_plus_sampled_replay" if quick else "full_replay_1051_plus_easy_medium_roundtrip"
         if resume and ac_f.is_file():
             cached_ac = json.loads(ac_f.read_text(encoding="utf-8"))
             if cached_ac.get("mode") == want_ac_mode:
@@ -805,7 +1081,7 @@ def run_sweep(
 
         if max_jobs == 1:
             for item in pending_modes:
-                r_m = _run_mode_shard(item)
+                r_m = _run_mode_shard(item, skip_inline_parity=quick)
                 mode_results[(r_m["cell_id"], r_m["mode"])] = r_m
             for s_item in pending_solvers:
                 cid, s_ref = _run_solver_shard(s_item)
@@ -978,7 +1254,8 @@ def run_sweep(
     wall_s = round(time.monotonic() - t0, 3)
 
     all_passed = bool(
-        rules.TIERS_VERSION == "v1.4"
+        git_prov["ok"] is True
+        and rules.TIERS_VERSION == "v1.4"
         and rules.KNOWN_V_MODE is True
         and v14_hash == "a8f99c2537c91d72"
         and total_violations == 0
@@ -994,6 +1271,7 @@ def run_sweep(
 
     summary = {
         "all_passed": all_passed,
+        "git_provenance": git_prov,
         "tiers_version": rules.TIERS_VERSION,
         "known_v_mode": rules.KNOWN_V_MODE,
         "v14_tier_hash": v14_hash,

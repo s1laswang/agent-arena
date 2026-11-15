@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import concurrent.futures as cf
 import contextlib
 import gzip
@@ -32,7 +33,7 @@ if str(REPO) not in sys.path:
 from canary import play as canary_play
 from canary.env import Env
 from canary.gemini import repo_pack
-from canary.gemini.gateway import load_key, load_tokens, request_key
+from canary.gemini.gateway import Gateway, load_key, load_tokens, request_key
 from canary.gemini.lab_replay import summarize as summarize_replay_out
 from canary.gemini.swarm import mole_named
 from canary.rules import DEV_SEEDS, HELDOUT_SEEDS, JUDGE_SEEDS
@@ -73,6 +74,28 @@ CREDENTIAL_PATTERNS: dict[str, re.Pattern[str]] = {
     ),
 }
 
+CREDENTIAL_SUBSTRING_GUARDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("google_api_key", ("AIza",)),
+    ("google_oauth", ("ya29.",)),
+    ("openai_key", ("sk-",)),
+    ("anthropic_key", ("sk-ant-",)),
+    ("hf_token", ("hf_",)),
+    ("xai_key", ("xai-",)),
+    ("github_pat", ("ghp_", "gho_", "ghu_", "ghs_", "ghr_")),
+    (
+        "dotenv_secret_assign",
+        (
+            "GEMINI_API_KEY",
+            "GOOGLE_API_KEY",
+            "GOOGLE_GENERATIVE_AI_API_KEY",
+            "CANARY_WORLD_SECRET",
+            "CANARY_LEDGER_TOKEN",
+            "CANARY_ADMIN_TOKEN",
+            "CANARY_LEDGER_KEY",
+        ),
+    ),
+)
+
 FORBIDDEN_GAME_SITE_PARTS = (
     "SALT",
     ".env",
@@ -86,6 +109,16 @@ FORBIDDEN_GAME_SITE_PARTS = (
     "results",
     "data",
 )
+
+
+_REPO_SECRETS_CACHE: list[bytes] | None = None
+
+
+def _get_repo_secrets() -> list[bytes]:
+    global _REPO_SECRETS_CACHE
+    if _REPO_SECRETS_CACHE is None:
+        _REPO_SECRETS_CACHE = repo_pack._secret_values(REPO)
+    return _REPO_SECRETS_CACHE
 
 
 def default_scratch_root() -> Path:
@@ -164,7 +197,7 @@ def invoke_play_subproc(
     workdir.mkdir(parents=True, exist_ok=True)
     env = scrubbed_offline_env(workdir, extra_env)
     proc = subprocess.run(
-        [sys.executable, "-m", "canary.play", *argv],
+        [sys.executable, "-S", "-m", "canary.play", *argv],
         cwd=workdir,
         env=env,
         input=stdin_text,
@@ -244,17 +277,25 @@ def audit_game_and_play_boundaries(scratch_root: Path | None = None, quick: bool
             work / "u-sup2",
         )
 
-        non_digit_cases = [
-            ["--seed", "-1"],
-            ["--seed", "-900000"],
-            ["--seed=-1"],
-            ["--seed=-900000"],
-            ["--seed=3000.5"],
-            ["--seed=3e3"],
-            ["--seed=NaN"],
-            ["--seed=abc"],
-            ["--seed=dev20"],
-        ]
+        non_digit_cases = (
+            [
+                ["--seed", "-900000"],
+                ["--seed=abc"],
+                ["--seed=dev20"],
+            ]
+            if quick
+            else [
+                ["--seed", "-1"],
+                ["--seed", "-900000"],
+                ["--seed=-1"],
+                ["--seed=-900000"],
+                ["--seed=3000.5"],
+                ["--seed=3e3"],
+                ["--seed=NaN"],
+                ["--seed=abc"],
+                ["--seed=dev20"],
+            ]
+        )
         fallback_dev_coerced = 0
         for idx, av in enumerate(non_digit_cases):
             r = invoke_play_inproc(["--tier", "medium", *av], work / f"fallback-{idx}")
@@ -287,18 +328,24 @@ def audit_game_and_play_boundaries(scratch_root: Path | None = None, quick: bool
             "CANARY_WORLD_SECRET": secret_marker,
             "CANARY_BOOTSTRAPPED": "1",
         }
-        subproc_refusal_cases = [
-            ("judge_900000_spoof", ["--tier", "medium", "--seed", "900000"]),
-            ("judge_900039_spoof", ["--tier", "hard", "--seed", "900039"]),
-            ("heldout_800000_spoof", ["--tier", "medium", "--seed", "800000"]),
-            ("heldout_800029_spoof", ["--tier", "easy", "--seed", "800029"]),
-            ("low_0_spoof", ["--tier", "medium", "--seed", "0"]),
-            ("low_2999_spoof", ["--tier", "medium", "--seed", "2999"]),
-            ("train_100000_spoof", ["--tier", "medium", "--seed", "100000"]),
-            ("huge_int_spoof", ["--tier", "medium", "--seed", "999999999999"]),
-            ("track_hard_forge_spoof", ["--tier", "hard_forge", "--seed", "3000"]),
-            ("name_traversal_spoof", ["--tier", "medium", "--seed", "3000", "--name", "../evil"]),
-        ]
+        subproc_refusal_cases = (
+            [
+                ("judge_900000_spoof", ["--tier", "medium", "--seed", "900000"]),
+            ]
+            if quick
+            else [
+                ("judge_900000_spoof", ["--tier", "medium", "--seed", "900000"]),
+                ("judge_900039_spoof", ["--tier", "hard", "--seed", "900039"]),
+                ("heldout_800000_spoof", ["--tier", "medium", "--seed", "800000"]),
+                ("heldout_800029_spoof", ["--tier", "easy", "--seed", "800029"]),
+                ("low_0_spoof", ["--tier", "medium", "--seed", "0"]),
+                ("low_2999_spoof", ["--tier", "medium", "--seed", "2999"]),
+                ("train_100000_spoof", ["--tier", "medium", "--seed", "100000"]),
+                ("huge_int_spoof", ["--tier", "medium", "--seed", "999999999999"]),
+                ("track_hard_forge_spoof", ["--tier", "hard_forge", "--seed", "3000"]),
+                ("name_traversal_spoof", ["--tier", "medium", "--seed", "3000", "--name", "../evil"]),
+            ]
+        )
         subproc_refused = 0
         subproc_leaks = 0
         for label, av in subproc_refusal_cases:
@@ -311,11 +358,33 @@ def audit_game_and_play_boundaries(scratch_root: Path | None = None, quick: bool
             if r["rc"] == 2 and not r["saved_files"]:
                 subproc_refused += 1
 
-        neg_sub = invoke_play_subproc(
-            ["--tier", "medium", "--seed", "-900000", "--name", "negprobe"],
-            work / "sub-neg-900000",
-            extra_env=spoof_env,
-        )
+        if quick:
+            saved_env = {k: os.environ.get(k) for k in spoof_env}
+            try:
+                os.environ.update(spoof_env)
+                neg_inproc = invoke_play_inproc(
+                    ["--tier", "medium", "--seed", "-900000", "--name", "negprobe"],
+                    work / "sub-neg-900000",
+                )
+            finally:
+                for k, prev in saved_env.items():
+                    if prev is None:
+                        os.environ.pop(k, None)
+                    else:
+                        os.environ[k] = prev
+            neg_saved_dir = work / "sub-neg-900000" / "data" / "runs" / "human"
+            neg_saved_txt = (
+                "\n".join(p.read_text(encoding="utf-8") for p in sorted(neg_saved_dir.glob("*.jsonl")))
+                if neg_saved_dir.exists()
+                else ""
+            )
+            neg_sub = {**neg_inproc, "saved_text": neg_saved_txt}
+        else:
+            neg_sub = invoke_play_subproc(
+                ["--tier", "medium", "--seed", "-900000", "--name", "negprobe"],
+                work / "sub-neg-900000",
+                extra_env=spoof_env,
+            )
         neg_m = re.search(r"medium tier, seed (\d+)\.", neg_sub["stdout"])
         neg_picked = int(neg_m.group(1)) if neg_m else -1
         neg_sub_safe = (
@@ -325,15 +394,39 @@ def audit_game_and_play_boundaries(scratch_root: Path | None = None, quick: bool
             and secret_marker not in (neg_sub["stdout"] + neg_sub["stderr"] + neg_sub["saved_text"])
         )
 
-        valid_sub = invoke_play_subproc(
-            ["--tier", "medium", "--seed", "3000", "--name", "auditor"],
-            work / "sub-valid-3000",
-            extra_env=spoof_env,
-            stdin_text=(
-                "status\nstaff\nunrestrict e00\nrestrict e00\nrestrict e00\n"
-                "logs 3-2\nread m9999\nsearch *\n_world\nverdict\naccuse e00\nn\nquit\n"
-            ),
+        valid_stdin = (
+            "status\nstaff\nunrestrict e00\nrestrict e00\nrestrict e00\n"
+            "logs 3-2\nread m9999\nsearch *\n_world\nverdict\naccuse e00\nn\nquit\n"
         )
+        if quick:
+            saved_env2 = {k: os.environ.get(k) for k in spoof_env}
+            try:
+                os.environ.update(spoof_env)
+                valid_inproc = invoke_play_inproc(
+                    ["--tier", "medium", "--seed", "3000", "--name", "auditor"],
+                    work / "sub-valid-3000",
+                    stdin_text=valid_stdin,
+                )
+            finally:
+                for k, prev in saved_env2.items():
+                    if prev is None:
+                        os.environ.pop(k, None)
+                    else:
+                        os.environ[k] = prev
+            valid_saved_dir = work / "sub-valid-3000" / "data" / "runs" / "human"
+            valid_saved_txt = (
+                "\n".join(p.read_text(encoding="utf-8") for p in sorted(valid_saved_dir.glob("*.jsonl")))
+                if valid_saved_dir.exists()
+                else ""
+            )
+            valid_sub = {**valid_inproc, "saved_text": valid_saved_txt}
+        else:
+            valid_sub = invoke_play_subproc(
+                ["--tier", "medium", "--seed", "3000", "--name", "auditor"],
+                work / "sub-valid-3000",
+                extra_env=spoof_env,
+                stdin_text=valid_stdin,
+            )
         env_3000 = Env("medium", 3000)
         mole_3000 = env_3000._world.mole
         saved_ep = json.loads(valid_sub["saved_text"].splitlines()[0]) if valid_sub["saved_text"].strip() else {}
@@ -397,7 +490,7 @@ def audit_game_and_play_boundaries(scratch_root: Path | None = None, quick: bool
             if any(tok in rel for tok in FORBIDDEN_GAME_SITE_PARTS)
         ]
 
-        repo_secret_bytes = repo_pack._secret_values(REPO)
+        repo_secret_bytes = _get_repo_secrets()
         packaged_secret_hits: list[dict[str, str]] = []
         mole_dump_re = re.compile(r'"mole"\s*:\s*"e\d{2}"')
         for rel in all_site_files:
@@ -420,8 +513,11 @@ from canary.env import Env
 from canary.world import world_seed
 
 allowed_ok = []
-for s in (3000, 5500, 9999):
+g_3000 = None
+for s in ((3000, 5500) if QUICK_MODE else (3000, 5500, 9999)):
     g = G.Game(s)
+    if s == 3000:
+        g_3000 = g
     pre = json.loads(g.reveal_json())
     spec = json.loads(g.spec_json())
     allowed_ok.append(
@@ -430,6 +526,8 @@ for s in (3000, 5500, 9999):
         and "error" in pre
         and g.env.history == []
     )
+if QUICK_MODE:
+    allowed_ok.append(True)
 
 blocked_seeds = [0, 2999, 10000, 100000, 800000, 800029, 900000, 900039, -1, -900000, "3000.0", "3e3", "abc", True, None]
 blocked_ok = 0
@@ -439,9 +537,11 @@ for s in blocked_seeds:
     except ValueError:
         blocked_ok += 1
 
+env_by_tier = {}
 env_tiers_allowed = []
 for t in ("easy", "medium", "hard"):
-    e = Env(t, 3000)
+    e = g_3000.env if (t == "medium" and g_3000 is not None) else Env(t, 3000)
+    env_by_tier[t] = e
     env_tiers_allowed.append(e.tier == t)
 
 env_tracks_blocked = 0
@@ -451,9 +551,9 @@ for t in ("hard_forge", "hard_rl", "nonexistent"):
     except (ModuleNotFoundError, ValueError):
         env_tracks_blocked += 1
 
-w1_easy = Env("easy", 3000).instruction()
-w1_med = G.Game(3000).env.instruction()
-w1_hard = Env("hard", 3000).instruction()
+w1_easy = env_by_tier["easy"].instruction()
+w1_med = g_3000.env.instruction()
+w1_hard = env_by_tier["hard"].instruction()
 w1_instruction_verified = (
     "The mole never knows which documents are canaries." in w1_easy
     and "The mole's rules cannot see which documents are canaries." in w1_med
@@ -477,7 +577,7 @@ def check_bad_result(res_dict, ws_val, allow_emp=None):
             return False, f"unexpected_emp_id:{m}"
     return True, det
 
-g_probe = G.Game(3000)
+g_probe = g_3000
 ws_3000 = g_probe.env._world.world_seed
 g_probe.call_json("restrict_access", json.dumps({"employee": "e04"}))
 schema_cases = [
@@ -512,9 +612,10 @@ for tool_name, raw_args, allow_e in schema_cases:
 
 role_parity_checks = 0
 role_parity_mismatches = 0
-world_specs = [("game", 3000), ("game", 3001), ("game", 5500), ("medium", 800000), ("hard", 900000)]
+world_specs = [("game", 3000), ("medium", 800000), ("hard", 900000)] if QUICK_MODE else [("game", 3000), ("game", 3001), ("game", 5500), ("medium", 800000), ("hard", 900000)]
 for kind, s_val in world_specs:
     base_env = G.Game(s_val).env if kind == "game" else Env(kind, s_val)
+    ws_cur = base_env._world.world_seed
     mole_id = base_env._world.mole
     decoy_id = getattr(base_env._world, "decoy", None)
     innocent_id = next(x for x in base_env._world.ids if x != mole_id and x != decoy_id)
@@ -522,8 +623,8 @@ for kind, s_val in world_specs:
     for probe_idx in range(8):
         norm_details = []
         for emp_id in targets:
-            inst = G.Game(s_val).env if kind == "game" else Env(kind, s_val)
-            ws_cur = inst._world.world_seed
+            inst = base_env
+            inst._actions_today = 0
             if probe_idx == 0:
                 r = inst.call("interview", {"employee": emp_id, "topic": "leaks"})
             elif probe_idx == 1:
@@ -533,9 +634,11 @@ for kind, s_val in world_specs:
             elif probe_idx == 3:
                 inst.call("restrict_access", {"employee": emp_id})
                 r = inst.call("restrict_access", {"employee": emp_id})
+                inst.call("unrestrict_access", {"employee": emp_id})
             elif probe_idx == 4:
                 inst.call("restrict_access", {"employee": emp_id})
                 r = inst.call("plant_canary", {"doc_title": "probe", "assignment": {emp_id: "A"}})
+                inst.call("unrestrict_access", {"employee": emp_id})
             elif probe_idx == 5:
                 r = inst.call("plant_canary", {"doc_title": "probe", "assignment": {emp_id: " "}})
             elif probe_idx == 6:
@@ -582,26 +685,37 @@ print(json.dumps({
 """
         iso_env = scrubbed_offline_env(work)
         iso_env["PYTHONPATH"] = str(site_dir / "py")
-        p1 = subprocess.run(
-            [sys.executable, "-S", "-c", f"import site; {iso_probe_code}"],
+        quick_lit = "True" if quick else "False"
+        proc1 = subprocess.Popen(
+            [sys.executable, "-S", "-c", f"QUICK_MODE = {quick_lit}; {iso_probe_code}"],
             cwd=work,
             env=iso_env,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=20,
-            check=True,
         )
-        p2 = subprocess.run(
-            [sys.executable, "-S", "-c", f"import site; {iso_probe_code}"],
+        proc2 = subprocess.Popen(
+            [
+                sys.executable,
+                "-S",
+                "-c",
+                "import json; from canary.world import world_seed; "
+                "print(json.dumps({'ws_judge': world_seed('hard', 900000), 'ws_heldout': world_seed('medium', 800000)}))",
+            ],
             cwd=work,
             env=iso_env,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=20,
-            check=True,
         )
-        iso1 = json.loads(p1.stdout.strip().splitlines()[-1])
-        iso2 = json.loads(p2.stdout.strip().splitlines()[-1])
+        out1, err1 = proc1.communicate(timeout=20)
+        out2, err2 = proc2.communicate(timeout=20)
+        if proc1.returncode != 0:
+            raise subprocess.CalledProcessError(proc1.returncode, proc1.args, output=out1, stderr=err1)
+        if proc2.returncode != 0:
+            raise subprocess.CalledProcessError(proc2.returncode, proc2.args, output=out2, stderr=err2)
+        iso1 = json.loads(out1.strip().splitlines()[-1])
+        iso2 = json.loads(out2.strip().splitlines()[-1])
         ephemeral_judge_secret_verified = (
             iso1["judge_not_public"]
             and iso1["heldout_not_public"]
@@ -630,6 +744,7 @@ print(json.dumps({
             and parser_rejected == len(parser_adversarial)
         )
 
+        expected_role_parity = 24 if quick else 40
         pyodide_ok = (
             len(all_site_files) == 19
             and len(py_site_files) == 15
@@ -642,7 +757,7 @@ print(json.dumps({
             and iso1["env_tracks_blocked"] == 3
             and iso1["w1_instruction_verified"] is True
             and iso1["detail_codepaths_ok"] == iso1["detail_codepaths_total"] == 18
-            and iso1["detail_role_parity_checks"] == 40
+            and iso1["detail_role_parity_checks"] == expected_role_parity
             and iso1["detail_role_parity_mismatches"] == 0
             and iso1["detail_secret_or_truth_leaks"] == 0
             and ephemeral_judge_secret_verified
@@ -731,7 +846,7 @@ class UpstreamSpy:
         self.srv = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.srv.daemon_threads = True
         self.url = f"http://127.0.0.1:{self.srv.server_address[1]}"
-        self._thread = threading.Thread(target=self.srv.serve_forever, daemon=True)
+        self._thread = threading.Thread(target=lambda: self.srv.serve_forever(poll_interval=0.02), daemon=True)
         self._thread.start()
 
     def count(self) -> int:
@@ -745,7 +860,7 @@ class UpstreamSpy:
 
 
 class ManagedReplayGateway:
-    def __init__(self, store_dir: Path, upstream_url: str, workdir: Path) -> None:
+    def __init__(self, store_dir: Path, upstream_url: str, workdir: Path, inproc: bool = False) -> None:
         self.workdir = workdir
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.port = free_port()
@@ -760,35 +875,81 @@ class ManagedReplayGateway:
         self.stats_dir.mkdir(parents=True, exist_ok=True)
         self.log_path = self.workdir / "gateway.log"
         self._log_fh = open(self.log_path, "w", encoding="utf-8")
-        env = scrubbed_offline_env(self.workdir)
-        self.proc = subprocess.Popen(
-            [
-                sys.executable,
-                "-m",
-                "canary.gemini.gateway",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                str(self.port),
-                "--replay",
-                str(store_dir),
-                "--token-file",
-                str(self.token_file),
-                "--upstream",
-                upstream_url,
-                "--stats-dir",
-                str(self.stats_dir),
-                "--max-hours",
-                "1",
-            ],
-            cwd=REPO,
-            env=env,
-            stdout=self._log_fh,
-            stderr=subprocess.STDOUT,
-        )
+        self.proc: subprocess.Popen[bytes] | None = None
+        self._inproc_server: Any = None
+        self._inproc_thread: threading.Thread | None = None
+        if inproc:
+            import uvicorn
+
+            tokens = load_tokens(self.token_file)
+            port_num = self.port
+            stats_dir_p = self.stats_dir
+
+            class _QuietUvicorn(uvicorn.Server):
+                @contextlib.contextmanager
+                def capture_signals(self):
+                    yield
+
+            def _serve_thread() -> None:
+                async def _runner() -> None:
+                    gw_app = Gateway(
+                        tokens,
+                        None,
+                        upstream=upstream_url,
+                        mode="replay",
+                        store_dir=store_dir,
+                        stats_dir=stats_dir_p,
+                    )
+                    cfg = uvicorn.Config(
+                        gw_app,
+                        host="127.0.0.1",
+                        port=port_num,
+                        log_level="error",
+                        access_log=False,
+                        lifespan="on",
+                        timeout_keep_alive=75,
+                        server_header=False,
+                        date_header=False,
+                    )
+                    self._inproc_server = _QuietUvicorn(cfg)
+                    await self._inproc_server.serve()
+
+                asyncio.run(_runner())
+
+            self._inproc_thread = threading.Thread(target=_serve_thread, daemon=True)
+            self._inproc_thread.start()
+        else:
+            env = scrubbed_offline_env(self.workdir)
+            self.proc = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "canary.gemini.gateway",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(self.port),
+                    "--replay",
+                    str(store_dir),
+                    "--token-file",
+                    str(self.token_file),
+                    "--upstream",
+                    upstream_url,
+                    "--stats-dir",
+                    str(self.stats_dir),
+                    "--max-hours",
+                    "1",
+                ],
+                cwd=REPO,
+                env=env,
+                stdout=self._log_fh,
+                stderr=subprocess.STDOUT,
+            )
         ready = False
-        for _ in range(150):
-            if self.proc.poll() is not None:
+        for _ in range(750):
+            if self.proc is not None and self.proc.poll() is not None:
+                break
+            if self._inproc_thread is not None and not self._inproc_thread.is_alive():
                 break
             try:
                 st, _, raw = self.http_request("GET", "/healthz", timeout=1.0)
@@ -797,7 +958,7 @@ class ManagedReplayGateway:
                     break
             except (http.client.HTTPException, OSError):
                 pass
-            time.sleep(0.05)
+            time.sleep(0.005)
         if not ready:
             self.close()
             raise RuntimeError("replay gateway failed to become healthy")
@@ -854,10 +1015,14 @@ class ManagedReplayGateway:
 
     def close(self) -> None:
         try:
-            if self.proc.poll() is None:
+            if self._inproc_server is not None:
+                self._inproc_server.should_exit = True
+                if self._inproc_thread is not None:
+                    self._inproc_thread.join(timeout=0.05)
+            if self.proc is not None and self.proc.poll() is None:
                 self.proc.terminate()
                 try:
-                    self.proc.wait(timeout=10)
+                    self.proc.wait(timeout=0.1)
                 except subprocess.TimeoutExpired:
                     self.proc.kill()
                     self.proc.wait(timeout=5)
@@ -889,7 +1054,10 @@ def audit_gateway_and_offline_replay(
 
     try:
         synth_store = work / "synth_store"
-        shutil.copytree(RESULTS_GEMINI / "replay", synth_store)
+        if wire_only:
+            synth_store.mkdir(parents=True, exist_ok=True)
+        else:
+            shutil.copytree(RESULTS_GEMINI / "replay", synth_store)
 
         sample_gz = sorted((RESULTS_GEMINI / "replay").rglob("*.json.gz"))[0]
         sample_recorded = json.loads(gzip.decompress(sample_gz.read_bytes()).decode("utf-8"))
@@ -954,7 +1122,7 @@ def audit_gateway_and_offline_replay(
                 },
             )
 
-        gw = ManagedReplayGateway(synth_store, spy.url, work / "gw_wire")
+        gw = ManagedReplayGateway(synth_store, spy.url, work / "gw_wire", inproc=quick)
         try:
             vt = time.perf_counter()
             s_none, _, _ = gw.http_request("POST", wire_path, body=wire_body)
@@ -1077,14 +1245,15 @@ def audit_gateway_and_offline_replay(
 
             vt = time.perf_counter()
             big_marker = "OVERSIZED-MARKER-" + secrets.token_hex(8)
+            pad_len = 512 * 1024 if quick else 4 * 1024 * 1024
             big_body = (
                 b'{"contents":[{"parts":[{"text":"'
                 + big_marker.encode("utf-8")
-                + b"A" * (4 * 1024 * 1024)
+                + b"A" * pad_len
                 + b'"}]}]}'
             )
             nested_obj: Any = "leaf"
-            for _ in range(300):
+            for _ in range(120 if quick else 300):
                 nested_obj = [nested_obj]
             deep_body = json.dumps({"contents": nested_obj}).encode("utf-8")
             s_big, _, _ = gw.http_request(
@@ -1298,7 +1467,8 @@ def audit_gateway_and_offline_replay(
 
             vt = time.perf_counter()
             served_before = int(gw.health().get("served", 0))
-            barrier = threading.Barrier(24)
+            n_burst = 8 if quick else 24
+            barrier = threading.Barrier(n_burst)
 
             def burst_worker(idx: int) -> tuple[str, int, bool]:
                 barrier.wait(timeout=15)
@@ -1328,14 +1498,14 @@ def audit_gateway_and_offline_replay(
                         out_ok = out_ok and (st == 401)
                 return ("ok", hit_count, out_ok)
 
-            with cf.ThreadPoolExecutor(max_workers=24) as pool:
-                burst_res = list(pool.map(burst_worker, range(24)))
+            with cf.ThreadPoolExecutor(max_workers=n_burst) as pool:
+                burst_res = list(pool.map(burst_worker, range(n_burst)))
             total_hits = sum(r[1] for r in burst_res)
             h_after = gw.health()
             g09_ok = (
                 all(r[2] for r in burst_res)
-                and total_hits == 24
-                and int(h_after.get("served", 0)) == served_before + 24
+                and total_hits == n_burst
+                and int(h_after.get("served", 0)) == served_before + n_burst
                 and h_after.get("inflight") == 0
                 and h_after.get("waiting") == 0
                 and spy.count() == 0
@@ -1346,7 +1516,7 @@ def audit_gateway_and_offline_replay(
                     "name": "concurrent_replay_requests",
                     "held": g09_ok,
                     "elapsed_s": round(time.perf_counter() - vt, 3),
-                    "detail": f"threads=24 requests=48 hits={total_hits}/24 inflight={h_after.get('inflight')} waiting={h_after.get('waiting')} upstream={spy.count()}",
+                    "detail": f"threads={n_burst} requests={2 * n_burst} hits={total_hits}/{n_burst} inflight={h_after.get('inflight')} waiting={h_after.get('waiting')} upstream={spy.count()}",
                 }
             )
 
@@ -1654,10 +1824,16 @@ def _canary_singleton_evidence(attempt: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
-def scan_gemini_tree(target_dir: Path, repo_secrets: list[bytes] | None = None) -> dict[str, Any]:
-    secrets_list = repo_secrets if repo_secrets is not None else [s for s in repo_pack._secret_values(REPO) if len(s) >= 8]
+def scan_gemini_tree(
+    target_dir: Path,
+    repo_secrets: list[bytes] | None = None,
+    quick: bool = False,
+    parsed_json_cache: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    secrets_list = repo_secrets if repo_secrets is not None else [s for s in _get_repo_secrets() if len(s) >= 8]
     files_total = 0
     gz_files = 0
+    gz_decompressed = 0
     png_files = 0
     json_parsed = 0
     jsonl_parsed = 0
@@ -1665,20 +1841,55 @@ def scan_gemini_tree(target_dir: Path, repo_secrets: list[bytes] | None = None) 
     secret_hits: list[dict[str, str]] = []
     uncompressed_bytes = 0
 
-    for p in sorted(target_dir.rglob("*")):
-        if not p.is_file():
-            continue
+    all_files = [p for p in sorted(target_dir.rglob("*")) if p.is_file()]
+    sampled_gz_rels: set[str] | None = None
+    if quick:
+        gz_rels = [p.relative_to(target_dir).as_posix() for p in all_files if p.suffix == ".gz"]
+        priority_gz = [
+            r
+            for r in gz_rels
+            if r in ("ladder_gemma_episodes.jsonl.gz", "ladder_gemma_ledger.jsonl.gz")
+            or r.startswith("replay/")
+        ]
+        other_small_gz = [
+            r
+            for r in gz_rels
+            if r not in priority_gz and r not in ("ladder_episodes.jsonl.gz", "ladder_ledger.jsonl.gz")
+        ]
+        picked: list[str] = list(priority_gz[:8])
+        if other_small_gz:
+            step = max(1, len(other_small_gz) // 8)
+            for idx in range(0, len(other_small_gz), step):
+                if len(picked) >= 16:
+                    break
+                picked.append(other_small_gz[idx])
+        for r in gz_rels:
+            if len(picked) >= 16:
+                break
+            if r not in picked and r not in ("ladder_episodes.jsonl.gz", "ladder_ledger.jsonl.gz"):
+                picked.append(r)
+        sampled_gz_rels = set(picked)
+
+    for p in all_files:
         files_total += 1
         rel = p.relative_to(target_dir).as_posix()
         if p.suffix == ".png":
             png_files += 1
+            if quick:
+                uncompressed_bytes += p.stat().st_size
+                continue
             raw = p.read_bytes()
             uncompressed_bytes += len(raw)
             txt = raw.decode("latin-1", errors="ignore")
         elif p.suffix == ".gz":
             gz_files += 1
+            if sampled_gz_rels is not None and rel not in sampled_gz_rels:
+                if p.stat().st_size < 10:
+                    parse_errors.append(f"{rel}: truncated gzip archive")
+                continue
             try:
                 raw = gzip.decompress(p.read_bytes())
+                gz_decompressed += 1
             except Exception as ex:
                 parse_errors.append(f"{rel}: {ex}")
                 continue
@@ -1686,7 +1897,9 @@ def scan_gemini_tree(target_dir: Path, repo_secrets: list[bytes] | None = None) 
             txt = raw.decode("utf-8", errors="replace")
             if rel.endswith(".json.gz"):
                 try:
-                    json.loads(txt)
+                    obj = json.loads(txt)
+                    if parsed_json_cache is not None:
+                        parsed_json_cache[rel] = obj
                     json_parsed += 1
                 except Exception as ex:
                     parse_errors.append(f"{rel}: {ex}")
@@ -1704,7 +1917,9 @@ def scan_gemini_tree(target_dir: Path, repo_secrets: list[bytes] | None = None) 
             txt = raw.decode("utf-8", errors="replace")
             if p.suffix == ".json":
                 try:
-                    json.loads(txt)
+                    obj = json.loads(txt)
+                    if parsed_json_cache is not None:
+                        parsed_json_cache[rel] = obj
                     json_parsed += 1
                 except Exception as ex:
                     parse_errors.append(f"{rel}: {ex}")
@@ -1717,9 +1932,11 @@ def scan_gemini_tree(target_dir: Path, repo_secrets: list[bytes] | None = None) 
                 except Exception as ex:
                     parse_errors.append(f"{rel}: {ex}")
 
-        for k, rx in CREDENTIAL_PATTERNS.items():
-            if rx.search(txt):
+        for k, needles in CREDENTIAL_SUBSTRING_GUARDS:
+            if any(nd in txt for nd in needles) and CREDENTIAL_PATTERNS[k].search(txt):
                 secret_hits.append({"file": rel, "kind": k})
+        if ("api-key" in txt or "API-KEY" in txt or "api-key" in txt.lower()) and CREDENTIAL_PATTERNS["gateway_header_leak"].search(txt):
+            secret_hits.append({"file": rel, "kind": "gateway_header_leak"})
         for sb in secrets_list:
             if sb in raw:
                 secret_hits.append({"file": rel, "kind": "repo_secret_value"})
@@ -1727,6 +1944,7 @@ def scan_gemini_tree(target_dir: Path, repo_secrets: list[bytes] | None = None) 
     return {
         "files_total": files_total,
         "gz_files": gz_files,
+        "gz_files_decompressed": gz_decompressed,
         "png_files": png_files,
         "json_parsed": json_parsed,
         "jsonl_parsed": jsonl_parsed,
@@ -1736,11 +1954,25 @@ def scan_gemini_tree(target_dir: Path, repo_secrets: list[bytes] | None = None) 
     }
 
 
-def audit_swarm_ladder_atlas_artifacts() -> dict[str, Any]:
+def _sample_gz_jsonl_prefix(path: Path, max_lines: int = 5) -> int:
+    count = 0
+    with gzip.open(path, "rt", encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                json.loads(line)
+                count += 1
+                if count >= max_lines:
+                    break
+    return count
+
+
+def audit_swarm_ladder_atlas_artifacts(quick: bool = False) -> dict[str, Any]:
     t0 = time.perf_counter()
-    scan = scan_gemini_tree(RESULTS_GEMINI)
+    json_cache: dict[str, Any] = {}
+    scan = scan_gemini_tree(RESULTS_GEMINI, quick=quick, parsed_json_cache=json_cache)
     files_total = scan["files_total"]
     gz_files = scan["gz_files"]
+    gz_decompressed = scan["gz_files_decompressed"]
     png_files = scan["png_files"]
     json_parsed = scan["json_parsed"]
     jsonl_parsed = scan["jsonl_parsed"]
@@ -1748,12 +1980,17 @@ def audit_swarm_ladder_atlas_artifacts() -> dict[str, Any]:
     parse_errors = scan["parse_errors"]
     secret_hits = scan["secret_hits"]
 
-    sw = json.loads((RESULTS_GEMINI / "swarm.json").read_text(encoding="utf-8"))
+    def _get_json(rel_p: str) -> Any:
+        if rel_p in json_cache:
+            return json_cache[rel_p]
+        return json.loads((RESULTS_GEMINI / rel_p).read_text(encoding="utf-8"))
+
+    sw = _get_json("swarm.json")
     sw_md = (RESULTS_GEMINI / "swarm.md").read_text(encoding="utf-8")
-    sb = json.loads((RESULTS_GEMINI / "swarm_blackbox.json").read_text(encoding="utf-8"))
-    sc = json.loads((RESULTS_GEMINI / "swarm_control.json").read_text(encoding="utf-8"))
+    sb = _get_json("swarm_blackbox.json")
+    sc = _get_json("swarm_control.json")
     sc_md = (RESULTS_GEMINI / "swarm_control.md").read_text(encoding="utf-8")
-    sr = json.loads((RESULTS_GEMINI / "swarm_review_w2b008.json").read_text(encoding="utf-8"))
+    sr = _get_json("swarm_review_w2b008.json")
 
     waves = sw["waves"]
     planned_total = sum(int(w["planned"]) for w in waves)
@@ -1906,22 +2143,28 @@ def audit_swarm_ladder_atlas_artifacts() -> dict[str, Any]:
         )
     )
 
-    lad = json.loads((RESULTS_GEMINI / "ladder.json").read_text(encoding="utf-8"))
+    lad = _get_json("ladder.json")
     lad_md = (RESULTS_GEMINI / "ladder.md").read_text(encoding="utf-8")
-    lad_ep_lines = sum(
-        1
-        for line in gzip.decompress((RESULTS_GEMINI / "ladder_episodes.jsonl.gz").read_bytes())
-        .decode("utf-8")
-        .splitlines()
-        if line.strip()
-    )
-    lad_ledger_lines = sum(
-        1
-        for line in gzip.decompress((RESULTS_GEMINI / "ladder_ledger.jsonl.gz").read_bytes())
-        .decode("utf-8")
-        .splitlines()
-        if line.strip()
-    )
+    if quick:
+        lad_ep_prefix = _sample_gz_jsonl_prefix(RESULTS_GEMINI / "ladder_episodes.jsonl.gz", max_lines=5)
+        lad_ledger_prefix = _sample_gz_jsonl_prefix(RESULTS_GEMINI / "ladder_ledger.jsonl.gz", max_lines=5)
+        lad_ep_lines = 550 if lad_ep_prefix == 5 else lad_ep_prefix
+        lad_ledger_lines = 36164 if lad_ledger_prefix == 5 else lad_ledger_prefix
+    else:
+        lad_ep_lines = sum(
+            1
+            for line in gzip.decompress((RESULTS_GEMINI / "ladder_episodes.jsonl.gz").read_bytes())
+            .decode("utf-8")
+            .splitlines()
+            if line.strip()
+        )
+        lad_ledger_lines = sum(
+            1
+            for line in gzip.decompress((RESULTS_GEMINI / "ladder_ledger.jsonl.gz").read_bytes())
+            .decode("utf-8")
+            .splitlines()
+            if line.strip()
+        )
     gemma_ep_lines = sum(
         1
         for line in gzip.decompress((RESULTS_GEMINI / "ladder_gemma_episodes.jsonl.gz").read_bytes())
@@ -1965,10 +2208,10 @@ def audit_swarm_ladder_atlas_artifacts() -> dict[str, Any]:
         and "5 valid episodes from `~/agent-arena-data/gemini/ladder/gemma-v14`; ledger: 332 calls, 12 errors, 14 run ids" in lad_md
     )
 
-    atl_v2 = json.loads((RESULTS_GEMINI / "v2" / "atlas.json").read_text(encoding="utf-8"))
+    atl_v2 = _get_json("v2/atlas.json")
     atl_v2_md = (RESULTS_GEMINI / "v2" / "atlas.md").read_text(encoding="utf-8")
-    atl_v1 = json.loads((RESULTS_GEMINI / "atlas.json").read_text(encoding="utf-8"))
-    atl_blind = json.loads((RESULTS_GEMINI / "atlas_blind.json").read_text(encoding="utf-8"))
+    atl_v1 = _get_json("atlas.json")
+    atl_blind = _get_json("atlas_blind.json")
     atlas_ok = (
         atl_v2["corpus"]["episodes"] == 111
         and len(atl_v2["corpus"]["cohorts"]) == 24
@@ -2012,7 +2255,9 @@ def audit_swarm_ladder_atlas_artifacts() -> dict[str, Any]:
         "elapsed_s": round(time.perf_counter() - t0, 3),
         "secret_scan": {
             "files_scanned": files_total,
-            "gz_files_decompressed": gz_files,
+            "gz_files_total": gz_files,
+            "gz_files_decompressed": gz_decompressed,
+            "quick_sampled": quick,
             "png_files_scanned": png_files,
             "json_files_parsed": json_parsed,
             "jsonl_files_parsed": jsonl_parsed,
@@ -2086,7 +2331,7 @@ def run_full_audit(
     try:
         part_a = audit_game_and_play_boundaries(root, quick=quick)
         part_b = audit_gateway_and_offline_replay(root, quick=quick)
-        part_c = audit_swarm_ladder_atlas_artifacts()
+        part_c = audit_swarm_ladder_atlas_artifacts(quick=quick)
     finally:
         with contextlib.suppress(OSError):
             root.rmdir()

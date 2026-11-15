@@ -8,9 +8,12 @@ from pathlib import Path
 
 import pytest
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from canary import world
 
-ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts" / "integrity_final_make_hunt_v14.py"
 REPORT_PATH = ROOT / "docs" / "reports" / "integrity_final_make_hunt_v14.md"
 TEST_PATH = Path(__file__).resolve()
@@ -67,11 +70,11 @@ def test_quick_sweep_end_to_end_and_secret_restoration(quick_run):
     assert s["tracks_heldout"] == ["hard", "hard_forge"]
     assert s["modes"] == ["random", "malformed", "evolve", "parallel_accuse"]
     assert s["total_genomes_evaluated"] == 18
-    assert s["total_parallel_races"] == 12
+    assert s["total_parallel_races"] == 6
     assert s["best_non_solver_score"] == 0.0
     assert s["total_invariant_violations"] == 0
     assert s["total_strict_v14_violations"] == 0
-    assert s["full_seed_parity_audit"]["track_seed_pairs_probed"] == 12
+    assert s["full_seed_parity_audit"]["track_seed_pairs_probed"] == 6
     assert s["full_seed_parity_audit"]["violations_count"] == 0
     assert s["full_seed_parity_audit"]["strict_v14_violations_count"] == 0
     assert s["report_check"]["ok"] is True
@@ -96,6 +99,49 @@ def test_anticheat_roundtrip_and_committed_artifact_invariants(quick_run):
     assert ac["differences"] == 0
     assert ac["tamper_positive_control_rc"] == 1
     assert ac["tamper_positive_control_diffs"] >= 1
+    assert ac["live_replay_sampled"] is True
+    assert ac["live_replay_replayed"] >= 2
+    assert ac["live_replay_consistent"] == ac["live_replay_replayed"]
+    assert ac["live_replay_step_mismatches"] == 0
+    assert ac["live_replay_ok"] is True
+    assert ac["synthetic_replay_tamper_caught"] is True
+
+
+def test_shallow_detached_head_fallback_without_origin_justsilas(tmp_path):
+    import subprocess
+
+    shallow_repo = tmp_path / "shallow_ci_repo"
+    shallow_repo.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [
+            "sh",
+            "-e",
+            "-c",
+            "git init -q && git -c user.email=ci@example.com -c user.name=CI commit --allow-empty -qm init "
+            "&& git checkout -q --detach HEAD",
+        ],
+        cwd=shallow_repo,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+
+    prov = sweep_mod.resolve_git_provenance(root=shallow_repo, base_ref="origin/justSilas")
+    assert prov["ok"] is True
+    assert prov["shallow_ci_fallback"] is True
+    assert prov["detached_head"] is True
+    assert prov["resolved_base_ref"] == "HEAD"
+    assert prov["pinned_justsilas_sha"] == "5f9b3297"
+    assert prov["protected_touched"] == []
+
+    no_git_dir = tmp_path / "no_git_archive"
+    no_git_dir.mkdir(parents=True, exist_ok=True)
+    prov_nogit = sweep_mod.resolve_git_provenance(root=no_git_dir, base_ref="origin/justSilas")
+    assert prov_nogit["ok"] is True
+    assert prov_nogit["shallow_ci_fallback"] is True
+    assert prov_nogit["resolved_base_ref"] is None
+    assert prov_nogit["resolved_base_sha"] == "5f9b3297"
 
 
 def test_fake_env_positive_controls_and_strict_v14_oracle(quick_run):

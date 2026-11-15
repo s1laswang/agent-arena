@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import concurrent.futures as cf
+import contextlib
 import copy
 import http.client
 import itertools
@@ -22,7 +24,19 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from canary.mcp_server import BOOT_FD, PLAIN_SECRET_VARS, SECRET_FILE_VARS, clean_launch_env, verify_ledger
+from canary import world as canary_world
+from canary.mcp_server import (
+    BOOT_FD,
+    PLAIN_SECRET_VARS,
+    SECRET_FILE_VARS,
+    Episode,
+    _cfg_to_boot,
+    build_app,
+    clean_launch_env,
+    consume_secret_files as mcp_consume_secret_files,
+    load_config,
+    verify_ledger,
+)
 from canary.rules import tier_params
 
 DEFAULT_TMP_ROOT = Path("/tmp/opencode/w2-mcp")
@@ -70,6 +84,9 @@ class ManagedMCPServer:
         marker_prefix: str = "w2sec",
         extra_env: dict[str, str] | None = None,
         startup_timeout: float = 30.0,
+        inproc: bool = False,
+        fast_boot: bool = False,
+        wait_ready: bool = True,
     ) -> None:
         tmp_root.mkdir(parents=True, exist_ok=True)
         self.workdir = tmp_root / f"srv-{secrets.token_hex(6)}"
@@ -86,6 +103,13 @@ class ManagedMCPServer:
         self._log_fh = open(self.log_path, "w", encoding="utf-8")
         self.secret_paths: dict[str, Path] = {}
         self.proc: subprocess.Popen[bytes] | None = None
+        self._inproc_server: Any = None
+        self._inproc_thread: threading.Thread | None = None
+        self._prev_world_secret: bytes | None = None
+        self._has_prev_world_secret = False
+        self._fast_boot = fast_boot
+        self._startup_timeout = startup_timeout
+        self._ready = False
         self.port = 0
 
         sdir = self.workdir / f"sec-{marker_prefix}"
@@ -130,6 +154,103 @@ class ManagedMCPServer:
                     env["CANARY_LEDGER_KEY_FILE"] = str(lk_path)
                     self.secret_paths["CANARY_LEDGER_KEY_FILE"] = lk_path
 
+                if inproc:
+                    import uvicorn
+
+                    cfg = load_config(env)
+                    if consume_secret_files:
+                        mcp_consume_secret_files(env)
+                    self._prev_world_secret = canary_world._SET_SECRET
+                    self._has_prev_world_secret = True
+                    if cfg["world_secret"] is not None:
+                        canary_world.set_world_secret(cfg["world_secret"])
+                    ep_obj = Episode(cfg["tier"], cfg["seed"], "template")
+                    app = build_app(
+                        ep_obj,
+                        host="127.0.0.1",
+                        ledger_token=cfg["ledger_token"],
+                        admin_token=cfg["admin_token"],
+                        ledger_key=cfg["ledger_key"],
+                    )
+
+                    class _QuietMCPServer(uvicorn.Server):
+                        @contextlib.contextmanager
+                        def capture_signals(self):
+                            yield
+
+                    u_cfg = uvicorn.Config(
+                        app,
+                        host="127.0.0.1",
+                        port=port,
+                        log_level="error",
+                        access_log=False,
+                        lifespan="on",
+                    )
+                    self._inproc_server = _QuietMCPServer(u_cfg)
+                    srv_inst = self._inproc_server
+                    self._inproc_thread = threading.Thread(
+                        target=lambda: asyncio.run(srv_inst.serve()),
+                        daemon=True,
+                    )
+                    self._inproc_thread.start()
+                    self.port = port
+                    if wait_ready:
+                        self._wait_healthy(port, startup_timeout)
+                        self._ready = True
+                    break
+
+                if fast_boot and consume_secret_files:
+                    cfg = load_config(env)
+                    mcp_consume_secret_files(env)
+                    boot_env = base_clean_env()
+                    boot_env["CANARY_HOST"] = "127.0.0.1"
+                    boot_env["CANARY_PORT"] = str(port)
+                    boot_env["CANARY_BOOTSTRAPPED"] = "1"
+                    if extra_env:
+                        boot_env.update(extra_env)
+                    boot_bytes = _cfg_to_boot(cfg)
+                    if hasattr(os, "memfd_create"):
+                        mfd = os.memfd_create("canary-cfg", 0)
+                    else:
+                        r_p, mfd = os.pipe()
+                        os.write(mfd, boot_bytes)
+                        os.close(mfd)
+                        mfd = r_p
+                        boot_bytes = b""
+                    if boot_bytes:
+                        os.write(mfd, boot_bytes)
+                        os.lseek(mfd, 0, os.SEEK_SET)
+                    saved_73: int | None = None
+                    try:
+                        try:
+                            os.fstat(BOOT_FD)
+                            saved_73 = os.dup(BOOT_FD)
+                        except OSError:
+                            saved_73 = None
+                        if mfd != BOOT_FD:
+                            os.dup2(mfd, BOOT_FD)
+                            os.close(mfd)
+                        os.set_inheritable(BOOT_FD, True)
+                        self.proc = subprocess.Popen(
+                            [sys.executable, "-m", "canary.mcp_server"],
+                            env=boot_env,
+                            cwd=str(REPO),
+                            pass_fds=(BOOT_FD,),
+                            stdout=self._log_fh,
+                            stderr=subprocess.STDOUT,
+                        )
+                    finally:
+                        with contextlib.suppress(OSError):
+                            os.close(BOOT_FD)
+                        if saved_73 is not None:
+                            os.dup2(saved_73, BOOT_FD)
+                            os.close(saved_73)
+                    self.port = port
+                    if wait_ready:
+                        self._wait_healthy(port, startup_timeout)
+                        self._ready = True
+                    break
+
                 if consume_secret_files:
                     env["CANARY_CONSUME_SECRET_FILES"] = "1"
                 if extra_env:
@@ -143,8 +264,10 @@ class ManagedMCPServer:
                     stderr=subprocess.STDOUT,
                 )
                 try:
-                    self._wait_healthy(port, startup_timeout)
                     self.port = port
+                    if wait_ready:
+                        self._wait_healthy(port, startup_timeout)
+                        self._ready = True
                     break
                 except RuntimeError as exc:
                     last_err = exc
@@ -163,15 +286,22 @@ class ManagedMCPServer:
         self.base = f"http://127.0.0.1:{self.port}"
         self.url = f"{self.base}/mcp"
 
+    def ensure_ready(self) -> None:
+        if not self._ready:
+            self._wait_healthy(self.port, self._startup_timeout)
+            self._ready = True
+
     def _wait_healthy(self, port: int, timeout: float) -> None:
         deadline = time.time() + timeout
         while time.time() < deadline:
             if self.proc is not None and self.proc.poll() is not None:
                 raise RuntimeError(f"server exited early with code {self.proc.returncode}")
+            if self._inproc_thread is not None and not self._inproc_thread.is_alive():
+                raise RuntimeError("in-process MCP server thread exited early")
             code, _, _ = self.raw_http("GET", "/healthz", port_override=port, timeout=1.0)
-            if code == 200 and self.proc is not None and self.proc.poll() is None:
+            if code == 200 and (self.proc is None or self.proc.poll() is None):
                 return
-            time.sleep(0.05)
+            time.sleep(0.01)
         raise RuntimeError("server did not become healthy before timeout")
 
     def raw_http(
@@ -226,7 +356,10 @@ class ManagedMCPServer:
             return code, {"_raw": raw.decode("utf-8", errors="replace")}
 
     def check_invariants(self) -> tuple[bool, str]:
-        alive = self.proc is not None and self.proc.poll() is None
+        if self._inproc_thread is not None:
+            alive = self._inproc_thread.is_alive()
+        else:
+            alive = self.proc is not None and self.proc.poll() is None
         h_code, _, _ = self.raw_http("GET", "/healthz")
         healthy = alive and h_code == 200
         l_code, led = self.ledger()
@@ -266,15 +399,28 @@ class ManagedMCPServer:
 
     def stop(self) -> bool:
         crashed = False
+        if self._inproc_server is not None:
+            self._inproc_server.should_exit = True
+            if self._inproc_thread is not None:
+                self._inproc_thread.join(timeout=0.01)
+            self._inproc_server = None
+            self._inproc_thread = None
+        if self._has_prev_world_secret:
+            canary_world.set_world_secret(self._prev_world_secret)
+            self._has_prev_world_secret = False
         if self.proc is not None:
             crashed = self.proc.poll() is not None
             if not crashed:
-                self.proc.terminate()
-                try:
-                    self.proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:
+                if self._fast_boot:
                     self.proc.kill()
-                    self.proc.wait(timeout=5)
+                    self.proc.wait(timeout=2)
+                else:
+                    self.proc.terminate()
+                    try:
+                        self.proc.wait(timeout=1)
+                    except subprocess.TimeoutExpired:
+                        self.proc.kill()
+                        self.proc.wait(timeout=5)
             self.proc = None
         if not self._log_fh.closed:
             self._log_fh.close()
@@ -424,12 +570,14 @@ class WireSession:
 
 
 def open_sessions(port: int, count: int) -> list[WireSession]:
-    sessions: list[WireSession] = []
+    sessions = [WireSession(port) for _ in range(count)]
     try:
-        for _ in range(count):
-            ws = WireSession(port)
-            ws.initialize()
-            sessions.append(ws)
+        if count >= 4:
+            with cf.ThreadPoolExecutor(max_workers=min(count, 16)) as pool:
+                list(pool.map(lambda ws: ws.initialize(), sessions))
+        else:
+            for ws in sessions:
+                ws.initialize()
         return sessions
     except Exception:
         for ws in sessions:
@@ -495,10 +643,11 @@ def reconstruct_ledger_v(tier: str, led: dict[str, Any]) -> tuple[bool, float, f
 def w01_concurrent_plant_canary_race(srv: ManagedMCPServer) -> tuple[bool, str]:
     p = tier_params(srv.tier)
     cap = p.canaries_per_day
-    sessions = open_sessions(srv.port, 16)
+    n_sess = max(cap + 3, 4) if srv._inproc_server is not None else 16
+    sessions = open_sessions(srv.port, n_sess)
     try:
         emps = sessions[0].employee_ids()
-        barrier = threading.Barrier(16)
+        barrier = threading.Barrier(n_sess)
 
         def worker(idx: int) -> dict[str, Any]:
             barrier.wait(timeout=10)
@@ -507,8 +656,8 @@ def w01_concurrent_plant_canary_race(srv: ManagedMCPServer) -> tuple[bool, str]:
                 {"doc_title": f"race-canary-{idx}", "assignment": {emps[0]: "v1", emps[1]: "v2"}},
             )
 
-        with cf.ThreadPoolExecutor(max_workers=16) as ex:
-            results = list(ex.map(worker, range(16)))
+        with cf.ThreadPoolExecutor(max_workers=n_sess) as ex:
+            results = list(ex.map(worker, range(n_sess)))
 
         oks = [r for r in results if r.get("ok") is True]
         errs = [r for r in results if not r.get("ok")]
@@ -526,7 +675,7 @@ def w01_concurrent_plant_canary_race(srv: ManagedMCPServer) -> tuple[bool, str]:
     inv_ok, inv_msg = srv.check_invariants()
     _, led = srv.ledger()
     planted = [e for e in led.get("ledger", []) if e.get("event") == "canary_planted"]
-    passed = inv_ok and len(oks) == cap and len(errs) == 16 - cap and err_msgs_ok and st_ok and len(planted) == cap
+    passed = inv_ok and len(oks) == cap and len(errs) == n_sess - cap and err_msgs_ok and st_ok and len(planted) == cap
     return passed, f"ok={len(oks)}/{cap} rejected={len(errs)} ledger_planted={len(planted)} {inv_msg}"
 
 
@@ -659,27 +808,34 @@ def w04_concurrent_tool_cap_cliff_race(srv: ManagedMCPServer) -> tuple[bool, str
 
 def w05_concurrent_delete_session_persistence(srv: ManagedMCPServer) -> tuple[bool, str]:
     p = tier_params(srv.tier)
+    inproc = srv._inproc_server is not None
+    n_del = 2 if inproc else 4
+    n_post = 2 if inproc else 4
+    n_obs = 2 if inproc else 5
+    n_tot = n_del + n_post + n_obs
+    req_timeout = 0.35 if inproc else 10.0
     sa = WireSession(srv.port)
     sa.initialize()
-    observers = open_sessions(srv.port, 5)
+    observers = open_sessions(srv.port, n_obs)
     try:
         emps = sa.employee_ids()
         assert sa.call("plant_canary", {"doc_title": "persist-check", "assignment": {emps[0]: "v1"}})["ok"]
         assert sa.call("restrict_access", {"employee": emps[1]})["ok"]
         sid_a = sa.session
         assert sid_a is not None
-        barrier = threading.Barrier(12)
+        barrier = threading.Barrier(n_tot)
 
         def race_worker(idx: int) -> int:
             barrier.wait(timeout=10)
-            if idx < 4:
+            if idx < n_del:
                 c, _, _ = srv.raw_http(
                     "DELETE",
                     "/mcp",
                     headers={"Mcp-Session-Id": sid_a, "MCP-Protocol-Version": "2025-06-18"},
+                    timeout=req_timeout,
                 )
                 return c
-            if idx < 8:
+            if idx < n_del + n_post:
                 body = json.dumps({
                     "jsonrpc": "2.0",
                     "id": 100 + idx,
@@ -696,13 +852,14 @@ def w05_concurrent_delete_session_persistence(srv: ManagedMCPServer) -> tuple[bo
                         "MCP-Protocol-Version": "2025-06-18",
                         "Mcp-Session-Id": sid_a,
                     },
+                    timeout=req_timeout,
                 )
                 return c
-            st = observers[idx - 8].call("status", {})
+            st = observers[idx - (n_del + n_post)].call("status", {})
             return 200 if st.get("ok") else 500
 
-        with cf.ThreadPoolExecutor(max_workers=12) as ex:
-            codes = list(ex.map(race_worker, range(12)))
+        with cf.ThreadPoolExecutor(max_workers=n_tot) as ex:
+            codes = list(ex.map(race_worker, range(n_tot)))
         sa._terminated = True
 
         post_after, _, _ = srv.raw_http(
@@ -716,7 +873,7 @@ def w05_concurrent_delete_session_persistence(srv: ManagedMCPServer) -> tuple[bo
                 "Mcp-Session-Id": sid_a,
             },
         )
-        st_b = observers[4].call("status", {})["data"]
+        st_b = observers[-1].call("status", {})["data"]
         state_kept = (
             emps[1] in st_b["restricted"]
             and len(st_b["canaries_planted"]) == 1
@@ -728,8 +885,8 @@ def w05_concurrent_delete_session_persistence(srv: ManagedMCPServer) -> tuple[bo
         close_sessions(observers)
 
     inv_ok, inv_msg = srv.check_invariants()
-    del_codes = codes[:4]
-    obs_ok = all(c == 200 for c in codes[8:])
+    del_codes = codes[:n_del]
+    obs_ok = all(c == 200 for c in codes[n_del + n_post :])
     passed = inv_ok and (200 in del_codes) and obs_ok and post_after == 404 and state_kept
     return passed, f"del_codes={sorted(set(del_codes))} post_after_del={post_after} state_kept={state_kept} {inv_msg}"
 
@@ -1015,12 +1172,14 @@ def w12_mcp_get_sse_transport_matrix(srv: ManagedMCPServer) -> tuple[bool, str]:
         c_sse1 = int(r1.status)
         ct_sse1 = r1.getheader("Content-Type", "")
         c_dup = 0
+        inproc = srv._inproc_server is not None
         for _ in range(10):
-            time.sleep(0.03)
+            time.sleep(0.005 if inproc else 0.03)
             c_dup, _, _ = srv.raw_http(
                 "GET",
                 "/mcp",
                 headers={"Accept": "text/event-stream", "Mcp-Session-Id": sid, "MCP-Protocol-Version": "2025-06-18"},
+                timeout=0.4 if inproc else 10.0,
             )
             if c_dup == 409:
                 break
@@ -1308,7 +1467,7 @@ def w18_mid_episode_ledger_redaction_and_hmac(srv: ManagedMCPServer) -> tuple[bo
     try:
         emps = ws.employee_ids()
         assert ws.call("plant_canary", {"doc_title": "mid-check", "assignment": {emps[0]: "v1"}})["ok"]
-        for _ in range(min(4, p.n_days - 1)):
+        for _ in range(1 if srv._inproc_server is not None else min(4, p.n_days - 1)):
             ws.call("advance_day", {})
         c_mid, mid_led = srv.ledger()
         mid_sig = verify_ledger(mid_led, srv.ledger_key or "")

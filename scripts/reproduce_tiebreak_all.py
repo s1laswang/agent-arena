@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import importlib.util
+import inspect
 import io
 import json
 import multiprocessing
@@ -39,11 +40,34 @@ CORE_GATE_SPECS: tuple[tuple[str, str, str], ...] = (
     ),
     ("tiebreak_scaling_calibration", "scripts/tiebreak_scaling_calibration.py", "scripts/tiebreak_scaling_calibration.py --check"),
     ("neural_mlp_tiebreak", "train/neural_mlp_tiebreak.py", "python -m train.neural_mlp_tiebreak --check"),
+    (
+        "tiebreak_delayed_leak_noise_audit",
+        "scripts/tiebreak_delayed_leak_noise_audit.py",
+        "scripts/tiebreak_delayed_leak_noise_audit.py --check",
+    ),
+    (
+        "tiebreak_dagger_mechanism_audit",
+        "scripts/tiebreak_dagger_mechanism_audit.py",
+        "scripts/tiebreak_dagger_mechanism_audit.py --check",
+    ),
+    (
+        "tiebreak_failure_taxonomy_matrix",
+        "scripts/tiebreak_failure_taxonomy_matrix.py",
+        "scripts/tiebreak_failure_taxonomy_matrix.py --check",
+    ),
 )
 
 OPTIONAL_FILENAMES: tuple[str, ...] = (
     "tiebreak_learning_curve.py",
     "build_tiebreak_viewer.py",
+    "tiebreak_calibration_stopping_audit.py",
+    "tiebreak_multiseed_stability_audit.py",
+    "tiebreak_state_externalization_audit.py",
+    "run_tiebreak_policy.py",
+    "tiebreak_working_memory_audit.py",
+    "tiebreak_pareto_efficiency.py",
+    "tiebreak_channel_ablation_audit.py",
+    "tiebreak_framing_decoy_audit.py",
 )
 
 PREREG_RE = re.compile(r"\bpre[-\s]?regist(?:er(?:ed|ing|s)?|ration)\b", re.IGNORECASE)
@@ -77,16 +101,25 @@ def discover_optional_gates(root: Path = ROOT) -> tuple[list[tuple[str, str, str
     for fname in OPTIONAL_FILENAMES:
         stem = Path(fname).stem
         found_rel: str | None = None
+        found_file: Path | None = None
         for folder in ("scripts", "train"):
             cand = root / folder / fname
             if cand.is_file():
                 found_rel = f"{folder}/{fname}"
+                found_file = cand
                 break
-        if found_rel is not None:
+        if found_rel is not None and found_file is not None:
+            flag = "--check"
+            try:
+                src_txt = found_file.read_text(encoding="utf-8")
+                if "--check" not in src_txt and "--verify" in src_txt:
+                    flag = "--verify"
+            except Exception:
+                flag = "--check"
             cmd = (
-                f"python -m train.{stem} --check"
+                f"python -m train.{stem} {flag}"
                 if found_rel.startswith("train/")
-                else f"{found_rel} --check"
+                else f"{found_rel} {flag}"
             )
             discovered.append((stem, found_rel, cmd))
         else:
@@ -94,19 +127,62 @@ def discover_optional_gates(root: Path = ROOT) -> tuple[list[tuple[str, str, str
     return discovered, absent
 
 
-def _preload_core_modules() -> None:
-    import scripts.tiebreak_addendum_pack as _tap
-    import scripts.tiebreak_context_confound_audit as _tcca
-    import scripts.tiebreak_cross_mole_generalization as _tcmg
-    import scripts.tiebreak_experiment_ledger as _tel
-    import scripts.tiebreak_forensics as _tf
-    import scripts.tiebreak_scaling_calibration as _tsc
-    import scripts.tiebreak_verda_multiseed_audit as _tvma
-    import scripts.tiebreak_vs_frontier_comparison as _tvfc
-    import scripts.verify_tiebreak_submission as _vts
-    import train.neural_mlp_tiebreak as _nmt
+def _preload_core_modules(planned_ids: set[str] | None = None) -> None:
+    def _want(gid: str) -> bool:
+        return planned_ids is None or gid in planned_ids
 
-    _ = (_tap, _tcca, _tcmg, _tel, _tf, _tsc, _tvma, _tvfc, _vts, _nmt)
+    if _want("tiebreak_addendum_pack"):
+        import scripts.tiebreak_addendum_pack as _tap
+
+        _ = _tap
+    if _want("tiebreak_context_confound_audit"):
+        import scripts.tiebreak_context_confound_audit as _tcca
+
+        _ = _tcca
+    if _want("tiebreak_cross_mole_generalization"):
+        import scripts.tiebreak_cross_mole_generalization as _tcmg
+
+        _ = _tcmg
+    if _want("tiebreak_dagger_mechanism_audit"):
+        import scripts.tiebreak_dagger_mechanism_audit as _tdma
+
+        _ = _tdma
+    if _want("tiebreak_delayed_leak_noise_audit"):
+        import scripts.tiebreak_delayed_leak_noise_audit as _tdlna
+
+        _ = _tdlna
+    if _want("tiebreak_experiment_ledger"):
+        import scripts.tiebreak_experiment_ledger as _tel
+
+        _ = _tel
+    if _want("tiebreak_failure_taxonomy_matrix"):
+        import scripts.tiebreak_failure_taxonomy_matrix as _tftm
+
+        _ = _tftm
+    if _want("tiebreak_forensics"):
+        import scripts.tiebreak_forensics as _tf
+
+        _ = _tf
+    if _want("tiebreak_scaling_calibration"):
+        import scripts.tiebreak_scaling_calibration as _tsc
+
+        _ = _tsc
+    if _want("tiebreak_verda_multiseed_audit"):
+        import scripts.tiebreak_verda_multiseed_audit as _tvma
+
+        _ = _tvma
+    if _want("tiebreak_vs_frontier_comparison"):
+        import scripts.tiebreak_vs_frontier_comparison as _tvfc
+
+        _ = _tvfc
+    if _want("verify_tiebreak_submission"):
+        import scripts.verify_tiebreak_submission as _vts
+
+        _ = _vts
+    if _want("neural_mlp_tiebreak"):
+        import train.neural_mlp_tiebreak as _nmt
+
+        _ = _nmt
 
 
 def _run_verify_tiebreak_submission(root: Path) -> tuple[bool, str, list[str]]:
@@ -289,11 +365,87 @@ def _run_neural_mlp_tiebreak(root: Path) -> tuple[bool, str, list[str]]:
     return bool(verdict.get("passed")), f"n={n_val} paired delta {delta:+.4f} verified", errs
 
 
+def _run_delayed_leak_noise_audit(root: Path) -> tuple[bool, str, list[str]]:
+    import scripts.tiebreak_delayed_leak_noise_audit as tdlna
+
+    out_json = root / tdlna.DEFAULT_OUT_JSON
+    out_md = root / tdlna.DEFAULT_OUT_MD
+    verdict = tdlna.verify_audit_artifacts(summary_path=out_json, report_path=out_md, repo_root=root)
+    errs = list(verdict.get("errors") or [])
+    n_ep = int(verdict.get("episodes_verified", 0))
+    return bool(verdict.get("passed")), f"{n_ep} delayed-leak & hard-noise episodes verified", errs
+
+
+def _run_dagger_mechanism_audit(root: Path) -> tuple[bool, str, list[str]]:
+    import scripts.tiebreak_dagger_mechanism_audit as tdma
+
+    out_json = root / tdma.DEFAULT_OUT_JSON
+    out_md = root / tdma.DEFAULT_OUT_MD
+    errs = tdma.verify_committed_artifacts(out_json, out_md, repo_root=root)
+    n_tr = 0
+    if out_json.is_file():
+        data = json.loads(out_json.read_text(encoding="utf-8"))
+        n_tr = int(data.get("train_seeds_unique_count", 0))
+    return len(errs) == 0, f"{n_tr} TRAIN episodes, cap=96/256 & stopping contrast verified", errs
+
+
+def _run_failure_taxonomy_matrix(root: Path) -> tuple[bool, str, list[str]]:
+    import scripts.tiebreak_failure_taxonomy_matrix as tftm
+
+    out_json = root / tftm.DEFAULT_OUT_JSON
+    out_md = root / tftm.DEFAULT_OUT_MD
+    errs = tftm.verify_committed_artifacts(out_json, out_md, repo_root=root)
+    n_runs = 0
+    n_buckets = 0
+    if out_json.is_file():
+        data = json.loads(out_json.read_text(encoding="utf-8"))
+        ht = data.get("headline_totals") or {}
+        n_runs = int(ht.get("historical_open_weight_runs", 0))
+        n_buckets = int(ht.get("root_cause_bucket_count", 0))
+    return len(errs) == 0, f"{n_runs}/19 runs across {n_buckets} MECE buckets verified", errs
+
+
+def _invoke_optional_main(main_fn: Any, full_path: Path, argv: list[str]) -> tuple[int, str]:
+    sig_params = list(inspect.signature(main_fn).parameters.values())
+    takes_argv = any(
+        p.kind
+        in (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.VAR_POSITIONAL,
+        )
+        for p in sig_params
+    )
+    buf_out = io.StringIO()
+    buf_err = io.StringIO()
+    prev_argv = list(sys.argv)
+    try:
+        with contextlib.redirect_stdout(buf_out), contextlib.redirect_stderr(buf_err):
+            if takes_argv:
+                raw_rc = main_fn(argv)
+            else:
+                sys.argv = [str(full_path), *argv]
+                raw_rc = main_fn()
+        rc = 0 if raw_rc in (0, None) else int(raw_rc)
+    except SystemExit as exc:
+        if exc.code in (0, None):
+            rc = 0
+        elif isinstance(exc.code, int):
+            rc = exc.code
+        else:
+            rc = 1
+    finally:
+        sys.argv = prev_argv
+    out_txt = (buf_out.getvalue() + "\n" + buf_err.getvalue()).strip()
+    return rc, out_txt
+
+
 def _run_optional_module_gate(root: Path, gate_id: str, rel_path: str) -> tuple[bool, str, list[str]]:
     full_path = root / rel_path
     if not full_path.is_file():
         return False, f"missing optional script {rel_path}", [f"missing {full_path}"]
 
+    src_text = full_path.read_text(encoding="utf-8")
     mod_name = f"_tiebreak_opt_{gate_id}_{abs(hash(str(full_path)))}"
     spec = importlib.util.spec_from_file_location(mod_name, full_path)
     if spec is None or spec.loader is None:
@@ -303,39 +455,68 @@ def _run_optional_module_gate(root: Path, gate_id: str, rel_path: str) -> tuple[
     sys.modules[mod_name] = mod
     try:
         spec.loader.exec_module(mod)
+        if root.resolve() != ROOT.resolve() and isinstance(getattr(mod, "ROOT", None), Path):
+            setattr(mod, "ROOT", root.resolve())
+
         main_fn = getattr(mod, "main", None)
         if callable(main_fn):
-            argv = ["--check"]
-            parser_fn = getattr(mod, "build_arg_parser", None)
+            flag_candidates: list[str] = []
+            root_args: list[str] = []
+            parser_fn = (
+                getattr(mod, "build_arg_parser", None)
+                or getattr(mod, "build_parser", None)
+                or getattr(mod, "_build_parser", None)
+            )
             if callable(parser_fn):
                 try:
                     opt_map = getattr(parser_fn(), "_option_string_actions", {})
-                    if "--check" not in opt_map and "--strict" in opt_map:
-                        argv = ["--strict"]
+                    if "--check" in opt_map:
+                        flag_candidates.append("--check")
+                    elif "--verify" in opt_map:
+                        flag_candidates.append("--verify")
+                    elif "--strict" in opt_map:
+                        flag_candidates.append("--strict")
                     if root.resolve() != ROOT.resolve():
                         if "--repo-root" in opt_map:
-                            argv.extend(["--repo-root", str(root)])
+                            root_args = ["--repo-root", str(root)]
                         elif "--root" in opt_map:
-                            argv.extend(["--root", str(root)])
+                            root_args = ["--root", str(root)]
                 except Exception:
-                    argv = ["--check"]
+                    flag_candidates = []
 
-            buf_out = io.StringIO()
-            buf_err = io.StringIO()
-            try:
-                with contextlib.redirect_stdout(buf_out), contextlib.redirect_stderr(buf_err):
-                    raw_rc = main_fn(argv)
-                rc = 0 if raw_rc in (0, None) else int(raw_rc)
-            except SystemExit as exc:
-                if exc.code in (0, None):
-                    rc = 0
-                elif isinstance(exc.code, int):
-                    rc = exc.code
+            if not flag_candidates:
+                if "--check" in src_text:
+                    flag_candidates = ["--check", "--verify"]
+                elif "--verify" in src_text:
+                    flag_candidates = ["--verify", "--check"]
+                elif "--strict" in src_text:
+                    flag_candidates = ["--strict", "--check"]
                 else:
-                    rc = 1
+                    flag_candidates = ["--check", "--verify"]
+                if root.resolve() != ROOT.resolve() and not root_args:
+                    if "--repo-root" in src_text:
+                        root_args = ["--repo-root", str(root)]
+                    elif "--root" in src_text:
+                        root_args = ["--root", str(root)]
 
-            out_txt = (buf_out.getvalue() + "\n" + buf_err.getvalue()).strip()
+            rc = 1
+            out_txt = ""
+            for idx, flag in enumerate(flag_candidates):
+                rc, out_txt = _invoke_optional_main(main_fn, full_path, [flag, *root_args])
+                if rc == 0:
+                    break
+                if idx + 1 < len(flag_candidates) and rc == 2 and "unrecognized arguments" in out_txt:
+                    continue
+                break
+
             first_line = out_txt.splitlines()[0].strip() if out_txt else "ok"
+            if first_line == "{":
+                try:
+                    parsed_json = json.loads(out_txt)
+                    if isinstance(parsed_json, dict):
+                        first_line = json.dumps(parsed_json, separators=(",", ":"))
+                except Exception:
+                    first_line = "ok"
             if rc == 0:
                 return True, f"optional check passed ({first_line[:90]})", []
             err_lines = [ln.strip() for ln in out_txt.splitlines() if ln.strip()] or [f"exited with {rc}"]
@@ -343,7 +524,13 @@ def _run_optional_module_gate(root: Path, gate_id: str, rel_path: str) -> tuple[
 
         verify_fn = getattr(mod, "verify_artifacts", None)
         if callable(verify_fn):
-            res = verify_fn()
+            v_params = inspect.signature(verify_fn).parameters
+            if root.resolve() != ROOT.resolve() and "root" in v_params:
+                res = verify_fn(root=root)
+            elif root.resolve() != ROOT.resolve() and "repo_root" in v_params:
+                res = verify_fn(repo_root=root)
+            else:
+                res = verify_fn()
             if isinstance(res, dict):
                 ok = bool(res.get("passed", res.get("ok", False)))
                 errs = [str(e) for e in (res.get("errors") or [])]
@@ -352,8 +539,9 @@ def _run_optional_module_gate(root: Path, gate_id: str, rel_path: str) -> tuple[
                 ok = len(res) == 0
                 return ok, "optional verify_artifacts passed" if ok else "optional verify_artifacts failed", [str(e) for e in res]
 
+        sub_flag = "--verify" if ("--check" not in src_text and "--verify" in src_text) else "--check"
         proc = subprocess.run(
-            [sys.executable, str(full_path), "--check"],
+            [sys.executable, str(full_path), sub_flag],
             cwd=str(root),
             capture_output=True,
             text=True,
@@ -401,6 +589,9 @@ def execute_single_gate(
         "tiebreak_forensics": _run_forensics,
         "tiebreak_scaling_calibration": _run_scaling_calibration,
         "neural_mlp_tiebreak": _run_neural_mlp_tiebreak,
+        "tiebreak_delayed_leak_noise_audit": _run_delayed_leak_noise_audit,
+        "tiebreak_dagger_mechanism_audit": _run_dagger_mechanism_audit,
+        "tiebreak_failure_taxonomy_matrix": _run_failure_taxonomy_matrix,
     }
     try:
         if optional or gate_id not in dispatch:
@@ -424,13 +615,77 @@ def execute_single_gate(
     )
 
 
+GATE_COST_ESTIMATE_MS: dict[str, int] = {
+    "tiebreak_addendum_pack": 900,
+    "_vts_rest": 650,
+    "_vts_ast_opt": 620,
+    "run_tiebreak_policy": 480,
+    "tiebreak_cross_mole_generalization": 460,
+    "_vts_ast_req": 420,
+    "tiebreak_working_memory_audit": 200,
+    "tiebreak_channel_ablation_audit": 160,
+    "tiebreak_framing_decoy_audit": 160,
+    "tiebreak_dagger_mechanism_audit": 130,
+    "build_tiebreak_viewer": 120,
+    "tiebreak_delayed_leak_noise_audit": 115,
+    "tiebreak_experiment_ledger": 110,
+    "tiebreak_context_confound_audit": 95,
+    "tiebreak_failure_taxonomy_matrix": 45,
+    "tiebreak_verda_multiseed_audit": 40,
+    "tiebreak_vs_frontier_comparison": 30,
+    "tiebreak_forensics": 12,
+    "tiebreak_scaling_calibration": 8,
+    "neural_mlp_tiebreak": 8,
+}
+
+VTS_SPLIT_IDS: frozenset[str] = frozenset({"_vts_ast_req", "_vts_ast_opt", "_vts_rest"})
+
+
+def _run_vts_part(root: Path, part: str) -> dict[str, Any]:
+    import scripts.verify_tiebreak_submission as vts
+
+    t0 = time.perf_counter()
+    if part in ("_vts_ast_req", "_vts_ast_opt"):
+        errs: list[str] = []
+        mods: list[str] = []
+        classes: list[str] = []
+        target_list = (
+            vts.REQUIRED_INFERENCE_MODULES if part == "_vts_ast_req" else vts.OPTIONAL_INFERENCE_MODULES
+        )
+        req_mode = part == "_vts_ast_req"
+        for rel in target_list:
+            p = root / rel
+            if not p.is_file():
+                if req_mode:
+                    errs.append(f"missing required inference module: {rel}")
+                continue
+            mods.append(rel)
+            m_errs, m_cls = vts._audit_policy_module_ast(rel, p)
+            errs.extend(m_errs)
+            classes.extend(m_cls)
+        dt_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+        return {"gate_id": part, "wall_clock_ms": dt_ms, "ast_errors": errs, "ast_mods": mods, "ast_classes": classes}
+
+    items = [
+        vts.check_protected_and_frozen_paths(root=root, strict=True).to_dict(),
+        vts.check_seed_and_secret_provenance(root=root, strict=True).to_dict(),
+        vts.check_claim_number_audit(root=root, strict=True).to_dict(),
+        vts.check_hygiene_and_panel_fix_a(root=root, strict=True).to_dict(),
+    ]
+    dt_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+    return {"gate_id": part, "wall_clock_ms": dt_ms, "checks": items}
+
+
 def _worker_run_batch(batch: tuple[str, bool, list[tuple[str, str, str, bool]]]) -> list[dict[str, Any]]:
     root_str, full, items = batch
     root = Path(root_str)
-    return [
-        execute_single_gate(root, gid, rel, cmd, optional=opt, full=full).to_dict()
-        for gid, rel, cmd, opt in items
-    ]
+    results: list[dict[str, Any]] = []
+    for gid, rel, cmd, opt in items:
+        if gid in VTS_SPLIT_IDS:
+            results.append(_run_vts_part(root, gid))
+        else:
+            results.append(execute_single_gate(root, gid, rel, cmd, optional=opt, full=full).to_dict())
+    return results
 
 
 def verify_tiebreak_index(root: Path = ROOT) -> list[str]:
@@ -464,7 +719,11 @@ def verify_tiebreak_index(root: Path = ROOT) -> list[str]:
         "200000",
         "800000",
         "800200",
+        "13/13",
         "scripts/reproduce_tiebreak_all.py",
+        "docs/reports/tiebreak_delayed_leak_noise.md",
+        "docs/reports/tiebreak_dagger_mechanism.md",
+        "docs/reports/tiebreak_failure_taxonomy.md",
     )
     for tok in required_tokens:
         if tok not in txt:
@@ -511,37 +770,91 @@ def run_all_gates(
         workers > 1
         and len(planned) >= 4
         and resolved_root == ROOT.resolve()
+        and not multiprocessing.current_process().daemon
         and "fork" in multiprocessing.get_all_start_methods()
     )
 
     if use_fork:
-        _preload_core_modules()
-        remaining: list[tuple[str, str, str, bool]] = []
-        for item in planned:
-            if item[0] == "verify_tiebreak_submission":
-                outcomes_by_id[item[0]] = execute_single_gate(
-                    resolved_root, item[0], item[1], item[2], optional=item[3], full=full
-                )
+        _preload_core_modules({gid for gid, _, _, _ in planned if gid != "tiebreak_vs_frontier_comparison"})
+        work_units: list[tuple[str, str, str, bool]] = []
+        vts_spec: tuple[str, str, str, bool] | None = None
+        for it in planned:
+            if it[0] == "verify_tiebreak_submission" and (resolved_root / it[1]).is_file():
+                vts_spec = it
+                work_units.append(("_vts_ast_req", it[1], it[2], it[3]))
+                work_units.append(("_vts_ast_opt", it[1], it[2], it[3]))
+                work_units.append(("_vts_rest", it[1], it[2], it[3]))
             else:
-                remaining.append(item)
+                work_units.append(it)
 
-        heavy_a = [it for it in remaining if it[0] == "tiebreak_addendum_pack"]
-        heavy_b = [it for it in remaining if it[0] == "tiebreak_cross_mole_generalization"]
-        rest = [
-            it
-            for it in remaining
-            if it[0] not in ("tiebreak_addendum_pack", "tiebreak_cross_mole_generalization")
-        ]
-        batches = [
-            (str(resolved_root), full, grp)
-            for grp in (heavy_a, heavy_b, rest)
-            if grp
-        ]
+        n_bins = min(workers, len(work_units))
+        bins: list[list[tuple[str, str, str, bool]]] = [[] for _ in range(n_bins)]
+        bin_loads = [0 for _ in range(n_bins)]
+
+        def _est_cost(it: tuple[str, str, str, bool]) -> int:
+            if full and it[0] == "tiebreak_vs_frontier_comparison":
+                return 2200
+            return GATE_COST_ESTIMATE_MS.get(it[0], 90)
+
+        for item in sorted(work_units, key=_est_cost, reverse=True):
+            target_idx = min(range(n_bins), key=lambda idx: bin_loads[idx])
+            bins[target_idx].append(item)
+            bin_loads[target_idx] += _est_cost(item)
+
+        batches = [(str(resolved_root), full, grp) for grp in bins if grp]
+        vts_parts: dict[str, dict[str, Any]] = {}
         ctx = multiprocessing.get_context("fork")
-        with ProcessPoolExecutor(max_workers=min(workers, len(batches)), mp_context=ctx) as pool:
+        with ProcessPoolExecutor(max_workers=len(batches), mp_context=ctx) as pool:
             for batch_dicts in pool.map(_worker_run_batch, batches):
                 for d in batch_dicts:
-                    outcomes_by_id[str(d["gate_id"])] = GateOutcome(**d)
+                    gid_str = str(d["gate_id"])
+                    if gid_str in VTS_SPLIT_IDS:
+                        vts_parts[gid_str] = d
+                    else:
+                        outcomes_by_id[gid_str] = GateOutcome(**d)
+
+        if vts_spec is not None:
+            import scripts.verify_tiebreak_submission as vts
+
+            req_p = vts_parts.get("_vts_ast_req", {})
+            opt_p = vts_parts.get("_vts_ast_opt", {})
+            ast_errs = list(req_p.get("ast_errors", [])) + list(opt_p.get("ast_errors", []))
+            ast_classes = list(req_p.get("ast_classes", [])) + list(opt_p.get("ast_classes", []))
+            if len(ast_classes) < 3:
+                ast_errs.append(f"expected >= 3 audited inference policy classes, found {len(ast_classes)}")
+            ast_chk = {
+                "name": "ast_inference_isolation",
+                "passed": len(ast_errs) == 0,
+                "errors": ast_errs,
+            }
+            merged_checks = {
+                "ast_inference_isolation": ast_chk,
+                **{
+                    c["name"]: c
+                    for c in vts_parts.get("_vts_rest", {}).get("checks", [])
+                },
+            }
+            ordered_checks = [merged_checks[nm] for nm in vts.CHECK_NAMES if nm in merged_checks]
+            vts_wall_ms = round(max((float(p["wall_clock_ms"]) for p in vts_parts.values()), default=0.0), 2)
+            vts_errs: list[str] = []
+            for chk in ordered_checks:
+                if not chk["passed"]:
+                    vts_errs.extend(chk.get("errors") or [f"{chk['name']} failed"])
+            if vts_wall_ms / 1000.0 > vts.MAX_RUNTIME_SECONDS:
+                vts_errs.append(
+                    f"verifier runtime {vts_wall_ms / 1000.0:.4f}s exceeded {vts.MAX_RUNTIME_SECONDS:.1f}s offline budget"
+                )
+            passed_cnt = sum(1 for chk in ordered_checks if chk["passed"])
+            vts_ok = passed_cnt == len(vts.CHECK_NAMES) and len(vts_errs) == 0
+            outcomes_by_id["verify_tiebreak_submission"] = GateOutcome(
+                gate_id="verify_tiebreak_submission",
+                command=vts_spec[2],
+                optional=vts_spec[3],
+                passed=vts_ok,
+                wall_clock_ms=vts_wall_ms,
+                summary=f"{passed_cnt}/{len(vts.CHECK_NAMES)} strict checks passed",
+                errors=vts_errs,
+            )
     else:
         for gid, rel, cmd, opt in planned:
             outcomes_by_id[gid] = execute_single_gate(

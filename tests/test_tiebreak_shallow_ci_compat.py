@@ -15,12 +15,15 @@ from typing import Any
 
 import pytest
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import scripts.reproduce_tiebreak_all as rta
 import scripts.tiebreak_forensics as tf
 import scripts.tiebreak_verda_multiseed_audit as tvma
 import scripts.verify_tiebreak_submission as vts
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 SELF_PATH = Path(__file__).resolve()
 
 STAGED_REL_FILES: tuple[str, ...] = (
@@ -28,6 +31,9 @@ STAGED_REL_FILES: tuple[str, ...] = (
     "docs/reports/TIEBREAK_INDEX.md",
     "docs/reports/tiebreak_small_model.md",
     "docs/reports/tiebreak_verda_multiseed.md",
+    "docs/reports/tiebreak_delayed_leak_noise.md",
+    "docs/reports/tiebreak_dagger_mechanism.md",
+    "docs/reports/tiebreak_failure_taxonomy.md",
     "train/compact_render.py",
     "train/eval_compact_hf.py",
     "train/empirical_bayes_policy.py",
@@ -38,6 +44,9 @@ STAGED_REL_FILES: tuple[str, ...] = (
     "scripts/tiebreak_context_confound_audit.py",
     "scripts/tiebreak_forensics.py",
     "scripts/tiebreak_scaling_calibration.py",
+    "scripts/tiebreak_delayed_leak_noise_audit.py",
+    "scripts/tiebreak_dagger_mechanism_audit.py",
+    "scripts/tiebreak_failure_taxonomy_matrix.py",
 )
 
 EXPECTED_PARTIAL_GATES: tuple[str, ...] = (
@@ -47,6 +56,9 @@ EXPECTED_PARTIAL_GATES: tuple[str, ...] = (
     "tiebreak_context_confound_audit",
     "tiebreak_forensics",
     "tiebreak_scaling_calibration",
+    "tiebreak_delayed_leak_noise_audit",
+    "tiebreak_dagger_mechanism_audit",
+    "tiebreak_failure_taxonomy_matrix",
 )
 
 
@@ -78,23 +90,23 @@ def _run_readonly_task(task: tuple[str, str]) -> dict[str, Any]:
     kind, root_str = task
     root_dir = Path(root_str)
     if kind == "vts":
-        return {"strict_report": vts.run_all_checks(root=root_dir, strict=True)}
-    gates_report = rta.run_all_gates(root=root_dir, allow_partial_root=True, workers=1)
-    verda_errs = tvma.verify_committed_artifacts(
-        root_dir / "results" / "tiebreak" / "verda_multiseed" / "multiseed_summary.json",
-        root_dir / "docs" / "reports" / "tiebreak_verda_multiseed.md",
-        repo_root=root_dir,
-        allow_git=False,
-    )
-    forensics_errs = tf.verify_committed_artifacts(
-        root_dir / "results" / "tiebreak" / "forensics_prior_runs.json",
-        md_path=root_dir / "results" / "tiebreak" / "forensics_prior_runs.md",
-    )
-    return {
-        "gates_report": gates_report,
-        "verda_errs": verda_errs,
-        "forensics_errs": forensics_errs,
-    }
+        strict_report = vts.run_all_checks(root=root_dir, strict=True)
+        verda_errs = tvma.verify_committed_artifacts(
+            root_dir / "results" / "tiebreak" / "verda_multiseed" / "multiseed_summary.json",
+            root_dir / "docs" / "reports" / "tiebreak_verda_multiseed.md",
+            repo_root=root_dir,
+            allow_git=False,
+        )
+        forensics_errs = tf.verify_committed_artifacts(
+            root_dir / "results" / "tiebreak" / "forensics_prior_runs.json",
+            md_path=root_dir / "results" / "tiebreak" / "forensics_prior_runs.md",
+        )
+        return {
+            "strict_report": strict_report,
+            "verda_errs": verda_errs,
+            "forensics_errs": forensics_errs,
+        }
+    return {"gates_report": rta.run_all_gates(root=root_dir, allow_partial_root=True, workers=1)}
 
 
 @pytest.fixture(scope="module")
@@ -150,7 +162,7 @@ def compat_envs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     _run_git(shallow_ci, ["checkout", "--detach", "HEAD"], env)
 
     zip_path = base_dir / "canary_judge_export.zip"
-    _run_git(upstream, ["archive", "--format=zip", "-o", str(zip_path), "HEAD"], env)
+    _run_git(upstream, ["archive", "--format=zip", "-0", "-o", str(zip_path), "HEAD"], env)
     export_dir = base_dir / "judge_unzipped_no_git"
     export_dir.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(zip_path, "r") as zf:
@@ -164,10 +176,13 @@ def compat_envs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     ]
     if "fork" in multiprocessing.get_all_start_methods():
         import scripts.tiebreak_context_confound_audit as _tcca
+        import scripts.tiebreak_dagger_mechanism_audit as _tdma
+        import scripts.tiebreak_delayed_leak_noise_audit as _tdlna
         import scripts.tiebreak_experiment_ledger as _tel
+        import scripts.tiebreak_failure_taxonomy_matrix as _tftm
         import scripts.tiebreak_scaling_calibration as _tsc
 
-        _ = (_tcca, _tel, _tsc)
+        _ = (_tcca, _tdma, _tdlna, _tel, _tftm, _tsc)
         ctx = multiprocessing.get_context("fork")
         with ProcessPoolExecutor(max_workers=4, mp_context=ctx) as pool:
             s_vts, s_rta, e_vts, e_rta = list(pool.map(_run_readonly_task, tasks))

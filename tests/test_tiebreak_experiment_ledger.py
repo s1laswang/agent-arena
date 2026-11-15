@@ -104,17 +104,40 @@ def test_historical_runs_and_clean_clone_determinism(tmp_path: Path) -> None:
     assert ledger_default == ledger_clean
     assert ledger_mod.render_markdown_report(ledger_default) == ledger_mod.render_markdown_report(ledger_clean)
 
+    bare_clone = tmp_path / "bare_clone"
+    for rel in (
+        "results/tiebreak/cal_v14_train_manifest.json",
+        "results/tiebreak/cal_v14_val_manifest.json",
+        "results/tiebreak/empirical_bayes/summary.json",
+    ):
+        dst = bare_clone / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text((REPO_ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8")
+
+    ledger_bare = ledger_mod.build_ledger(
+        repo_root=bare_clone,
+        external_data_root=tmp_path / "absent_external_data_dir",
+    )
+    assert ledger_default == ledger_bare
+    assert ledger_mod.render_markdown_report(ledger_default) == ledger_mod.render_markdown_report(ledger_bare)
+
     by_id = {r["run_id"]: r for r in ledger_default["historical_runs"]}
     assert tuple(by_id.keys()) == (
         "J4-pilot-44200",
         "J4-v1-44397",
         "WS4-base-44411",
+        "WS4-base-pooled",
         "WS4-v2-44412",
         "WS4-v2-off30-68bb",
         "WS4-v3-44548-44550",
         "WS4-v3-44553",
-        "WS4-v3-verda-s0-44572",
+        "WS4-v3-4k-s1-714d-spot",
+        "WS4-v3-4k-s1-44572",
         "WS4-v3-verda-s0-eval",
+        "WS4-v3-4k-s0-ctx8k",
+        "WS4-v3-8k-s1-ac58",
+        "WS4-v3-8k-s2-dbd0",
+        "WS4-v3-8k-s3-f437",
     )
 
     assert by_id["J4-pilot-44200"]["status"] == "FAILED_OOM"
@@ -137,6 +160,15 @@ def test_historical_runs_and_clean_clone_determinism(tmp_path: Path) -> None:
     assert r_base["before_valid_call_rate"] == 0.03
     assert r_base["details"]["unpaired_urandom_secret_caveat"] is True
 
+    r_base_pooled = by_id["WS4-base-pooled"]
+    assert r_base_pooled["status"] == "BASELINE_CAVEATED"
+    assert r_base_pooled["heldout_n"] == 36
+    assert r_base_pooled["before_mean_score"] == 0.0
+    assert r_base_pooled["before_valid_call_rate"] == 0.03
+    assert r_base_pooled["details"]["n_44411"] == 16
+    assert r_base_pooled["details"]["n_44584"] == 20
+    assert r_base_pooled["details"]["world_secret_tags"] == ["f272803cdb679dbe", "404f83e6a15c3f1c"]
+
     r_v2 = by_id["WS4-v2-44412"]
     assert r_v2["status"] == "NEGATIVE_BLIND_ACCUSE"
     assert r_v2["heldout_n"] == 82
@@ -147,35 +179,131 @@ def test_historical_runs_and_clean_clone_determinism(tmp_path: Path) -> None:
     assert r_v2["details"]["header_tokens"] == 2842
     assert r_v2["details"]["body_budget_tokens"] == 1254
 
-    assert by_id["WS4-v3-44548-44550"]["status"] == "FAILED_CUDA_OOM"
-    assert by_id["WS4-v3-44553"]["status"] == "FAILED_ZERO_VARIANCE"
-    assert by_id["WS4-v3-44553"]["details"]["zero_variance_groups_first_10"] == 8
-
-    r_v3 = by_id["WS4-v3-verda-s0-44572"]
-    assert r_v3["status"] == "IN_PROGRESS_PARTIAL"
-    assert r_v3["details"]["step_milestone"] == 140
-    assert r_v3["details"]["valid_only_gain_vs_solver"] == 0.091
-    assert r_v3["details"]["forced_accuse_whom_accuracy"] == 0.19
-
     r_v2_off30 = by_id["WS4-v2-off30-68bb"]
     assert r_v2_off30["status"] == "NEGATIVE_BLIND_ACCUSE"
     assert r_v2_off30["heldout_n"] == 90
     assert r_v2_off30["after_mean_score"] == -0.514
+    assert r_v2_off30["after_ci95"] == 0.115
     assert r_v2_off30["details"]["pooled_v2_n"] == 172
     assert r_v2_off30["details"]["pooled_v2_mean_score"] == -0.457
+    assert r_v2_off30["details"]["pooled_v2_ci95"] == 0.086
+
+    assert by_id["WS4-v3-44548-44550"]["status"] == "FAILED_CUDA_OOM"
+    assert by_id["WS4-v3-44553"]["status"] == "FAILED_ZERO_VARIANCE"
+    assert by_id["WS4-v3-44553"]["details"]["zero_variance_groups_first_10"] == 8
+
+    r_spot = by_id["WS4-v3-4k-s1-714d-spot"]
+    assert r_spot["status"] == "FAILED_SPOT_PREEMPTED"
+    assert r_spot["heldout_n"] == 0
+    assert r_spot["details"]["verda_instance"] == "714d8144"
+    assert r_spot["details"]["spot_preempted"] is True
+
+    r_s1_4k = by_id["WS4-v3-4k-s1-44572"]
+    assert r_s1_4k["status"] == "NEGATIVE_FLAT_PARTIAL"
+    assert r_s1_4k["heldout_n"] == 25
+    assert r_s1_4k["after_mean_score"] == -0.24
+    assert r_s1_4k["after_ci95"] == 0.171
+    assert r_s1_4k["after_valid_call_rate"] == 0.97
+    assert r_s1_4k["details"]["grpo_steps"] == 192
+    assert r_s1_4k["details"]["accused_rate"] == 0.24
+    assert r_s1_4k["details"]["accuracy"] == 0.0
 
     r_v3_eval = by_id["WS4-v3-verda-s0-eval"]
     assert r_v3_eval["status"] == "NEGATIVE_4K_TRUNCATION_PERSISTS"
-    assert r_v3_eval["heldout_n"] == 90
-    assert r_v3_eval["after_mean_score"] == -0.103
-    assert r_v3_eval["after_ci95"] == 0.081
+    assert r_v3_eval["heldout_n"] == 180
+    assert r_v3_eval["after_mean_score"] == -0.147
+    assert r_v3_eval["after_ci95"] == 0.063
+    assert r_v3_eval["after_valid_call_rate"] == 1.0
     assert r_v3_eval["details"]["grpo_steps"] == 609
-    assert r_v3_eval["details"]["delta_vs_v2_mean"] == 0.306
-    assert r_v3_eval["details"]["delta_vs_base_mean"] == -0.062
+    assert r_v3_eval["details"]["accused_count"] == 38
+    assert r_v3_eval["details"]["accused_rate"] == 0.21
+    assert r_v3_eval["details"]["correct_count"] == 6
+    assert r_v3_eval["details"]["precision_when_accused"] == 0.16
+    assert r_v3_eval["details"]["delta_vs_v2_mean"] == 0.31
+    assert r_v3_eval["details"]["delta_vs_v2_ci95"] == 0.107
+    assert r_v3_eval["details"]["s0_n"] == 90
+    assert r_v3_eval["details"]["s0_mean_score"] == -0.103
+    assert r_v3_eval["details"]["off30_n"] == 90
+    assert r_v3_eval["details"]["off30_mean_score"] == -0.192
+
+    r_ctx8k = by_id["WS4-v3-4k-s0-ctx8k"]
+    assert r_ctx8k["status"] == "NEGATIVE_INFERENCE_CTX_CONFOUND"
+    assert r_ctx8k["context_len"] == 8192
+    assert r_ctx8k["heldout_n"] == 90
+    assert r_ctx8k["after_mean_score"] == -0.716
+    assert r_ctx8k["after_ci95"] == 0.105
+    assert r_ctx8k["after_world_secret_tag"] == "1ca0c2a64d"
+    assert r_ctx8k["details"]["two_sample_delta_vs_4k_mean"] == -0.568
+    assert r_ctx8k["details"]["two_sample_delta_vs_4k_ci95"] == 0.123
+
+    r_8k_s1 = by_id["WS4-v3-8k-s1-ac58"]
+    assert r_8k_s1["status"] == "NEGATIVE_OFFPOLICY_OVERACCUSE"
+    assert r_8k_s1["context_len"] == 8192
+    assert r_8k_s1["heldout_n"] == 90
+    assert r_8k_s1["after_mean_score"] == -0.777
+    assert r_8k_s1["after_ci95"] == 0.118
+    assert r_8k_s1["after_valid_call_rate"] == 0.92
+    assert r_8k_s1["details"]["grpo_steps"] == 371
+    assert r_8k_s1["details"]["accused_rate"] == 0.94
+    assert r_8k_s1["details"]["accuracy"] == 0.09
+
+    r_8k_s2 = by_id["WS4-v3-8k-s2-dbd0"]
+    assert r_8k_s2["status"] == "NEGATIVE_ABSTAIN_COLLAPSE"
+    assert r_8k_s2["context_len"] == 8192
+    assert r_8k_s2["heldout_n"] == 90
+    assert r_8k_s2["after_mean_score"] == -0.05
+    assert r_8k_s2["after_ci95"] == 0.049
+    assert r_8k_s2["after_valid_call_rate"] == 0.96
+    assert r_8k_s2["details"]["grpo_steps"] == 693
+    assert r_8k_s2["details"]["accused_rate"] == 0.07
+    assert r_8k_s2["details"]["accuracy"] == 0.01
+    assert r_8k_s2["details"]["abstain_rate"] == 0.93
+
+    r_8k_s3 = by_id["WS4-v3-8k-s3-f437"]
+    assert r_8k_s3["status"] == "NEGATIVE_PAIRED_8K_NULL"
+    assert r_8k_s3["context_len"] == 8192
+    assert r_8k_s3["heldout_n"] == 90
+    assert r_8k_s3["after_mean_score"] == -0.788
+    assert r_8k_s3["after_ci95"] == 0.117
+    assert r_8k_s3["after_valid_call_rate"] == 0.94
+    assert r_8k_s3["after_world_secret_tag"] == "1ca0c2a64d"
+    assert r_8k_s3["details"]["grpo_steps"] == 344
+    assert r_8k_s3["details"]["accused_rate"] == 0.96
+    assert r_8k_s3["details"]["accuracy"] == 0.09
+    assert r_8k_s3["details"]["paired_vs_4k_ctx8k_mean_delta"] == -0.073
+    assert r_8k_s3["details"]["paired_vs_4k_ctx8k_ci95"] == 0.173
+    assert r_8k_s3["details"]["matching_step0_rosters"] == 60
 
     for r in by_id.values():
         assert r["verified_improvement"] is False
         assert r["gates"]["all_passed"] is False
+
+
+def test_markdown_diagnosis_pillars_and_panel_fix_a() -> None:
+    ledger = ledger_mod.build_ledger(repo_root=REPO_ROOT)
+    md = ledger_mod.render_markdown_report(ledger)
+
+    for required_substr in (
+        "Historical runs logged: `15`",
+        "2,842 / 4,096",
+        "1,254",
+        "0.19 -> 0.89",
+        "6/38 = 0.16",
+        "-0.147 -> -0.716",
+        "-0.568 +/- 0.123",
+        "-0.073 +/- 0.173",
+        "60/60",
+        "1ca0c2a64d",
+        "Open-Weight Autoregressive LLM Track",
+        "Structured Compact Policy Track",
+        "EmpiricalBayesPolicy",
+        "post-hoc locked",
+        "not pre-registered",
+    ):
+        assert required_substr in md, f"missing diagnosis substring: {required_substr!r}"
+
+    for run_id in ledger_mod.HISTORICAL_RUN_IDS:
+        assert f"| `{run_id}` |" in md
 
 
 def test_gate1_rejects_leaked_and_overlapping_seeds() -> None:
@@ -344,7 +472,7 @@ def test_positive_acceptance_and_dynamic_discovery(tmp_path: Path) -> None:
     ])
     assert rc_write == 0
     written = json.loads(out_json.read_text(encoding="utf-8"))
-    assert written["summary_counts"]["historical_runs"] == 9
+    assert written["summary_counts"]["historical_runs"] == 15
     assert written["summary_counts"]["discovered_runs"] == 2
     assert written["summary_counts"]["verified_improvements"] == 1
     assert written["summary_counts"]["verified_run_ids"] == ["compact-cal-0.5b-v1"]
@@ -367,6 +495,7 @@ def test_positive_acceptance_and_dynamic_discovery(tmp_path: Path) -> None:
 
 def test_committed_artifacts_check_and_tamper_detection(tmp_path: Path) -> None:
     assert ledger_mod.main(["--check"]) == 0
+    assert ledger_mod.main(["--check", "--external-data-root", str(tmp_path / "missing_ext")]) == 0
 
     proc = subprocess.run(
         [sys.executable, str(SCRIPT_PATH), "--check"],
@@ -378,7 +507,7 @@ def test_committed_artifacts_check_and_tamper_detection(tmp_path: Path) -> None:
     assert proc.returncode == 0, proc.stdout + proc.stderr
     payload = json.loads(proc.stdout.strip())
     assert payload["ok"] is True
-    assert payload["historical_runs"] == 9
+    assert payload["historical_runs"] == 15
 
     tampered_json = tmp_path / "tampered_ledger.json"
     data = json.loads(LEDGER_JSON_PATH.read_text(encoding="utf-8"))

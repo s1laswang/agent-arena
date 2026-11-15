@@ -4,6 +4,7 @@ import importlib.util
 import json
 import math
 from pathlib import Path
+import sys
 
 from canary.analysis.gap import load_runs, mean_ci
 
@@ -20,6 +21,25 @@ COMMITTED_G1_SEEDS = [34, 37]
 FLEET_NEW_SEEDS = [30, 42, 45, 48, 57, 58]
 EXT8_SEEDS = [30, 34, 37, 42, 45, 48, 57, 58]
 POOLED38_SEEDS = list(range(30)) + EXT8_SEEDS
+FINITE_STAT_KEYS = (
+    "mean",
+    "ci",
+    "accuracy",
+    "accused_rate",
+    "p_accused",
+    "accuse_day",
+    "solver_same_seeds",
+    "ratio",
+    "ratio_lo",
+    "ratio_hi",
+    "diff",
+    "diff_ci",
+    "post_expected",
+    "post_expected_ratio",
+    "post_expected_lo",
+    "post_expected_hi",
+    "solver_post_expected",
+)
 
 
 def _load_script(name: str, rel_path: str):
@@ -145,6 +165,10 @@ def _assert_cohort_stats(
     assert row["n"] == len(expected_seeds)
     assert row["seeds"] == expected_seeds
     assert [ep["seed"] for ep in episodes] == expected_seeds
+    for key in FINITE_STAT_KEYS:
+        val = row[key]
+        assert isinstance(val, (int, float)) and not isinstance(val, bool)
+        assert math.isfinite(val)
 
     scores = [ep["score"] for ep in episodes]
     sol_scores = [solver_by_seed[ep["seed"]]["score"] for ep in episodes]
@@ -154,6 +178,9 @@ def _assert_cohort_stats(
     exp_sol_mean = sum(sol_scores) / len(sol_scores)
     exp_diff, exp_diff_ci = mean_ci(diffs)
 
+    assert row["ci"] >= 0.0
+    assert row["diff_ci"] >= 0.0
+    assert row["ratio"] > 0.0
     assert abs(row["mean"] - exp_mean) < 1e-9
     assert abs(row["ci"] - exp_ci) < 1e-9
     assert abs(row["solver_same_seeds"] - exp_sol_mean) < 1e-9
@@ -189,7 +216,7 @@ def test_frontier_replication_v14_readme_and_committed_g1_replay(monkeypatch):
 
     committed_ext_path = COMMITTED_EXT_HARD / "episodes.jsonl"
     committed_eps = _read_jsonl(committed_ext_path)
-    assert [ep["seed"] for ep in committed_eps] == COMMITTED_G1_SEEDS
+    assert [ep["seed"] for ep in committed_eps] in (COMMITTED_G1_SEEDS, EXT8_SEEDS)
     for ep in committed_eps:
         assert ep["tier"] == "hard"
         assert ep["agent"] == "opencode:google/gemini-4-carbon"
@@ -204,6 +231,17 @@ def test_frontier_replication_v14_readme_and_committed_g1_replay(monkeypatch):
 
 
 def test_frontier_replication_v14_paired_tables_fleet7_ext8_pooled38():
+    for fname in (
+        "README.md",
+        "paired_table_fleet7.json",
+        "paired_table_fleet7.md",
+        "paired_table_ext8_combined.json",
+        "paired_table_ext8_combined.md",
+        "paired_table_pooled38.json",
+        "paired_table_pooled38.md",
+    ):
+        assert (EXT_ROOT / fname).is_file()
+
     fleet_eps = _read_jsonl(EXT_HARD / "episodes.jsonl")
     committed_ext_eps = _read_jsonl(COMMITTED_EXT_HARD / "episodes.jsonl")
     primary_hard_eps = _read_jsonl(COMMITTED_PRIMARY_HARD / "episodes.jsonl")
@@ -215,17 +253,21 @@ def test_frontier_replication_v14_paired_tables_fleet7_ext8_pooled38():
     solver_by_seed = {ep["seed"]: ep for ep in solver_hard_eps}
     assert sorted(solver_by_seed) == list(range(60))
 
-    committed_seed_set = {ep["seed"] for ep in committed_ext_eps}
-    assert sorted(committed_seed_set) == COMMITTED_G1_SEEDS
-    fleet_new_eps = [ep for ep in fleet_eps if ep["seed"] not in committed_seed_set]
+    assert [ep["seed"] for ep in committed_ext_eps] in (COMMITTED_G1_SEEDS, EXT8_SEEDS)
+    g1_seed_set = set(COMMITTED_G1_SEEDS)
+    g1_eps = [ep for ep in committed_ext_eps if ep["seed"] in g1_seed_set]
+    assert [ep["seed"] for ep in g1_eps] == COMMITTED_G1_SEEDS
+    fleet_new_eps = [ep for ep in fleet_eps if ep["seed"] not in g1_seed_set]
     assert [ep["seed"] for ep in fleet_new_eps] == FLEET_NEW_SEEDS
 
-    dedup_ext8_eps = sorted(committed_ext_eps + fleet_new_eps, key=lambda ep: ep["seed"])
+    dedup_ext8_eps = sorted(g1_eps + fleet_new_eps, key=lambda ep: ep["seed"])
     assert [ep["seed"] for ep in dedup_ext8_eps] == EXT8_SEEDS
-    committed_by_seed = {ep["seed"]: ep for ep in committed_ext_eps}
+    if len(committed_ext_eps) == len(EXT8_SEEDS):
+        assert [ep["score"] for ep in committed_ext_eps] == [ep["score"] for ep in dedup_ext8_eps]
+    g1_by_seed = {ep["seed"]: ep for ep in g1_eps}
     fleet_by_seed = {ep["seed"]: ep for ep in fleet_eps}
     dedup_by_seed = {ep["seed"]: ep for ep in dedup_ext8_eps}
-    assert dedup_by_seed[34]["score"] == committed_by_seed[34]["score"]
+    assert dedup_by_seed[34]["score"] == g1_by_seed[34]["score"]
     assert dedup_by_seed[34]["score"] != fleet_by_seed[34]["score"]
 
     pooled38_eps = primary_hard_eps + dedup_ext8_eps
@@ -233,6 +275,7 @@ def test_frontier_replication_v14_paired_tables_fleet7_ext8_pooled38():
 
     fleet7_json = json.loads((EXT_ROOT / "paired_table_fleet7.json").read_text(encoding="utf-8"))
     assert len(fleet7_json) == 2
+    assert fleet7_json[0]["n"] == 7
     _assert_cohort_stats(fleet7_json[0], fleet_eps, solver_by_seed, EXPECTED_SEEDS)
     assert fleet7_json[1]["agent"] == "solver"
     assert fleet7_json[1]["n"] == 30
@@ -243,6 +286,7 @@ def test_frontier_replication_v14_paired_tables_fleet7_ext8_pooled38():
 
     ext8_json = json.loads((EXT_ROOT / "paired_table_ext8_combined.json").read_text(encoding="utf-8"))
     assert len(ext8_json) == 2
+    assert ext8_json[0]["n"] == 8
     _assert_cohort_stats(ext8_json[0], dedup_ext8_eps, solver_by_seed, EXT8_SEEDS)
     assert ext8_json[1]["agent"] == "solver"
     assert ext8_json[1]["n"] == 30
@@ -272,6 +316,9 @@ def test_frontier_replication_v14_paired_tables_fleet7_ext8_pooled38():
     ]
     solver60_row = hard_by_group[("v1.4/reference", "reference solver")]
 
+    assert primary_row["n"] == 30
+    assert ext8_row["n"] == 8
+    assert pooled_row["n"] == 38
     _assert_cohort_stats(primary_row, primary_hard_eps, solver_by_seed, list(range(30)))
     _assert_cohort_stats(ext8_row, dedup_ext8_eps, solver_by_seed, EXT8_SEEDS)
     _assert_cohort_stats(pooled_row, pooled38_eps, solver_by_seed, POOLED38_SEEDS)
@@ -281,3 +328,22 @@ def test_frontier_replication_v14_paired_tables_fleet7_ext8_pooled38():
     sol_0_59_mean = sum(solver_by_seed[s]["score"] for s in range(60)) / 60
     assert abs(solver60_row["mean"] - sol_0_59_mean) < 1e-9
     _assert_md_matches_json(EXT_ROOT / "paired_table_pooled38.md", pooled38_json)
+
+
+def test_frontier_replication_v14_supports_pr3_ext8_committed_layout(tmp_path, monkeypatch):
+    fleet_eps = _read_jsonl(EXT_HARD / "episodes.jsonl")
+    committed_eps = _read_jsonl(COMMITTED_EXT_HARD / "episodes.jsonl")
+    g1_seed_set = set(COMMITTED_G1_SEEDS)
+    g1_eps = [ep for ep in committed_eps if ep["seed"] in g1_seed_set]
+    fleet_new_eps = [ep for ep in fleet_eps if ep["seed"] not in g1_seed_set]
+    ext8_eps = sorted(g1_eps + fleet_new_eps, key=lambda ep: ep["seed"])
+
+    sim_ext_hard = tmp_path / "hard"
+    sim_ext_hard.mkdir(parents=True)
+    (sim_ext_hard / "episodes.jsonl").write_text(
+        "\n".join(json.dumps(ep) for ep in ext8_eps) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(sys.modules[__name__], "COMMITTED_EXT_HARD", sim_ext_hard)
+    test_frontier_replication_v14_readme_and_committed_g1_replay(monkeypatch)
+    test_frontier_replication_v14_paired_tables_fleet7_ext8_pooled38()

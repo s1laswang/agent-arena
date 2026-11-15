@@ -77,7 +77,7 @@ def test_j1_self_hosted_section_replay_verified_and_costed(tmp_path, monkeypatch
     args = ["--runs", str(tmp_path / "gem"), "--out", str(tmp_path / "a"), "--bootstrap", "100",
             "--probe", str(tmp_path / "none.json"), "--no-tags", "--j1-runs", str(j1), "--j1-model", "Qwen/Qwen3-14B",
             "--j1-eur-per-hour", "1.0794", "--j1-billed-hours", "hard=0.5", "--j1-eur-usd", "1.10",
-            "--j1-fx-source", "test rate"]
+            "--j1-fx-source", "test rate", "--j1-cap-tokens", "4096"]
     assert ladder_report.main(args) == 0
     doc = json.loads((tmp_path / "a" / "ladder.json").read_text())
     j = doc["j1"]
@@ -87,12 +87,15 @@ def test_j1_self_hosted_section_replay_verified_and_costed(tmp_path, monkeypatch
     md = (tmp_path / "a" / "ladder.md").read_text()
     assert "## Open-weight comparison on Canary v1.4 (Verda self-hosted)" in md and "2/2 replay-verified" in md
     assert "Qwen/Qwen3-14B (Verda self-hosted, vLLM)" in md
+    assert ("Gemini cells had no per-turn output cap; Qwen/Qwen3-14B was capped at 4096 tokens/turn for time." in md)
+    assert "| medium | Qwen/Qwen3-14B (Verda self-hosted, vLLM) | 0 | not run |" in md
     assert doc["episodes"] == 2 and [x["model"] for x in doc["rows"]] == ["gemini-3.8-flash"]  # Gemini table untouched
     fr = json.loads((tmp_path / "a" / "frontier.json").read_text())
     p = [x for x in fr["points"]["hard"] if x["kind"] == "j1"][0]
     assert p["cost_per_ep_usd"] and "EUR 1.0794/h" in p["cost_basis"] and not p["imported"]
+    assert p["label"] == "Qwen/Qwen3-14B (Verda self-hosted, vLLM, capped 4096 tok/turn)"
     # without cost inputs the points are never placed at an invented cost
-    assert ladder_report.main(args[:-8] + ["--out", str(tmp_path / "b")]) == 0
+    assert ladder_report.main(args[:-10] + ["--out", str(tmp_path / "b")]) == 0
     fb = json.loads((tmp_path / "b" / "frontier.json").read_text())
     assert [x for x in fb["points"]["hard"] if x["kind"] == "j1"][0]["cost_per_ep_usd"] is None
 

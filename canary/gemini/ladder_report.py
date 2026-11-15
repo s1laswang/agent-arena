@@ -445,7 +445,8 @@ def frontier_points(rows: list[dict], gemma_rows: list[dict] | None, tier: str,
                     "served_model_versions": r.get("model_versions") or [],
                     "cost_basis": r.get("cost_basis"),
                     "label": (f"{r['model']} via Gemini API (hosted Gemma)" if kind == "gemma" else
-                              f"{r['model']} ({J1_LABEL})" if kind == "j1" else
+                              f"{r['model']} ({J1_LABEL}" + (f", capped {r['cap_tokens']} tok/turn"
+                                                              if r.get("cap_tokens") else "") + ")" if kind == "j1" else
                               f"{_short(r['model'])} {r['level']}" + (" (in-process, imported)" if imported else ""))})
     return pts
 
@@ -693,6 +694,7 @@ def j1_block(eps: list[dict], solver: dict, a, B: int) -> dict:
     n_all = len(eps)
     for r in rows:
         r["cost_basis"] = None
+        r["cap_tokens"] = a.j1_cap_tokens
         h = hours.get(r["tier"]) if r["tier"] in hours else hours.get("*")
         n = r["n"] if r["tier"] in hours else n_all
         if a.j1_eur_per_hour and h and n:
@@ -707,7 +709,7 @@ def j1_block(eps: list[dict], solver: dict, a, B: int) -> dict:
     return {"runs": str(a.j1_runs).replace(str(Path.home()), "~"), "model": a.j1_model, "episodes": n_all,
             "replay_verified": sum(v["ok"] for v in ver), "replay_mismatches": [v for v in ver if not v["ok"]],
             "eur_per_hour": a.j1_eur_per_hour, "billed_hours": hours, "eur_usd": a.j1_eur_usd,
-            "fx_source": a.j1_fx_source, "note": a.j1_note, "rows": rows}
+            "fx_source": a.j1_fx_source, "note": a.j1_note, "cap_tokens": a.j1_cap_tokens, "rows": rows}
 
 
 def j1_md(j: dict | None) -> list[str]:
@@ -719,6 +721,9 @@ def j1_md(j: dict | None) -> list[str]:
          f"seeds. {j['episodes']} valid episodes from `{j['runs']}`; **{j['replay_verified']}/{j['episodes']} replay-verified** "
          f"(`scripts/verify_replay.py`: each episode's recorded tool calls re-run in a fresh Env reproduce its score and "
          f"accused id)" + (f"; mismatches: {j['replay_mismatches']}" if j["replay_mismatches"] else "") + ".", ""]
+    if j.get("cap_tokens"):
+        L += [f"**Asymmetry:** Gemini cells had no per-turn output cap; {j['model']} was capped at "
+              f"{j['cap_tokens']} tokens/turn for time.", ""]
     if j.get("note"):
         L += [j["note"], ""]
     L += ["| tier | model | n | score ± 95% CI | acc. | solver, same seeds | **score / solver [95% CI]** | "
@@ -729,6 +734,9 @@ def j1_md(j: dict | None) -> list[str]:
                  f"{r['accuracy']:.2f} | {_f(r['solver_same_seeds'])} | **{_pct(r, 'ratio')}** | {_f(r['diff'])} ± "
                  f"{_f(r['diff_ci'], 2)} | {_f(r['calls_per_ep'], 0)} | {'–' if eur is None else f'{eur:.3f}'} | "
                  f"{_f(r['cost_per_ep'], 3)} | {r.get('cost_basis') or 'not stated: not costed'} |")
+    for tier in TIERS:
+        if not any(r["tier"] == tier for r in j["rows"]):
+            L.append(f"| {tier} | {j['model']} ({J1_LABEL}) | 0 | not run | | | | | | | | |")
     L += ["", "Costs are the instance's hourly price times the hours attributed to these runs, divided by the episodes; "
           "they are not API list prices and are not comparable token-for-token with the Gemini rows.", ""]
     return L
@@ -855,6 +863,8 @@ def main(argv=None) -> int:
     ap.add_argument("--j1-eur-usd", type=float, default=None, help="EUR->USD rate used for the frontier x axis")
     ap.add_argument("--j1-fx-source", default=None, help="where the EUR->USD rate comes from (stated in the report)")
     ap.add_argument("--j1-note", default="", help="serving setup / instance / disclosures, printed in the section")
+    ap.add_argument("--j1-cap-tokens", type=int, default=None,
+                    help="server-side per-turn output-token cap used for the self-hosted model (stated as an asymmetry)")
     ap.add_argument("--headline", default=None,
                     help="hand-written findings block for the top of ladder.md (default: generated from the table)")
     a = ap.parse_args(argv)

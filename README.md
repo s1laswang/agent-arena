@@ -23,6 +23,7 @@ A simulated company has one **mole** who leaks documents to a rival. Every leak 
   - *Luck-adjusted* scores each accusation by its expected value under the solver's posterior, so it separates decisions from luck.
 - **Honest reading.** The same model run in-process reaches 95% [62%, 140%] on hard, and OpenCode reaches 111% on medium. The gap is on hard, in the judges' harness. A random accusation on day 1 (`guess_day1`) averages −0.95 on hard ([`results/solver_range/guess_day1_hard_judge40.md`](results/solver_range/guess_day1_hard_judge40.md)).
 - **Infra retries, disclosed.** Some OpenCode attempts ended on an empty model reply (a Gemini/OpenCode client failure, not a decision). Those attempts were retried and never counted. If they are instead scored 0, OpenCode hard is 56% [19%, 87%] of the solver (luck-adjusted 55% [34%, 77%]): the gap widens, so retrying is the conservative choice. Source: the "alternative" row in the paired table.
+- **Harness difference, disclosed.** The committed headline runs used OpenCode with only the 13 MCP tools: `bash`/`python3` were denied. The Harbor template's agent container allows `bash` and `python3`, which cannot reach the world, the seed or the ledger (isolation check: 11/11). So in a Harbor rerun the agent may also compute with Python. The judge rehearsal (`results/harbor/rehearsal/`) uses the Harbor setting, so it measures exactly what you will run.
 
 ## Reproduce: one command, no API keys
 
@@ -31,9 +32,9 @@ make setup && make reproduce    # about 1 min; needs uv and make (Linux or macOS
 make accept                     # asserts the baselines, MCP smoke test; exit 0 = pass
 ```
 
-- **What `make reproduce` does.** It replays every committed episode, so the Gemini row above comes back as +0.322 ± 0.199. It plays the solver and six baselines on the 40 frozen judge seeds, then runs the anti-cheat battery. The last line is `ANTI-CHEAT: every probe blocked ...`, and it exits 1 if any cheat gets through.
+- **What `make reproduce` does.** It replays every committed episode, so the Gemini row above comes back as +0.322 ± 0.199. It plays the solver and six baselines on the 40 frozen judge seeds, then runs the anti-cheat battery. It prints `ANTI-CHEAT: every probe blocked ...` (exit 1 if any cheat gets through), then a `HEADLINE` line: the 65% [24%, 98%] row above, recomputed from the committed episodes and diffed against the committed paired table (exit 1 on any difference). A `slow act()` line on stderr is a timing note from the solver, not an error.
 - **Run-to-run variation.** Each run draws a fresh world secret, so the solver's judge-seed row moves between runs: hard +0.553 ± 0.093 in the committed [`results/judge_table.md`](results/judge_table.md), +0.643 ± 0.087 in our fresh-clone run. The spread over 300 fresh secrets is in [`results/solver_range/`](results/solver_range/), and `make accept` checks against it. do_nothing and stop_early are always exactly 0. `CANARY_WORLD_SECRET=<any string> make reproduce` gives bit-identical output.
-- **Speed knobs.** `REPRO_ANTICHEAT=0` prints only the table (about 10 s). `REPRO_FAST=1` shrinks the table to 5 seeds per tier, but it is not much faster: the anti-cheat verdict still uses all 40 judge seeds, because a 5-seed verdict raised false alarms.
+- **Speed knobs.** `REPRO_ANTICHEAT=0` prints only the table (about 25–75 s on a laptop). `REPRO_FAST=1` shrinks the table to 5 seeds per tier, but it is not much faster: the anti-cheat verdict still uses all 40 judge seeds, because a 5-seed verdict raised false alarms.
 - **Where things go.** Output goes to `results/latest/`, which is gitignored. A timed fresh clone of this branch on macOS is in [`results/fresh_clone/`](results/fresh_clone/).
 
 ## In the judges' harness: Harbor + OpenCode over MCP (needs Docker)
@@ -98,7 +99,7 @@ We attacked our own reward before the judges did: scripted cheats, Codex and Gro
 - **Judge worlds regenerable from public code (#24).** Judge worlds now need a secret and fail closed without it.
 - **Reading the server's environment from the same uid (#27).** Closed by secrets in 0600 files that are consumed at start, and in Harbor by a separate sidecar container.
 
-`make reproduce` runs the anti-cheat battery (designed by Vaishnav, ported from his Poisoned Inbox) on the same seeds and secret as the table: 13 scripted cheats, an effort ladder, and a replay of every committed episode and Harbor trial. `make anticheat-verify` reruns the committed 40-seed battery in [`results/anticheat/exploits.md`](results/anticheat/exploits.md) and expects `0 differences`.
+`make reproduce` runs the anti-cheat battery (designed by Vaishnav, ported from his Poisoned Inbox) on the same seeds and secret as the table: 14 scripted attack probes and 1 swarm probe, an effort ladder, and a replay of every committed episode and Harbor trial. `make anticheat-verify` reruns the committed 40-seed battery in [`results/anticheat/exploits.md`](results/anticheat/exploits.md) and expects `0 differences`.
 
 ## Run an agent over MCP (without Harbor)
 

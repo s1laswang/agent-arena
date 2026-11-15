@@ -49,8 +49,12 @@ def _cli_error(trial: Path) -> str | None:
 
 def trials(job: Path) -> dict[str, dict]:
     out = {}
+    candidates = []
     for rf in sorted(job.glob("canary-*/result.json")):
         r = json.loads(rf.read_text())
+        candidates.append((str(r.get("started_at") or ""), rf.parent.name, rf, r))
+    candidates.sort(key=lambda item: (item[0], item[1]))
+    for _, _, rf, r in candidates:
         task = r.get("task_name", rf.parent.name).split("/")[-1]
         rew = ((r.get("verifier_result") or {}).get("rewards") or {}).get("reward")
         led = rf.parent / "artifacts/ledger.json"
@@ -65,10 +69,20 @@ def trials(job: Path) -> dict[str, dict]:
                 why = _cli_error(rf.parent)
         if rew is None and why is None:
             why = f"no verifier reward ({exc_t})"
-        out[task] = {"reward": None if rew is None else float(rew), "accused": lj.get("accused"),
-                     "correct": lj.get("correct"), "day": lj.get("final_day"), "done": bool(lj.get("done")),
-                     "exc": exc_t, "infra": why, "rerun": False}
-    return out
+        cfg = r.get("config")
+        src_trial = cfg.get("source_trial") if isinstance(cfg, dict) else None
+        entry = {"reward": None if rew is None else float(rew), "accused": lj.get("accused"),
+                 "correct": lj.get("correct"), "day": lj.get("final_day"), "done": bool(lj.get("done")),
+                 "exc": exc_t, "infra": why, "rerun": False}
+        if task in out:
+            if out[task]["infra"]:
+                first = out[task].get("first") or out[task]["infra"]
+                out[task] = {**entry, "rerun": True, "first": first, "inline": True}
+        elif src_trial:
+            out[task] = {**entry, "rerun": True, "first": f"source_trial={src_trial}", "inline": True}
+        else:
+            out[task] = entry
+    return {k: out[k] for k in sorted(out)}
 
 
 def mean(xs):
@@ -99,8 +113,24 @@ def load(folder: Path) -> dict[str, dict]:
         base = jobs[n[: -len(RERUN)]]
         for t, x in j.items():
             if t in base and base[t]["infra"]:
-                base[t] = {**x, "rerun": True, "first": base[t]["infra"]}
+                first = base[t].get("first") or base[t]["infra"]
+                base[t] = {**x, "rerun": True, "first": first, "inline": False}
     return jobs
+
+
+def inline_job_retries(folder: Path, names: list[str], jobs: dict[str, dict]) -> list[tuple[str, int]]:
+    out = []
+    for n in names:
+        if n.endswith(RERUN):
+            continue
+        rf = folder / n / "result.json"
+        if not rf.is_file():
+            continue
+        jr = json.loads(rf.read_text())
+        nr = int(((jr.get("stats") or {}).get("n_retries")) or 0)
+        if nr > 0 and not any(x.get("inline") for x in jobs[n].values()):
+            out.append((n, nr))
+    return out
 
 
 def valid(x) -> bool:
@@ -153,16 +183,27 @@ def main(argv=None):
         L.append(f"| {n} | {len(both)} | {ninfra} | {sum(1 for x in acc if x['correct'])} / {len(acc)} | "
                  f"{mean(ra):+.3f} | {mean(rb):+.3f} | {ratio:.0%} [{ci[0]:.0%}, {ci[1]:.0%}] | "
                  f"{mean(ra) - mean(rb):+.3f} | {as0:+.3f} |")
-    reruns = [(n, t, x["first"]) for n in names for t, x in jobs[n].items() if x.get("rerun")]
+    reruns = [(n, t, x["first"], bool(x.get("inline"))) for n in names for t, x in jobs[n].items() if x.get("rerun")]
     if reruns:
-        L += ["", "† re-run in `<job>-infra-rerun` because the first attempt was an infrastructure failure: "
-              + "; ".join(f"{n} {t} ({w})" for n, t, w in reruns) + "."]
+        if not any(inl for _, _, _, inl in reruns):
+            L += ["", "† re-run in `<job>-infra-rerun` because the first attempt was an infrastructure failure: "
+                  + "; ".join(f"{n} {t} ({w})" for n, t, w, _ in reruns) + "."]
+        elif all(inl for _, _, _, inl in reruns):
+            L += ["", "† inline retry within `<job>` because the first attempt was an infrastructure failure: "
+                  + "; ".join(f"{n} {t} ({w})" for n, t, w, _ in reruns) + "."]
+        else:
+            L += ["", "† re-run because the first attempt was an infrastructure failure: "
+                  + "; ".join(f"{n} {t} ({w}, {'inline' if inl else 'infra-rerun'})" for n, t, w, inl in reruns) + "."]
     if len(agent_means) >= 2:
         m = mean(agent_means)
         sd = math.sqrt(sum((x - m) ** 2 for x in agent_means) / (len(agent_means) - 1))
         L += ["", f"Run-to-run spread over {len(agent_means)} OpenCode runs: run means "
               + ", ".join(f"{x:+.3f}" for x in agent_means)
               + f"; mean of means {m:+.3f}, SD {sd:.3f}, range {max(agent_means) - min(agent_means):.3f}."]
+    in_place = inline_job_retries(a.folder, names, jobs)
+    if in_place:
+        L += ["", "Note: Harbor inline --retry-include infra retries recorded in job result.json: "
+              + "; ".join(f"{n} (n_retries={nr})" for n, nr in in_place) + "."]
     txt = "\n".join(L) + "\n"
     print(txt)
     if a.out:

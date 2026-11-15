@@ -16,11 +16,11 @@ PYTHONPATH=. python scripts/verify_frontier_replication.py --check
   - **Primary `0-29` (`n=30`, locked headline):** `opencode:google/gemini-4-carbon` on hard scores `0.322 +/- 0.199` vs solver `0.499`, giving **65% [24%, 98%]** raw and **72% [52%, 91%]** luck-adjusted; on medium (`n=30`) it reaches `111% [99%, 127%]` raw and `101% [85%, 119%]` luck-adjusted.
   - **Replication hard (`seeds 30, 34, 42, 45, 57`, `n=5`, separate cohort):** `opencode:google/gemini-4-carbon` scores `0.656 +/- 0.110` (5/5 correct, mean `P(accused) = 0.89`, luck-adjusted `0.472`) vs solver `0.248` raw (luck-adjusted `0.430`, ratio `110% [58%, 179%]`).
   - **Secondary pooled sensitivity (`n=35`, secondary per pre-registered rule):** Pooling primary `0-29` with replication `30, 34, 42, 45, 57` yields `80% [42%, 124%]` raw and **77% [58%, 96%]** luck-adjusted, where the luck-adjusted 95% CI `[58%, 96%]` continues to exclude parity.
-  - **Cross-model ordering (`gemini-4-carbon` vs `gemini-3.5-flash` vs `grok_tactics` vs `solver`):** On medium (`n=30` shared seeds `0-29`), `opencode:google/gemini-3.5-flash` drops to `67% [29%, 103%]` raw / `75% [45%, 105%]` luck-adjusted (`gemini-4-carbon - gemini-3.5-flash = +0.279 +/- 0.231` V raw, `+0.167 +/- 0.186` V luck-adjusted). On hard (`n=30`, `0-29`), `gemini-3.5-flash`'s raw `75% [36%, 123%]` reflects 7 lucky sub-break-even guesses (mean `P(accused) = 0.71`); its luck-adjusted ratio falls to **22% [-23%, 63%]** (`gemini-4-carbon - gemini-3.5-flash = +0.250 +/- 0.221` V/episode).
+  - **Cross-model replication (`gemini-3.5-flash` medium `n=30`, separate FR8 replication cohort):** On medium (`n=30` shared seeds `0-29`), `opencode:google/gemini-3.5-flash` reaches `67% [29%, 103%]` raw / `75% [45%, 105%]` luck-adjusted (`gemini-4-carbon - gemini-3.5-flash = +0.279 +/- 0.231` V raw, `+0.167 +/- 0.186` V luck-adjusted). `docs/reports/gap.md` is the sole source for primary `hard` (`0-29`) gap rows; `opencode:google/gemini-3.5-flash` hard is replay-verified in `committed_v14` (`410/410`) and omitted from tables here until `docs/reports/gap.md` ships it.
 
 ## 2. Primary Committed v1.4 Cohort (Seeds 0-29, Locked Headline)
 
-Exact reproduction of `data/runs/committed/v1.4/` (`scripts/paired_gemini.py --version v1.4 --seeds 0-29` and `docs/reports/gap.md`):
+Exact reproduction of `docs/reports/gap.md` rows in `data/runs/committed/v1.4/` (`scripts/paired_gemini.py --version v1.4 --seeds 0-29`):
 
 | tier | run | n | score +/- 95% CI | accuracy | accused | mean accuse day | mean P(accused) | solver, same seeds | frontier / solver [95% CI] | paired diff +/- CI | luck-adjusted score | luck-adj. / solver [95% CI] |
 |---|---|---:|---|---:|---:|---:|---:|---:|---|---|---|---|
@@ -30,17 +30,16 @@ Exact reproduction of `data/runs/committed/v1.4/` (`scripts/paired_gemini.py --v
 | medium | reference solver | 30 | 0.645 +/- 0.087 | 0.90 | 0.90 | 7.6 | 1.00 | 0.645 | n/a | n/a | 0.645 | n/a |
 | medium | heuristic | 20 | -0.275 +/- 0.361 | 0.45 | 1.00 | 11.3 | 0.62 | 0.717 | -38% [-86%, 8%] | -0.991 +/- 0.369 | -0.018 | **-3% [-33%, 28%]** |
 | medium | do_nothing | 20 | 0.000 +/- 0.000 | 0.00 | 0.00 | 0.0 | n/a | 0.717 | 0% [0%, 0%] | -0.717 +/- 0.052 | 0.000 | **0% [0%, 0%]** |
-| medium | stop_early | 20 | -1.000 +/- 0.000 | 0.00 | 1.00 | 1.0 | 0.05 | 0.717 | -139% [-151%, -131%] | -1.717 +/- 0.052 | -0.900 | **-126% [-136%, -118%]** |
+| medium | day-1 guess (recorded under the pre-2bb6729 name stop_early; today's stop_early stops without accusing and scores 0, see results/judge_table.md) | 20 | -1.000 +/- 0.000 | 0.00 | 1.00 | 1.0 | 0.05 | 0.717 | -139% [-151%, -131%] | -1.717 +/- 0.052 | -0.900 | **-126% [-136%, -118%]** |
 | medium | random | 20 | -0.678 +/- 0.225 | 0.05 | 0.75 | 6.5 | 0.08 | 0.717 | -95% [-127%, -62%] | -1.395 +/- 0.221 | -0.651 | **-91% [-118%, -63%]** |
 | medium | restrict_all | 20 | -0.950 +/- 0.098 | 0.05 | 1.00 | 7.0 | 0.05 | 0.717 | -132% [-149%, -114%] | -1.667 +/- 0.104 | -0.948 | **-132% [-144%, -123%]** |
 | hard | OpenCode + gemini-4-carbon over MCP (judges' shape) | 30 | 0.322 +/- 0.199 | 0.83 | 0.97 | 13.2 | 0.88 | 0.499 | 65% [24%, 98%] | -0.177 +/- 0.194 | 0.360 | **72% [52%, 91%]** |
 | hard | OpenCode, alternative (NOT the headline): episodes whose first attempt ended on an empty model reply counted as 0 instead of retried | 30 | 0.279 +/- 0.180 | 0.70 | 0.80 | 13.2 | 0.87 | 0.499 | 56% [19%, 87%] | -0.220 +/- 0.174 | 0.277 | **55% [34%, 77%]** |
 | hard | in-process gemini-4-carbon (full history, thought-signature replay) | 30 | 0.473 +/- 0.118 | 0.93 | 0.97 | 12.7 | 0.93 | 0.499 | 95% [62%, 140%] | -0.026 +/- 0.184 | 0.421 | **84% [65%, 106%]** |
-| hard | OpenCode + gemini-3.5-flash over MCP (second Gemini family; modelVersion gemini-3.6-flash) | 30 | 0.373 +/- 0.177 | 0.90 | 1.00 | 12.7 | 0.71 | 0.499 | 75% [36%, 123%] | -0.126 +/- 0.221 | 0.110 | **22% [-23%, 63%]** |
 | hard | reference solver | 30 | 0.499 +/- 0.119 | 0.97 | 1.00 | 10.6 | 0.97 | 0.499 | n/a | n/a | 0.499 | n/a |
 | hard | heuristic | 20 | 0.186 +/- 0.233 | 0.85 | 1.00 | 13.9 | 0.79 | 0.464 | 40% [-12%, 108%] | -0.279 +/- 0.317 | 0.095 | **19% [-19%, 54%]** |
 | hard | do_nothing | 20 | 0.000 +/- 0.000 | 0.00 | 0.00 | 0.0 | n/a | 0.464 | 0% [0%, 0%] | -0.464 +/- 0.171 | 0.000 | **0% [0%, 0%]** |
-| hard | stop_early | 20 | -1.000 +/- 0.000 | 0.00 | 1.00 | 1.0 | 0.03 | 0.464 | -215% [-360%, -167%] | -1.464 +/- 0.171 | -0.950 | **-192% [-231%, -166%]** |
+| hard | day-1 guess (recorded under the pre-2bb6729 name stop_early; today's stop_early stops without accusing and scores 0, see results/judge_table.md) | 20 | -1.000 +/- 0.000 | 0.00 | 1.00 | 1.0 | 0.03 | 0.464 | -215% [-360%, -167%] | -1.464 +/- 0.171 | -0.950 | **-192% [-231%, -166%]** |
 | hard | random | 20 | -0.850 +/- 0.161 | 0.00 | 0.85 | 8.1 | 0.02 | 0.464 | -183% [-313%, -129%] | -1.315 +/- 0.232 | -0.824 | **-166% [-209%, -129%]** |
 | hard | restrict_all | 20 | -1.000 +/- 0.000 | 0.00 | 1.00 | 9.0 | 0.01 | 0.464 | -215% [-360%, -167%] | -1.464 +/- 0.171 | -0.993 | **-201% [-241%, -173%]** |
 
@@ -100,9 +99,9 @@ Across the full 30-seed extension block (`results/frontier_replication/v1.4/refe
 | SECONDARY sensitivity: OpenCode + gemini-4-carbon hard pooled (0-29 primary + 30, 34, 42, 45, 57 replication) | 35 | 0.370 +/- 0.175 | 0.86 | 0.97 | 12.9 | 0.88 | 0.463 | 80% [42%, 124%] | -0.093 +/- 0.193 | 0.376 | **77% [58%, 96%]** |
 | reference solver (same 35 seeds) | 35 | 0.463 +/- 0.133 | 0.94 | 1.00 | 10.6 | 0.96 | 0.463 | n/a | n/a | 0.489 | n/a |
 
-## 5. Cohort (c): gemini-3.5-flash Medium (`n=30`) + Hard (`n=30`) and Cross-Model Capability Ordering
+## 5. Cohort (c): gemini-3.5-flash Medium Replication (`n=30`) and Capability Ordering
 
-### 5.1 Cross-Model Capability Ordering on Medium (`seeds 0-29`, `n=30` Shared Seeds)
+### 5.1 Cross-Model Capability Ordering on Medium (`seeds 0-29`, `n=30` Shared Seeds, FR8 Replication Cohort)
 
 `results/frontier_replication/v1.4/opencode-gemini-3.5-flash` contains `30` replay-verified medium episodes (`seeds 0-29`; missing seeds in `0-29`: `[]`). Pairing all agents on those exact `30` seeds against `data/runs/committed/v1.4/reference/solver-medium*` (with deterministic `GrokTactics` included for baseline context; on full `0-29` `grok_tactics` scores `0.460 +/- 0.123`, `71% [51%, 95%]`):
 
@@ -114,9 +113,9 @@ Across the full 30-seed extension block (`results/frontier_replication/v1.4/refe
 | grok_tactics (deterministic scripted policy, shared 30 seeds) | 30 | 0.460 +/- 0.123 | 0.70 | 0.70 | 7.7 | 1.00 | 0.645 | 71% [51%, 95%] | -0.185 +/- 0.152 | 0.460 | **71% [51%, 95%]** |
 | OpenCode + gemini-3.5-flash over MCP (seeds 0-29, complete n=30) | 30 | 0.434 +/- 0.236 | 0.83 | 1.00 | 9.0 | 0.87 | 0.645 | 67% [29%, 103%] | -0.211 +/- 0.251 | 0.485 | **75% [45%, 105%]** |
 
-### 5.2 Cross-Model Capability Ordering on Hard (`seeds 0-29`, `n=30` Shared Seeds)
+### 5.2 Capability Ordering on Hard (`seeds 0-29`, `n=30` Shared Seeds)
 
-Pairing `solver`, `gemini-4-carbon` (in-process and OpenCode over MCP), `grok_tactics` (deterministic policy), and `gemini-3.5-flash` (OpenCode over MCP) on the exact same 30 hard seeds (`0-29`):
+Pairing `docs/reports/gap.md`-approved primary runs (`solver`, in-process `gemini-4-carbon`, OpenCode `gemini-4-carbon` over MCP) and deterministic `grok_tactics` on the exact same 30 hard seeds (`0-29`; `opencode:google/gemini-3.5-flash` hard is held pending `docs/reports/gap.md`):
 
 | run | n | score +/- 95% CI | accuracy | accused | mean accuse day | mean P(accused) | solver, same seeds | frontier / solver [95% CI] | paired diff +/- CI | luck-adjusted score | luck-adj. / solver [95% CI] |
 |---|---:|---|---:|---:|---:|---:|---:|---|---|---|---|
@@ -124,15 +123,13 @@ Pairing `solver`, `gemini-4-carbon` (in-process and OpenCode over MCP), `grok_ta
 | in-process gemini-4-carbon (seeds 0-29) | 30 | 0.473 +/- 0.118 | 0.93 | 0.97 | 12.7 | 0.93 | 0.499 | 95% [62%, 140%] | -0.026 +/- 0.184 | 0.421 | **84% [65%, 106%]** |
 | grok_tactics (deterministic scripted policy, seeds 0-29) | 30 | 0.432 +/- 0.085 | 0.93 | 0.93 | 10.4 | 0.96 | 0.499 | 87% [67%, 119%] | -0.067 +/- 0.135 | 0.384 | **77% [61%, 95%]** |
 | OpenCode + gemini-4-carbon over MCP (primary seeds 0-29) | 30 | 0.322 +/- 0.199 | 0.83 | 0.97 | 13.2 | 0.88 | 0.499 | 65% [24%, 98%] | -0.177 +/- 0.194 | 0.360 | **72% [52%, 91%]** |
-| OpenCode + gemini-3.5-flash over MCP (seeds 0-29) | 30 | 0.373 +/- 0.177 | 0.90 | 1.00 | 12.7 | 0.71 | 0.499 | 75% [36%, 123%] | -0.126 +/- 0.221 | 0.110 | **22% [-23%, 63%]** |
 
 ### 5.3 Direct Paired Model Comparison (`opencode:google/gemini-4-carbon` minus `opencode:google/gemini-3.5-flash`)
 
 | tier | shared seeds (n) | gemini-4-carbon raw | gemini-3.5-flash raw | paired raw diff +/- 95% CI | gemini-4-carbon luck-adj. | gemini-3.5-flash luck-adj. | paired luck-adj. diff +/- 95% CI |
 |---|---:|---:|---:|---|---:|---:|---|
 | medium | 30 (`0-29`) | 0.713 | 0.434 | **+0.279 +/- 0.231** | 0.652 | 0.485 | **+0.167 +/- 0.186** |
-| hard | 30 (`0-29`) | 0.322 | 0.373 | -0.051 +/- 0.239 | 0.360 | 0.110 | **+0.250 +/- 0.221** |
 
-Key takeaway on capability ordering (`solver` > `gemini-4-carbon` / `grok_tactics` > `gemini-3.5-flash` > `heuristic` > `do_nothing` / `stop_early`):
-- On **medium**, `gemini-4-carbon` solves `30/30` shared seeds at high posterior confidence (`mean P(accused) = 0.96`, `101%` luck-adjusted of solver), outperforming both `grok_tactics` (`71%` luck-adjusted, `30%` abstention when scripted narrowing stalls) and `gemini-3.5-flash` (`75%` luck-adjusted, accuracy `0.83`, `+0.279 +/- 0.231` raw V/episode in favor of `gemini-4-carbon`).
-- On **hard**, `gemini-3.5-flash` commits on weak evidence (`mean P(accused) = 0.71` vs `gemini-4-carbon`'s `0.88` and `solver`'s `0.97`). Lucky low-posterior guesses lift its raw score (`0.373`), but posterior-expected scoring exposes a decision-quality drop to `0.110` (`22% [-23%, 63%]` of solver), trailing `gemini-4-carbon` (`0.360`, `72% [52%, 91%]`) by `+0.250 +/- 0.221` luck-adjusted V per episode while `gemini-4-carbon` itself remains significantly below the Bayesian reference `solver` (`0.499`).
+Key takeaway on capability ordering:
+- On **medium**, `gemini-4-carbon` solves `30/30` shared seeds at high posterior confidence (`mean P(accused) = 0.96`, `101%` luck-adjusted of solver), outperforming both `grok_tactics` (`71%` luck-adjusted, `30%` abstention when scripted narrowing stalls) and the FR8 `gemini-3.5-flash` medium replication cohort (`75%` luck-adjusted, accuracy `0.83`, `+0.279 +/- 0.231` raw V/episode in favor of `gemini-4-carbon`).
+- On **hard**, `OpenCode + gemini-4-carbon over MCP` scores `0.322 +/- 0.199` raw (`65% [24%, 98%]`) and `0.360` luck-adjusted (`72% [52%, 91%]` of solver `0.499`), trailing both in-process `gemini-4-carbon` (`0.421`, `84% [65%, 106%]`) and deterministic `grok_tactics` (`0.384`, `77% [61%, 95%]`) while remaining significantly below the Bayesian reference `solver`.

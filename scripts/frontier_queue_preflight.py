@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import shlex
 import shutil
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -37,6 +40,20 @@ EXPECTED_FLASH_MEDIUM_MISSING: list[int] = []
 EXPECTED_FLASH_HARD_LANDED: list[int] = []
 EXPECTED_FLASH_HARD_MISSING = list(range(30, 60))
 
+GEMINI_SESSIONS_DOC = "docs/agents/GEMINI-SESSIONS.md"
+GEMINI_SESSIONS_COMMIT = "f9fb7a4a"
+CARBON_MODEL = "google/gemini-4-carbon"
+NON_CARBON_REHEARSAL_ALLOWED_MODELS: tuple[str, ...] = (
+    "google/gemini-4-argon",
+    "google/gemini-4-hydrogen",
+)
+CARBON_BLACKOUT_START_ISO = "2026-11-15T04:30:00Z"
+CARBON_BLACKOUT_END_ISO = "2026-11-15T06:15:00Z"
+CARBON_BLACKOUT_START_UTC = datetime(2026, 11, 15, 4, 30, 0, tzinfo=timezone.utc)
+CARBON_BLACKOUT_END_UTC = datetime(2026, 11, 15, 6, 15, 0, tzinfo=timezone.utc)
+CARBON_BLACKOUT_LOCAL_WINDOW = "06:30-08:15 Europe/Helsinki"
+CARBON_BLACKOUT_REASON = "rehearsal_carbon_blackout_0630_0815_eet"
+
 TARGET_COHORTS: tuple[dict[str, Any], ...] = (
     {
         "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
@@ -48,6 +65,8 @@ TARGET_COHORTS: tuple[dict[str, Any], ...] = (
         "seed_end": 59,
         "baseline_landed_seeds": EXPECTED_CARBON_HARD_LANDED,
         "priority": 1,
+        "execution_owner": "silas_g1_ext60",
+        "fr8_dispatch_enabled": False,
     },
     {
         "cohort_id": "opencode-gemini-3.5-flash-medium-0-29",
@@ -59,6 +78,8 @@ TARGET_COHORTS: tuple[dict[str, Any], ...] = (
         "seed_end": 29,
         "baseline_landed_seeds": EXPECTED_FLASH_MEDIUM_LANDED,
         "priority": 2,
+        "execution_owner": "fr8_frontier_complete",
+        "fr8_dispatch_enabled": False,
     },
     {
         "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
@@ -70,6 +91,35 @@ TARGET_COHORTS: tuple[dict[str, Any], ...] = (
         "seed_end": 59,
         "baseline_landed_seeds": EXPECTED_FLASH_HARD_LANDED,
         "priority": 3,
+        "execution_owner": "fr8_frontier_paused_pure_cpu",
+        "fr8_dispatch_enabled": False,
+    },
+)
+
+G2_TEMPLATE_COHORTS: tuple[dict[str, Any], ...] = (
+    {
+        "cohort_id": "opencode-gemini-4-argon-hard-0-29",
+        "priority": 10,
+        "agent_dir": "opencode-gemini-4-argon",
+        "agent": "opencode:google/gemini-4-argon",
+        "model": "google/gemini-4-argon",
+        "tier": "hard",
+        "seed_range": [0, 29],
+        "missing_seeds": list(range(30)),
+        "execution_owner": "silas_g2_families",
+        "fr8_dispatch_enabled": False,
+    },
+    {
+        "cohort_id": "opencode-gemini-4-hydrogen-hard-0-29",
+        "priority": 11,
+        "agent_dir": "opencode-gemini-4-hydrogen",
+        "agent": "opencode:google/gemini-4-hydrogen",
+        "model": "google/gemini-4-hydrogen",
+        "tier": "hard",
+        "seed_range": [0, 29],
+        "missing_seeds": list(range(30)),
+        "execution_owner": "silas_g2_families",
+        "fr8_dispatch_enabled": False,
     },
 )
 
@@ -139,6 +189,116 @@ def build_runner_command(agent_dir: str, model: str, tier: str, seed: int) -> tu
     )
     verify_cmd = f"PYTHONPATH=. {VENV_PYTHON} scripts/verify_replay.py {out_rel}"
     return out_rel, cmd, verify_cmd
+
+
+def _helsinki_tz():
+    try:
+        return ZoneInfo("Europe/Helsinki")
+    except ZoneInfoNotFoundError:
+        return timezone(timedelta(hours=2))
+
+
+def _parse_utc_timestamp(utc_epoch_or_iso: int | float | str | datetime) -> datetime:
+    if isinstance(utc_epoch_or_iso, bool):
+        raise ValueError("boolean is not a valid timestamp")
+    if isinstance(utc_epoch_or_iso, datetime):
+        if utc_epoch_or_iso.tzinfo is None:
+            return utc_epoch_or_iso.replace(tzinfo=timezone.utc)
+        return utc_epoch_or_iso.astimezone(timezone.utc)
+    if isinstance(utc_epoch_or_iso, (int, float)):
+        val = float(utc_epoch_or_iso)
+        if not math.isfinite(val):
+            raise ValueError(f"non-finite epoch timestamp: {utc_epoch_or_iso!r}")
+        return datetime.fromtimestamp(val, tz=timezone.utc)
+    if isinstance(utc_epoch_or_iso, str):
+        raw = utc_epoch_or_iso.strip()
+        if not raw:
+            raise ValueError("empty timestamp string")
+        if re.fullmatch(r"[+-]?\d+(?:\.\d+)?", raw):
+            return datetime.fromtimestamp(float(raw), tz=timezone.utc)
+        iso = raw[:-1] + "+00:00" if raw.endswith(("Z", "z")) else raw
+        parsed = datetime.fromisoformat(iso)
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    raise TypeError(f"unsupported timestamp type: {type(utc_epoch_or_iso)!r}")
+
+
+def check_carbon_quota_blackout(
+    utc_epoch_or_iso: int | float | str | datetime,
+    model: str = CARBON_MODEL,
+) -> dict[str, Any]:
+    raw_model = model.strip()
+    if raw_model.startswith("opencode:"):
+        raw_model = raw_model.partition(":")[2]
+    norm_model = opencode_run.normalize_model(raw_model)
+    dt_utc = _parse_utc_timestamp(utc_epoch_or_iso)
+    in_window = CARBON_BLACKOUT_START_UTC <= dt_utc < CARBON_BLACKOUT_END_UTC
+    is_carbon = norm_model == CARBON_MODEL or norm_model.endswith("/gemini-4-carbon")
+    if in_window and is_carbon:
+        allowed = False
+        reason = CARBON_BLACKOUT_REASON
+    elif in_window:
+        allowed = True
+        reason = "non_carbon_model_allowed_during_blackout"
+    else:
+        allowed = True
+        reason = "outside_carbon_blackout_window"
+
+    if dt_utc.microsecond:
+        ts_utc = dt_utc.isoformat().replace("+00:00", "Z")
+    else:
+        ts_utc = dt_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+    ts_eet = dt_utc.astimezone(_helsinki_tz()).isoformat()
+    return {
+        "allowed": allowed,
+        "reason": reason,
+        "model": norm_model,
+        "is_carbon_model": is_carbon,
+        "in_blackout_window": in_window,
+        "timestamp_utc": ts_utc,
+        "timestamp_eet": ts_eet,
+        "epoch_s": dt_utc.timestamp(),
+        "window_start_utc": CARBON_BLACKOUT_START_ISO,
+        "window_end_utc": CARBON_BLACKOUT_END_ISO,
+        "window_local_eet": CARBON_BLACKOUT_LOCAL_WINDOW,
+        "allowed_models_during_blackout": list(NON_CARBON_REHEARSAL_ALLOWED_MODELS),
+    }
+
+
+def check_carbon_quota_blackout_guard() -> dict[str, Any]:
+    errors: list[str] = []
+    carbon_cases = (
+        ("2026-11-15T04:29:59Z", True, False, "outside_carbon_blackout_window"),
+        ("2026-11-15T04:30:00Z", False, True, CARBON_BLACKOUT_REASON),
+        ("2026-11-15T05:30:00Z", False, True, CARBON_BLACKOUT_REASON),
+        ("2026-11-15T06:14:59Z", False, True, CARBON_BLACKOUT_REASON),
+        ("2026-11-15T06:15:00Z", True, False, "outside_carbon_blackout_window"),
+    )
+    for ts_iso, exp_allowed, exp_in_win, exp_reason in carbon_cases:
+        res = check_carbon_quota_blackout(ts_iso)
+        if res["allowed"] is not exp_allowed or res["in_blackout_window"] is not exp_in_win or res["reason"] != exp_reason:
+            errors.append(f"unexpected carbon blackout result at {ts_iso}: {res!r}")
+        res_epoch = check_carbon_quota_blackout(int(res["epoch_s"]))
+        if res_epoch["allowed"] is not exp_allowed or res_epoch["reason"] != exp_reason:
+            errors.append(f"unexpected carbon epoch blackout result at {ts_iso}: {res_epoch!r}")
+
+    for alt_model in ("gemini-4-argon", "gemini-4-hydrogen", "google/gemini-4-argon", "google/gemini-4-hydrogen"):
+        res_alt = check_carbon_quota_blackout("2026-11-15T05:30:00Z", model=alt_model)
+        if res_alt["allowed"] is not True or res_alt["in_blackout_window"] is not True:
+            errors.append(f"non-carbon model {alt_model} blocked during carbon blackout: {res_alt!r}")
+
+    return {
+        "passed": not errors,
+        "window_start_utc": CARBON_BLACKOUT_START_ISO,
+        "window_end_utc": CARBON_BLACKOUT_END_ISO,
+        "window_local_eet": CARBON_BLACKOUT_LOCAL_WINDOW,
+        "blocked_model": CARBON_MODEL,
+        "allowed_models_during_blackout": list(NON_CARBON_REHEARSAL_ALLOWED_MODELS),
+        "reason": CARBON_BLACKOUT_REASON,
+        "synthetic_timestamps_verified": len(carbon_cases) * 2 + 4,
+        "errors": errors,
+    }
 
 
 def scan_replication_tree(
@@ -232,6 +392,8 @@ def scan_replication_tree(
                 "missing_seeds": missing_seeds,
                 "invalid_seeds": invalid_seeds,
                 "baseline_landed_verified": baseline_ok,
+                "execution_owner": spec.get("execution_owner", "unassigned"),
+                "fr8_dispatch_enabled": bool(spec.get("fr8_dispatch_enabled", False)),
             }
         )
 
@@ -248,6 +410,7 @@ def scan_replication_tree(
 def partition_into_waves(
     cohort_rows: list[dict[str, Any]],
     max_workers_per_wave: int = MAX_WORKERS_PER_WAVE,
+    include_disabled: bool = False,
 ) -> list[dict[str, Any]]:
     if max_workers_per_wave < 1 or max_workers_per_wave > MAX_WORKERS_PER_WAVE:
         raise ValueError(f"max_workers_per_wave must be in 1..{MAX_WORKERS_PER_WAVE}")
@@ -255,6 +418,9 @@ def partition_into_waves(
     ordered = sorted(cohort_rows, key=lambda c: int(c["priority"]))
     wave_id = 0
     for cohort in ordered:
+        dispatch_enabled = bool(cohort.get("fr8_dispatch_enabled", True))
+        if not include_disabled and not dispatch_enabled:
+            continue
         missing = list(cohort["missing_seeds"])
         cohort_wave = 0
         for idx in range(0, len(missing), max_workers_per_wave):
@@ -291,6 +457,8 @@ def partition_into_waves(
                     "cohort_wave": cohort_wave,
                     "model": cohort["model"],
                     "tier": cohort["tier"],
+                    "execution_owner": cohort.get("execution_owner", "unassigned"),
+                    "fr8_dispatch_enabled": dispatch_enabled,
                     "worker_count": len(jobs_list),
                     "ram_safe": len(jobs_list) <= MAX_WORKERS_PER_WAVE,
                     "seeds": batch,
@@ -298,6 +466,27 @@ def partition_into_waves(
                 }
             )
     return waves
+
+
+def build_template_waves(
+    cohort_rows: list[dict[str, Any]],
+    max_workers_per_wave: int = MAX_WORKERS_PER_WAVE,
+) -> list[dict[str, Any]]:
+    return partition_into_waves(
+        cohort_rows,
+        max_workers_per_wave=max_workers_per_wave,
+        include_disabled=True,
+    )
+
+
+def build_g2_template_waves(
+    max_workers_per_wave: int = MAX_WORKERS_PER_WAVE,
+) -> list[dict[str, Any]]:
+    return partition_into_waves(
+        [dict(c) for c in G2_TEMPLATE_COHORTS],
+        max_workers_per_wave=max_workers_per_wave,
+        include_disabled=True,
+    )
 
 
 def validate_wave_commands(waves: list[dict[str, Any]]) -> dict[str, Any]:
@@ -388,9 +577,15 @@ def check_opencode_config_isolation() -> dict[str, Any]:
     if canary_srv.get("url") != test_url or canary_srv.get("enabled") is not True:
         errors.append(f"unexpected mcp canary config: {canary_srv!r}")
     carbon_settings = opencode_run.opencode_google_settings("google/gemini-4-carbon")
+    argon_settings = opencode_run.opencode_google_settings("google/gemini-4-argon")
+    hydrogen_settings = opencode_run.opencode_google_settings("google/gemini-4-hydrogen")
     flash_settings = opencode_run.opencode_google_settings("google/gemini-3.5-flash")
     if "gemini-4-carbon: medium" not in carbon_settings.get("thinking", ""):
         errors.append(f"unexpected carbon thinking settings: {carbon_settings!r}")
+    if "no thinkingLevel" not in argon_settings.get("thinking", ""):
+        errors.append(f"unexpected argon thinking settings: {argon_settings!r}")
+    if "no thinkingLevel" not in hydrogen_settings.get("thinking", ""):
+        errors.append(f"unexpected hydrogen thinking settings: {hydrogen_settings!r}")
     if "thinkingLevel=high" not in flash_settings.get("thinking", ""):
         errors.append(f"unexpected flash thinking settings: {flash_settings!r}")
     return {
@@ -592,12 +787,17 @@ def check_transcript_redaction_and_infra(
     unredacted_rx = re.compile(r'"thoughtSignature":\s?"[^"<]{64,}"')
     real_transcripts_checked = 0
     carbon_step_counts: dict[str, int] = {}
+    flash_medium_s28_steps: int | None = None
 
     carbon_records = records_by_agent_tier.get(("opencode:google/gemini-4-carbon", "hard"), {})
+    flash_medium_records = records_by_agent_tier.get(("opencode:google/gemini-3.5-flash", "medium"), {})
     if enforce_expected_baseline:
         for req_seed in EXPECTED_CARBON_HARD_LANDED:
             if req_seed not in carbon_records:
                 errors.append(f"missing verified carbon hard replication record for seed {req_seed}")
+        for req_seed in EXPECTED_FLASH_MEDIUM_LANDED:
+            if req_seed not in flash_medium_records:
+                errors.append(f"missing verified flash medium replication record for seed {req_seed}")
 
     for (agent, tier), seed_map in sorted(records_by_agent_tier.items()):
         if not agent.startswith("opencode:"):
@@ -632,12 +832,15 @@ def check_transcript_redaction_and_infra(
 
             if agent == "opencode:google/gemini-4-carbon" and tier == "hard" and 30 <= seed <= 59:
                 carbon_step_counts[str(seed)] = len(rebuilt)
+            if agent == "opencode:google/gemini-3.5-flash" and tier == "medium" and seed == 28:
+                flash_medium_s28_steps = len(rebuilt)
 
     return {
         "passed": not errors,
         "synthetic_cases_verified": 9,
         "real_transcripts_checked": real_transcripts_checked,
         "carbon_hard_step_counts": carbon_step_counts,
+        "flash_medium_s28_steps": flash_medium_s28_steps,
         "errors": errors,
     }
 
@@ -648,7 +851,13 @@ def build_manifest(
     enforce_expected_baseline: bool = True,
 ) -> dict[str, Any]:
     scan = scan_replication_tree(root, TARGET_COHORTS, enforce_expected_baseline=enforce_expected_baseline)
-    waves = partition_into_waves(scan["cohorts"], max_workers_per_wave=max_workers_per_wave)
+    waves = partition_into_waves(
+        scan["cohorts"],
+        max_workers_per_wave=max_workers_per_wave,
+        include_disabled=False,
+    )
+    template_waves = build_template_waves(scan["cohorts"], max_workers_per_wave=max_workers_per_wave)
+    g2_template_waves = build_g2_template_waves(max_workers_per_wave=max_workers_per_wave)
 
     tiers_check = check_tiers_gate()
     config_check = check_opencode_config_isolation()
@@ -659,7 +868,33 @@ def build_manifest(
         scan.get("records_by_agent_tier", {}),
         enforce_expected_baseline=enforce_expected_baseline,
     )
-    cmd_check = validate_wave_commands(waves)
+    active_cmd_check = validate_wave_commands(waves)
+    template_cmd_check = validate_wave_commands(template_waves)
+    g2_cmd_check = validate_wave_commands(g2_template_waves)
+    cmd_errors = (
+        list(active_cmd_check["errors"])
+        + list(template_cmd_check["errors"])
+        + list(g2_cmd_check["errors"])
+    )
+    cohorts_by_id = {c["cohort_id"]: c for c in scan["cohorts"]}
+    for w in waves:
+        cohort_obj = cohorts_by_id.get(w["cohort_id"])
+        if cohort_obj is not None and not cohort_obj.get("fr8_dispatch_enabled", False):
+            cmd_errors.append(f"active wave {w['wave_id']} dispatches disabled cohort {w['cohort_id']}")
+    cmd_check = {
+        "passed": not cmd_errors,
+        "active_waves_validated": len(waves),
+        "active_commands_validated": active_cmd_check["commands_validated"],
+        "template_waves_validated": len(template_waves),
+        "commands_validated": template_cmd_check["commands_validated"],
+        "g2_family_waves_validated": len(g2_template_waves),
+        "g2_family_commands_validated": g2_cmd_check["commands_validated"],
+        "max_workers_per_wave": max_workers_per_wave,
+        "timeout_s": DEFAULT_TIMEOUT_S,
+        "jobs_per_worker": DEFAULT_JOBS,
+        "errors": cmd_errors,
+    }
+    blackout_check = check_carbon_quota_blackout_guard()
 
     checks = {
         "tiers_v14_gate": tiers_check,
@@ -668,6 +903,7 @@ def build_manifest(
         "clean_workdir_isolation": workdir_check,
         "transcript_redaction_infra_and_steps": transcript_check,
         "cli_command_validation": cmd_check,
+        "carbon_quota_blackout_guard": blackout_check,
     }
     all_errors = list(scan["errors"])
     for chk in checks.values():
@@ -676,11 +912,44 @@ def build_manifest(
     total_target = sum(c["target_count"] for c in scan["cohorts"])
     total_landed = sum(c["landed_count"] for c in scan["cohorts"])
     total_missing = sum(c["missing_count"] for c in scan["cohorts"])
+    carbon_cohort = cohorts_by_id.get("opencode-gemini-4-carbon-hard-30-59", {})
 
     return {
         "schema_version": 1,
         "tiers_version": rules.TIERS_VERSION,
         "replication_root": scan["replication_root"],
+        "gemini_sessions": {
+            "source_doc": GEMINI_SESSIONS_DOC,
+            "source_commit": GEMINI_SESSIONS_COMMIT,
+            "pure_cpu_mode": True,
+            "fr8_live_gemini_dispatch_enabled": any(c["fr8_dispatch_enabled"] for c in scan["cohorts"]),
+            "g1_carbon_hard_ext60": {
+                "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+                "execution_owner": "silas_g1_ext60",
+                "fr8_dispatch_enabled": False,
+                "model": CARBON_MODEL,
+                "tier": "hard",
+                "seed_range": [30, 59],
+                "fr8_landed_seeds": list(carbon_cohort.get("landed_seeds", EXPECTED_CARBON_HARD_LANDED)),
+                "remaining_count": int(carbon_cohort.get("missing_count", 25)),
+            },
+            "g2_frontier_families_hard_0_29": {
+                "execution_owner": "silas_g2_families",
+                "fr8_dispatch_enabled": False,
+                "models": list(NON_CARBON_REHEARSAL_ALLOWED_MODELS),
+                "tier": "hard",
+                "seed_range": [0, 29],
+                "allowed_during_carbon_blackout": True,
+            },
+            "carbon_quota_blackout": {
+                "window_start_utc": CARBON_BLACKOUT_START_ISO,
+                "window_end_utc": CARBON_BLACKOUT_END_ISO,
+                "window_local_eet": CARBON_BLACKOUT_LOCAL_WINDOW,
+                "blocked_models": [CARBON_MODEL],
+                "allowed_models": list(NON_CARBON_REHEARSAL_ALLOWED_MODELS),
+                "reason": CARBON_BLACKOUT_REASON,
+            },
+        },
         "runner": {
             "module": RUNNER_MODULE,
             "python": VENV_PYTHON,
@@ -691,13 +960,17 @@ def build_manifest(
         },
         "summary": {
             "passed": not all_errors,
+            "pure_cpu_mode": True,
             "replication_total_episodes": scan["total_episodes"],
             "replication_replay_verified_episodes": scan["replay_verified_episodes"],
             "target_frontier_episodes": total_target,
             "landed_frontier_episodes": total_landed,
             "missing_frontier_episodes": total_missing,
+            "fr8_dispatch_active_episodes": sum(w["worker_count"] for w in waves),
             "wave_count": len(waves),
             "max_workers_in_any_wave": max((w["worker_count"] for w in waves), default=0),
+            "template_wave_count": len(template_waves),
+            "template_commands_validated": template_cmd_check["commands_validated"],
         },
         "cohorts": scan["cohorts"],
         "preflight": {
@@ -724,8 +997,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--manifest", default=None, help="override output/check manifest path")
     ap.add_argument("--write", action="store_true", help="write queue_manifest.json")
     ap.add_argument("--check", action="store_true", help="verify preflight passes and queue_manifest.json is up to date")
-    ap.add_argument("--json", action="store_true", help="print full manifest JSON to stdout")
+    ap.add_argument(
+        "--validate-template-waves",
+        action="store_true",
+        help="validate offline runner CLI syntax on synthetic/template waves while keeping active waves empty",
+    )
+    ap.add_argument("--check-blackout", default=None, help="evaluate carbon blackout guard at UTC epoch or ISO timestamp")
+    ap.add_argument("--model", default=CARBON_MODEL, help="model id for --check-blackout")
+    ap.add_argument("--json", action="store_true", help="print JSON output to stdout")
     args = ap.parse_args(argv)
+
+    if args.check_blackout is not None:
+        res = check_carbon_quota_blackout(args.check_blackout, model=args.model)
+        if args.json:
+            sys.stdout.write(json.dumps(res, indent=2) + "\n")
+        else:
+            print(
+                f"blackout_check model={res['model']} ts={res['timestamp_utc']} "
+                f"allowed={res['allowed']} reason={res['reason']}"
+            )
+        return 0 if res["allowed"] else 1
 
     root = Path(args.root).resolve()
     manifest_path = Path(args.manifest).resolve() if args.manifest else default_manifest_path(root)
@@ -736,6 +1027,18 @@ def main(argv: list[str] | None = None) -> int:
         for err in manifest["preflight"]["errors"]:
             print(f"FAIL: {err}", file=sys.stderr)
         return 1
+
+    if args.validate_template_waves:
+        template_waves = build_template_waves(manifest["cohorts"])
+        g2_waves = build_g2_template_waves()
+        val_t = validate_wave_commands(template_waves)
+        val_g2 = validate_wave_commands(g2_waves)
+        if not val_t["passed"] or not val_g2["passed"] or manifest["waves"] != []:
+            for err in val_t["errors"] + val_g2["errors"]:
+                print(f"FAIL: {err}", file=sys.stderr)
+            if manifest["waves"] != []:
+                print("FAIL: active waves must be empty in pure-CPU mode", file=sys.stderr)
+            return 1
 
     if args.write:
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -755,14 +1058,16 @@ def main(argv: list[str] | None = None) -> int:
     else:
         s = manifest["summary"]
         cohort_bits = ", ".join(
-            f"{c['cohort_id']}: landed={c['landed_count']}/{c['target_count']} missing={c['missing_count']}"
+            f"{c['cohort_id']}: owner={c['execution_owner']} dispatch={c['fr8_dispatch_enabled']} "
+            f"landed={c['landed_count']}/{c['target_count']} missing={c['missing_count']}"
             for c in manifest["cohorts"]
         )
         print(
             f"OK preflight=PASS verified={s['replication_replay_verified_episodes']}/{s['replication_total_episodes']} "
             f"landed={s['landed_frontier_episodes']}/{s['target_frontier_episodes']} "
-            f"missing={s['missing_frontier_episodes']} waves={s['wave_count']} "
-            f"max_workers={s['max_workers_in_any_wave']} ({cohort_bits})"
+            f"missing={s['missing_frontier_episodes']} active_waves={s['wave_count']} "
+            f"template_waves={s['template_wave_count']} "
+            f"template_cmds={s['template_commands_validated']} ({cohort_bits})"
         )
     return 0
 

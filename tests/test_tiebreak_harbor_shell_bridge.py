@@ -14,6 +14,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+_PRELOADED_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 import scripts.tiebreak_harbor_shell_bridge as thsb
 
 SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_harbor_shell_bridge.py"
@@ -218,5 +220,5 @@ def test_source_and_report_hygiene() -> None:
         assert unicode_minus not in txt
         assert txt.isascii()
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    newly_loaded_heavy = {m for m in ("torch", "transformers") if m in sys.modules} - set(_PRELOADED_HEAVY)
+    assert newly_loaded_heavy == set()

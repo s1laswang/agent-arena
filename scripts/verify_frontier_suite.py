@@ -142,6 +142,16 @@ UPSTREAM_JSON_SPECS: tuple[dict[str, Any], ...] = (
         "cohort_n_summary": "97+ OpenCode transcripts (5+ active cohorts, 10 forensic case dossiers) in 777 pool",
         "verify_cmd": "PYTHONPATH=. python scripts/frontier_transcript_forensics.py --check",
     },
+    {
+        "deliverable_id": "frontier_stopping_counterfactual",
+        "json_rel": "results/frontier_replication/v1.4/stopping_counterfactual_v14.json",
+        "max_bytes": 35_000,
+        "script_rel": "scripts/frontier_stopping_counterfactual_v14.py",
+        "report_rel": "docs/reports/frontier_stopping_counterfactual_v14.md",
+        "test_rel": "tests/test_frontier_stopping_counterfactual_v14.py",
+        "cohort_n_summary": "246 episodes across 9 v1.4 cohorts (Bayes break-even abstention and EV decomposition)",
+        "verify_cmd": "PYTHONPATH=. python scripts/frontier_stopping_counterfactual_v14.py --check",
+    },
 )
 
 MASTER_SUITE_SPEC: dict[str, Any] = {
@@ -454,6 +464,7 @@ def compute_suite_manifest(root: Path = ROOT) -> dict[str, Any]:
     que = loaded_jsons["frontier_queue_preflight"]
     trj = loaded_jsons["frontier_trajectory_audit"]
     fsc = loaded_jsons["frontier_transcript_forensics"]
+    stp = loaded_jsons["frontier_stopping_counterfactual"]
 
     corpus_checks = (
         ("replication_summary.committed", rep["replay_verification"]["committed_v14"]["total"], EXPECTED_COMMITTED_EPISODES),
@@ -486,6 +497,15 @@ def compute_suite_manifest(root: Path = ROOT) -> dict[str, Any]:
         ("forensics.combined_verified", fsc["replay_and_transcript_verification"]["combined_verified_episodes"], EXPECTED_COMBINED_EPISODES),
         ("forensics.secret_leaks", fsc["replay_and_transcript_verification"]["secret_key_leaks"], 0),
         ("forensics.unredacted_sigs", fsc["replay_and_transcript_verification"]["unredacted_thought_signatures"], 0),
+        ("stopping.committed_verified", stp["provenance"]["committed_v14_episodes"], EXPECTED_COMMITTED_EPISODES),
+        ("stopping.replication_verified", stp["provenance"]["replication_v14_episodes"], EXPECTED_REPLICATION_EPISODES),
+        ("stopping.combined_verified", stp["provenance"]["combined_v14_episodes"], EXPECTED_COMBINED_EPISODES),
+        ("stopping.solver_sub_breakeven", stp["summary"]["solver_sub_breakeven_total"], 0),
+        ("stopping.harbor_ratios", stp["provenance"]["harbor_rehearsal_ratios_pct"], EXPECTED_HARBOR_RATIOS_PCT),
+        ("stopping.gpt55_non_accuse", stp["provenance"]["gpt_5_5_clean_rc0_non_accuse_seeds"], EXPECTED_GPT55_NON_ACCUSE_SEEDS),
+        ("stopping.g1_seeds", stp["provenance"]["g1_seeds"], EXPECTED_G1_SEEDS),
+        ("stopping.fr8_seeds", stp["provenance"]["fr8_rep_seeds"], EXPECTED_FR8_SEEDS),
+        ("stopping.union6_seeds", stp["provenance"]["carbon_hard_30_59_dedup_union_seeds"], EXPECTED_UNION_SEEDS),
     )
     for lbl, got, exp in corpus_checks:
         _assert_eq(got, exp, lbl)
@@ -1022,7 +1042,7 @@ def render_markdown(manifest: dict[str, Any]) -> str:
             "```bash",
             "PYTHONPATH=. python scripts/verify_frontier_suite.py --check",
             "PYTHONPATH=. python scripts/verify_replay.py data/runs/committed/v1.4 results/frontier_replication/v1.4",
-            "PYTHONPATH=. pytest -q tests/test_frontier_suite_master.py tests/test_frontier_replication.py tests/test_frontier_g2_families_audit.py tests/test_frontier_infra_sensitivity.py tests/test_frontier_mole_stratified_gap.py tests/test_frontier_queue_preflight.py tests/test_frontier_trajectory_audit.py tests/test_frontier_transcript_forensics.py",
+            "PYTHONPATH=. pytest -q " + " ".join(d["test_rel"] for d in manifest["deliverables"]),
             "```",
             "",
         ]

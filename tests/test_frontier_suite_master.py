@@ -252,7 +252,8 @@ def test_cross_artifact_numerical_and_provenance_invariants(monkeypatch):
     assert hr["do_nothing_ratio_pct"] == 0
     assert hr["stop_early_ratio_pct"] == 0
 
-    assert len(m["deliverables"]) == 8
+    assert len(m["deliverables"]) == len(vfs.UPSTREAM_JSON_SPECS) + 1
+    assert len(m["deliverables"]) >= 9
     for d in m["deliverables"]:
         assert d["script_rel"] in md
         assert d["json_rel"] in md

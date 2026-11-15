@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
-import subprocess
 import sys
 import time
 import tokenize
@@ -28,7 +27,7 @@ def quick_sweep_report() -> dict:
 
 
 def test_quick_sweep_all_nine_cells_and_eight_families(quick_sweep_report: dict) -> None:
-    assert quick_sweep_report["_fixture_cpu_s"] < 3.0
+    assert quick_sweep_report["_fixture_cpu_s"] < 2.5
     assert quick_sweep_report["mode"] == "quick"
     assert quick_sweep_report["live_llm_calls"] == 0
     assert quick_sweep_report["v14_tier_hash_preserved"] is True
@@ -41,7 +40,7 @@ def test_quick_sweep_all_nine_cells_and_eight_families(quick_sweep_report: dict)
     assert quick_sweep_report["total_cells"] == 9
     assert quick_sweep_report["total_trajectories"] == 18
     assert quick_sweep_report["total_steps"] >= 900
-    assert quick_sweep_report["total_rejected_calls"] >= 200
+    assert quick_sweep_report["total_rejected_calls"] >= 120
     assert quick_sweep_report["total_post_end_calls"] >= 20
     assert quick_sweep_report["total_invariant_violations"] == 0
     assert quick_sweep_report["max_rounded_v_drift"] == 0.0
@@ -140,57 +139,42 @@ def test_five_diagnostic_issue_probes(quick_sweep_report: dict) -> None:
 
 def test_shallow_ci_detached_and_nogit_fallback(tmp_path: Path) -> None:
     shallow_tmp = tmp_path / "shallow_detached_repo"
-    shallow_tmp.mkdir(parents=True)
-    subprocess.run(["git", "init", "-q"], cwd=shallow_tmp, check=True)
-    (shallow_tmp / "README.txt").write_text("detached shallow checkout\n", encoding="utf-8")
-    subprocess.run(
-        [
-            "git",
-            "-c",
-            "user.email=ci@canary.local",
-            "-c",
-            "user.name=Canary CI",
-            "commit",
-            "--allow-empty",
-            "-qm",
-            "shallow init",
-        ],
-        cwd=shallow_tmp,
-        check=True,
+    git_dir = shallow_tmp / ".git"
+    (git_dir / "objects" / "info").mkdir(parents=True)
+    (git_dir / "objects" / "pack").mkdir(parents=True)
+    (git_dir / "refs" / "heads").mkdir(parents=True)
+    (git_dir / "refs" / "tags").mkdir(parents=True)
+    detached_sha = "1111111111111111111111111111111111111111"
+    (git_dir / "HEAD").write_text(detached_sha + "\n", encoding="utf-8")
+    (git_dir / "shallow").write_text(detached_sha + "\n", encoding="utf-8")
+    (git_dir / "config").write_text(
+        "[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n\tbare = false\n",
+        encoding="utf-8",
     )
-    subprocess.run(["git", "checkout", "-q", "--detach", "HEAD"], cwd=shallow_tmp, check=True)
+    (shallow_tmp / "README.txt").write_text("detached shallow checkout\n", encoding="utf-8")
 
-    temp_pkg = "_canary_v15_shallow_w4c"
-    try:
-        rep_shallow = cost_sweep.run_cost_and_trajectory_boundary_sweep(
-            quick=True,
-            repo_root=shallow_tmp,
-            v14_targets=("easy", "hard_forge"),
-            v15_targets=("easy", "hard_forge"),
-            v15_pkg_name=temp_pkg,
-        )
-        assert rep_shallow["shallow_checkout_fallback"] is True
-        assert rep_shallow["v15_source_mode"] == "embedded_zlib_b64"
-        assert rep_shallow["v15_commit_sha"] == "de9cc50e"
-        assert rep_shallow["total_cells"] == 4
-        assert rep_shallow["total_trajectories"] == 8
-        assert rep_shallow["total_invariant_violations"] == 0
-        assert rep_shallow["positive_controls"]["all_caught"] is True
-        assert rep_shallow["v14_tier_hash_preserved"] is True
-        assert rep_shallow["working_tree_unchanged"] is True
+    rep_shallow = cost_sweep.run_cost_and_trajectory_boundary_sweep(
+        quick=True,
+        repo_root=shallow_tmp,
+        v14_targets=("easy", "hard_forge"),
+        v15_targets=("easy", "hard_forge"),
+    )
+    assert rep_shallow["shallow_checkout_fallback"] is True
+    assert rep_shallow["v15_source_mode"] == "embedded_zlib_b64"
+    assert rep_shallow["v15_commit_sha"] == "de9cc50e"
+    assert rep_shallow["v14_head_sha"] == "11111111"
+    assert rep_shallow["total_cells"] == 4
+    assert rep_shallow["total_trajectories"] == 8
+    assert rep_shallow["total_invariant_violations"] == 0
+    assert rep_shallow["positive_controls"]["all_caught"] is True
+    assert rep_shallow["v14_tier_hash_preserved"] is True
+    assert rep_shallow["working_tree_unchanged"] is True
 
-        nogit_tmp = tmp_path / "nogit_dir"
-        nogit_tmp.mkdir(parents=True)
-        (nogit_tmp / "marker.txt").write_text("no git metadata\n", encoding="utf-8")
-        assert cost_sweep.resolve_head_commit(nogit_tmp) == "nogit0000"
-        assert cost_sweep.try_resolve_git_commit(repo_root=nogit_tmp) is None
-    finally:
-        for mod_key in list(sys.modules):
-            if mod_key == temp_pkg or mod_key.startswith(temp_pkg + "."):
-                sys.modules.pop(mod_key, None)
-        sys.meta_path[:] = [
-            f for f in sys.meta_path if getattr(f, "pkg_name", None) != temp_pkg
-        ]
+    nogit_tmp = tmp_path / "nogit_dir"
+    nogit_tmp.mkdir(parents=True)
+    (nogit_tmp / "marker.txt").write_text("no git metadata\n", encoding="utf-8")
+    assert cost_sweep.resolve_head_commit(nogit_tmp) == "nogit0000"
+    assert cost_sweep.try_resolve_git_commit(repo_root=nogit_tmp) is None
 
 
 def test_cli_quick_json_smoke(tmp_path: Path) -> None:

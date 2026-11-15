@@ -1,8 +1,8 @@
 # Deception Research Grounding for Canary: Empirical Literature, Quantitative Audit, and Concrete Proposals
 
 **Squad:** `research` (`canary-research-lead` and `canary-research-w1..w9`)  
-**Baseline:** `origin/justSilas@cf394894` (rules `v1.4`, frozen hash `a8f99c2537c91d72`)  
-**Deep-Dive Monographs:** [01. Deception Detection](research/01_deception_detection.md) | [04. Social Engineering & Cheap Talk](research/04_social_engineering_cheap_talk.md) | [07. Human-Bias Social Layer & Gate B Post-Mortem](research/07_v15_bias_layer_proposals.md)  
+**Baseline:** `origin/justSilas@58716742` (rules `v1.4`, frozen hash `a8f99c2537c91d72`)  
+**Deep-Dive Monographs:** [01. Deception Detection](research/01_deception_detection.md) | [04. Social Engineering & Cheap Talk](research/04_social_engineering_cheap_talk.md) | [06. Organisational Bias, 44 Cases & Sleeper Port](research/06_organisational_bias_and_sleeper_port.md) | [07. Human-Bias Social Layer & Gate B Post-Mortem](research/07_v15_bias_layer_proposals.md) | [08. Stackelberg Games & Constrained Mole RL](research/08_mole_rl_stackelberg_and_catchability.md)  
 **Companion Case Studies:** [Organisational Biases & 44 Cases](research-biases.md) | [Failure Research Dataset](FAILURE-RESEARCH.md)  
 **Primary Benchmark Evidence:** [Gap Report](reports/gap.md) | [Failure Analysis v1.4](reports/failure_analysis_v1.4.md) | [Reference Optimality](reports/reference_optimality.md) | [Difficulty Design](DIFFICULTY.md) | [Exploit & Fairness Audit](EXPLOITS.md)
 
@@ -246,7 +246,7 @@ Across six empirical research traditions - **deception detection, insider-threat
 
 ## 7. Pillar 6: Organisational Bias, Paranoid Cognition, Scapegoating, and Security Fatigue
 
-*(Full 9-bias social-psychology audit and `v1.5`/`v1.6` derivations in [docs/research/07_v15_bias_layer_proposals.md](research/07_v15_bias_layer_proposals.md).)*
+*(Full 44-case corporate failure cross-map and 28-strategy Sleeper port in [docs/research/06_organisational_bias_and_sleeper_port.md](research/06_organisational_bias_and_sleeper_port.md); full 9-bias social-psychology audit and `v1.5`/`v1.6` derivations in [docs/research/07_v15_bias_layer_proposals.md](research/07_v15_bias_layer_proposals.md).)*
 
 ### 7.1 Primary Papers, Verified Links, and Verbatim Quotes
 
@@ -295,6 +295,8 @@ Across six empirical research traditions - **deception detection, insider-threat
 
 ## 8. Pillar 7: Stackelberg Security Games and Constrained RL for the Mole
 
+*(Full 10-paper Stackelberg, PAIRED, CPO/RCPO, GRPO/DPO, and QRE/CH analysis in [docs/research/08_mole_rl_stackelberg_and_catchability.md](research/08_mole_rl_stackelberg_and_catchability.md).)*
+
 ### 8.1 Primary Papers, Verified Links, and Verbatim Quotes
 
 - **Korzhyk, D., Conitzer, V., & Parr, R. (2011).** Stackelberg vs. Nash in Security Games: An Extended Investigation of Interchangeability, Equivalence, and Uniqueness. *Journal of Artificial Intelligence Research*, 41, 297-327.  
@@ -332,7 +334,8 @@ Every proposal below respects four hard Canary invariants:
 | **P7.1** | `canary/social/engine.py` (Zero protected paths) | Babbling equilibrium & pastiche (Crawford & Sobel, 1982; Blythe et al., 2011; Fein et al., 1990) | Seed `V16SocialProvider` from a secret-free public structural digest `sha256(tier:company:decoy:emp_sig:doc_sig)[:16]` (never `world_seed` or `world.mole`), ban `FORBIDDEN_SUBJECT_PREFIXES`, scrub `DECOY_VOCAB` so `SolverPolicy.decoy_queries` has `0` non-decoy hits, and catch `OfflineCacheMiss` cleanly onto deterministic templates. Proven `P(primary == mole) = 13/500 = 2.60%` vs `1/39 = 2.56%` (`I = 0.0000` nats). |
 | **P4.1 / P7.3** | `canary/social/biases.py` (`plausible_pretext_target`) | Illusory-truth plausibility boundary (Pennycook et al., 2018; Stajano & Wilson, 2011) | Static Day 1 `primary_suspect` is eliminated by surfaced regular-leak intersections in **63.3%** of hard episodes by Day 6 (`n = 400`) and **78.0%** by Day 12 (`n = 200`). Dynamically pivot `recency`, `misforward`, and `bandwagon` targets onto $P_d = C_{\text{reg}}(d) \setminus \text{restricted}_d$ using public `surfaced_reg_docs`, raising Day 12 pretext survival from **22.0% to 100.0%** (`200/200` seeds) with `I(Target; Mole | PublicHistory) = 0`. |
 | **P1.3** | `canary/social/biases.py` (`gen_demeanor_lure`, zero protected paths) | Perceived incompetence/ambivalence cues (Hartwig & Bond, 2011: $r = .59, .49$) | Emit peer compliance-sync notes describing a public consistent-set suspect as hesitant/ambivalent on handoff timelines and suggesting an `interview` check. `SolverPolicy` loss: `0.000 V`; reinforces `gemini-4-carbon`'s `68.0`-interview action-budget crowding (`242/303` under-planted days). |
-| **P6.1** | `canary/social/biases.py` (`gen_intergroup_scapegoat`, zero protected paths) | Intergroup bias & dual-motive scapegoating (Hewstone et al., 2002; Rothschild et al., 2012) | When a 2-department regular leak `(dept_A, dept_B)` surfaces, `dept_A` speakers vouch for in-group peers while blaming `dept_B` co-recipients (`#cross-team`), manufacturing correlated departmental consensus (`LLR = 0.0000` nats) that biases `1/k` tie-breaks when `|consistent_set| >= 2`. |
+| **P6.1** | `canary/social/biases.py` (`gen_intergroup_scapegoat`, zero protected paths) | Intergroup bias & dual-motive scapegoating (Hewstone et al., 2002; Rothschild et al., 2012) | When a 2-department regular leak `(dept_A, dept_B)` surfaces, `dept_A` speakers vouch for in-group peers while blaming `dept_B` co-recipients (`#cross-team`), manufacturing correlated departmental consensus (`600/600` schema-valid, `LLR = 0.0000` nats) that biases `1/k` tie-breaks when `|consistent_set| >= 2`. |
+| **P6.2** | `canary/social/biases.py` (`gen_procedure_override_lure`, zero protected paths) | Compliance budget & diffusion of responsibility / Sleeper `controller_cosign` port (Beautement et al., 2008; Darley & Latane, 1968; Vuori & Huy, 2016) | Senior peer cites a cosigning colleague as having cleared other holders of a leaked doc and urges skipping slow `plant_canary` rounds in favor of immediate `interview` or `restrict_access` (`600/600` schema-valid, `LLR = 0.0000` nats; `SolverPolicy` `listen = False` incurs `0.000 V` loss; paired `sleeper_override_cover_v16` lifts `min_regret` `+0.1453 -> +0.2482` at `93.3%` solver catchability). |
 | **P1.1** | Opt-in for Silas: `canary/rules.py`, `canary/env.py`, `canary/solver/` | Strategic Use of Evidence (Hartwig et al., 2006: `85.4%` vs `56.1%`; Vrij et al., 2009) | Add `sue_interview: bool = False`. Ungrounded `interview(emp, topic)` drops to `interview_lr_ungrounded = 1.05` (`KL = 0.00031` nats, `15.4x` weaker than `v1.4` hard). Supplying `evidence_doc` publicly surfaced within `sue_window_days = 6` and held by `emp` yields `interview_lr_sue = 1.80` (`KL = 0.06879` nats, keyed once per `(world_seed, emp, doc)`). `SolverPolicy` uses spare free actions on endgame `2 <= |C| <= 4` sets at `0.00 V` cost while blind Day 1-4 interview sweeps yield near-zero signal. |
 | **P1.2 / P7.2** | Opt-in for Silas: `canary/rules.py`, `canary/env.py`, `canary/solver/belief.py` | Othello error & paranoid scrutiny distress (Bond & DePaulo, 2006; Kramer, 1998) | Public scrutiny raises innocent evasiveness $p_{\text{base}}(e, d) = \min(0.52, 0.20 + 0.14 r_{e,d} + 0.06 \min(m_{e,<d}, 4))$, while mole odds scale by constant $\text{OR}_0 = 24/19 \approx 1.2632$. A restricted, focal innocent answers evasively **52.0%** vs **24.0%** for an unmentioned mole (`+0.0702` nats/interview false drift for naive flat-LR agents; `0.0000` bias for `SolverPolicy` conditioning on public `(r, m)`). |
 

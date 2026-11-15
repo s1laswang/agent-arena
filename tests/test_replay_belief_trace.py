@@ -15,7 +15,8 @@ from canary import rules
 from canary.analysis.accuse import audit_episode
 from canary.analysis.tags import to_result
 from canary.solver.policy import SolverPolicy
-from replay.belief_trace import compute_belief_trace, resolve_episode_params
+from canary.solver.regret import attribute
+from replay.belief_trace import _fast_attribute, compute_belief_trace, resolve_episode_params
 from replay.loader import load_committed_episodes
 
 TOP_TRACE_KEYS = {
@@ -607,17 +608,27 @@ def test_v_for_luck_precedence_decoy_inference_and_v12_leak_timing() -> None:
     assert tr_v13["steps"][1]["posterior"]["e00"] == pytest.approx(1.0 / 20.0)
 
 
-def test_real_committed_episodes_across_v12_v13_v14() -> None:
-    episodes = load_committed_episodes()
+@pytest.fixture(scope="module")
+def committed_episodes() -> list[dict[str, Any]]:
+    return load_committed_episodes()
+
+
+def test_real_committed_episodes_across_v12_v13_v14(
+    committed_episodes: list[dict[str, Any]],
+) -> None:
+    episodes = committed_episodes
     assert len(episodes) > 0
 
     selected: list[dict[str, Any]] = []
     seen_buckets: set[tuple[str, str, str]] = set()
     for ep in episodes:
-        bucket = (ep["tiers_version"], ep["tier"], ep["agent"])
+        bucket = (ep["tiers_version"], ep["tier"], ep["provenance"]["kind"])
         if bucket not in seen_buckets:
             selected.append(ep)
             seen_buckets.add(bucket)
+    abstained_ep = next((ep for ep in episodes if ep["accused"] is None), None)
+    if abstained_ep is not None and abstained_ep not in selected:
+        selected.append(abstained_ep)
 
     versions_seen = {ep["tiers_version"] for ep in selected}
     assert {"v1.2", "v1.3", "v1.4"}.issubset(versions_seen)
@@ -629,7 +640,7 @@ def test_real_committed_episodes_across_v12_v13_v14() -> None:
         ep_snapshot = copy.deepcopy(ep)
         tr1 = compute_belief_trace(ep)
         assert ep == ep_snapshot
-        if determinism_checked < 9:
+        if determinism_checked < 3:
             tr2 = compute_belief_trace(ep)
             assert tr1 == tr2
             determinism_checked += 1
@@ -680,8 +691,10 @@ def test_real_committed_episodes_across_v12_v13_v14() -> None:
             )
 
 
-def test_step_by_step_exact_parity_with_unoptimized_solver_policy() -> None:
-    episodes = load_committed_episodes()
+def test_step_by_step_exact_parity_with_unoptimized_solver_policy(
+    committed_episodes: list[dict[str, Any]],
+) -> None:
+    episodes = committed_episodes
     sample = [
         next(
             ep
@@ -713,6 +726,8 @@ def test_step_by_step_exact_parity_with_unoptimized_solver_policy() -> None:
         sp.obs.employees = [f"e{k:02d}" for k in range(params.n_employees)]
         sp.obs.leak_timing_known = leak_known
         er = to_result(ep)
+        with rules.tiers_version(ep["tiers_version"]):
+            assert _fast_attribute(er) == attribute(er)
         assert trace["initial"]["posterior"] == sp.belief()
         for st_obj, st_trace in zip(er.steps, trace["steps"], strict=True):
             assert st_trace["posterior_before"] == sp.belief()

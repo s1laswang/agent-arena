@@ -7,7 +7,7 @@ from typing import Any
 from canary.analysis.tags import WHY, to_result
 from canary.rules import TIERS_HISTORY, TIERS_VERSION, tier_params_for_episode, tiers_version
 from canary.solver.policy import SolverPolicy, accuse_value
-from canary.solver.regret import attribute
+from replay.belief_trace import _fast_attribute, _fast_sp_belief
 from replay.loader import make_episode_id, provenance_info
 
 _EM_DASH = "\u2014"
@@ -121,7 +121,7 @@ def _snapshot_episode(episode: dict[str, Any], ver: str) -> dict[str, Any]:
             v_at_moment = float(sp.V)
             p_breakeven = breakeven_posterior(v_at_moment, wrong_score)
             if sp.obs.employees:
-                post = sp.belief()
+                post = _fast_sp_belief(sp)
             else:
                 n_emp = max(1, int(params.n_employees))
                 post = {f"e{k:02d}": 1.0 / n_emp for k in range(n_emp)}
@@ -145,7 +145,7 @@ def _snapshot_episode(episode: dict[str, Any], ver: str) -> dict[str, Any]:
             accused = str(ep_res.accused) if ep_res.accused is not None else None
             v_at_moment = float(sp.V)
             p_breakeven = breakeven_posterior(v_at_moment, wrong_score)
-            post = sp.belief() if sp.obs.employees else {}
+            post = _fast_sp_belief(sp) if sp.obs.employees else {}
             top_suspect = min(post, key=lambda e: (-post[e], e)) if post else None
             p_top = float(post[top_suspect]) if top_suspect is not None else None
             if accused is not None:
@@ -479,7 +479,7 @@ def _detect_fooled_impl(
         else ep_res
     )
     with _maybe_tiers_version(ver):
-        attr_items = attribute(attr_input)
+        attr_items = _fast_attribute(attr_input)
 
     accused = snap["accused"]
     correct = bool(episode.get("correct", False))

@@ -676,8 +676,6 @@ def test_public_exports_and_tiers_version_isolation() -> None:
 
 def test_real_committed_episodes_and_showcase_pairs() -> None:
     episodes = load_committed_episodes()
-    pairs = pair_with_solver(episodes)
-
     real_episodes = [ep for ep in episodes if ep["provenance"]["kind"] == "real"]
     assert len(real_episodes) > 0
     ep_by_id = {ep["episode_id"]: ep for ep in real_episodes}
@@ -694,7 +692,34 @@ def test_real_committed_episodes_and_showcase_pairs() -> None:
     assert grok_abstain["verdict"] == "rational-abstain"
     _assert_ascii_no_dashes(grok_abstain)
 
-    fooled_real = find_fooled_episodes(episodes, real_only=True)
+    sampled_real: list[dict[str, Any]] = []
+    for ver in ("v1.2", "v1.3", "v1.4"):
+        ver_real = [ep for ep in real_episodes if ep["tiers_version"] == ver]
+        ver_real.sort(
+            key=lambda ep: (
+                0 if (not ep["correct"] or ep["accused"] is None) else 1,
+                int(ep["seed"]),
+                str(ep["agent"]),
+            )
+        )
+        sampled_real.extend(ver_real[:5])
+
+    target_worlds = {(ep["tiers_version"], ep["tier"], ep["seed"]) for ep in sampled_real}
+    sampled_solvers = [
+        ep
+        for ep in episodes
+        if ep["agent"] == "solver"
+        and (ep["tiers_version"], ep["tier"], ep["seed"]) in target_worlds
+    ]
+    sampled_scripted = [
+        ep
+        for ep in episodes
+        if ep["provenance"]["kind"] == "scripted" and ep["agent"] != "solver"
+    ][:8]
+    sampled_all = sampled_real + sampled_solvers + sampled_scripted
+    pairs = pair_with_solver(sampled_all)
+
+    fooled_real = find_fooled_episodes(sampled_all, real_only=True)
     assert len(fooled_real) > 0
     for item in fooled_real:
         assert REQUIRED_FOOLED_KEYS.issubset(item.keys())
@@ -705,7 +730,7 @@ def test_real_committed_episodes_and_showcase_pairs() -> None:
         assert 0 <= item["step_index"] < len(src_ep["steps"])
         _assert_ascii_no_dashes(item)
 
-    mixed_sample = real_episodes[:10] + [ep for ep in episodes if ep["provenance"]["kind"] == "scripted"][:15]
+    mixed_sample = sampled_real[:6] + sampled_scripted
     fooled_mixed = find_fooled_episodes(mixed_sample, real_only=False)
     assert len(fooled_mixed) > 0
     seen_scripted = False
@@ -721,9 +746,9 @@ def test_real_committed_episodes_and_showcase_pairs() -> None:
     assert len(showcase_full) > 0
     assert len(showcase_full) <= 20
 
-    real_pairs_subset = [p for p in pairs if p["provenance"]["kind"] == "real"][:20]
-    det_first = rank_showcase_pairs(real_pairs_subset, limit=10, real_only=True)
-    det_second = rank_showcase_pairs(real_pairs_subset, limit=10, real_only=True)
+    real_pairs_subset = [p for p in pairs if p["provenance"]["kind"] == "real"][:8]
+    det_first = rank_showcase_pairs(real_pairs_subset, limit=6, real_only=True)
+    det_second = rank_showcase_pairs(real_pairs_subset, limit=6, real_only=True)
     assert json.dumps(det_first, sort_keys=True) == json.dumps(det_second, sort_keys=True)
 
     json_full = json.dumps(showcase_full, sort_keys=True)

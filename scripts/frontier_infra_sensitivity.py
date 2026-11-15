@@ -523,24 +523,34 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
         comm_eps = load_runs(comm_v14)
         rep_eps = load_runs(rep_v14)
 
-        if verify_replays:
-            comm_audit = verify_episode_list(comm_eps, "data/runs/committed/v1.4")
-            rep_audit = verify_episode_list(rep_eps, "results/frontier_replication/v1.4")
-        else:
-            comm_audit = {
+        comm_audit = (
+            verify_episode_list(comm_eps, "data/runs/committed/v1.4")
+            if verify_replays
+            else {
                 "cohort": "data/runs/committed/v1.4",
                 "total": len(comm_eps),
                 "verified": 0,
                 "mismatches": 0,
                 "duplicates": 0,
             }
-            rep_audit = {
+        )
+        rep_audit = (
+            verify_episode_list(rep_eps, "results/frontier_replication/v1.4")
+            if verify_replays
+            else {
                 "cohort": "results/frontier_replication/v1.4",
                 "total": len(rep_eps),
                 "verified": 0,
                 "mismatches": 0,
                 "duplicates": 0,
             }
+        )
+        combined_audit = {
+            "total": int(comm_audit["total"]) + int(rep_audit["total"]),
+            "verified": int(comm_audit["verified"]) + int(rep_audit["verified"]),
+            "mismatches": int(comm_audit["mismatches"]) + int(rep_audit["mismatches"]),
+            "duplicates": int(comm_audit["duplicates"]) + int(rep_audit["duplicates"]),
+        }
 
         include_flash_hard = gap_ships_flash_hard(root)
         seeds_0_29 = set(range(30))
@@ -559,6 +569,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
         carbon_oc_med_dir = comm_v14 / "opencode-gemini-4-carbon" / "medium"
         carbon_oc_hard_dir = comm_v14 / "opencode-gemini-4-carbon" / "hard"
         carbon_ext_hard_dir = comm_v14 / "opencode-gemini-4-carbon-ext" / "hard"
+        gpt55_hard_dir = comm_v14 / "opencode-gpt-5.5" / "hard"
         inproc_med_dir = comm_v14 / "inproc-gemini-4-carbon" / "medium"
         inproc_hard_dir = comm_v14 / "inproc-gemini-4-carbon" / "hard"
         flash_hard_dir = comm_v14 / "opencode-gemini-3.5-flash" / "hard"
@@ -567,6 +578,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             summarize_run_dir_meta(root, carbon_oc_med_dir, "committed_opencode_carbon_medium_0_29"),
             summarize_run_dir_meta(root, carbon_oc_hard_dir, "committed_opencode_carbon_hard_0_29"),
             summarize_run_dir_meta(root, carbon_ext_hard_dir, "committed_opencode_carbon_ext_hard_30_59"),
+            summarize_run_dir_meta(root, gpt55_hard_dir, "committed_opencode_gpt55_hard_0_29"),
             summarize_run_dir_meta(root, inproc_med_dir, "committed_inproc_carbon_medium_0_29"),
             summarize_run_dir_meta(root, inproc_hard_dir, "committed_inproc_carbon_hard_0_29"),
         ]
@@ -625,6 +637,16 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             ),
             key=lambda e: int(e["seed"]),
         )
+        gpt55_hard_0_29 = sorted(
+            (
+                e
+                for e in comm_eps
+                if e["agent"] == "opencode:openai/gpt-5.5"
+                and e["tier"] == "hard"
+                and int(e["seed"]) in seeds_0_29
+            ),
+            key=lambda e: int(e["seed"]),
+        )
         rep_carbon_hard = sorted(
             (
                 e
@@ -645,11 +667,14 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
         med_meta_row = meta_cohorts[0]
         hard_meta_row = meta_cohorts[1]
         ext_meta_row = meta_cohorts[2]
+        gpt55_meta_row = meta_cohorts[3]
 
         med_empty_seeds = set(med_meta_row["empty_reply_seeds"])
         med_all_seeds = set(med_meta_row["affected_seeds"])
         hard_empty_seeds = set(hard_meta_row["empty_reply_seeds"])
         hard_all_seeds = set(hard_meta_row["affected_seeds"])
+        gpt55_empty_seeds = set(gpt55_meta_row["empty_reply_seeds"])
+        gpt55_all_seeds = set(gpt55_meta_row["affected_seeds"])
 
         hard_regimes = [
             build_paired_metrics(
@@ -735,6 +760,37 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             ),
         ]
 
+        gpt55_non_acc_eps = [e for e in gpt55_hard_0_29 if not e.get("accused")]
+        gpt55_accused_eps = [e for e in gpt55_hard_0_29 if e.get("accused")]
+        gpt55_first_attempt_valid_count = sum(
+            1 for e in gpt55_hard_0_29 if int((e.get("meta") or {}).get("attempts", 1)) == 1
+        )
+        gpt55_clean_rc0_non_acc = all(
+            int((e.get("meta") or {}).get("rc", -1)) == 0
+            and float(e["score"]) == 0.0
+            and int(e["final_day"]) == 0
+            for e in gpt55_non_acc_eps
+        )
+        gpt55_regime_metrics = build_paired_metrics(
+            "gpt55_hard_regimes_1_2_3_invariant",
+            "OpenCode gpt-5.5 Regimes 1/2/3 (invariant: 0 infra exclusions, 30/30 first-attempt valid; 2 rc=0 non-accusation stops on [0, 17] score 0.0)",
+            "opencode:openai/gpt-5.5",
+            "hard",
+            gpt55_hard_0_29,
+            solver_0_29,
+            zeroed_seeds=[],
+        )
+        gpt55_hard_audit = {
+            "regimes_1_2_3_identical": (not gpt55_empty_seeds) and (not gpt55_all_seeds),
+            "first_attempt_valid_count": gpt55_first_attempt_valid_count,
+            "excluded_attempts_total": int(gpt55_meta_row["excluded_attempts_total"]),
+            "clean_rc0_non_accusation_stop_seeds": [int(e["seed"]) for e in gpt55_non_acc_eps],
+            "all_non_accusation_stops_rc0_day0_score0": gpt55_clean_rc0_non_acc,
+            "accused_count": len(gpt55_accused_eps),
+            "correct_given_accused_count": sum(1 for e in gpt55_accused_eps if e.get("correct")),
+            "regime_metrics": gpt55_regime_metrics,
+        }
+
         flash_med_s28_sensitivity = [
             build_paired_metrics(
                 "flash_medium_as_played_with_s28_rerun",
@@ -784,6 +840,12 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                 "opencode_carbon_medium_0_29",
                 "OpenCode gemini-4-carbon medium (primary 0-29)",
                 carbon_med_0_29,
+                solver_map=solver_0_29,
+            ),
+            summarize_wall_clock_cohort(
+                "opencode_gpt55_hard_0_29",
+                "OpenCode gpt-5.5 hard (0-29)",
+                gpt55_hard_0_29,
                 solver_map=solver_0_29,
             ),
             summarize_wall_clock_cohort(
@@ -880,6 +942,9 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                     },
                     "extension_preregistration_commit": "f9fb7a4a",
                     "gpt55_preregistration_commit": "cf394894",
+                    "gpt55_results_commit": "ca0a0dc0",
+                    "rehearsal_commit": "c59ecfd0",
+                    "justsilas_sync_commit": "9225f2ad",
                     "gpt55_runner_guards": {
                         "timeout_s": 7200,
                         "max_spend_usd": 200.0,
@@ -889,6 +954,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                     "flash_hard_held_pending_gap_md": not include_flash_hard,
                     "committed_v14_replay": comm_audit,
                     "replication_v14_replay": rep_audit,
+                    "combined_v14_replay": combined_audit,
                 },
                 "cohort_meta_audit": {
                     "committed_cohorts": meta_cohorts,
@@ -902,6 +968,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                     "monotonic_retry_helps_frontier": monotonic_conservative,
                     "hard_0_29_regimes": hard_regimes,
                     "medium_0_29_regimes": medium_regimes,
+                    "gpt55_hard_0_29_audit": gpt55_hard_audit,
                     "hard_non_empty_retried_seeds_detail": {
                         "seeds": hard_non_empty_extra_seeds,
                         "wrong_accusation_seeds_on_retry": hard_extra_wrong_seeds,
@@ -979,7 +1046,7 @@ def _imputation_table_lines(rows: list[dict[str, Any]]) -> list[str]:
     ]
     for idx, r in enumerate(rows):
         z_txt = "none (0)" if not r["zeroed_seeds"] else f"`{r['zeroed_seeds']}` ({r['zeroed_count']})"
-        is_primary = idx == 0
+        is_primary = idx == 0 or r["regime_id"] == "gpt55_hard_regimes_1_2_3_invariant"
         lines.append(
             f"| {r['tier']} | {r['label']} | {z_txt} | {r['n']} | {_num(r['mean'])} +/- {_num(r['ci'])} | "
             f"{r['accuracy']:.2f} | {r['accused_rate']:.2f} | {_num(r['solver_same_seeds'])} | "
@@ -998,16 +1065,20 @@ def render_markdown(summary: dict[str, Any]) -> str:
 
     comm_v = sl["committed_v14_replay"]
     rep_v = sl["replication_v14_replay"]
+    comb_v = sl["combined_v14_replay"]
     flash_held = bool(sl["flash_hard_held_pending_gap_md"])
 
     h1, h2, h3 = imp["hard_0_29_regimes"]
     m1, m2, m3 = imp["medium_0_29_regimes"]
+    gpt_aud = imp["gpt55_hard_0_29_audit"]
+    gpt_m = gpt_aud["regime_metrics"]
     fl_play, fl_z28 = imp["flash_medium_s28_rerun_sensitivity"]
     agg_cat = cm["committed_excluded_by_category"]
 
     wc_by_id = {c["cohort_id"]: c for c in wc["cohorts"]}
     wc_hard = wc_by_id["opencode_carbon_hard_0_29"]
     wc_med = wc_by_id["opencode_carbon_medium_0_29"]
+    wc_gpt55 = wc_by_id["opencode_gpt55_hard_0_29"]
 
     prim_p = ext["primary_carbon_hard_0_29"]
     ext_p = ext["ext_carbon_hard_survivors"]
@@ -1037,27 +1108,37 @@ def render_markdown(summary: dict[str, Any]) -> str:
         "",
         _md_heading(2, "1. Post-Hoc Seed Lock, Replay Audit, and Headline Summary"),
         "",
-        "- **Post-hoc seed lock (`docs/reports/gap.md`, Panel Fix A):** The primary `seeds 0-29` set (`n=30` per tier in "
-        "`data/runs/committed/v1.4/`) was locked in commit `671ed96` (`28 s` after `8fd4dec`), making it a **post-hoc lock "
-        "against later reruns and cherry-picking, not a pre-registration**. On `hard` (`n=30`), `OpenCode + gemini-4-carbon over MCP` "
-        f"scores **{_ratio_txt(h1)}** of the paired reference solver (`{_num(h1['mean'])} +/- {_num(h1['ci'])}` vs `{_num(h1['solver_same_seeds'])}`), "
-        f"with luck-adjusted ratio **{_luck_txt(h1)}** (`{_num(h1['post_expected'])}` vs `{_num(h1['solver_post_expected'])}`). "
-        f"On `medium` (`n=30`), it reaches `{_ratio_txt(m1)}` raw and `{_luck_txt(m1)}` luck-adjusted.",
+        "- **Post-hoc seed lock and pre-registered `gpt-5.5` family (`docs/reports/gap.md`, synced to `justSilas@9225f2ad`):** "
+        "The primary `seeds 0-29` set (`n=30` per tier in `data/runs/committed/v1.4/`) was locked in commit `671ed96` (`28 s` after `8fd4dec`), "
+        "making it a **post-hoc lock against later reruns and cherry-picking, not a pre-registration**. On `hard` (`n=30`), "
+        f"`OpenCode + gemini-4-carbon over MCP` scores **{_ratio_txt(h1)}** of the paired reference solver "
+        f"(`{_num(h1['mean'])} +/- {_num(h1['ci'])}` vs `{_num(h1['solver_same_seeds'])}`), with luck-adjusted ratio "
+        f"**{_luck_txt(h1)}** (`{_num(h1['post_expected'])}` vs `{_num(h1['solver_post_expected'])}`); on `medium` (`n=30`), "
+        f"it reaches `{_ratio_txt(m1)}` raw and `{_luck_txt(m1)}` luck-adjusted. Pre-registered second frontier family "
+        f"`OpenCode + gpt-5.5` (`cf394894`, shipped in `ca0a0dc0`, `data/runs/committed/v1.4/opencode-gpt-5.5/hard`) matches the solver at "
+        f"**{_ratio_txt(gpt_m)}** raw (`{_num(gpt_m['mean'])} +/- {_num(gpt_m['ci'])}` vs `{_num(gpt_m['solver_same_seeds'])}`) and "
+        f"**{_luck_txt(gpt_m)}** luck-adjusted (`{_num(gpt_m['post_expected'])}` vs `{_num(gpt_m['solver_post_expected'])}`) with `0` infra exclusions "
+        f"(`{gpt_aud['first_attempt_valid_count']}/30` first-attempt valid, `{gpt_aud['correct_given_accused_count']}/{gpt_aud['accused_count']}` "
+        f"accusations correct, `2` clean `rc=0` non-accusation stops on `seeds {gpt_aud['clean_rc0_non_accusation_stop_seeds']}` scoring `0.0` with "
+        "`final_day=0`; Harbor judge-path rehearsal in `c59ecfd0` / `results/harbor/rehearsal/TABLE.md` also landed at or above oracle).",
         f"- **Deterministic replay verification (`scripts/verify_replay.py`):** `{comm_v['verified']}/{comm_v['total']}` committed "
-        f"`v1.4` episodes and `{rep_v['verified']}/{rep_v['total']}` FR8 replication `v1.4` episodes pass full `Env` replay "
+        f"`v1.4` episodes (including `30/30` `opencode-gpt-5.5/hard`) and `{rep_v['verified']}/{rep_v['total']}` FR8 replication `v1.4` episodes "
+        f"(`{comb_v['verified']}/{comb_v['total']}` combined corpus) pass full `Env` replay "
         "with `0` mismatches and `0` duplicate `(agent, tier, seed)` entries. " + flash_note,
         f"- **Retrying infra failures is strictly conservative (favors the frontier agent):** Across `{cm['committed_excluded_attempts_total']}` "
         f"excluded infra-invalid attempts in committed `v1.4` (`{agg_cat.get('provider_quota', 0)}` `provider_quota`, "
         f"`{agg_cat.get('cli_error_event', 0)}` `cli_error_event`, `{agg_cat.get('empty_model_response', 0)}` `empty_model_response`, "
-        f"`{agg_cat.get('provider_unavailable', 0)}` `provider_unavailable`, `{agg_cat.get('mcp_server_error', 0)}` `mcp_server_error`), "
+        f"`{agg_cat.get('provider_unavailable', 0)}` `provider_unavailable`, `{agg_cat.get('mcp_server_error', 0)}` `mcp_server_error`, "
+        f"and `0` on `opencode-gpt-5.5/hard`), "
         f"scoring `empty_model_response` first-attempt failures as `0` lowers OpenCode `gemini-4-carbon` hard from `{_ratio_txt(h1)}` raw "
         f"(`{_luck_txt(h1)}` luck-adjusted) to `{_ratio_txt(h2)}` raw (`{_luck_txt(h2)}` luck-adjusted), and scoring **all** `{h3['zeroed_count']}` "
         f"infra-retried seeds as `0` lowers it further to `{_ratio_txt(h3)}` raw (`{_luck_txt(h3)}` luck-adjusted; medium `{_ratio_txt(m1)}` -> "
-        f"`{_ratio_txt(m2)}` -> `{_ratio_txt(m3)}` raw).",
+        f"`{_ratio_txt(m2)}` -> `{_ratio_txt(m3)}` raw; `opencode-gpt-5.5` hard is invariant across Regimes 1/2/3 at `{_ratio_txt(gpt_m)}` raw).",
         f"- **Timeout truncation (`900s` -> `7200s`) and `ext` quota survivor bias:** Legacy `900s` PR 3 timeouts would truncate "
-        f"`{wc_hard['thresholds']['900']['exceeded_count']}/30` (`100.0%`) of valid primary hard episodes and "
-        f"`{wc_med['thresholds']['900']['exceeded_count']}/30` (`86.7%`) of medium episodes, whereas the `cf394894` `7200s` cap truncates "
-        f"`0` episodes across all OpenCode cohorts (max observed `wall_s = {_num(wc['max_observed_opencode_wall_s'], 1)}s`). In "
+        f"`{wc_hard['thresholds']['900']['exceeded_count']}/30` (`100.0%`) of valid primary `gemini-4-carbon` hard episodes and "
+        f"`{wc_med['thresholds']['900']['exceeded_count']}/30` (`86.7%`) of medium episodes while truncating "
+        f"`{wc_gpt55['thresholds']['900']['exceeded_count']}/30` (`0.0%`, max `wall_s = {_num(wc_gpt55['max_wall_s'], 1)}s`) of `gpt-5.5` hard episodes; "
+        f"the `cf394894` `7200s` cap truncates `0` episodes across all OpenCode cohorts (max observed `wall_s = {_num(wc['max_observed_opencode_wall_s'], 1)}s`). In "
         f"`opencode-gemini-4-carbon-ext/hard`, `{ext['quota_excluded_attempts']}` `infra:provider_quota` exclusions blocked `9` of the `11` "
         f"launched seeds (`30..40`) before the `03:22` Helsinki stop; the `2` survivors (`seeds 34, 37`) took `{_num(ext_p['mean_wall_s'], 1)}s` "
         f"and `{_num(ext_p['mean_final_day'], 2)}` days vs `{_num(prim_p['mean_wall_s'], 1)}s` and `{_num(prim_p['mean_final_day'], 2)}` days on primary `0-29`.",
@@ -1111,11 +1192,11 @@ def render_markdown(summary: dict[str, Any]) -> str:
             "`infra_invalid_attempts_excluded` failed on its first attempt. Comparing (1) the primary retry policy, "
             "(2) `empty_model_response` seeds imputed as `0` (`docs/reports/gap.md` alternative row), and "
             "(3) **all** first-attempt infra-invalid seeds imputed as `0` (`empty_model_response`, `cli_error_event`, "
-            "`provider_unavailable`, `mcp_server_error`, `provider_quota`, `provider_rate_limit`):",
+            "`provider_unavailable`, `mcp_server_error`, `provider_quota`, `provider_rate_limit`) across `gemini-4-carbon` and `gpt-5.5`:",
             "",
         ]
     )
-    lines.extend(_imputation_table_lines(imp["hard_0_29_regimes"] + imp["medium_0_29_regimes"]))
+    lines.extend(_imputation_table_lines(imp["hard_0_29_regimes"] + imp["medium_0_29_regimes"] + [gpt_m]))
     lines.extend(
         [
             "",
@@ -1124,6 +1205,12 @@ def render_markdown(summary: dict[str, Any]) -> str:
             f"On the `{len(extra_detail['seeds'])}` non-empty-reply retried hard seeds `{extra_detail['seeds']}`, `4` valid retries succeeded while `2` "
             f"(`seeds {extra_detail['wrong_accusation_seeds_on_retry']}`) made `-1.000` wrong accusations, nearly canceling in raw score (`+0.040` net across 6 seeds) "
             "whereas posterior-expected value was positive (`+1.192` net). Under both raw and luck-adjusted metrics, retrying never inflates the frontier gap.",
+            f"- **`OpenCode + gpt-5.5` hard (`0-29`, `ca0a0dc0`) retry invariance and clean `rc=0` stops:** "
+            f"`data/runs/committed/v1.4/opencode-gpt-5.5/hard` logged `{gpt_aud['excluded_attempts_total']}` `infra_invalid_attempts_excluded` "
+            f"(`{gpt_aud['first_attempt_valid_count']}/30` first-attempt valid with `meta.attempts=1`), so Regimes 1, 2, and 3 are identical "
+            f"(`{_num(gpt_m['mean'])} +/- {_num(gpt_m['ci'])}`, `{_ratio_txt(gpt_m)}` raw, `{_luck_txt(gpt_m)}` luck-adjusted). "
+            f"On `{gpt_aud['correct_given_accused_count']}/{gpt_aud['accused_count']}` accusations `gpt-5.5` was correct; on `seeds {gpt_aud['clean_rc0_non_accusation_stop_seeds']}` "
+            "it wrote an accusation in prose without calling `accuse` and exited cleanly (`rc=0`, `score=0.0`, `final_day=0`).",
             f"- **FR8 `gemini-3.5-flash` medium `seed 28` rerun sensitivity (`results/frontier_replication/v1.4/opencode-gemini-3.5-flash/`):** "
             f"As played (`30/30` with `medium-s28`), `gemini-3.5-flash` medium scores `{_num(fl_play['mean'])} +/- {_num(fl_play['ci'])}` "
             f"(`{_ratio_txt(fl_play)}` raw, `{_luck_txt(fl_play)}` luck-adjusted); imputing standalone rerun `seed 28` as `0` shifts it to "
@@ -1153,13 +1240,14 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            "Counterfactual primary `0-29` scores for `OpenCode + gemini-4-carbon` if episodes exceeding threshold `T` are truncated to `0`:",
+            "Counterfactual `0-29` scores for `OpenCode + gemini-4-carbon` and `OpenCode + gpt-5.5` if episodes exceeding threshold `T` are truncated to `0`:",
             "",
-            "| tier | timeout `T` | truncated seeds | counterfactual score +/- CI | counterfactual / solver [95% CI] | counterfactual luck-adj. / solver [95% CI] |",
-            "|---|---:|---:|---|---|---|",
+            "| agent | tier | timeout `T` | truncated seeds | counterfactual score +/- CI | counterfactual / solver [95% CI] | counterfactual luck-adj. / solver [95% CI] |",
+            "|---|---|---:|---:|---|---|---|",
         ]
     )
-    for wc_row in (wc_hard, wc_med):
+    for wc_row in (wc_hard, wc_med, wc_gpt55):
+        short_agent = wc_row["agent"].split("/")[-1]
         for th_key in ("900", "1800", "2400", "3600", "7200"):
             t_item = wc_row["thresholds"][th_key]
             r_lo = t_item["counterfactual_ratio_lo"]
@@ -1177,7 +1265,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
                 else f"{t_item['counterfactual_luck_ratio']:.0%}"
             )
             lines.append(
-                f"| {wc_row['tier']} | {th_key}s | {t_item['exceeded_count']}/{wc_row['n']} | "
+                f"| `{short_agent}` | {wc_row['tier']} | {th_key}s | {t_item['exceeded_count']}/{wc_row['n']} | "
                 f"{_num(t_item['counterfactual_mean'])} +/- {_num(t_item['counterfactual_ci'])} | {r_str} | {l_str} |"
             )
 
@@ -1224,8 +1312,8 @@ def render_markdown(summary: dict[str, Any]) -> str:
 def _fmt_json_inline_lists(obj: Any, depth: int = 0) -> str:
     if not isinstance(obj, (dict, list)) or not obj:
         return json.dumps(obj, sort_keys=True, allow_nan=False)
-    pad = "  " * depth
-    inner = "  " * (depth + 1)
+    pad = " " * depth
+    inner = " " * (depth + 1)
     if isinstance(obj, list):
         if all(not isinstance(x, (dict, list)) for x in obj):
             return json.dumps(obj, allow_nan=False)
@@ -1295,8 +1383,10 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         c_ver = summary["seed_lock_and_replay"]["committed_v14_replay"]["verified"]
         r_ver = summary["seed_lock_and_replay"]["replication_v14_replay"]["verified"]
+        comb_ver = summary["seed_lock_and_replay"]["combined_v14_replay"]["verified"]
         print(
             f"OK infra_sensitivity=PASS committed_replays={c_ver} replication_replays={r_ver} "
+            f"combined_replays={comb_ver} "
             f"excluded_attempts={summary['cohort_meta_audit']['committed_excluded_attempts_total']} "
             f"json_bytes={disk_bytes}"
         )

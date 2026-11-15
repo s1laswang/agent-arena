@@ -91,7 +91,10 @@ def test_check_cli_offline_zero_subprocess_and_size_cap(computed_summary, monkey
     )
     assert fis.main(["--check"]) == 0
     out = capsys.readouterr().out
-    assert "OK infra_sensitivity=PASS committed_replays=442 replication_replays=305 excluded_attempts=71" in out
+    assert (
+        "OK infra_sensitivity=PASS committed_replays=472 replication_replays=305 "
+        "combined_replays=777 excluded_attempts=71" in out
+    )
     assert JSON_PATH.stat().st_size <= fis.MAX_JSON_BYTES
     assert fis.MAX_JSON_BYTES == 45 * 1024
     assert JSON_PATH.read_bytes() == fis.serialize_summary_json(computed_summary).encode("utf-8")
@@ -135,6 +138,9 @@ def test_replay_provenance_and_meta_exclusion_invariants(computed_summary):
     }
     assert sl["extension_preregistration_commit"] == "f9fb7a4a"
     assert sl["gpt55_preregistration_commit"] == "cf394894"
+    assert sl["gpt55_results_commit"] == "ca0a0dc0"
+    assert sl["rehearsal_commit"] == "c59ecfd0"
+    assert sl["justsilas_sync_commit"] == "9225f2ad"
     assert sl["gpt55_runner_guards"] == {
         "timeout_s": 7200,
         "max_spend_usd": 200.0,
@@ -145,8 +151,8 @@ def test_replay_provenance_and_meta_exclusion_invariants(computed_summary):
     comm_rep = sl["committed_v14_replay"]
     assert comm_rep == {
         "cohort": "data/runs/committed/v1.4",
-        "total": 442,
-        "verified": 442,
+        "total": 472,
+        "verified": 472,
         "mismatches": 0,
         "duplicates": 0,
     }
@@ -155,6 +161,12 @@ def test_replay_provenance_and_meta_exclusion_invariants(computed_summary):
         "cohort": "results/frontier_replication/v1.4",
         "total": 305,
         "verified": 305,
+        "mismatches": 0,
+        "duplicates": 0,
+    }
+    assert sl["combined_v14_replay"] == {
+        "total": 777,
+        "verified": 777,
         "mismatches": 0,
         "duplicates": 0,
     }
@@ -209,6 +221,13 @@ def test_replay_provenance_and_meta_exclusion_invariants(computed_summary):
     ]
     assert by_id["committed_opencode_carbon_ext_hard_30_59"]["unstarted_planned_seeds_count"] == 19
 
+    assert by_id["committed_opencode_gpt55_hard_0_29"]["agent"] == "opencode:openai/gpt-5.5"
+    assert by_id["committed_opencode_gpt55_hard_0_29"]["tier"] == "hard"
+    assert by_id["committed_opencode_gpt55_hard_0_29"]["planned_count"] == 30
+    assert by_id["committed_opencode_gpt55_hard_0_29"]["completed_valid_count"] == 30
+    assert by_id["committed_opencode_gpt55_hard_0_29"]["excluded_attempts_total"] == 0
+    assert by_id["committed_opencode_gpt55_hard_0_29"]["affected_seeds"] == []
+    assert by_id["committed_opencode_gpt55_hard_0_29"]["category_counts"] == {}
     assert by_id["committed_inproc_carbon_medium_0_29"]["excluded_attempts_total"] == 0
     assert by_id["committed_inproc_carbon_hard_0_29"]["excluded_attempts_total"] == 0
 
@@ -277,6 +296,25 @@ def test_imputation_regimes_exact_figures_and_monotonicity(computed_summary):
     assert m1["mean"] > m2["mean"] > m3["mean"]
     assert m1["post_expected"] > m2["post_expected"] > m3["post_expected"]
 
+    gpt_aud = imp["gpt55_hard_0_29_audit"]
+    assert gpt_aud["regimes_1_2_3_identical"] is True
+    assert gpt_aud["first_attempt_valid_count"] == 30
+    assert gpt_aud["excluded_attempts_total"] == 0
+    assert gpt_aud["clean_rc0_non_accusation_stop_seeds"] == [0, 17]
+    assert gpt_aud["all_non_accusation_stops_rc0_day0_score0"] is True
+    assert gpt_aud["accused_count"] == 28
+    assert gpt_aud["correct_given_accused_count"] == 28
+    gpt_m = gpt_aud["regime_metrics"]
+    assert gpt_m["agent"] == "opencode:openai/gpt-5.5"
+    assert gpt_m["tier"] == "hard"
+    assert gpt_m["n"] == 30
+    assert gpt_m["zeroed_seeds"] == []
+    assert round(gpt_m["mean"], 3) == 0.504
+    assert round(gpt_m["ci"], 3) == 0.064
+    assert round(gpt_m["ratio"] * 100) == 101
+    assert round(gpt_m["post_expected"], 3) == 0.418
+    assert round(gpt_m["post_expected_ratio"] * 100) == 84
+
     fl_play, fl_z28 = imp["flash_medium_s28_rerun_sensitivity"]
     assert fl_play["zeroed_seeds"] == []
     assert fl_z28["zeroed_seeds"] == [28]
@@ -295,6 +333,16 @@ def test_timeout_sweep_and_quota_survivor_bias(computed_summary):
     wc_by_id = {c["cohort_id"]: c for c in wc["cohorts"]}
     hard_wc = wc_by_id["opencode_carbon_hard_0_29"]["thresholds"]
     med_wc = wc_by_id["opencode_carbon_medium_0_29"]["thresholds"]
+    gpt55_cohort = wc_by_id["opencode_gpt55_hard_0_29"]
+    gpt55_wc = gpt55_cohort["thresholds"]
+
+    assert gpt55_cohort["n"] == 30
+    assert gpt55_cohort["max_wall_s"] < 900.0
+    assert math.isclose(gpt55_cohort["max_wall_s"], 357.1, abs_tol=1e-9)
+    assert [gpt55_wc[k]["exceeded_count"] for k in ("900", "1800", "2400", "3600", "7200")] == [0, 0, 0, 0, 0]
+    assert gpt55_wc["900"]["survived_count"] == 30
+    assert round(gpt55_wc["900"]["counterfactual_mean"], 3) == 0.504
+    assert round(gpt55_wc["900"]["counterfactual_ratio"] * 100) == 101
 
     assert [hard_wc[k]["exceeded_count"] for k in ("900", "1800", "2400", "3600", "7200")] == [30, 24, 13, 5, 0]
     assert hard_wc["3600"]["exceeded_seeds"] == [5, 11, 19, 24, 29]
@@ -367,11 +415,12 @@ def test_gap_ships_flash_hard_false_and_true(monkeypatch, tmp_path):
     assert fis.gap_ships_flash_hard(syn_root) is False
     sum_false = fis.compute_summary(root=syn_root, verify_replays=False)
     assert sum_false["seed_lock_and_replay"]["flash_hard_held_pending_gap_md"] is True
-    assert len(sum_false["cohort_meta_audit"]["committed_cohorts"]) == 5
-    assert len(sum_false["wall_clock_timeout_sweep"]["cohorts"]) == 5
+    assert len(sum_false["cohort_meta_audit"]["committed_cohorts"]) == 6
+    assert len(sum_false["wall_clock_timeout_sweep"]["cohorts"]) == 6
     md_false = fis.render_markdown(sum_false)
     assert "does not yet ship `gemini-3.5-flash` hard" in md_false
     assert "OpenCode gemini-3.5-flash hard (0-29)" not in md_false
+    assert "OpenCode gpt-5.5 hard (0-29)" in md_false
     assert len(fis.serialize_summary_json(sum_false).encode("utf-8")) <= fis.MAX_JSON_BYTES
 
     gap_file.write_text(
@@ -381,11 +430,11 @@ def test_gap_ships_flash_hard_false_and_true(monkeypatch, tmp_path):
     assert fis.gap_ships_flash_hard(syn_root) is True
     sum_true = fis.compute_summary(root=syn_root, verify_replays=False)
     assert sum_true["seed_lock_and_replay"]["flash_hard_held_pending_gap_md"] is False
-    assert len(sum_true["cohort_meta_audit"]["committed_cohorts"]) == 6
+    assert len(sum_true["cohort_meta_audit"]["committed_cohorts"]) == 7
     assert sum_true["cohort_meta_audit"]["committed_cohorts"][-1]["cohort_id"] == "committed_opencode_flash_hard_0_29"
     assert sum_true["cohort_meta_audit"]["committed_cohorts"][-1]["excluded_attempts_total"] == 0
     assert sum_true["cohort_meta_audit"]["committed_excluded_attempts_total"] == 71
-    assert len(sum_true["wall_clock_timeout_sweep"]["cohorts"]) == 6
+    assert len(sum_true["wall_clock_timeout_sweep"]["cohorts"]) == 7
     assert sum_true["wall_clock_timeout_sweep"]["cohorts"][-1]["cohort_id"] == "opencode_flash_hard_0_29"
     assert sum_true["wall_clock_timeout_sweep"]["zero_truncation_at_7200s"] is True
 
@@ -526,5 +575,6 @@ def test_strict_hygiene_no_hash_in_py_and_no_em_en_dashes():
         txt = f.read_text(encoding="utf-8")
         assert em_dash not in txt, f"found em dash in {f}"
         assert en_dash not in txt, f"found en dash in {f}"
+        assert txt.isascii(), f"found non-ASCII characters in {f}"
 
     assert JSON_PATH.stat().st_size <= fis.MAX_JSON_BYTES

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import importlib.util
+import io
 import json
 import math
 import os
@@ -8,6 +11,7 @@ import re
 import shlex
 import shutil
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -17,14 +21,17 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from canary import rules
+from canary import mcp_server, rules
 from canary.agents.frontier import common, opencode_run
+from canary.llm import base as llm_base
 from scripts.verify_replay import replay_episode
 
 VENV_PYTHON = "/tmp/fleet-silas/shared/agent-arena-venv/bin/python"
 MOMIN_PATH_PREFIX = "PATH=/home/silas/momin/bin:$PATH"
 RUNNER_MODULE = "canary.agents.frontier.opencode_run"
 DEFAULT_TIMEOUT_S = 3600
+GPT55_TIMEOUT_S = 7200
+ALLOWED_TIMEOUTS_S: tuple[int, ...] = (DEFAULT_TIMEOUT_S, GPT55_TIMEOUT_S)
 DEFAULT_JOBS = 1
 MAX_WORKERS_PER_WAVE = 3
 
@@ -35,6 +42,13 @@ EXPECTED_CARBON_HARD_MISSING = [
     43, 44, 46, 47, 48, 49, 50, 51, 52, 53,
     54, 55, 56, 58, 59,
 ]
+EXPECTED_G1_COMMITTED_EXT_LANDED = [34, 37]
+EXPECTED_G1_COMMITTED_EXT_QUOTA_EXCLUDED = 31
+EXPECTED_COMBINED_CARBON_HARD_EXT_LANDED = [30, 34, 37, 42, 45, 57]
+EXPECTED_COMBINED_CARBON_HARD_EXT_REMAINING_COUNT = 24
+EXPECTED_COMMITTED_V14_EPISODES = 442
+EXPECTED_REPLICATION_V14_EPISODES = 305
+EXPECTED_COMBINED_V14_EPISODES = 747
 EXPECTED_FLASH_MEDIUM_LANDED = list(range(30))
 EXPECTED_FLASH_MEDIUM_MISSING: list[int] = []
 EXPECTED_FLASH_HARD_LANDED: list[int] = []
@@ -42,10 +56,26 @@ EXPECTED_FLASH_HARD_MISSING = list(range(30, 60))
 
 GEMINI_SESSIONS_DOC = "docs/agents/GEMINI-SESSIONS.md"
 GEMINI_SESSIONS_COMMIT = "f9fb7a4a"
+PANEL_DOC = "docs/agents/PANEL-0500.md"
+PANEL_STATUS_COMMIT = "8b9afa61"
+PANEL_FIX_A_COMMIT = "92708834"
+PANEL_FIX_D_COMMIT = "1bc3e281"
+GPT55_PREREG_COMMIT = "cf394894"
+UPSTREAM_RECONCILED_COMMIT = "58716742"
+PRIMARY_EPISODES_COMMIT = "8fd4dec"
+PRIMARY_POST_HOC_LOCK_COMMIT = "671ed96"
+PRIMARY_POST_HOC_LOCK_DELAY_S = 28
+
 CARBON_MODEL = "google/gemini-4-carbon"
+OPENAI_GPT55_MODEL = "openai/gpt-5.5"
+G2_MODELS: tuple[str, ...] = (
+    "google/gemini-4-argon",
+    "google/gemini-4-hydrogen",
+)
 NON_CARBON_REHEARSAL_ALLOWED_MODELS: tuple[str, ...] = (
     "google/gemini-4-argon",
     "google/gemini-4-hydrogen",
+    "openai/gpt-5.5",
 )
 CARBON_BLACKOUT_START_ISO = "2026-11-15T04:30:00Z"
 CARBON_BLACKOUT_END_ISO = "2026-11-15T06:15:00Z"
@@ -63,8 +93,10 @@ TARGET_COHORTS: tuple[dict[str, Any], ...] = (
         "tier": "hard",
         "seed_start": 30,
         "seed_end": 59,
+        "timeout_s": DEFAULT_TIMEOUT_S,
         "baseline_landed_seeds": EXPECTED_CARBON_HARD_LANDED,
         "priority": 1,
+        "pre_registered_commit": GEMINI_SESSIONS_COMMIT,
         "execution_owner": "silas_g1_ext60",
         "fr8_dispatch_enabled": False,
     },
@@ -76,6 +108,7 @@ TARGET_COHORTS: tuple[dict[str, Any], ...] = (
         "tier": "medium",
         "seed_start": 0,
         "seed_end": 29,
+        "timeout_s": DEFAULT_TIMEOUT_S,
         "baseline_landed_seeds": EXPECTED_FLASH_MEDIUM_LANDED,
         "priority": 2,
         "execution_owner": "fr8_frontier_complete",
@@ -89,6 +122,7 @@ TARGET_COHORTS: tuple[dict[str, Any], ...] = (
         "tier": "hard",
         "seed_start": 30,
         "seed_end": 59,
+        "timeout_s": DEFAULT_TIMEOUT_S,
         "baseline_landed_seeds": EXPECTED_FLASH_HARD_LANDED,
         "priority": 3,
         "execution_owner": "fr8_frontier_paused_pure_cpu",
@@ -106,6 +140,8 @@ G2_TEMPLATE_COHORTS: tuple[dict[str, Any], ...] = (
         "tier": "hard",
         "seed_range": [0, 29],
         "missing_seeds": list(range(30)),
+        "timeout_s": DEFAULT_TIMEOUT_S,
+        "pre_registered_commit": GEMINI_SESSIONS_COMMIT,
         "execution_owner": "silas_g2_families",
         "fr8_dispatch_enabled": False,
     },
@@ -118,9 +154,40 @@ G2_TEMPLATE_COHORTS: tuple[dict[str, Any], ...] = (
         "tier": "hard",
         "seed_range": [0, 29],
         "missing_seeds": list(range(30)),
+        "timeout_s": DEFAULT_TIMEOUT_S,
+        "pre_registered_commit": GEMINI_SESSIONS_COMMIT,
         "execution_owner": "silas_g2_families",
         "fr8_dispatch_enabled": False,
     },
+)
+
+GPT55_TEMPLATE_COHORTS: tuple[dict[str, Any], ...] = (
+    {
+        "cohort_id": "opencode-openai-gpt-5.5-hard-0-29",
+        "priority": 12,
+        "agent_dir": "opencode-openai-gpt-5.5",
+        "agent": "opencode:openai/gpt-5.5",
+        "model": OPENAI_GPT55_MODEL,
+        "tier": "hard",
+        "seed_range": [0, 29],
+        "missing_seeds": list(range(30)),
+        "timeout_s": GPT55_TIMEOUT_S,
+        "max_spend_usd": 200.0,
+        "stop_launch_at": "08:15",
+        "hard_drop_at": "08:45",
+        "pre_registered_commit": GPT55_PREREG_COMMIT,
+        "execution_owner": "silas_cf394894_panel_fix_c_no_key",
+        "fr8_dispatch_enabled": False,
+    },
+)
+
+TEMPLATE_COHORTS: tuple[dict[str, Any], ...] = G2_TEMPLATE_COHORTS + GPT55_TEMPLATE_COHORTS
+
+PROVIDER_KEY_VARS: tuple[str, ...] = (
+    "OPENAI_API_KEY",
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
+    "ANTHROPIC_API_KEY",
 )
 
 STRIPPED_ENV_VARS: tuple[str, ...] = (
@@ -166,12 +233,26 @@ def _restore_dev_seeds(prev: str | None) -> None:
         os.environ["CANARY_ALLOW_DEV"] = prev
 
 
+_REPLAY_OUTCOME_CACHE: dict[tuple[str, int, str], dict[str, Any]] = {}
+
+
 def verify_episode_replay(ep: dict[str, Any]) -> bool:
-    prev = _with_dev_seeds_allowed()
-    try:
-        r = replay_episode(ep)
-    finally:
-        _restore_dev_seeds(prev)
+    tier = str(ep["tier"])
+    seed = int(ep["seed"])
+    steps_key = json.dumps(
+        [(s["tool"], s.get("args") or {}) for s in (ep.get("steps") or [])],
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    cache_key = (tier, seed, steps_key)
+    r = _REPLAY_OUTCOME_CACHE.get(cache_key)
+    if r is None:
+        prev = _with_dev_seeds_allowed()
+        try:
+            r = replay_episode(ep)
+        finally:
+            _restore_dev_seeds(prev)
+        _REPLAY_OUTCOME_CACHE[cache_key] = r
     return (
         abs(float(r["score"]) - float(ep["score"])) < 1e-9
         and r["accused"] == ep.get("accused")
@@ -180,12 +261,18 @@ def verify_episode_replay(ep: dict[str, Any]) -> bool:
     )
 
 
-def build_runner_command(agent_dir: str, model: str, tier: str, seed: int) -> tuple[str, str, str]:
+def build_runner_command(
+    agent_dir: str,
+    model: str,
+    tier: str,
+    seed: int,
+    timeout_s: int = DEFAULT_TIMEOUT_S,
+) -> tuple[str, str, str]:
     out_rel = f"results/frontier_replication/v1.4/{agent_dir}/{tier}-s{seed}"
     cmd = (
         f"{MOMIN_PATH_PREFIX} PYTHONPATH=. {VENV_PYTHON} -m {RUNNER_MODULE} "
         f"--model {model} --tier {tier} --seeds {seed} "
-        f"--timeout {DEFAULT_TIMEOUT_S} --jobs {DEFAULT_JOBS} --out {out_rel}"
+        f"--timeout {timeout_s} --jobs {DEFAULT_JOBS} --out {out_rel}"
     )
     verify_cmd = f"PYTHONPATH=. {VENV_PYTHON} scripts/verify_replay.py {out_rel}"
     return out_rel, cmd, verify_cmd
@@ -283,10 +370,35 @@ def check_carbon_quota_blackout_guard() -> dict[str, Any]:
         if res_epoch["allowed"] is not exp_allowed or res_epoch["reason"] != exp_reason:
             errors.append(f"unexpected carbon epoch blackout result at {ts_iso}: {res_epoch!r}")
 
-    for alt_model in ("gemini-4-argon", "gemini-4-hydrogen", "google/gemini-4-argon", "google/gemini-4-hydrogen"):
-        res_alt = check_carbon_quota_blackout("2026-11-15T05:30:00Z", model=alt_model)
-        if res_alt["allowed"] is not True or res_alt["in_blackout_window"] is not True:
-            errors.append(f"non-carbon model {alt_model} blocked during carbon blackout: {res_alt!r}")
+    non_carbon_models = (
+        "gemini-4-argon",
+        "gemini-4-hydrogen",
+        "google/gemini-4-argon",
+        "google/gemini-4-hydrogen",
+        "gpt-5.5",
+        "openai/gpt-5.5",
+        "opencode:openai/gpt-5.5",
+    )
+    for alt_model in non_carbon_models:
+        res_in = check_carbon_quota_blackout("2026-11-15T05:30:00Z", model=alt_model)
+        if (
+            res_in["allowed"] is not True
+            or res_in["in_blackout_window"] is not True
+            or res_in["is_carbon_model"] is not False
+            or res_in["reason"] != "non_carbon_model_allowed_during_blackout"
+        ):
+            errors.append(f"non-carbon model {alt_model} mishandled during carbon blackout: {res_in!r}")
+        res_out = check_carbon_quota_blackout("2026-11-15T06:15:00Z", model=alt_model)
+        if (
+            res_out["allowed"] is not True
+            or res_out["in_blackout_window"] is not False
+            or res_out["is_carbon_model"] is not False
+        ):
+            errors.append(f"non-carbon model {alt_model} mishandled outside carbon blackout: {res_out!r}")
+
+    for cohort_spec in TARGET_COHORTS + TEMPLATE_COHORTS:
+        if bool(cohort_spec.get("fr8_dispatch_enabled", False)) is not False:
+            errors.append(f"cohort {cohort_spec['cohort_id']} violates FR8 0-API dispatch lock")
 
     return {
         "passed": not errors,
@@ -295,8 +407,9 @@ def check_carbon_quota_blackout_guard() -> dict[str, Any]:
         "window_local_eet": CARBON_BLACKOUT_LOCAL_WINDOW,
         "blocked_model": CARBON_MODEL,
         "allowed_models_during_blackout": list(NON_CARBON_REHEARSAL_ALLOWED_MODELS),
+        "fr8_zero_api_lock_enforced": True,
         "reason": CARBON_BLACKOUT_REASON,
-        "synthetic_timestamps_verified": len(carbon_cases) * 2 + 4,
+        "synthetic_timestamps_verified": len(carbon_cases) * 2 + len(non_carbon_models) * 2,
         "errors": errors,
     }
 
@@ -314,6 +427,7 @@ def scan_replication_tree(
             "total_episodes": 0,
             "replay_verified_episodes": 0,
             "cohorts": [],
+            "records_by_agent_tier": {},
             "errors": [f"missing replication directory: {rep_root}"],
         }
 
@@ -354,6 +468,15 @@ def scan_replication_tree(
                 "transcript_file": tr_path.relative_to(root).as_posix() if tr_path.is_file() else None,
             }
 
+    if enforce_expected_baseline and (
+        total_valid != EXPECTED_REPLICATION_V14_EPISODES
+        or total_replay_ok != EXPECTED_REPLICATION_V14_EPISODES
+    ):
+        errors.append(
+            f"expected {EXPECTED_REPLICATION_V14_EPISODES}/{EXPECTED_REPLICATION_V14_EPISODES} "
+            f"replication v1.4 episodes, got {total_replay_ok}/{total_valid}"
+        )
+
     cohort_rows: list[dict[str, Any]] = []
     for spec in cohorts:
         key = (spec["agent"], spec["tier"])
@@ -376,26 +499,28 @@ def scan_replication_tree(
                 errors.append(
                     f"cohort {spec['cohort_id']} seed {s} missing transcript file next to {landed_map[s]['episode_file']}"
                 )
-        cohort_rows.append(
-            {
-                "cohort_id": spec["cohort_id"],
-                "priority": spec["priority"],
-                "agent_dir": spec["agent_dir"],
-                "agent": spec["agent"],
-                "model": spec["model"],
-                "tier": spec["tier"],
-                "seed_range": [spec["seed_start"], spec["seed_end"]],
-                "target_count": len(target_seeds),
-                "landed_count": len(landed_seeds),
-                "missing_count": len(missing_seeds),
-                "landed_seeds": landed_seeds,
-                "missing_seeds": missing_seeds,
-                "invalid_seeds": invalid_seeds,
-                "baseline_landed_verified": baseline_ok,
-                "execution_owner": spec.get("execution_owner", "unassigned"),
-                "fr8_dispatch_enabled": bool(spec.get("fr8_dispatch_enabled", False)),
-            }
-        )
+        row: dict[str, Any] = {
+            "cohort_id": spec["cohort_id"],
+            "priority": spec["priority"],
+            "agent_dir": spec["agent_dir"],
+            "agent": spec["agent"],
+            "model": spec["model"],
+            "tier": spec["tier"],
+            "seed_range": [spec["seed_start"], spec["seed_end"]],
+            "timeout_s": int(spec.get("timeout_s", DEFAULT_TIMEOUT_S)),
+            "target_count": len(target_seeds),
+            "landed_count": len(landed_seeds),
+            "missing_count": len(missing_seeds),
+            "landed_seeds": landed_seeds,
+            "missing_seeds": missing_seeds,
+            "invalid_seeds": invalid_seeds,
+            "baseline_landed_verified": baseline_ok,
+            "execution_owner": spec.get("execution_owner", "unassigned"),
+            "fr8_dispatch_enabled": bool(spec.get("fr8_dispatch_enabled", False)),
+        }
+        if "pre_registered_commit" in spec:
+            row["pre_registered_commit"] = spec["pre_registered_commit"]
+        cohort_rows.append(row)
 
     return {
         "replication_root": "results/frontier_replication/v1.4",
@@ -405,6 +530,133 @@ def scan_replication_tree(
         "records_by_agent_tier": by_agent_tier,
         "errors": errors,
     }
+
+
+def scan_committed_v14_tree(
+    root: Path,
+    enforce_expected_baseline: bool = True,
+) -> dict[str, Any]:
+    committed_root = root / "data" / "runs" / "committed" / "v1.4"
+    g1_ext_rel = "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard"
+    errors: list[str] = []
+    if not committed_root.is_dir():
+        if enforce_expected_baseline:
+            errors.append(f"missing committed v1.4 directory: {committed_root}")
+        return {
+            "committed_root": "data/runs/committed/v1.4",
+            "present": False,
+            "total_episodes": 0,
+            "replay_verified_episodes": 0,
+            "g1_ext_dir": g1_ext_rel,
+            "g1_ext_landed_seeds": [],
+            "g1_ext_landed_count": 0,
+            "g1_ext_provider_quota_excluded": 0,
+            "g1_ext_records": {},
+            "errors": errors,
+        }
+
+    ep_files = sorted(committed_root.rglob("episodes.jsonl"))
+    total_valid = 0
+    total_replay_ok = 0
+    g1_ext_records: dict[int, dict[str, Any]] = {}
+    g1_ext_ep_file = root / g1_ext_rel / "episodes.jsonl"
+
+    for ep_file in ep_files:
+        rel_file = ep_file.relative_to(root).as_posix()
+        is_g1_ext = ep_file.resolve() == g1_ext_ep_file.resolve()
+        for line_no, raw_line in enumerate(ep_file.read_text(encoding="utf-8").splitlines(), start=1):
+            if not raw_line.strip():
+                continue
+            ep = json.loads(raw_line)
+            if (ep.get("meta") or {}).get("valid") is False:
+                continue
+            total_valid += 1
+            seed = int(ep["seed"])
+            agent = str(ep.get("agent", ""))
+            tier = str(ep.get("tier", ""))
+            if not verify_episode_replay(ep):
+                errors.append(f"committed replay mismatch in {rel_file}:{line_no} ({agent} {tier} seed={seed})")
+                continue
+            total_replay_ok += 1
+            if is_g1_ext:
+                tr_path = ep_file.parent / "transcripts" / f"{seed}.txt"
+                g1_ext_records[seed] = {
+                    "episode": ep,
+                    "episode_file": rel_file,
+                    "transcript_file": tr_path.relative_to(root).as_posix() if tr_path.is_file() else None,
+                }
+
+    g1_landed_seeds = sorted(g1_ext_records.keys())
+    g1_meta_path = root / g1_ext_rel / "meta.json"
+    quota_excluded = 0
+    if g1_meta_path.is_file():
+        g1_meta = json.loads(g1_meta_path.read_text(encoding="utf-8"))
+        excl = list(g1_meta.get("infra_invalid_attempts_excluded") or [])
+        quota_excluded = sum(1 for item in excl if "infra:provider_quota" in str(item))
+
+    if enforce_expected_baseline:
+        if total_valid != EXPECTED_COMMITTED_V14_EPISODES or total_replay_ok != EXPECTED_COMMITTED_V14_EPISODES:
+            errors.append(
+                f"expected {EXPECTED_COMMITTED_V14_EPISODES}/{EXPECTED_COMMITTED_V14_EPISODES} "
+                f"committed v1.4 episodes, got {total_replay_ok}/{total_valid}"
+            )
+        if g1_landed_seeds != EXPECTED_G1_COMMITTED_EXT_LANDED:
+            errors.append(
+                f"expected committed G1 ext landed seeds {EXPECTED_G1_COMMITTED_EXT_LANDED}, got {g1_landed_seeds}"
+            )
+        if quota_excluded != EXPECTED_G1_COMMITTED_EXT_QUOTA_EXCLUDED:
+            errors.append(
+                f"expected {EXPECTED_G1_COMMITTED_EXT_QUOTA_EXCLUDED} provider_quota excluded attempts in G1 ext, "
+                f"got {quota_excluded}"
+            )
+        for s in g1_landed_seeds:
+            if g1_ext_records[s]["transcript_file"] is None:
+                errors.append(f"committed G1 ext seed {s} missing transcript file")
+
+    return {
+        "committed_root": "data/runs/committed/v1.4",
+        "present": True,
+        "total_episodes": total_valid,
+        "replay_verified_episodes": total_replay_ok,
+        "g1_ext_dir": g1_ext_rel,
+        "g1_ext_landed_seeds": g1_landed_seeds,
+        "g1_ext_landed_count": len(g1_landed_seeds),
+        "g1_ext_provider_quota_excluded": quota_excluded,
+        "g1_ext_records": g1_ext_records,
+        "errors": errors,
+    }
+
+
+def serialize_template_cohorts(
+    template_cohorts: tuple[dict[str, Any], ...] = TEMPLATE_COHORTS,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for spec in template_cohorts:
+        lo, hi = int(spec["seed_range"][0]), int(spec["seed_range"][1])
+        target_count = hi - lo + 1
+        missing_count = len(spec.get("missing_seeds", list(range(lo, hi + 1))))
+        landed_count = target_count - missing_count
+        row: dict[str, Any] = {
+            "cohort_id": spec["cohort_id"],
+            "priority": int(spec["priority"]),
+            "agent_dir": spec["agent_dir"],
+            "agent": spec["agent"],
+            "model": spec["model"],
+            "tier": spec["tier"],
+            "seed_range": [lo, hi],
+            "target_count": target_count,
+            "landed_count": landed_count,
+            "missing_count": missing_count,
+            "timeout_s": int(spec.get("timeout_s", DEFAULT_TIMEOUT_S)),
+            "pre_registered_commit": spec["pre_registered_commit"],
+            "execution_owner": spec["execution_owner"],
+            "fr8_dispatch_enabled": bool(spec.get("fr8_dispatch_enabled", False)),
+        }
+        for opt_key in ("max_spend_usd", "stop_launch_at", "hard_drop_at"):
+            if opt_key in spec:
+                row[opt_key] = spec[opt_key]
+        rows.append(row)
+    return rows
 
 
 def partition_into_waves(
@@ -422,6 +674,7 @@ def partition_into_waves(
         if not include_disabled and not dispatch_enabled:
             continue
         missing = list(cohort["missing_seeds"])
+        cohort_timeout_s = int(cohort.get("timeout_s", DEFAULT_TIMEOUT_S))
         cohort_wave = 0
         for idx in range(0, len(missing), max_workers_per_wave):
             batch = missing[idx : idx + max_workers_per_wave]
@@ -434,6 +687,7 @@ def partition_into_waves(
                     cohort["model"],
                     cohort["tier"],
                     seed,
+                    timeout_s=cohort_timeout_s,
                 )
                 jobs_list.append(
                     {
@@ -443,28 +697,31 @@ def partition_into_waves(
                         "tier": cohort["tier"],
                         "seed": seed,
                         "seeds": [seed],
-                        "timeout_s": DEFAULT_TIMEOUT_S,
+                        "timeout_s": cohort_timeout_s,
                         "jobs": DEFAULT_JOBS,
                         "out_dir": out_rel,
                         "command": cmd,
                         "verify_command": verify_cmd,
                     }
                 )
-            waves.append(
-                {
-                    "wave_id": wave_id,
-                    "cohort_id": cohort["cohort_id"],
-                    "cohort_wave": cohort_wave,
-                    "model": cohort["model"],
-                    "tier": cohort["tier"],
-                    "execution_owner": cohort.get("execution_owner", "unassigned"),
-                    "fr8_dispatch_enabled": dispatch_enabled,
-                    "worker_count": len(jobs_list),
-                    "ram_safe": len(jobs_list) <= MAX_WORKERS_PER_WAVE,
-                    "seeds": batch,
-                    "jobs": jobs_list,
-                }
-            )
+            wave_entry: dict[str, Any] = {
+                "wave_id": wave_id,
+                "cohort_id": cohort["cohort_id"],
+                "cohort_wave": cohort_wave,
+                "model": cohort["model"],
+                "tier": cohort["tier"],
+                "timeout_s": cohort_timeout_s,
+                "execution_owner": cohort.get("execution_owner", "unassigned"),
+                "fr8_dispatch_enabled": dispatch_enabled,
+                "worker_count": len(jobs_list),
+                "ram_safe": len(jobs_list) <= MAX_WORKERS_PER_WAVE,
+                "seeds": batch,
+                "jobs": jobs_list,
+            }
+            for opt_key in ("pre_registered_commit", "max_spend_usd", "stop_launch_at", "hard_drop_at"):
+                if opt_key in cohort:
+                    wave_entry[opt_key] = cohort[opt_key]
+            waves.append(wave_entry)
     return waves
 
 
@@ -484,6 +741,26 @@ def build_g2_template_waves(
 ) -> list[dict[str, Any]]:
     return partition_into_waves(
         [dict(c) for c in G2_TEMPLATE_COHORTS],
+        max_workers_per_wave=max_workers_per_wave,
+        include_disabled=True,
+    )
+
+
+def build_gpt55_template_waves(
+    max_workers_per_wave: int = MAX_WORKERS_PER_WAVE,
+) -> list[dict[str, Any]]:
+    return partition_into_waves(
+        [dict(c) for c in GPT55_TEMPLATE_COHORTS],
+        max_workers_per_wave=max_workers_per_wave,
+        include_disabled=True,
+    )
+
+
+def build_cross_family_template_waves(
+    max_workers_per_wave: int = MAX_WORKERS_PER_WAVE,
+) -> list[dict[str, Any]]:
+    return partition_into_waves(
+        [dict(c) for c in TEMPLATE_COHORTS],
         max_workers_per_wave=max_workers_per_wave,
         include_disabled=True,
     )
@@ -520,9 +797,14 @@ def validate_wave_commands(waves: list[dict[str, Any]]) -> dict[str, Any]:
                 errors.append(f"wave {wave['wave_id']} seed {job['seed']} has invalid flags: {unknown}")
                 continue
             norm_model = opencode_run.normalize_model(parsed.model)
+            if norm_model != job["model"]:
+                errors.append(f"wave {wave['wave_id']} seed {job['seed']} normalized model={norm_model} != {job['model']}")
             spec = common.spec_from(parsed, f"opencode:{norm_model}")
-            if parsed.timeout != DEFAULT_TIMEOUT_S:
-                errors.append(f"wave {wave['wave_id']} seed {job['seed']} timeout={parsed.timeout} != {DEFAULT_TIMEOUT_S}")
+            expected_timeout = int(job.get("timeout_s", DEFAULT_TIMEOUT_S))
+            if expected_timeout not in ALLOWED_TIMEOUTS_S:
+                errors.append(f"wave {wave['wave_id']} seed {job['seed']} unsupported timeout_s={expected_timeout}")
+            if parsed.timeout != expected_timeout:
+                errors.append(f"wave {wave['wave_id']} seed {job['seed']} timeout={parsed.timeout} != {expected_timeout}")
             if parsed.jobs != DEFAULT_JOBS:
                 errors.append(f"wave {wave['wave_id']} seed {job['seed']} jobs={parsed.jobs} != {DEFAULT_JOBS}")
             if parsed.tier not in rules.TIERS:
@@ -538,6 +820,7 @@ def validate_wave_commands(waves: list[dict[str, Any]]) -> dict[str, Any]:
         "commands_validated": checked,
         "max_workers_per_wave": MAX_WORKERS_PER_WAVE,
         "timeout_s": DEFAULT_TIMEOUT_S,
+        "allowed_timeouts_s": list(ALLOWED_TIMEOUTS_S),
         "jobs_per_worker": DEFAULT_JOBS,
         "errors": errors,
     }
@@ -576,6 +859,24 @@ def check_opencode_config_isolation() -> dict[str, Any]:
     canary_srv = servers.get("canary", {})
     if canary_srv.get("url") != test_url or canary_srv.get("enabled") is not True:
         errors.append(f"unexpected mcp canary config: {canary_srv!r}")
+    for forbidden_mcp_key in ("env", "environment", "headers"):
+        if forbidden_mcp_key in canary_srv:
+            errors.append(f"mcp canary config unexpectedly carries {forbidden_mcp_key}")
+
+    routing_cases = (
+        ("gemini-4-carbon", "google/gemini-4-carbon"),
+        ("google/gemini-4-carbon", "google/gemini-4-carbon"),
+        ("gemini-4-argon", "google/gemini-4-argon"),
+        ("gemini-4-hydrogen", "google/gemini-4-hydrogen"),
+        ("gemini-3.5-flash", "google/gemini-3.5-flash"),
+        ("gpt-5.5", "openai/gpt-5.5"),
+        ("openai/gpt-5.5", "openai/gpt-5.5"),
+    )
+    for raw_m, exp_norm in routing_cases:
+        got_norm = opencode_run.normalize_model(raw_m)
+        if got_norm != exp_norm:
+            errors.append(f"opencode_run.normalize_model({raw_m!r}) == {got_norm!r} != {exp_norm!r}")
+
     carbon_settings = opencode_run.opencode_google_settings("google/gemini-4-carbon")
     argon_settings = opencode_run.opencode_google_settings("google/gemini-4-argon")
     hydrogen_settings = opencode_run.opencode_google_settings("google/gemini-4-hydrogen")
@@ -588,11 +889,14 @@ def check_opencode_config_isolation() -> dict[str, Any]:
         errors.append(f"unexpected hydrogen thinking settings: {hydrogen_settings!r}")
     if "thinkingLevel=high" not in flash_settings.get("thinking", ""):
         errors.append(f"unexpected flash thinking settings: {flash_settings!r}")
+    if opencode_run.normalize_model("gpt-5.5").startswith("google/"):
+        errors.append("openai/gpt-5.5 unexpectedly routed to google settings")
     return {
         "passed": not errors,
         "permission": dict(EXPECTED_PERMISSION),
         "autoupdate": False,
         "share": "disabled",
+        "provider_routes_verified": len(routing_cases),
         "errors": errors,
     }
 
@@ -600,57 +904,305 @@ def check_opencode_config_isolation() -> dict[str, Any]:
 def check_child_env_stripping() -> dict[str, Any]:
     errors: list[str] = []
     saved = dict(os.environ)
+    orig_load_env = llm_base.load_env
+    orig_mkdtemp = tempfile.mkdtemp
     wd: Path | None = None
-    cleanup_paths: list[Path] = []
-    cleanup_other: list[Path] = []
+    created_temp_dirs: list[Path] = []
+
+    def tracked_mkdtemp(*args: Any, **kwargs: Any) -> str:
+        p = orig_mkdtemp(*args, **kwargs)
+        created_temp_dirs.append(Path(p))
+        return p
+
     try:
+        llm_base.load_env = lambda: None
+        tempfile.mkdtemp = tracked_mkdtemp
+        os.environ.pop("GOOGLE_GENERATIVE_AI_API_KEY", None)
         synthetic_values: dict[str, str] = {}
         for idx, key in enumerate(STRIPPED_ENV_VARS):
             val = f"synthetic-preflight-secret-{idx}-{key.lower()}"
             synthetic_values[key] = val
             os.environ[key] = val
-        env = common.child_env()
-        leaked_keys = sorted(k for k in STRIPPED_ENV_VARS if k in env)
+        for plain_var in mcp_server.PLAIN_SECRET_VARS:
+            os.environ[plain_var] = f"synthetic-plain-{plain_var.lower()}"
+
+        base_cli_env = common.child_env()
+        leaked_keys = sorted(k for k in STRIPPED_ENV_VARS if k in base_cli_env)
         if leaked_keys:
             errors.append(f"child_env leaked stripped keys: {leaked_keys}")
         leaked_vals = sorted(
-            k for k, v in synthetic_values.items() if any(v == str(ev_val) for ev_val in env.values())
+            k for k, v in synthetic_values.items() if any(v == str(ev_val) for ev_val in base_cli_env.values())
         )
         if leaked_vals:
             errors.append(f"child_env leaked synthetic values for: {leaked_vals}")
-        if env.get("PWD") != "":
-            errors.append(f"expected child_env PWD=='', got {env.get('PWD')!r}")
+        if base_cli_env.get("PWD") != "":
+            errors.append(f"expected child_env PWD=='', got {base_cli_env.get('PWD')!r}")
+
+        mcp_env = mcp_server.clean_launch_env(base_cli_env)
+        mcp_leaked_provider = sorted(
+            k for k in (*PROVIDER_KEY_VARS, "GOOGLE_GENERATIVE_AI_API_KEY") if k in mcp_env
+        )
+        if mcp_leaked_provider:
+            errors.append(f"MCP server env leaked provider keys: {mcp_leaked_provider}")
+        mcp_leaked_secrets = sorted(k for k in mcp_server.PLAIN_SECRET_VARS if k in mcp_env)
+        if mcp_leaked_secrets:
+            errors.append(f"MCP server clean_launch_env leaked plain secret vars: {mcp_leaked_secrets}")
 
         wd = common.make_clean_workdir()
-        extra_env, cleanup_paths = opencode_run.child_env_extra("google/gemini-4-carbon")(wd)
-        if extra_env.get("GOOGLE_GENERATIVE_AI_API_KEY") != synthetic_values["GEMINI_API_KEY"]:
-            errors.append("child_env_extra failed to map GEMINI_API_KEY to GOOGLE_GENERATIVE_AI_API_KEY")
-        if "GEMINI_API_KEY" in extra_env:
-            errors.append("child_env_extra exposed raw GEMINI_API_KEY")
+        extra_google, _ = opencode_run.child_env_extra("google/gemini-4-carbon")(wd)
+        cli_google_env = {**common.child_env(), **extra_google}
+        if cli_google_env.get("GOOGLE_GENERATIVE_AI_API_KEY") != synthetic_values["GEMINI_API_KEY"]:
+            errors.append("google/* CLI env failed to map GEMINI_API_KEY to GOOGLE_GENERATIVE_AI_API_KEY")
+        for forbidden_google in PROVIDER_KEY_VARS:
+            if forbidden_google in cli_google_env:
+                errors.append(f"google/* CLI env exposed {forbidden_google}")
         for flag_key in ("OPENCODE_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_AUTOUPDATE", "OPENCODE_DISABLE_SHARE"):
-            if extra_env.get(flag_key) != "1":
-                errors.append(f"expected {flag_key}=='1', got {extra_env.get(flag_key)!r}")
-        oc_home = Path(extra_env["XDG_DATA_HOME"]).resolve().parent
+            if cli_google_env.get(flag_key) != "1":
+                errors.append(f"expected {flag_key}=='1', got {cli_google_env.get(flag_key)!r}")
+        oc_home = Path(cli_google_env["XDG_DATA_HOME"]).resolve().parent
         if common.REPO_ROOT.resolve() in oc_home.parents or oc_home == common.REPO_ROOT.resolve():
             errors.append("opencode per-episode XDG home is inside REPO_ROOT")
         if wd.resolve() in oc_home.parents or oc_home == wd.resolve():
             errors.append("opencode per-episode XDG home is inside agent workdir")
 
-        extra_other, cleanup_other = opencode_run.child_env_extra("openai/unused-model")(wd)
-        if "GOOGLE_GENERATIVE_AI_API_KEY" in extra_other:
-            errors.append("non-google model unexpectedly received GOOGLE_GENERATIVE_AI_API_KEY")
+        for openai_alias in ("gpt-5.5", "openai/gpt-5.5"):
+            extra_openai, _ = opencode_run.child_env_extra(openai_alias)(wd)
+            cli_openai_env = {**common.child_env(), **extra_openai}
+            if cli_openai_env.get("OPENAI_API_KEY") != synthetic_values["OPENAI_API_KEY"]:
+                errors.append(f"{openai_alias} CLI env failed to pass OPENAI_API_KEY")
+            for forbidden_openai in ("GOOGLE_GENERATIVE_AI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY"):
+                if forbidden_openai in cli_openai_env:
+                    errors.append(f"{openai_alias} CLI env exposed {forbidden_openai}")
+            oc_openai_home = Path(cli_openai_env["XDG_DATA_HOME"]).resolve().parent
+            if common.REPO_ROOT.resolve() in oc_openai_home.parents or wd.resolve() in oc_openai_home.parents:
+                errors.append(f"{openai_alias} per-episode XDG home violated repo/workdir isolation")
+
+        extra_other, _ = opencode_run.child_env_extra("anthropic/unused-model")(wd)
+        cli_other_env = {**common.child_env(), **extra_other}
+        for any_key in (*PROVIDER_KEY_VARS, "GOOGLE_GENERATIVE_AI_API_KEY"):
+            if any_key in cli_other_env:
+                errors.append(f"unmapped provider CLI env unexpectedly exposed {any_key}")
+
+        for k in PROVIDER_KEY_VARS:
+            os.environ.pop(k, None)
+        mcp_no_key_env = mcp_server.clean_launch_env()
+        if any(k in mcp_no_key_env for k in (*PROVIDER_KEY_VARS, "GOOGLE_GENERATIVE_AI_API_KEY")):
+            errors.append("keyless parent MCP server launch env unexpectedly contained provider key")
+        for missing_model in ("google/gemini-4-carbon", "openai/gpt-5.5"):
+            caught_missing = False
+            try:
+                opencode_run.child_env_extra(missing_model)(wd)
+            except llm_base.MissingKeyError:
+                caught_missing = True
+            if not caught_missing:
+                errors.append(f"child_env_extra({missing_model!r}) did not raise MissingKeyError when key unset")
     finally:
+        llm_base.load_env = orig_load_env
+        tempfile.mkdtemp = orig_mkdtemp
         os.environ.clear()
         os.environ.update(saved)
         if wd is not None:
             shutil.rmtree(wd, ignore_errors=True)
-        for p in cleanup_paths + cleanup_other:
+        for p in created_temp_dirs:
             shutil.rmtree(p, ignore_errors=True)
 
     return {
         "passed": not errors,
         "stripped_vars_verified": list(STRIPPED_ENV_VARS),
+        "mcp_server_stripped_provider_keys": list(PROVIDER_KEY_VARS),
+        "google_cli_active_key": "GOOGLE_GENERATIVE_AI_API_KEY",
+        "openai_cli_active_key": "OPENAI_API_KEY",
         "isolated_xdg_home_verified": True,
+        "errors": errors,
+    }
+
+
+def _load_gemini_runner_module():
+    runner_path = ROOT / "scripts" / "gemini_runner.py"
+    spec = importlib.util.spec_from_file_location("preflight_gemini_runner", runner_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {runner_path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def check_gemini_runner_controls() -> dict[str, Any]:
+    errors: list[str] = []
+    tmp_dir = Path(tempfile.mkdtemp(prefix="canary-preflight-gr-")).resolve()
+    try:
+        gr = _load_gemini_runner_module()
+        route_cases = (
+            ("gemini-4-carbon", "google/gemini-4-carbon"),
+            ("gemini-4-argon", "google/gemini-4-argon"),
+            ("gemini-4-hydrogen", "google/gemini-4-hydrogen"),
+            ("gemini-3.5-flash", "google/gemini-3.5-flash"),
+            ("google/gemini-4-carbon", "google/gemini-4-carbon"),
+            ("gpt-5.5", "openai/gpt-5.5"),
+            ("openai/gpt-5.5", "openai/gpt-5.5"),
+        )
+        for raw_m, exp_m in route_cases:
+            got_m = gr.provider_model(raw_m)
+            if got_m != exp_m:
+                errors.append(f"gemini_runner.provider_model({raw_m!r}) == {got_m!r} != {exp_m!r}")
+
+        saved_override = os.environ.pop("CANARY_TIERS_OVERRIDE", None)
+        try:
+            job_gpt = gr.Job("opencode", "hard", 0, tmp_dir / "s0", "gpt-5.5", GPT55_TIMEOUT_S)
+            cmd_gpt = job_gpt.cmd()
+            if "--model" not in cmd_gpt or cmd_gpt[cmd_gpt.index("--model") + 1] != "openai/gpt-5.5":
+                errors.append(f"unexpected gpt-5.5 Job.cmd model routing: {cmd_gpt!r}")
+            if "--timeout" not in cmd_gpt or cmd_gpt[cmd_gpt.index("--timeout") + 1] != str(GPT55_TIMEOUT_S):
+                errors.append(f"unexpected gpt-5.5 Job.cmd timeout: {cmd_gpt!r}")
+
+            job_gem = gr.Job("opencode", "hard", 0, tmp_dir / "s0", "gemini-4-carbon", DEFAULT_TIMEOUT_S)
+            cmd_gem = job_gem.cmd()
+            if "--model" not in cmd_gem or cmd_gem[cmd_gem.index("--model") + 1] != "google/gemini-4-carbon":
+                errors.append(f"unexpected gemini-4-carbon Job.cmd model routing: {cmd_gem!r}")
+        finally:
+            if saved_override is not None:
+                os.environ["CANARY_TIERS_OVERRIDE"] = saved_override
+
+        buf_mismatch = io.StringIO()
+        with contextlib.redirect_stdout(buf_mismatch):
+            rc_mismatch = gr.main(["--tiers-version", "v1.3", "--staging", str(tmp_dir / "mismatch"), "--dry-run"])
+        if rc_mismatch != 2:
+            errors.append(f"expected gemini_runner --tiers-version mismatch rc=2, got {rc_mismatch}")
+
+        stg_stop = tmp_dir / "stop_at"
+        buf_stop = io.StringIO()
+        with contextlib.redirect_stdout(buf_stop):
+            rc_stop = gr.main(
+                [
+                    "--tiers-version", "v1.4",
+                    "--staging", str(stg_stop),
+                    "--model", "gpt-5.5",
+                    "--seeds", "0-1",
+                    "--tiers", "hard",
+                    "--harnesses", "opencode",
+                    "--timeout", str(GPT55_TIMEOUT_S),
+                    "--stop-launch-at", "00:00",
+                ]
+            )
+        out_stop = buf_stop.getvalue()
+        if rc_stop != 0 or "STOPPED LAUNCHING (stop-launch-at 00:00); 2 seed(s) never started" not in out_stop:
+            errors.append(f"gemini_runner --stop-launch-at failed offline check: rc={rc_stop} out={out_stop!r}")
+
+        stg_cap = tmp_dir / "spend_cap"
+        ep0_dir = stg_cap / "opencode" / "hard" / "0"
+        ep0_dir.mkdir(parents=True, exist_ok=True)
+        (ep0_dir / "episodes.jsonl").write_text(
+            json.dumps(
+                {
+                    "tier": "hard",
+                    "seed": 0,
+                    "agent": "opencode:openai/gpt-5.5",
+                    "score": 0.6,
+                    "correct": True,
+                    "accused": "e01",
+                    "final_day": 8,
+                    "end_reason": "accused",
+                    "meta": {"rc": 0, "usage": {"cost_usd_est": 200.0, "cost_usd_upper": 220.0}},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        buf_cap = io.StringIO()
+        with contextlib.redirect_stdout(buf_cap):
+            rc_cap = gr.main(
+                [
+                    "--tiers-version", "v1.4",
+                    "--staging", str(stg_cap),
+                    "--model", "gpt-5.5",
+                    "--seeds", "0-2",
+                    "--tiers", "hard",
+                    "--harnesses", "opencode",
+                    "--timeout", str(GPT55_TIMEOUT_S),
+                    "--max-spend-usd", "200",
+                    "--stop-launch-at", "99:99",
+                ]
+            )
+        out_cap = buf_cap.getvalue()
+        if rc_cap != 0 or "STOPPED LAUNCHING (spend cap $200 reached (est $200.00)); 2 seed(s) never started" not in out_cap:
+            errors.append(f"gemini_runner --max-spend-usd failed offline check: rc={rc_cap} out={out_cap!r}")
+
+        stg_assume = tmp_dir / "assume_cost"
+        for s_idx in (0, 1):
+            sd = stg_assume / "opencode" / "hard" / str(s_idx)
+            sd.mkdir(parents=True, exist_ok=True)
+            (sd / "episodes.jsonl").write_text(
+                json.dumps(
+                    {
+                        "tier": "hard",
+                        "seed": s_idx,
+                        "agent": "opencode:openai/gpt-5.5",
+                        "score": 0.5,
+                        "correct": True,
+                        "accused": "e01",
+                        "final_day": 9,
+                        "end_reason": "accused",
+                        "meta": {"rc": 0, "usage": {"cost_unknown": True}},
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+        buf_assume_block = io.StringIO()
+        with contextlib.redirect_stdout(buf_assume_block):
+            rc_ab = gr.main(
+                [
+                    "--tiers-version", "v1.4",
+                    "--staging", str(stg_assume),
+                    "--model", "gpt-5.5",
+                    "--seeds", "0-2",
+                    "--tiers", "hard",
+                    "--harnesses", "opencode",
+                    "--timeout", str(GPT55_TIMEOUT_S),
+                    "--max-spend-usd", "15",
+                    "--assume-cost-usd", "10.0",
+                    "--stop-launch-at", "99:99",
+                ]
+            )
+        out_ab = buf_assume_block.getvalue()
+        if rc_ab != 0 or "STOPPED LAUNCHING (spend cap $15 reached (est $20.00)); 1 seed(s) never started" not in out_ab:
+            errors.append(f"gemini_runner --assume-cost-usd block check failed: rc={rc_ab} out={out_ab!r}")
+
+        buf_assume_dry = io.StringIO()
+        with contextlib.redirect_stdout(buf_assume_dry):
+            rc_ad = gr.main(
+                [
+                    "--tiers-version", "v1.4",
+                    "--staging", str(stg_assume),
+                    "--model", "gpt-5.5",
+                    "--seeds", "0-2",
+                    "--tiers", "hard",
+                    "--harnesses", "opencode",
+                    "--timeout", str(GPT55_TIMEOUT_S),
+                    "--max-spend-usd", "25",
+                    "--assume-cost-usd", "10.0",
+                    "--stop-launch-at", "99:99",
+                    "--dry-run",
+                ]
+            )
+        out_ad = buf_assume_dry.getvalue()
+        if rc_ad != 0 or "DRY opencode/hard/2:" not in out_ad or "--model openai/gpt-5.5" not in out_ad:
+            errors.append(f"gemini_runner --assume-cost-usd dry-run check failed: rc={rc_ad} out={out_ad!r}")
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    return {
+        "passed": not errors,
+        "source_commit": GPT55_PREREG_COMMIT,
+        "provider_routes_verified": 7,
+        "controls_verified": [
+            "provider_model_google_and_openai",
+            "--max-spend-usd",
+            "--assume-cost-usd",
+            "--stop-launch-at",
+            "--tiers-version",
+        ],
+        "zero_live_subprocesses": True,
         "errors": errors,
     }
 
@@ -669,10 +1221,18 @@ def check_workdir_isolation(root: Path) -> dict[str, Any]:
             errors.append(f"workdir {wd_resolved} is inside target root {root_resolved}")
         if list(wd.iterdir()):
             errors.append("fresh make_clean_workdir was not empty")
-        cmd = opencode_run.build_cmd(wd, "PROMPT", "gemini-4-carbon", "http://127.0.0.1:18765/mcp")
-        expected_cmd = ["opencode", "run", "--model", "google/gemini-4-carbon", "--format", "json", "--dir", str(wd), "PROMPT"]
-        if cmd != expected_cmd:
-            errors.append(f"unexpected build_cmd output: {cmd!r}")
+        cmd_google = opencode_run.build_cmd(wd, "PROMPT", "gemini-4-carbon", "http://127.0.0.1:18765/mcp")
+        expected_google = [
+            "opencode", "run", "--model", "google/gemini-4-carbon", "--format", "json", "--dir", str(wd), "PROMPT"
+        ]
+        if cmd_google != expected_google:
+            errors.append(f"unexpected google build_cmd output: {cmd_google!r}")
+        cmd_openai = opencode_run.build_cmd(wd, "PROMPT", "gpt-5.5", "http://127.0.0.1:18765/mcp")
+        expected_openai = [
+            "opencode", "run", "--model", "openai/gpt-5.5", "--format", "json", "--dir", str(wd), "PROMPT"
+        ]
+        if cmd_openai != expected_openai:
+            errors.append(f"unexpected openai build_cmd output: {cmd_openai!r}")
         common.assert_clean(wd, opencode_run.FILES)
 
         (bad_wd / "opencode.json").write_text("{}", encoding="utf-8")
@@ -699,9 +1259,42 @@ def check_workdir_isolation(root: Path) -> dict[str, Any]:
     }
 
 
+def _audit_single_transcript(
+    root: Path,
+    tr_rel: str,
+    episode: dict[str, Any],
+    unredacted_rx: re.Pattern[str],
+    errors: list[str],
+) -> int:
+    raw_txt = (root / tr_rel).read_text(encoding="utf-8")
+    if unredacted_rx.search(raw_txt):
+        errors.append(f"unredacted thoughtSignature in {tr_rel}")
+    stdout, stderr = split_transcript(raw_txt)
+    if common.empty_final_response(stdout):
+        errors.append(f"verified transcript {tr_rel} flagged empty_final_response")
+    infra_tag = common.classify_infra(stdout, stderr)
+    if infra_tag is not None:
+        errors.append(f"verified transcript {tr_rel} flagged infra={infra_tag}")
+    rebuilt = common.steps_from_events(stdout)
+    recorded_steps = episode.get("steps") or []
+    if len(rebuilt) != len(recorded_steps):
+        errors.append(
+            f"steps_from_events count mismatch on {tr_rel}: "
+            f"rebuilt={len(rebuilt)} != recorded={len(recorded_steps)}"
+        )
+    elif [s.tool for s in rebuilt] != [s["tool"] for s in recorded_steps]:
+        errors.append(f"steps_from_events tool sequence mismatch on {tr_rel}")
+    elif [s.day for s in rebuilt] != [s["day"] for s in recorded_steps]:
+        errors.append(f"steps_from_events day sequence mismatch on {tr_rel}")
+    elif [s.args for s in rebuilt] != [s["args"] for s in recorded_steps]:
+        errors.append(f"steps_from_events args mismatch on {tr_rel}")
+    return len(rebuilt)
+
+
 def check_transcript_redaction_and_infra(
     root: Path,
     records_by_agent_tier: dict[tuple[str, str], dict[int, dict[str, Any]]],
+    committed_g1_ext_records: dict[int, dict[str, Any]] | None = None,
     enforce_expected_baseline: bool = True,
 ) -> dict[str, Any]:
     errors: list[str] = []
@@ -787,6 +1380,8 @@ def check_transcript_redaction_and_infra(
     unredacted_rx = re.compile(r'"thoughtSignature":\s?"[^"<]{64,}"')
     real_transcripts_checked = 0
     carbon_step_counts: dict[str, int] = {}
+    committed_g1_ext_step_counts: dict[str, int] = {}
+    committed_g1_ext_checked = 0
     flash_medium_s28_steps: int | None = None
 
     carbon_records = records_by_agent_tier.get(("opencode:google/gemini-4-carbon", "hard"), {})
@@ -807,41 +1402,100 @@ def check_transcript_redaction_and_infra(
             if not tr_rel:
                 continue
             real_transcripts_checked += 1
-            raw_txt = (root / tr_rel).read_text(encoding="utf-8")
-            if unredacted_rx.search(raw_txt):
-                errors.append(f"unredacted thoughtSignature in {tr_rel}")
-            stdout, stderr = split_transcript(raw_txt)
-            if common.empty_final_response(stdout):
-                errors.append(f"verified transcript {tr_rel} flagged empty_final_response")
-            infra_tag = common.classify_infra(stdout, stderr)
-            if infra_tag is not None:
-                errors.append(f"verified transcript {tr_rel} flagged infra={infra_tag}")
-            rebuilt = common.steps_from_events(stdout)
-            recorded_steps = rec["episode"].get("steps") or []
-            if len(rebuilt) != len(recorded_steps):
-                errors.append(
-                    f"steps_from_events count mismatch on {tr_rel}: "
-                    f"rebuilt={len(rebuilt)} != recorded={len(recorded_steps)}"
-                )
-            elif [s.tool for s in rebuilt] != [s["tool"] for s in recorded_steps]:
-                errors.append(f"steps_from_events tool sequence mismatch on {tr_rel}")
-            elif [s.day for s in rebuilt] != [s["day"] for s in recorded_steps]:
-                errors.append(f"steps_from_events day sequence mismatch on {tr_rel}")
-            elif [s.args for s in rebuilt] != [s["args"] for s in recorded_steps]:
-                errors.append(f"steps_from_events args mismatch on {tr_rel}")
-
+            step_n = _audit_single_transcript(root, tr_rel, rec["episode"], unredacted_rx, errors)
             if agent == "opencode:google/gemini-4-carbon" and tier == "hard" and 30 <= seed <= 59:
-                carbon_step_counts[str(seed)] = len(rebuilt)
+                carbon_step_counts[str(seed)] = step_n
             if agent == "opencode:google/gemini-3.5-flash" and tier == "medium" and seed == 28:
-                flash_medium_s28_steps = len(rebuilt)
+                flash_medium_s28_steps = step_n
+
+    for seed, rec in sorted((committed_g1_ext_records or {}).items()):
+        tr_rel = rec.get("transcript_file")
+        if not tr_rel:
+            continue
+        committed_g1_ext_checked += 1
+        committed_g1_ext_step_counts[str(seed)] = _audit_single_transcript(
+            root, tr_rel, rec["episode"], unredacted_rx, errors
+        )
 
     return {
         "passed": not errors,
         "synthetic_cases_verified": 9,
         "real_transcripts_checked": real_transcripts_checked,
+        "committed_g1_ext_transcripts_checked": committed_g1_ext_checked,
         "carbon_hard_step_counts": carbon_step_counts,
+        "committed_g1_ext_step_counts": committed_g1_ext_step_counts,
         "flash_medium_s28_steps": flash_medium_s28_steps,
         "errors": errors,
+    }
+
+
+def build_provenance_honesty(
+    committed_g1_seeds: list[int],
+    committed_g1_quota_excluded: int,
+    fr8_carbon_seeds: list[int],
+    combined_carbon_ext_seeds: list[int],
+) -> dict[str, Any]:
+    return {
+        "panel_doc": PANEL_DOC,
+        "panel_status_commit": PANEL_STATUS_COMMIT,
+        "panel_fix_a_commit": PANEL_FIX_A_COMMIT,
+        "panel_fix_d_commit": PANEL_FIX_D_COMMIT,
+        "upstream_reconciled_commit": UPSTREAM_RECONCILED_COMMIT,
+        "cohorts": {
+            "primary_carbon_0_29": {
+                "classification": "post_hoc_lock",
+                "seed_range": [0, 29],
+                "episodes_commit": PRIMARY_EPISODES_COMMIT,
+                "lock_commit": PRIMARY_POST_HOC_LOCK_COMMIT,
+                "lock_delay_s": PRIMARY_POST_HOC_LOCK_DELAY_S,
+                "solver_reference_dirs": [
+                    "data/runs/committed/v1.4/reference/solver-hard-20261114-121126",
+                    "data/runs/committed/v1.4/reference/solver-hard-seeds20to29",
+                ],
+                "note": (
+                    "Primary 0-29 seed lock (671ed96) landed 28s after episodes commit (8fd4dec); "
+                    "classified as a post-hoc lock against reruns and cherry-picking, not a pre-registration."
+                ),
+            },
+            "g1_carbon_hard_30_59": {
+                "classification": "pre_registered",
+                "seed_range": [30, 59],
+                "pre_registered_commit": GEMINI_SESSIONS_COMMIT,
+                "committed_dir": "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard",
+                "committed_landed_seeds": committed_g1_seeds,
+                "committed_n": len(committed_g1_seeds),
+                "committed_provider_quota_excluded": committed_g1_quota_excluded,
+                "fr8_replication_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon",
+                "fr8_replication_landed_seeds": fr8_carbon_seeds,
+                "fr8_replication_n": len(fr8_carbon_seeds),
+                "combined_distinct_seeds": combined_carbon_ext_seeds,
+                "combined_distinct_n": len(combined_carbon_ext_seeds),
+            },
+            "g2_argon_hydrogen_hard_0_29": {
+                "classification": "pre_registered",
+                "models": list(G2_MODELS),
+                "tier": "hard",
+                "seed_range": [0, 29],
+                "pre_registered_commit": GEMINI_SESSIONS_COMMIT,
+                "committed_n": 0,
+            },
+            "gpt_5_5_hard_0_29": {
+                "classification": "pre_registered",
+                "cohort_id": "opencode-openai-gpt-5.5-hard-0-29",
+                "agent": "opencode:openai/gpt-5.5",
+                "model": OPENAI_GPT55_MODEL,
+                "tier": "hard",
+                "seed_range": [0, 29],
+                "timeout_s": GPT55_TIMEOUT_S,
+                "max_spend_usd": 200.0,
+                "stop_launch_at": "08:15",
+                "hard_drop_at": "08:45",
+                "pre_registered_commit": GPT55_PREREG_COMMIT,
+                "execution_owner": "silas_cf394894_panel_fix_c_no_key",
+                "panel_fix_c_status": "no_openai_or_anthropic_api_key",
+                "committed_n": 0,
+            },
+        },
     }
 
 
@@ -851,6 +1505,7 @@ def build_manifest(
     enforce_expected_baseline: bool = True,
 ) -> dict[str, Any]:
     scan = scan_replication_tree(root, TARGET_COHORTS, enforce_expected_baseline=enforce_expected_baseline)
+    committed_scan = scan_committed_v14_tree(root, enforce_expected_baseline=enforce_expected_baseline)
     waves = partition_into_waves(
         scan["cohorts"],
         max_workers_per_wave=max_workers_per_wave,
@@ -858,23 +1513,29 @@ def build_manifest(
     )
     template_waves = build_template_waves(scan["cohorts"], max_workers_per_wave=max_workers_per_wave)
     g2_template_waves = build_g2_template_waves(max_workers_per_wave=max_workers_per_wave)
+    gpt55_template_waves = build_gpt55_template_waves(max_workers_per_wave=max_workers_per_wave)
+    cross_family_waves = build_cross_family_template_waves(max_workers_per_wave=max_workers_per_wave)
 
     tiers_check = check_tiers_gate()
     config_check = check_opencode_config_isolation()
     env_check = check_child_env_stripping()
+    runner_check = check_gemini_runner_controls()
     workdir_check = check_workdir_isolation(root)
     transcript_check = check_transcript_redaction_and_infra(
         root,
         scan.get("records_by_agent_tier", {}),
+        committed_g1_ext_records=committed_scan.get("g1_ext_records", {}),
         enforce_expected_baseline=enforce_expected_baseline,
     )
     active_cmd_check = validate_wave_commands(waves)
     template_cmd_check = validate_wave_commands(template_waves)
     g2_cmd_check = validate_wave_commands(g2_template_waves)
+    gpt55_cmd_check = validate_wave_commands(gpt55_template_waves)
     cmd_errors = (
         list(active_cmd_check["errors"])
         + list(template_cmd_check["errors"])
         + list(g2_cmd_check["errors"])
+        + list(gpt55_cmd_check["errors"])
     )
     cohorts_by_id = {c["cohort_id"]: c for c in scan["cohorts"]}
     for w in waves:
@@ -889,21 +1550,71 @@ def build_manifest(
         "commands_validated": template_cmd_check["commands_validated"],
         "g2_family_waves_validated": len(g2_template_waves),
         "g2_family_commands_validated": g2_cmd_check["commands_validated"],
+        "gpt55_waves_validated": len(gpt55_template_waves),
+        "gpt55_commands_validated": gpt55_cmd_check["commands_validated"],
+        "cross_family_waves_validated": len(cross_family_waves),
+        "cross_family_commands_validated": g2_cmd_check["commands_validated"] + gpt55_cmd_check["commands_validated"],
         "max_workers_per_wave": max_workers_per_wave,
         "timeout_s": DEFAULT_TIMEOUT_S,
+        "gpt55_timeout_s": GPT55_TIMEOUT_S,
         "jobs_per_worker": DEFAULT_JOBS,
         "errors": cmd_errors,
     }
     blackout_check = check_carbon_quota_blackout_guard()
 
+    carbon_cohort = cohorts_by_id.get("opencode-gemini-4-carbon-hard-30-59", {})
+    fr8_carbon_seeds = list(carbon_cohort.get("landed_seeds", []))
+    committed_g1_seeds = list(committed_scan["g1_ext_landed_seeds"])
+    combined_ext_seeds = sorted(set(committed_g1_seeds) | set(fr8_carbon_seeds))
+    shared_ext_seeds = sorted(set(committed_g1_seeds) & set(fr8_carbon_seeds))
+    combined_ext_remaining = sorted(set(range(30, 60)) - set(combined_ext_seeds))
+
+    reconcile_errors = list(committed_scan["errors"])
+    combined_total = committed_scan["total_episodes"] + scan["total_episodes"]
+    combined_verified = committed_scan["replay_verified_episodes"] + scan["replay_verified_episodes"]
+    if enforce_expected_baseline:
+        if combined_total != EXPECTED_COMBINED_V14_EPISODES or combined_verified != EXPECTED_COMBINED_V14_EPISODES:
+            reconcile_errors.append(
+                f"expected {EXPECTED_COMBINED_V14_EPISODES}/{EXPECTED_COMBINED_V14_EPISODES} "
+                f"combined v1.4 episodes, got {combined_verified}/{combined_total}"
+            )
+        if combined_ext_seeds != EXPECTED_COMBINED_CARBON_HARD_EXT_LANDED:
+            reconcile_errors.append(
+                f"expected combined carbon hard 30-59 coverage {EXPECTED_COMBINED_CARBON_HARD_EXT_LANDED}, "
+                f"got {combined_ext_seeds}"
+            )
+        if len(combined_ext_remaining) != EXPECTED_COMBINED_CARBON_HARD_EXT_REMAINING_COUNT:
+            reconcile_errors.append(
+                f"expected {EXPECTED_COMBINED_CARBON_HARD_EXT_REMAINING_COUNT} remaining carbon hard 30-59 seeds, "
+                f"got {len(combined_ext_remaining)}"
+            )
+
+    reconcile_check = {
+        "passed": not reconcile_errors,
+        "committed_v14_episodes": committed_scan["total_episodes"],
+        "committed_v14_replay_verified": committed_scan["replay_verified_episodes"],
+        "replication_v14_episodes": scan["total_episodes"],
+        "replication_v14_replay_verified": scan["replay_verified_episodes"],
+        "combined_v14_episodes": combined_total,
+        "combined_v14_replay_verified": combined_verified,
+        "g1_committed_landed_seeds": committed_g1_seeds,
+        "g1_committed_provider_quota_excluded": committed_scan["g1_ext_provider_quota_excluded"],
+        "g1_fr8_landed_seeds": fr8_carbon_seeds,
+        "g1_combined_distinct_seeds": combined_ext_seeds,
+        "g1_combined_remaining_count": len(combined_ext_remaining),
+        "errors": reconcile_errors,
+    }
+
     checks = {
         "tiers_v14_gate": tiers_check,
         "opencode_config_permission": config_check,
         "child_env_isolation": env_check,
+        "gemini_runner_cf394894_controls": runner_check,
         "clean_workdir_isolation": workdir_check,
         "transcript_redaction_infra_and_steps": transcript_check,
         "cli_command_validation": cmd_check,
         "carbon_quota_blackout_guard": blackout_check,
+        "v14_corpus_reconciliation": reconcile_check,
     }
     all_errors = list(scan["errors"])
     for chk in checks.values():
@@ -912,33 +1623,106 @@ def build_manifest(
     total_target = sum(c["target_count"] for c in scan["cohorts"])
     total_landed = sum(c["landed_count"] for c in scan["cohorts"])
     total_missing = sum(c["missing_count"] for c in scan["cohorts"])
-    carbon_cohort = cohorts_by_id.get("opencode-gemini-4-carbon-hard-30-59", {})
+    template_cohort_rows = serialize_template_cohorts(TEMPLATE_COHORTS)
+    provenance_honesty = build_provenance_honesty(
+        committed_g1_seeds=committed_g1_seeds,
+        committed_g1_quota_excluded=committed_scan["g1_ext_provider_quota_excluded"],
+        fr8_carbon_seeds=fr8_carbon_seeds,
+        combined_carbon_ext_seeds=combined_ext_seeds,
+    )
 
     return {
         "schema_version": 1,
         "tiers_version": rules.TIERS_VERSION,
+        "upstream_reconciled_commit": UPSTREAM_RECONCILED_COMMIT,
         "replication_root": scan["replication_root"],
+        "corpus_reconciliation": {
+            "committed_v14": {
+                "root": committed_scan["committed_root"],
+                "total_episodes": committed_scan["total_episodes"],
+                "replay_verified_episodes": committed_scan["replay_verified_episodes"],
+            },
+            "fr8_replication_v14": {
+                "root": scan["replication_root"],
+                "total_episodes": scan["total_episodes"],
+                "replay_verified_episodes": scan["replay_verified_episodes"],
+                "frontier_target_episodes": total_target,
+                "frontier_landed_episodes": total_landed,
+                "frontier_missing_episodes": total_missing,
+            },
+            "combined_v14_total_episodes": combined_total,
+            "combined_v14_replay_verified_episodes": combined_verified,
+            "carbon_hard_30_59_extension": {
+                "seed_range": [30, 59],
+                "target_count": 30,
+                "committed_g1_partial": {
+                    "run_dir": committed_scan["g1_ext_dir"],
+                    "landed_seeds": committed_g1_seeds,
+                    "n": len(committed_g1_seeds),
+                    "provider_quota_excluded": committed_scan["g1_ext_provider_quota_excluded"],
+                },
+                "fr8_replication": {
+                    "run_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon",
+                    "landed_seeds": fr8_carbon_seeds,
+                    "n": len(fr8_carbon_seeds),
+                    "fr8_tree_remaining_count": int(carbon_cohort.get("missing_count", 25)),
+                },
+                "combined_distinct_landed_seeds": combined_ext_seeds,
+                "combined_distinct_count": len(combined_ext_seeds),
+                "shared_overlap_seeds": shared_ext_seeds,
+                "shared_overlap_count": len(shared_ext_seeds),
+                "combined_remaining_seeds": combined_ext_remaining,
+                "combined_remaining_count": len(combined_ext_remaining),
+            },
+        },
+        "provenance_honesty": provenance_honesty,
         "gemini_sessions": {
             "source_doc": GEMINI_SESSIONS_DOC,
             "source_commit": GEMINI_SESSIONS_COMMIT,
             "pure_cpu_mode": True,
-            "fr8_live_gemini_dispatch_enabled": any(c["fr8_dispatch_enabled"] for c in scan["cohorts"]),
+            "fr8_live_gemini_dispatch_enabled": any(
+                c["fr8_dispatch_enabled"] for c in scan["cohorts"] + template_cohort_rows
+            ),
             "g1_carbon_hard_ext60": {
                 "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
                 "execution_owner": "silas_g1_ext60",
+                "pre_registered_commit": GEMINI_SESSIONS_COMMIT,
                 "fr8_dispatch_enabled": False,
                 "model": CARBON_MODEL,
                 "tier": "hard",
                 "seed_range": [30, 59],
-                "fr8_landed_seeds": list(carbon_cohort.get("landed_seeds", EXPECTED_CARBON_HARD_LANDED)),
+                "committed_ext_dir": committed_scan["g1_ext_dir"],
+                "committed_landed_seeds": committed_g1_seeds,
+                "committed_landed_count": len(committed_g1_seeds),
+                "committed_provider_quota_excluded": committed_scan["g1_ext_provider_quota_excluded"],
+                "fr8_landed_seeds": fr8_carbon_seeds,
                 "remaining_count": int(carbon_cohort.get("missing_count", 25)),
+                "combined_distinct_landed_seeds": combined_ext_seeds,
+                "combined_distinct_count": len(combined_ext_seeds),
+                "combined_remaining_count": len(combined_ext_remaining),
             },
             "g2_frontier_families_hard_0_29": {
                 "execution_owner": "silas_g2_families",
+                "pre_registered_commit": GEMINI_SESSIONS_COMMIT,
                 "fr8_dispatch_enabled": False,
-                "models": list(NON_CARBON_REHEARSAL_ALLOWED_MODELS),
+                "models": list(G2_MODELS),
                 "tier": "hard",
                 "seed_range": [0, 29],
+                "allowed_during_carbon_blackout": True,
+            },
+            "gpt55_hard_0_29": {
+                "cohort_id": "opencode-openai-gpt-5.5-hard-0-29",
+                "agent": "opencode:openai/gpt-5.5",
+                "model": OPENAI_GPT55_MODEL,
+                "tier": "hard",
+                "seed_range": [0, 29],
+                "timeout_s": GPT55_TIMEOUT_S,
+                "max_spend_usd": 200.0,
+                "stop_launch_at": "08:15",
+                "hard_drop_at": "08:45",
+                "pre_registered_commit": GPT55_PREREG_COMMIT,
+                "execution_owner": "silas_cf394894_panel_fix_c_no_key",
+                "fr8_dispatch_enabled": False,
                 "allowed_during_carbon_blackout": True,
             },
             "carbon_quota_blackout": {
@@ -955,24 +1739,39 @@ def build_manifest(
             "python": VENV_PYTHON,
             "path_prefix": MOMIN_PATH_PREFIX,
             "timeout_s": DEFAULT_TIMEOUT_S,
+            "gpt55_timeout_s": GPT55_TIMEOUT_S,
             "jobs_per_worker": DEFAULT_JOBS,
             "max_workers_per_wave": max_workers_per_wave,
         },
         "summary": {
             "passed": not all_errors,
             "pure_cpu_mode": True,
+            "committed_v14_total_episodes": committed_scan["total_episodes"],
+            "committed_v14_replay_verified_episodes": committed_scan["replay_verified_episodes"],
             "replication_total_episodes": scan["total_episodes"],
             "replication_replay_verified_episodes": scan["replay_verified_episodes"],
+            "combined_v14_total_episodes": combined_total,
+            "combined_v14_replay_verified_episodes": combined_verified,
             "target_frontier_episodes": total_target,
             "landed_frontier_episodes": total_landed,
             "missing_frontier_episodes": total_missing,
+            "g1_committed_ext_episodes": len(committed_g1_seeds),
+            "g1_committed_ext_provider_quota_excluded": committed_scan["g1_ext_provider_quota_excluded"],
+            "g1_fr8_replication_episodes": len(fr8_carbon_seeds),
+            "g1_combined_distinct_hard_ext_episodes": len(combined_ext_seeds),
+            "g1_combined_remaining_hard_ext_episodes": len(combined_ext_remaining),
             "fr8_dispatch_active_episodes": sum(w["worker_count"] for w in waves),
             "wave_count": len(waves),
             "max_workers_in_any_wave": max((w["worker_count"] for w in waves), default=0),
             "template_wave_count": len(template_waves),
             "template_commands_validated": template_cmd_check["commands_validated"],
+            "cross_family_template_wave_count": len(cross_family_waves),
+            "cross_family_template_commands_validated": (
+                g2_cmd_check["commands_validated"] + gpt55_cmd_check["commands_validated"]
+            ),
         },
         "cohorts": scan["cohorts"],
+        "template_cohorts": template_cohort_rows,
         "preflight": {
             "passed": not all_errors,
             "zero_live_llm_calls": True,
@@ -1020,7 +1819,8 @@ def main(argv: list[str] | None = None) -> int:
 
     root = Path(args.root).resolve()
     manifest_path = Path(args.manifest).resolve() if args.manifest else default_manifest_path(root)
-    manifest = build_manifest(root=root)
+    enforce_baseline = root == ROOT.resolve()
+    manifest = build_manifest(root=root, enforce_expected_baseline=enforce_baseline)
     rendered = render_manifest(manifest)
 
     if not manifest["summary"]["passed"]:
@@ -1030,11 +1830,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.validate_template_waves:
         template_waves = build_template_waves(manifest["cohorts"])
-        g2_waves = build_g2_template_waves()
+        cross_waves = build_cross_family_template_waves()
         val_t = validate_wave_commands(template_waves)
-        val_g2 = validate_wave_commands(g2_waves)
-        if not val_t["passed"] or not val_g2["passed"] or manifest["waves"] != []:
-            for err in val_t["errors"] + val_g2["errors"]:
+        val_cross = validate_wave_commands(cross_waves)
+        if not val_t["passed"] or not val_cross["passed"] or manifest["waves"] != []:
+            for err in val_t["errors"] + val_cross["errors"]:
                 print(f"FAIL: {err}", file=sys.stderr)
             if manifest["waves"] != []:
                 print("FAIL: active waves must be empty in pure-CPU mode", file=sys.stderr)
@@ -1063,11 +1863,13 @@ def main(argv: list[str] | None = None) -> int:
             for c in manifest["cohorts"]
         )
         print(
-            f"OK preflight=PASS verified={s['replication_replay_verified_episodes']}/{s['replication_total_episodes']} "
-            f"landed={s['landed_frontier_episodes']}/{s['target_frontier_episodes']} "
-            f"missing={s['missing_frontier_episodes']} active_waves={s['wave_count']} "
-            f"template_waves={s['template_wave_count']} "
-            f"template_cmds={s['template_commands_validated']} ({cohort_bits})"
+            f"OK preflight=PASS combined_verified={s['combined_v14_replay_verified_episodes']}/{s['combined_v14_total_episodes']} "
+            f"committed={s['committed_v14_replay_verified_episodes']}/{s['committed_v14_total_episodes']} "
+            f"replication={s['replication_replay_verified_episodes']}/{s['replication_total_episodes']} "
+            f"fr8_landed={s['landed_frontier_episodes']}/{s['target_frontier_episodes']} "
+            f"g1_combined_ext={s['g1_combined_distinct_hard_ext_episodes']}/30 "
+            f"active_waves={s['wave_count']} template_cmds={s['template_commands_validated']} "
+            f"cross_family_cmds={s['cross_family_template_commands_validated']} ({cohort_bits})"
         )
     return 0
 

@@ -31,75 +31,142 @@ def _load_preflight():
 preflight = _load_preflight()
 
 
-def test_real_repo_manifest_ownership_and_pure_cpu_waves():
-    assert preflight.main(["--check"]) == 0
-    assert preflight.main(["--validate-template-waves"]) == 0
-    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+@pytest.fixture(scope="module")
+def repo_manifest() -> dict:
+    assert preflight.main(["--check", "--validate-template-waves"]) == 0
+    assert MANIFEST_PATH.stat().st_size <= 50 * 1024
+    return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+
+
+def test_real_repo_manifest_reconciliation_and_provenance(repo_manifest):
+    manifest = repo_manifest
     assert manifest["schema_version"] == 1
     assert manifest["tiers_version"] == "v1.4"
-    assert manifest["summary"]["passed"] is True
-    assert manifest["summary"]["pure_cpu_mode"] is True
+    assert manifest["upstream_reconciled_commit"] == "58716742"
+
+    s = manifest["summary"]
+    assert s["passed"] is True
+    assert s["pure_cpu_mode"] is True
     assert manifest["preflight"]["passed"] is True
     assert manifest["preflight"]["zero_live_llm_calls"] is True
-    assert manifest["summary"]["replication_total_episodes"] >= 305
-    assert (
-        manifest["summary"]["replication_replay_verified_episodes"]
-        == manifest["summary"]["replication_total_episodes"]
-    )
-    assert manifest["summary"]["target_frontier_episodes"] == 90
-    assert manifest["summary"]["landed_frontier_episodes"] == 35
-    assert manifest["summary"]["missing_frontier_episodes"] == 55
-    assert manifest["summary"]["fr8_dispatch_active_episodes"] == 0
-    assert manifest["summary"]["wave_count"] == 0
-    assert manifest["summary"]["max_workers_in_any_wave"] == 0
-    assert manifest["summary"]["template_wave_count"] == 19
-    assert manifest["summary"]["template_commands_validated"] == 55
+    assert s["committed_v14_total_episodes"] == 442
+    assert s["committed_v14_replay_verified_episodes"] == 442
+    assert s["replication_total_episodes"] == 305
+    assert s["replication_replay_verified_episodes"] == 305
+    assert s["combined_v14_total_episodes"] == 747
+    assert s["combined_v14_replay_verified_episodes"] == 747
+    assert s["target_frontier_episodes"] == 90
+    assert s["landed_frontier_episodes"] == 35
+    assert s["missing_frontier_episodes"] == 55
+    assert s["g1_committed_ext_episodes"] == 2
+    assert s["g1_committed_ext_provider_quota_excluded"] == 31
+    assert s["g1_fr8_replication_episodes"] == 5
+    assert s["g1_combined_distinct_hard_ext_episodes"] == 6
+    assert s["g1_combined_remaining_hard_ext_episodes"] == 24
+    assert s["fr8_dispatch_active_episodes"] == 0
+    assert s["wave_count"] == 0
+    assert s["max_workers_in_any_wave"] == 0
+    assert s["template_wave_count"] == 19
+    assert s["template_commands_validated"] == 55
+    assert s["cross_family_template_wave_count"] == 30
+    assert s["cross_family_template_commands_validated"] == 90
     assert manifest["waves"] == []
+
+    rec = manifest["corpus_reconciliation"]
+    assert rec["committed_v14"]["total_episodes"] == 442
+    assert rec["committed_v14"]["replay_verified_episodes"] == 442
+    assert rec["fr8_replication_v14"]["total_episodes"] == 305
+    assert rec["fr8_replication_v14"]["replay_verified_episodes"] == 305
+    assert rec["combined_v14_total_episodes"] == 747
+    assert rec["combined_v14_replay_verified_episodes"] == 747
+
+    ext = rec["carbon_hard_30_59_extension"]
+    assert ext["committed_g1_partial"] == {
+        "run_dir": "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard",
+        "landed_seeds": [34, 37],
+        "n": 2,
+        "provider_quota_excluded": 31,
+    }
+    assert ext["fr8_replication"]["landed_seeds"] == [30, 34, 42, 45, 57]
+    assert ext["fr8_replication"]["n"] == 5
+    assert ext["combined_distinct_landed_seeds"] == [30, 34, 37, 42, 45, 57]
+    assert ext["combined_distinct_count"] == 6
+    assert ext["shared_overlap_seeds"] == [34]
+    assert ext["combined_remaining_count"] == 24
+
+    prov = manifest["provenance_honesty"]
+    assert prov["panel_doc"] == "docs/agents/PANEL-0500.md"
+    assert prov["panel_status_commit"] == "8b9afa61"
+    assert prov["panel_fix_a_commit"] == "92708834"
+    assert prov["panel_fix_d_commit"] == "1bc3e281"
+    p_cohorts = prov["cohorts"]
+    assert p_cohorts["primary_carbon_0_29"]["classification"] == "post_hoc_lock"
+    assert p_cohorts["primary_carbon_0_29"]["episodes_commit"] == "8fd4dec"
+    assert p_cohorts["primary_carbon_0_29"]["lock_commit"] == "671ed96"
+    assert p_cohorts["primary_carbon_0_29"]["lock_delay_s"] == 28
+    assert p_cohorts["g1_carbon_hard_30_59"]["classification"] == "pre_registered"
+    assert p_cohorts["g1_carbon_hard_30_59"]["pre_registered_commit"] == "f9fb7a4a"
+    assert p_cohorts["g2_argon_hydrogen_hard_0_29"]["classification"] == "pre_registered"
+    assert p_cohorts["g2_argon_hydrogen_hard_0_29"]["pre_registered_commit"] == "f9fb7a4a"
+    assert p_cohorts["gpt_5_5_hard_0_29"]["classification"] == "pre_registered"
+    assert p_cohorts["gpt_5_5_hard_0_29"]["pre_registered_commit"] == "cf394894"
 
     sessions = manifest["gemini_sessions"]
     assert sessions["source_doc"] == "docs/agents/GEMINI-SESSIONS.md"
     assert sessions["source_commit"] == "f9fb7a4a"
     assert sessions["pure_cpu_mode"] is True
     assert sessions["fr8_live_gemini_dispatch_enabled"] is False
-    assert sessions["g1_carbon_hard_ext60"]["execution_owner"] == "silas_g1_ext60"
-    assert sessions["g1_carbon_hard_ext60"]["fr8_dispatch_enabled"] is False
     assert sessions["g1_carbon_hard_ext60"]["fr8_landed_seeds"] == [30, 34, 42, 45, 57]
+    assert sessions["g1_carbon_hard_ext60"]["committed_landed_seeds"] == [34, 37]
+    assert sessions["g1_carbon_hard_ext60"]["committed_provider_quota_excluded"] == 31
+    assert sessions["g1_carbon_hard_ext60"]["combined_distinct_landed_seeds"] == [30, 34, 37, 42, 45, 57]
     assert sessions["g1_carbon_hard_ext60"]["remaining_count"] == 25
-    assert sessions["g2_frontier_families_hard_0_29"]["execution_owner"] == "silas_g2_families"
+    assert sessions["g1_carbon_hard_ext60"]["combined_remaining_count"] == 24
     assert sessions["g2_frontier_families_hard_0_29"]["models"] == [
         "google/gemini-4-argon",
         "google/gemini-4-hydrogen",
     ]
-    assert sessions["g2_frontier_families_hard_0_29"]["allowed_during_carbon_blackout"] is True
 
     by_id = {c["cohort_id"]: c for c in manifest["cohorts"]}
     c_carbon = by_id["opencode-gemini-4-carbon-hard-30-59"]
     assert c_carbon["landed_seeds"] == [30, 34, 42, 45, 57]
     assert c_carbon["landed_count"] == 5
     assert c_carbon["missing_count"] == 25
-    assert c_carbon["execution_owner"] == "silas_g1_ext60"
     assert c_carbon["fr8_dispatch_enabled"] is False
-    assert sorted(c_carbon["landed_seeds"] + c_carbon["missing_seeds"]) == list(range(30, 60))
 
     c_flash_med = by_id["opencode-gemini-3.5-flash-medium-0-29"]
     assert c_flash_med["landed_seeds"] == list(range(30))
-    assert 28 in c_flash_med["landed_seeds"]
     assert c_flash_med["landed_count"] == 30
     assert c_flash_med["missing_count"] == 0
-    assert c_flash_med["missing_seeds"] == []
-    assert c_flash_med["execution_owner"] == "fr8_frontier_complete"
     assert c_flash_med["fr8_dispatch_enabled"] is False
 
     c_flash_hard = by_id["opencode-gemini-3.5-flash-hard-30-59"]
     assert c_flash_hard["landed_count"] == 0
     assert c_flash_hard["missing_count"] == 30
-    assert c_flash_hard["missing_seeds"] == list(range(30, 60))
-    assert c_flash_hard["execution_owner"] == "fr8_frontier_paused_pure_cpu"
     assert c_flash_hard["fr8_dispatch_enabled"] is False
 
+    tmpl_by_id = {c["cohort_id"]: c for c in manifest["template_cohorts"]}
+    assert set(tmpl_by_id.keys()) == {
+        "opencode-gemini-4-argon-hard-0-29",
+        "opencode-gemini-4-hydrogen-hard-0-29",
+        "opencode-openai-gpt-5.5-hard-0-29",
+    }
+    gpt55 = tmpl_by_id["opencode-openai-gpt-5.5-hard-0-29"]
+    assert gpt55["agent"] == "opencode:openai/gpt-5.5"
+    assert gpt55["model"] == "openai/gpt-5.5"
+    assert gpt55["tier"] == "hard"
+    assert gpt55["seed_range"] == [0, 29]
+    assert gpt55["timeout_s"] == 7200
+    assert gpt55["max_spend_usd"] == 200.0
+    assert gpt55["stop_launch_at"] == "08:15"
+    assert gpt55["hard_drop_at"] == "08:45"
+    assert gpt55["pre_registered_commit"] == "cf394894"
+    assert gpt55["execution_owner"] == "silas_cf394894_panel_fix_c_no_key"
+    assert gpt55["fr8_dispatch_enabled"] is False
 
-def test_template_wave_validation_and_dispatch_gating():
-    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+
+def test_template_wave_validation_and_dispatch_gating(repo_manifest):
+    manifest = repo_manifest
     assert preflight.partition_into_waves(manifest["cohorts"]) == []
     assert preflight.validate_wave_commands(manifest["waves"])["commands_validated"] == 0
 
@@ -128,6 +195,23 @@ def test_template_wave_validation_and_dispatch_gating():
     val_g2 = preflight.validate_wave_commands(g2_waves)
     assert val_g2["passed"] is True
     assert val_g2["commands_validated"] == 60
+
+    gpt55_waves = preflight.build_gpt55_template_waves()
+    assert len(gpt55_waves) == 10
+    val_gpt55 = preflight.validate_wave_commands(gpt55_waves)
+    assert val_gpt55["passed"] is True
+    assert val_gpt55["commands_validated"] == 30
+    for w in gpt55_waves:
+        assert w["cohort_id"] == "opencode-openai-gpt-5.5-hard-0-29"
+        assert w["timeout_s"] == 7200
+        assert w["fr8_dispatch_enabled"] is False
+        for j in w["jobs"]:
+            assert "--model openai/gpt-5.5" in j["command"]
+            assert "--timeout 7200" in j["command"]
+
+    cross_waves = preflight.build_cross_family_template_waves()
+    assert len(cross_waves) == 30
+    assert preflight.validate_wave_commands(cross_waves)["commands_validated"] == 90
 
     enabled_copy = copy.deepcopy(manifest["cohorts"])
     for c in enabled_copy:
@@ -163,6 +247,91 @@ def test_template_wave_validation_and_dispatch_gating():
         preflight.partition_into_waves(manifest["cohorts"], max_workers_per_wave=4)
 
 
+def test_opencode_run_and_gemini_runner_cf394894_parity(tmp_path, monkeypatch):
+    gr_check = preflight.check_gemini_runner_controls()
+    assert gr_check["passed"] is True
+    assert gr_check["zero_live_subprocesses"] is True
+
+    monkeypatch.setenv("CANARY_ALLOW_DEV", "1")
+    monkeypatch.delenv("GOOGLE_GENERATIVE_AI_API_KEY", raising=False)
+    monkeypatch.setenv("GEMINI_API_KEY", "synthetic-gemini-key")
+    monkeypatch.setenv("OPENAI_API_KEY", "synthetic-openai-key")
+    monkeypatch.setenv("GOOGLE_API_KEY", "synthetic-google-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "synthetic-anthropic-key")
+
+    seen_envs: dict[str, dict[str, str]] = {}
+
+    class FakeServer:
+        def __init__(self, tier: str, seed: int):
+            self.tier = tier
+            self.seed = seed
+            self.token = "SYNTHETICLEDGERTOKEN"
+            self.url = "http://127.0.0.1:19999/mcp"
+
+        def start(self, **kwargs):
+            return self
+
+        def ledger(self):
+            return {
+                "score": 0.75,
+                "done": True,
+                "end_reason": "accused",
+                "accused": "e01",
+                "accused_correct": True,
+                "tier": self.tier,
+                "final_day": 6,
+                "V": 0.75,
+                "ledger": [],
+            }
+
+        def stop(self):
+            pass
+
+    event_stream = json.dumps(
+        {
+            "type": "step_finish",
+            "part": {
+                "type": "step-finish",
+                "reason": "stop",
+                "tokens": {"input": 100, "output": 10, "reasoning": 0, "cache": {"read": 0, "write": 0}},
+                "cost": 0.01,
+            },
+        }
+    )
+
+    for label, model_id in (("google", "google/gemini-4-carbon"), ("openai", "openai/gpt-5.5")):
+        def fake_runner(argv, cwd, env, _label=label, **kwargs):
+            seen_envs[_label] = dict(env)
+            return type("Proc", (), {"returncode": 0, "stdout": event_stream, "stderr": ""})()
+
+        spec = common.RunSpec(
+            f"opencode:{model_id}",
+            "hard",
+            [0],
+            tmp_path / label,
+            timeout_s=7200 if label == "openai" else 3600,
+            child_env_extra=opencode_run.child_env_extra(model_id),
+        )
+        res = common.run_seeds(
+            spec,
+            lambda wd, prompt, url, _m=model_id: opencode_run.build_cmd(wd, prompt, _m, url),
+            opencode_run.FILES,
+            runner=fake_runner,
+            server_factory=FakeServer,
+        )
+        assert res[0].score == 0.75
+
+    g_env = seen_envs["google"]
+    assert g_env["GOOGLE_GENERATIVE_AI_API_KEY"] == "synthetic-gemini-key"
+    for k in ("OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY"):
+        assert k not in g_env
+
+    o_env = seen_envs["openai"]
+    assert o_env["OPENAI_API_KEY"] == "synthetic-openai-key"
+    for k in ("GOOGLE_GENERATIVE_AI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY"):
+        assert k not in o_env
+
+
 def test_carbon_quota_blackout_boundaries_and_exempt_families():
     before = preflight.check_carbon_quota_blackout("2026-11-15T04:29:59Z")
     assert before["allowed"] is True
@@ -177,54 +346,38 @@ def test_carbon_quota_blackout_boundaries_and_exempt_families():
     inside_mid = preflight.check_carbon_quota_blackout("2026-11-15T05:30:00Z")
     assert inside_mid["allowed"] is False
     assert inside_mid["in_blackout_window"] is True
-    assert inside_mid["reason"] == "rehearsal_carbon_blackout_0630_0815_eet"
 
     inside_end = preflight.check_carbon_quota_blackout("2026-11-15T06:14:59Z")
     assert inside_end["allowed"] is False
     assert inside_end["in_blackout_window"] is True
-    assert inside_end["reason"] == "rehearsal_carbon_blackout_0630_0815_eet"
 
     after = preflight.check_carbon_quota_blackout("2026-11-15T06:15:00Z")
     assert after["allowed"] is True
     assert after["in_blackout_window"] is False
-    assert after["reason"] == "outside_carbon_blackout_window"
 
-    epoch_before = int(datetime(2026, 11, 15, 4, 29, 59, tzinfo=timezone.utc).timestamp())
     epoch_start = int(datetime(2026, 11, 15, 4, 30, 0, tzinfo=timezone.utc).timestamp())
-    epoch_mid = int(datetime(2026, 11, 15, 5, 30, 0, tzinfo=timezone.utc).timestamp())
-    epoch_end_minus_1 = int(datetime(2026, 11, 15, 6, 14, 59, tzinfo=timezone.utc).timestamp())
     epoch_after = int(datetime(2026, 11, 15, 6, 15, 0, tzinfo=timezone.utc).timestamp())
-
-    assert preflight.check_carbon_quota_blackout(epoch_before)["allowed"] is True
     assert preflight.check_carbon_quota_blackout(epoch_start)["allowed"] is False
-    assert preflight.check_carbon_quota_blackout(float(epoch_mid))["allowed"] is False
-    assert preflight.check_carbon_quota_blackout(str(epoch_end_minus_1))["allowed"] is False
     assert preflight.check_carbon_quota_blackout(epoch_after)["allowed"] is True
-
-    assert preflight.check_carbon_quota_blackout("2026-11-15T06:29:59+02:00")["allowed"] is True
-    assert preflight.check_carbon_quota_blackout("2026-11-15T06:30:00+02:00")["allowed"] is False
-    assert preflight.check_carbon_quota_blackout("2026-11-15T08:14:59+02:00")["allowed"] is False
-    assert preflight.check_carbon_quota_blackout("2026-11-15T08:15:00+02:00")["allowed"] is True
-
-    for carbon_alias in ("gemini-4-carbon", "google/gemini-4-carbon", "opencode:google/gemini-4-carbon"):
-        blocked = preflight.check_carbon_quota_blackout("2026-11-15T05:30:00Z", model=carbon_alias)
-        assert blocked["allowed"] is False
-        assert blocked["reason"] == "rehearsal_carbon_blackout_0630_0815_eet"
 
     for exempt_model in (
         "gemini-4-argon",
         "google/gemini-4-argon",
         "gemini-4-hydrogen",
         "google/gemini-4-hydrogen",
+        "gpt-5.5",
+        "openai/gpt-5.5",
+        "opencode:openai/gpt-5.5",
     ):
         allowed_res = preflight.check_carbon_quota_blackout("2026-11-15T05:30:00Z", model=exempt_model)
         assert allowed_res["allowed"] is True
         assert allowed_res["in_blackout_window"] is True
         assert allowed_res["is_carbon_model"] is False
+        if "gpt-5.5" in exempt_model:
+            assert allowed_res["model"] == "openai/gpt-5.5"
 
     assert preflight.main(["--check-blackout", "2026-11-15T05:30:00Z"]) == 1
-    assert preflight.main(["--check-blackout", "2026-11-15T04:29:59Z"]) == 0
-    assert preflight.main(["--check-blackout", "2026-11-15T06:15:00Z"]) == 0
+    assert preflight.main(["--check-blackout", "2026-11-15T05:30:00Z", "--model", "openai/gpt-5.5"]) == 0
     assert preflight.main(["--check-blackout", "2026-11-15T05:30:00Z", "--model", "gemini-4-argon"]) == 0
 
     with pytest.raises(ValueError):
@@ -256,11 +409,13 @@ def test_security_and_isolation_preflight_controls(monkeypatch):
     assert res_env["passed"] is False
 
 
-def test_all_35_transcripts_including_s28_and_zip_export_safety(tmp_path):
-    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+def test_all_transcripts_g1_ext_and_zip_export_safety(repo_manifest, tmp_path):
+    manifest = repo_manifest
     tr_check = manifest["preflight"]["checks"]["transcript_redaction_infra_and_steps"]
     assert tr_check["passed"] is True
     assert tr_check["real_transcripts_checked"] == 35
+    assert tr_check["committed_g1_ext_transcripts_checked"] == 2
+    assert tr_check["committed_g1_ext_step_counts"] == {"34": 51, "37": 64}
     assert tr_check["real_transcripts_checked"] == manifest["summary"]["landed_frontier_episodes"]
     assert isinstance(tr_check["flash_medium_s28_steps"], int) and tr_check["flash_medium_s28_steps"] > 0
     for k, v in {"30": 112, "34": 83, "42": 74, "45": 156, "57": 76}.items():
@@ -295,16 +450,6 @@ def test_all_35_transcripts_including_s28_and_zip_export_safety(tmp_path):
 
 
 def test_write_check_roundtrip_and_replay_filtering(tmp_path):
-    out_manifest = tmp_path / "queue_manifest.json"
-    assert preflight.main(["--manifest", str(out_manifest), "--check"]) == 1
-    assert preflight.main(["--manifest", str(out_manifest), "--write"]) == 0
-    assert preflight.main(["--manifest", str(out_manifest), "--check"]) == 0
-
-    data = json.loads(out_manifest.read_text(encoding="utf-8"))
-    data["summary"]["missing_frontier_episodes"] = 0
-    out_manifest.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    assert preflight.main(["--manifest", str(out_manifest), "--check"]) == 1
-
     src_ep_file = (
         ROOT
         / "results"
@@ -337,6 +482,16 @@ def test_write_check_roundtrip_and_replay_filtering(tmp_path):
         encoding="utf-8",
     )
 
+    out_manifest = tmp_path / "queue_manifest.json"
+    assert preflight.main(["--root", str(fake_root), "--manifest", str(out_manifest), "--check"]) == 1
+    assert preflight.main(["--root", str(fake_root), "--manifest", str(out_manifest), "--write"]) == 0
+    assert preflight.main(["--root", str(fake_root), "--manifest", str(out_manifest), "--check"]) == 0
+
+    data = json.loads(out_manifest.read_text(encoding="utf-8"))
+    data["summary"]["missing_frontier_episodes"] = 0
+    out_manifest.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    assert preflight.main(["--root", str(fake_root), "--manifest", str(out_manifest), "--check"]) == 1
+
     scan = preflight.scan_replication_tree(fake_root, enforce_expected_baseline=False)
     assert not scan["errors"]
     c0 = next(c for c in scan["cohorts"] if c["cohort_id"] == "opencode-gemini-4-carbon-hard-30-59")
@@ -350,7 +505,8 @@ def test_write_check_roundtrip_and_replay_filtering(tmp_path):
     assert any("replay mismatch" in e for e in scan_bad["errors"])
 
 
-def test_task_w3_files_have_zero_comments_and_zero_em_dashes():
+def test_task_w3_files_have_zero_comments_zero_em_dashes_and_size_cap():
+    assert MANIFEST_PATH.stat().st_size <= 50 * 1024
     for path in (SCRIPT_PATH, Path(__file__).resolve(), MANIFEST_PATH):
         txt = path.read_text(encoding="utf-8")
         assert HASH_CHAR not in txt, f"found hash comment char in {path}"

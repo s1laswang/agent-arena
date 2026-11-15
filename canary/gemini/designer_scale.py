@@ -729,6 +729,10 @@ def build_report_and_write(
             argon_tested += 1
             if ar_fails_02:
                 argon_also_fails += 1
+        ar_seeds = [int(e["seed"]) for e in (ar.get("episodes") or [])] if ar_valid else []
+        sol_by_seed = dict(zip(seeds, r["solver_scores"]))
+        ar_paired_sol = [sol_by_seed[s] for s in ar_seeds] if ar_valid else []
+        ar_paired_gap = round(statistics.fmean(ar_paired_sol) - ar_mean, 4) if (ar_valid and ar_paired_sol and ar_mean is not None) else None
         top10_summary.append({
             "rank": rank,
             "id": r["id"],
@@ -748,13 +752,15 @@ def build_report_and_write(
             "flash_low_scores": fl["scores"],
             "paired_gap_solver_minus_flash": r["paired_gap_solver_minus_flash"],
             "paired_gap_ci95": paired_bootstrap_ci(r["solver_scores"], fl["scores"]),
+            "argon_high_n": len(ar_seeds) if ar_valid else 0,
+            "argon_high_seeds": ar_seeds if ar_valid else None,
             "argon_high_mean": ar_mean,
             "argon_high_ci95": ar["ci95"] if ar_valid else None,
             "argon_high_acc": ar["acc"] if ar_valid else None,
             "argon_high_scores": ar["scores"] if ar_valid else None,
             "argon_high_also_fails_le_0_2": ar_fails_02 if ar_valid else None,
-            "argon_high_paired_gap_vs_solver": round(r["solver_mean"] - ar_mean, 4) if ar_valid else None,
-            "argon_high_paired_gap_ci95": paired_bootstrap_ci(r["solver_scores"], ar["scores"]) if ar_valid else None,
+            "argon_high_paired_gap_vs_solver": ar_paired_gap,
+            "argon_high_paired_gap_ci95": paired_bootstrap_ci(ar_paired_sol, ar["scores"]) if ar_valid else None,
         })
 
     # Aggregate served model_versions across all stages
@@ -916,7 +922,7 @@ def build_report_and_write(
 
     for t in top10_summary:
         ar_str = (
-            f"`{t['argon_high_mean']:+.3f} ± {t['argon_high_ci95']:.3f}` ({t['argon_high_acc']*100:.0f}%)"
+            f"`{t['argon_high_mean']:+.3f} ± {t['argon_high_ci95']:.3f}` ({t['argon_high_acc']*100:.0f}%, n={t['argon_high_n']})"
             if t["argon_high_mean"] is not None
             else "—"
         )
@@ -952,7 +958,7 @@ def build_report_and_write(
         "",
         f"1. **Strictly `{ARENA_LABEL}`:** None of these strategies modify or enter the judged v1.4 benchmark. Only `mole_strategy` in `Env('medium', seed, mole_strategy=...)` varies; `TierParams` are untouched.",
         "2. **Selection-bias caveat (in-sample 5-seed filter):** Filtering candidates on `flash_low_mean <= 0.20` over 5 seeds selects partly for genuine strategic difficulty and partly for negative luck on those 5 seeds (each wrong accusation is `-1.0`). Evaluating the **independent `gemini-4-argon` (`high` thinking)** model on the selected Top-10 provides an out-of-model transfer test free of filter-selection luck on Argon's own rollouts.",
-        "3. **Behavioral equivalence caching:** Distinct DSL JSONs that evaluate to the exact same `(leak, frame)` choices across our 6,912-state reachable `MoleView` truth-table and solver trajectory trace share one behavioral class (`behavior_key`), avoiding redundant API spend on dead-branch syntactic variants while reporting both raw-proposal and deduplicated class acceptance rates.",
+        "3. **Behavioral equivalence caching:** Distinct DSL JSONs that evaluate to the exact same `(leak, frame)` choices across our 4,096-state reachable `MoleView` truth-table and solver trajectory trace share one behavioral class (`behavior_key`), avoiding redundant API spend on dead-branch syntactic variants while reporting both raw-proposal and deduplicated class acceptance rates.",
         "4. **Infra-error handling:** Transport/quota errors (`429`, `5xx`, timeouts) are retried with 60s quota backoff and never scored as `0`.",
     ])
 
@@ -1148,12 +1154,12 @@ def run_campaign(
                 fut.result()
 
     def _assemble_argon(bkey: str, label_id: str) -> dict | None:
-        eps = [argon_ep_cache.get((bkey, s)) for s in seeds]
-        if any(e is None or not e.get("valid") for e in eps):
+        eps = [argon_ep_cache.get((bkey, s)) for s in seeds if argon_ep_cache.get((bkey, s)) and argon_ep_cache[(bkey, s)].get("valid")]
+        if len(eps) < 3:
             return None
         scores = [float(e["score"]) for e in eps]  # type: ignore[index]
         m, ci = mean_ci95(scores)
-        acc = sum(1 for e in eps if e and e.get("correct")) / len(seeds)
+        acc = sum(1 for e in eps if e and e.get("correct")) / len(eps)
         mvs: dict[str, int] = {}
         for e in eps:
             for mv, cnt in ((e or {}).get("model_versions") or {}).items():

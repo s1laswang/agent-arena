@@ -1,8 +1,8 @@
 {
   "mode": "arena mode, not the judged environment",
   "label": "arena mode, not the judged environment",
-  "generated_at": "2026-11-15 06:48:48 EET",
-  "git_sha": "eb7db83360236d2393c79aaab26d18e4ee7aa55d",
+  "generated_at": "2026-11-15 07:43:59 EET",
+  "git_sha": "31e27928596002d6e540d7218aa7b8e0561a73cd",
   "run_id": "ws5-designer-v1",
   "tier": "medium",
   "dev_seeds": [
@@ -23,10 +23,10 @@
         "gemini-4-hydrogen": 34
       },
       "filter_flash_low": {
-        "gemini-3.8-flash": 12014
+        "gemini-3.8-flash": 27725
       },
       "transfer_argon_high": {
-        "gemini-4-argon": 615
+        "gemini-4-argon": 2367
       }
     }
   },
@@ -275,31 +275,31 @@
   },
   "counts": {
     "n_proposed_total": 500,
-    "n_fully_evaluated": 281,
-    "n_solver_feasible_ge_0_5": 50,
-    "solver_feasible_rate": 0.1779,
+    "n_fully_evaluated": 481,
+    "n_solver_feasible_ge_0_5": 107,
+    "solver_feasible_rate": 0.2225,
     "solver_feasible_rate_ci95": [
-      0.1377,
-      0.2269
+      0.1876,
+      0.2617
     ],
-    "n_accepted_paired": 32,
-    "acceptance_rate": 0.1139,
+    "n_accepted_paired": 65,
+    "acceptance_rate": 0.1351,
     "acceptance_rate_ci95": [
-      0.0818,
-      0.1563
+      0.1075,
+      0.1686
     ],
-    "conditional_break_rate_given_solver_ge_0_5": 0.64,
+    "conditional_break_rate_given_solver_ge_0_5": 0.6075,
     "conditional_break_rate_ci95": [
-      0.5014,
-      0.7586
+      0.5128,
+      0.6947
     ],
-    "unique_behavioral_classes": 280,
-    "unique_solver_feasible_classes": 50,
-    "unique_accepted_classes": 32,
-    "unique_acceptance_rate": 0.1143,
+    "unique_behavioral_classes": 477,
+    "unique_solver_feasible_classes": 107,
+    "unique_accepted_classes": 65,
+    "unique_acceptance_rate": 0.1363,
     "unique_acceptance_rate_ci95": [
-      0.0821,
-      0.1569
+      0.1084,
+      0.17
     ],
     "proposer_stats": {
       "batches": 34,
@@ -314,16 +314,16 @@
     }
   },
   "argon_high_transfer": {
-    "n_top_strategies_tested": 1,
-    "n_argon_also_fails_le_0_2": 0,
-    "argon_fail_rate_le_0_2": 0.0,
+    "n_top_strategies_tested": 5,
+    "n_argon_also_fails_le_0_2": 2,
+    "argon_fail_rate_le_0_2": 0.4,
     "argon_fail_rate_ci95": [
-      0.0,
-      0.7935
+      0.1176,
+      0.7693
     ],
-    "mean_solver_on_top10": 0.6082,
-    "mean_flash_low_on_top10": -0.5284,
-    "mean_argon_high_on_top10": 0.662
+    "mean_solver_on_top10": 0.6068,
+    "mean_flash_low_on_top10": -0.6372,
+    "mean_argon_high_on_top10": 0.5261
   },
   "top_10_strategies": [
     {
@@ -416,6 +416,139 @@
         1.244,
         1.67
       ],
+      "argon_high_n": 4,
+      "argon_high_seeds": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "argon_high_mean": 0.195,
+      "argon_high_ci95": 0.7818,
+      "argon_high_acc": 0.75,
+      "argon_high_scores": [
+        0.55,
+        0.65,
+        0.58,
+        -1.0
+      ],
+      "argon_high_also_fails_le_0_2": true,
+      "argon_high_paired_gap_vs_solver": 0.4325,
+      "argon_high_paired_gap_ci95": [
+        0.045,
+        1.1675
+      ]
+    },
+    {
+      "rank": 2,
+      "id": "cand-0436",
+      "name": "dilution_hybrid_midgame_pivot",
+      "archetype": "canary_dilution_hybrid",
+      "rationale": "Pivot framing and leak selection around day 7 while strictly obeying dilution when low-recipient docs are present.",
+      "behavior_key": "dbb1b8350e16b0f0:8d0c08ee27d717f9",
+      "strategy_json": {
+        "rules": [
+          {
+            "if": [
+              [
+                "recent_low_recipient_docs",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                "<=",
+                7
+              ],
+              [
+                "recent_low_recipient_docs",
+                "==",
+                0
+              ]
+            ],
+            "then": {
+              "leak": "random_seeded",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                8
+              ],
+              [
+                "recent_low_recipient_docs",
+                "==",
+                0
+              ],
+              [
+                "n_docs_held",
+                ">=",
+                3
+              ]
+            ],
+            "then": {
+              "leak": "newest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "days_since_last_leak",
+                ">=",
+                2
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "newest",
+          "frame": "decoy"
+        }
+      },
+      "solver_mean": 0.63,
+      "solver_ci95": 0.3111,
+      "solver_acc": 0.8,
+      "solver_scores": [
+        0.8,
+        0.0,
+        0.85,
+        0.73,
+        0.77
+      ],
+      "heuristic_mean": -0.046,
+      "flash_low_mean": -0.682,
+      "flash_low_ci95": 0.6233,
+      "flash_low_acc": 0.2,
+      "flash_low_scores": [
+        0.59,
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "paired_gap_solver_minus_flash": 1.312,
+      "paired_gap_ci95": [
+        0.696,
+        1.794
+      ],
+      "argon_high_n": 0,
+      "argon_high_seeds": null,
       "argon_high_mean": null,
       "argon_high_ci95": null,
       "argon_high_acc": null,
@@ -425,7 +558,7 @@
       "argon_high_paired_gap_ci95": null
     },
     {
-      "rank": 2,
+      "rank": 3,
       "id": "cand-0235",
       "name": "sprinter_v11_colleague_cover",
       "archetype": "late_horizon_sprinter",
@@ -514,6 +647,129 @@
         0.776,
         1.588
       ],
+      "argon_high_n": 3,
+      "argon_high_seeds": [
+        0,
+        1,
+        4
+      ],
+      "argon_high_mean": 0.8167,
+      "argon_high_ci95": 0.0908,
+      "argon_high_acc": 1.0,
+      "argon_high_scores": [
+        0.81,
+        0.9,
+        0.74
+      ],
+      "argon_high_also_fails_le_0_2": false,
+      "argon_high_paired_gap_vs_solver": -0.2067,
+      "argon_high_paired_gap_ci95": [
+        -0.22,
+        -0.2
+      ]
+    },
+    {
+      "rank": 4,
+      "id": "cand-0428",
+      "name": "late_surge_switcher",
+      "archetype": "threshold_edge_switcher",
+      "rationale": "Shifts from oldest+random_peer early to random_seeded+decoy mid-episode to newest+most_restricted_peer late.",
+      "behavior_key": "f872f1a7661fd511:d32700bd7bf4961f",
+      "strategy_json": {
+        "rules": [
+          {
+            "if": [
+              [
+                "day",
+                "<=",
+                6
+              ],
+              [
+                "n_docs_held",
+                ">=",
+                3
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                7
+              ],
+              [
+                "day",
+                "<=",
+                10
+              ],
+              [
+                "days_since_last_leak",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "random_seeded",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                11
+              ],
+              [
+                "min_recipient_count",
+                "<=",
+                5
+              ]
+            ],
+            "then": {
+              "leak": "newest",
+              "frame": "most_restricted_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "most_recipients",
+          "frame": "decoy"
+        }
+      },
+      "solver_mean": 0.596,
+      "solver_ci95": 0.0865,
+      "solver_acc": 1.0,
+      "solver_scores": [
+        0.62,
+        0.75,
+        0.58,
+        0.49,
+        0.54
+      ],
+      "heuristic_mean": -0.07,
+      "flash_low_mean": -0.63,
+      "flash_low_ci95": 0.7252,
+      "flash_low_acc": 0.2,
+      "flash_low_scores": [
+        -1.0,
+        -1.0,
+        0.85,
+        -1.0,
+        -1.0
+      ],
+      "paired_gap_solver_minus_flash": 1.226,
+      "paired_gap_ci95": [
+        0.47,
+        1.666
+      ],
+      "argon_high_n": 0,
+      "argon_high_seeds": null,
       "argon_high_mean": null,
       "argon_high_ci95": null,
       "argon_high_acc": null,
@@ -523,7 +779,94 @@
       "argon_high_paired_gap_ci95": null
     },
     {
-      "rank": 3,
+      "rank": 5,
+      "id": "cand-0470",
+      "name": "peer_frame_stale_flip",
+      "archetype": "stale_doc_ambusher",
+      "rationale": "Flips framing from most_restricted_peer in week 1 to decoy in week 2 while leaking oldest.",
+      "behavior_key": "a5c6a09bfb31491a:a2e1db2d4a3136b8",
+      "strategy_json": {
+        "rules": [
+          {
+            "if": [
+              [
+                "day",
+                "<=",
+                7
+              ],
+              [
+                "n_docs_held",
+                ">=",
+                3
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                8
+              ],
+              [
+                "n_leakable",
+                ">=",
+                2
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "random_peer"
+        }
+      },
+      "solver_mean": 0.566,
+      "solver_ci95": 0.286,
+      "solver_acc": 0.8,
+      "solver_scores": [
+        0.84,
+        0.65,
+        0.64,
+        0.7,
+        0.0
+      ],
+      "heuristic_mean": -0.014,
+      "flash_low_mean": -0.642,
+      "flash_low_ci95": 0.7017,
+      "flash_low_acc": 0.2,
+      "flash_low_scores": [
+        -1.0,
+        -1.0,
+        0.79,
+        -1.0,
+        -1.0
+      ],
+      "paired_gap_solver_minus_flash": 1.208,
+      "paired_gap_ci95": [
+        0.54,
+        1.746
+      ],
+      "argon_high_n": 0,
+      "argon_high_seeds": null,
+      "argon_high_mean": null,
+      "argon_high_ci95": null,
+      "argon_high_acc": null,
+      "argon_high_scores": null,
+      "argon_high_also_fails_le_0_2": null,
+      "argon_high_paired_gap_vs_solver": null,
+      "argon_high_paired_gap_ci95": null
+    },
+    {
+      "rank": 6,
       "id": "cand-0078",
       "name": "late_sprint_v4_gap_exploiter",
       "archetype": "late_horizon_sprinter",
@@ -612,6 +955,14 @@
         0.6,
         1.65
       ],
+      "argon_high_n": 5,
+      "argon_high_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
       "argon_high_mean": 0.662,
       "argon_high_ci95": 0.0524,
       "argon_high_acc": 1.0,
@@ -630,7 +981,94 @@
       ]
     },
     {
-      "rank": 4,
+      "rank": 7,
+      "id": "cand-0359",
+      "name": "colleague_restriction_mirror",
+      "archetype": "restriction_counterpuncher",
+      "rationale": "Mirror colleague restrictions by framing most_restricted_peer when colleagues are restricted, and switching to random_peer early.",
+      "behavior_key": "2d80c419b8a8d8dd:8bb2fdeda75e7039",
+      "strategy_json": {
+        "rules": [
+          {
+            "if": [
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ],
+              [
+                "day",
+                ">=",
+                6
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                "<=",
+                5
+              ],
+              [
+                "n_docs_held",
+                ">=",
+                2
+              ]
+            ],
+            "then": {
+              "leak": "random_seeded",
+              "frame": "random_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "newest",
+          "frame": "decoy"
+        }
+      },
+      "solver_mean": 0.796,
+      "solver_ci95": 0.0563,
+      "solver_acc": 1.0,
+      "solver_scores": [
+        0.8,
+        0.8,
+        0.89,
+        0.78,
+        0.71
+      ],
+      "heuristic_mean": 0.252,
+      "flash_low_mean": -0.394,
+      "flash_low_ci95": 0.7279,
+      "flash_low_acc": 0.4,
+      "flash_low_scores": [
+        0.56,
+        0.47,
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "paired_gap_solver_minus_flash": 1.19,
+      "paired_gap_ci95": [
+        0.566,
+        1.81
+      ],
+      "argon_high_n": 0,
+      "argon_high_seeds": null,
+      "argon_high_mean": null,
+      "argon_high_ci95": null,
+      "argon_high_acc": null,
+      "argon_high_scores": null,
+      "argon_high_also_fails_le_0_2": null,
+      "argon_high_paired_gap_vs_solver": null,
+      "argon_high_paired_gap_ci95": null
+    },
+    {
+      "rank": 8,
       "id": "cand-0062",
       "name": "rc_escalating_containment",
       "archetype": "restriction_counterpuncher",
@@ -719,16 +1157,29 @@
         0.6,
         1.642
       ],
-      "argon_high_mean": null,
-      "argon_high_ci95": null,
-      "argon_high_acc": null,
-      "argon_high_scores": null,
-      "argon_high_also_fails_le_0_2": null,
-      "argon_high_paired_gap_vs_solver": null,
-      "argon_high_paired_gap_ci95": null
+      "argon_high_n": 3,
+      "argon_high_seeds": [
+        0,
+        1,
+        2
+      ],
+      "argon_high_mean": 0.15,
+      "argon_high_ci95": 1.1277,
+      "argon_high_acc": 0.6667,
+      "argon_high_scores": [
+        -1.0,
+        0.76,
+        0.69
+      ],
+      "argon_high_also_fails_le_0_2": true,
+      "argon_high_paired_gap_vs_solver": 0.5467,
+      "argon_high_paired_gap_ci95": [
+        -0.01,
+        1.59
+      ]
     },
     {
-      "rank": 5,
+      "rank": 9,
       "id": "cand-0114",
       "name": "fresh_doc_peer_scatter",
       "archetype": "peer_scatter_framer",
@@ -812,65 +1263,42 @@
         0.546,
         1.626
       ],
-      "argon_high_mean": null,
-      "argon_high_ci95": null,
-      "argon_high_acc": null,
-      "argon_high_scores": null,
-      "argon_high_also_fails_le_0_2": null,
-      "argon_high_paired_gap_vs_solver": null,
-      "argon_high_paired_gap_ci95": null
+      "argon_high_n": 3,
+      "argon_high_seeds": [
+        0,
+        2,
+        3
+      ],
+      "argon_high_mean": 0.8067,
+      "argon_high_ci95": 0.121,
+      "argon_high_acc": 1.0,
+      "argon_high_scores": [
+        0.9,
+        0.83,
+        0.69
+      ],
+      "argon_high_also_fails_le_0_2": false,
+      "argon_high_paired_gap_vs_solver": -0.2034,
+      "argon_high_paired_gap_ci95": [
+        -0.41,
+        -0.1
+      ]
     },
     {
-      "rank": 6,
-      "id": "cand-0230",
-      "name": "sprinter_v6_restricted_aware",
-      "archetype": "late_horizon_sprinter",
-      "rationale": "If restricted, lay low early; otherwise sprint hard from day 6 with newest.",
-      "behavior_key": "90cce5da7a7577d2:dd703ec02b1e4d0b",
+      "rank": 10,
+      "id": "cand-0449",
+      "name": "trap_evader_midgame_decoy",
+      "archetype": "trap_evader",
+      "rationale": "Uses random_peer framing early, switches to decoy with most_recipients midgame when traps peak, and leaks oldest late.",
+      "behavior_key": "4b32532732fa6cb8:e11823f263b9500a",
       "strategy_json": {
         "rules": [
           {
             "if": [
               [
-                "i_am_restricted",
-                "==",
-                1
-              ],
-              [
                 "day",
                 "<=",
                 4
-              ]
-            ],
-            "then": {
-              "leak": "none",
-              "frame": "most_restricted_peer"
-            }
-          },
-          {
-            "if": [
-              [
-                "day",
-                "<=",
-                4
-              ],
-              [
-                "min_recipient_count",
-                "<=",
-                3
-              ]
-            ],
-            "then": {
-              "leak": "most_recipients",
-              "frame": "decoy"
-            }
-          },
-          {
-            "if": [
-              [
-                "day",
-                ">=",
-                6
               ],
               [
                 "n_leakable",
@@ -879,97 +1307,7 @@
               ]
             ],
             "then": {
-              "leak": "newest",
-              "frame": "decoy"
-            }
-          }
-        ],
-        "default": {
-          "leak": "random_seeded",
-          "frame": "random_peer"
-        }
-      },
-      "solver_mean": 0.778,
-      "solver_ci95": 0.0461,
-      "solver_acc": 1.0,
-      "solver_scores": [
-        0.8,
-        0.75,
-        0.85,
-        0.78,
-        0.71
-      ],
-      "heuristic_mean": 0.252,
-      "flash_low_mean": -0.338,
-      "flash_low_ci95": 0.7946,
-      "flash_low_acc": 0.4,
-      "flash_low_scores": [
-        0.64,
-        -1.0,
-        -1.0,
-        0.67,
-        -1.0
-      ],
-      "paired_gap_solver_minus_flash": 1.116,
-      "paired_gap_ci95": [
-        0.45,
-        1.782
-      ],
-      "argon_high_mean": null,
-      "argon_high_ci95": null,
-      "argon_high_acc": null,
-      "argon_high_scores": null,
-      "argon_high_also_fails_le_0_2": null,
-      "argon_high_paired_gap_vs_solver": null,
-      "argon_high_paired_gap_ci95": null
-    },
-    {
-      "rank": 7,
-      "id": "cand-0276",
-      "name": "threshold_edge_switcher_07",
-      "archetype": "threshold_edge_switcher",
-      "rationale": "5-rule switcher emphasizing n_docs_held and min_recipient_count edges.",
-      "behavior_key": "9624e6ad9d953e24:17f17f6858a52e69",
-      "strategy_json": {
-        "rules": [
-          {
-            "if": [
-              [
-                "day",
-                "<=",
-                3
-              ],
-              [
-                "n_docs_held",
-                ">=",
-                2
-              ]
-            ],
-            "then": {
-              "leak": "oldest",
-              "frame": "decoy"
-            }
-          },
-          {
-            "if": [
-              [
-                "day",
-                ">=",
-                4
-              ],
-              [
-                "day",
-                "<=",
-                7
-              ],
-              [
-                "min_recipient_count",
-                ">=",
-                2
-              ]
-            ],
-            "then": {
-              "leak": "fewest_recipients",
+              "leak": "random_seeded",
               "frame": "random_peer"
             }
           },
@@ -978,28 +1316,15 @@
               [
                 "day",
                 ">=",
-                8
-              ],
-              [
-                "n_docs_held",
-                ">=",
                 5
-              ]
-            ],
-            "then": {
-              "leak": "oldest",
-              "frame": "most_restricted_peer"
-            }
-          },
-          {
-            "if": [
+              ],
               [
                 "day",
-                ">=",
-                11
+                "<=",
+                9
               ],
               [
-                "days_since_last_leak",
+                "recent_low_recipient_docs",
                 ">=",
                 1
               ]
@@ -1012,14 +1337,19 @@
           {
             "if": [
               [
-                "days_since_last_leak",
+                "day",
                 ">=",
-                3
+                10
+              ],
+              [
+                "min_recipient_count",
+                "<=",
+                4
               ]
             ],
             "then": {
-              "leak": "random_seeded",
-              "frame": "most_restricted_peer"
+              "leak": "oldest",
+              "frame": "decoy"
             }
           }
         ],
@@ -1028,316 +1358,34 @@
           "frame": "decoy"
         }
       },
-      "solver_mean": 0.766,
-      "solver_ci95": 0.0649,
+      "solver_mean": 0.798,
+      "solver_ci95": 0.0516,
       "solver_acc": 1.0,
       "solver_scores": [
-        0.74,
         0.8,
         0.8,
-        0.84,
-        0.65
+        0.89,
+        0.73,
+        0.77
       ],
-      "heuristic_mean": 0.278,
-      "flash_low_mean": -0.302,
-      "flash_low_ci95": 0.8379,
+      "heuristic_mean": -0.026,
+      "flash_low_mean": -0.36,
+      "flash_low_ci95": 0.7683,
       "flash_low_acc": 0.4,
       "flash_low_scores": [
-        0.72,
+        0.58,
+        0.62,
         -1.0,
-        -1.0,
-        0.77,
-        -1.0
-      ],
-      "paired_gap_solver_minus_flash": 1.068,
-      "paired_gap_ci95": [
-        0.376,
-        1.77
-      ],
-      "argon_high_mean": null,
-      "argon_high_ci95": null,
-      "argon_high_acc": null,
-      "argon_high_scores": null,
-      "argon_high_also_fails_le_0_2": null,
-      "argon_high_paired_gap_vs_solver": null,
-      "argon_high_paired_gap_ci95": null
-    },
-    {
-      "rank": 8,
-      "id": "cand-0110",
-      "name": "high_held_peer_scatter",
-      "archetype": "peer_scatter_framer",
-      "rationale": "Frames random_peer when holding many docs early, then shifts to decoy and most_restricted_peer.",
-      "behavior_key": "48c52ebf9291200d:850ebe0f8967174f",
-      "strategy_json": {
-        "rules": [
-          {
-            "if": [
-              [
-                "n_docs_held",
-                ">=",
-                5
-              ],
-              [
-                "day",
-                "<=",
-                6
-              ]
-            ],
-            "then": {
-              "leak": "oldest",
-              "frame": "random_peer"
-            }
-          },
-          {
-            "if": [
-              [
-                "n_leakable",
-                ">=",
-                3
-              ]
-            ],
-            "then": {
-              "leak": "oldest",
-              "frame": "decoy"
-            }
-          },
-          {
-            "if": [
-              [
-                "n_restricted_colleagues",
-                ">=",
-                2
-              ]
-            ],
-            "then": {
-              "leak": "newest",
-              "frame": "most_restricted_peer"
-            }
-          }
-        ],
-        "default": {
-          "leak": "most_recipients",
-          "frame": "decoy"
-        }
-      },
-      "solver_mean": 0.624,
-      "solver_ci95": 0.1605,
-      "solver_acc": 1.0,
-      "solver_scores": [
-        0.65,
-        0.8,
-        0.8,
-        0.44,
-        0.43
-      ],
-      "heuristic_mean": -0.346,
-      "flash_low_mean": -0.38,
-      "flash_low_ci95": 0.7446,
-      "flash_low_acc": 0.4,
-      "flash_low_scores": [
-        -1.0,
-        -1.0,
-        -1.0,
-        0.59,
-        0.51
-      ],
-      "paired_gap_solver_minus_flash": 1.004,
-      "paired_gap_ci95": [
-        0.238,
-        1.77
-      ],
-      "argon_high_mean": null,
-      "argon_high_ci95": null,
-      "argon_high_acc": null,
-      "argon_high_scores": null,
-      "argon_high_also_fails_le_0_2": null,
-      "argon_high_paired_gap_vs_solver": null,
-      "argon_high_paired_gap_ci95": null
-    },
-    {
-      "rank": 9,
-      "id": "cand-0198",
-      "name": "decoy_restricted_pivot",
-      "archetype": "decoy_amplifier",
-      "rationale": "Frames decoy early, pivots to most_restricted_peer when restricted colleagues exist.",
-      "behavior_key": "9d0ca3f5c9f3d01f:5411cf23d106c6be",
-      "strategy_json": {
-        "rules": [
-          {
-            "if": [
-              [
-                "day",
-                "<=",
-                4
-              ],
-              [
-                "n_docs_held",
-                ">=",
-                2
-              ]
-            ],
-            "then": {
-              "leak": "most_recipients",
-              "frame": "decoy"
-            }
-          },
-          {
-            "if": [
-              [
-                "day",
-                "<=",
-                6
-              ],
-              [
-                "newest_doc_age_days",
-                ">=",
-                1
-              ]
-            ],
-            "then": {
-              "leak": "oldest",
-              "frame": "decoy"
-            }
-          },
-          {
-            "if": [
-              [
-                "i_am_restricted",
-                "==",
-                1
-              ]
-            ],
-            "then": {
-              "leak": "most_recipients",
-              "frame": "most_restricted_peer"
-            }
-          },
-          {
-            "if": [
-              [
-                "n_restricted_colleagues",
-                ">=",
-                3
-              ]
-            ],
-            "then": {
-              "leak": "oldest",
-              "frame": "most_restricted_peer"
-            }
-          }
-        ],
-        "default": {
-          "leak": "random_seeded",
-          "frame": "decoy"
-        }
-      },
-      "solver_mean": 0.676,
-      "solver_ci95": 0.0761,
-      "solver_acc": 1.0,
-      "solver_scores": [
-        0.74,
-        0.7,
-        0.74,
-        0.53,
-        0.67
-      ],
-      "heuristic_mean": 0.042,
-      "flash_low_mean": -0.274,
-      "flash_low_ci95": 0.8715,
-      "flash_low_acc": 0.4,
-      "flash_low_scores": [
-        -1.0,
-        0.84,
-        0.79,
         -1.0,
         -1.0
       ],
-      "paired_gap_solver_minus_flash": 0.95,
+      "paired_gap_solver_minus_flash": 1.158,
       "paired_gap_ci95": [
-        0.23,
-        1.656
+        0.506,
+        1.81
       ],
-      "argon_high_mean": null,
-      "argon_high_ci95": null,
-      "argon_high_acc": null,
-      "argon_high_scores": null,
-      "argon_high_also_fails_le_0_2": null,
-      "argon_high_paired_gap_vs_solver": null,
-      "argon_high_paired_gap_ci95": null
-    },
-    {
-      "rank": 10,
-      "id": "cand-0048",
-      "name": "decoy_stale_docs_4",
-      "archetype": "decoy_amplifier",
-      "rationale": "Frame decoy for the first 6 days leaking oldest, then leak newest when newest_doc_age_days is fresh.",
-      "behavior_key": "f2e89d972e10a365:0435591b67b1a86b",
-      "strategy_json": {
-        "rules": [
-          {
-            "if": [
-              [
-                "day",
-                "<=",
-                6
-              ]
-            ],
-            "then": {
-              "leak": "oldest",
-              "frame": "decoy"
-            }
-          },
-          {
-            "if": [
-              [
-                "newest_doc_age_days",
-                "==",
-                0
-              ],
-              [
-                "n_leakable",
-                ">=",
-                2
-              ]
-            ],
-            "then": {
-              "leak": "newest",
-              "frame": "random_peer"
-            }
-          }
-        ],
-        "default": {
-          "leak": "most_recipients",
-          "frame": "decoy"
-        }
-      },
-      "solver_mean": 0.556,
-      "solver_ci95": 0.2815,
-      "solver_acc": 0.8,
-      "solver_scores": [
-        0.65,
-        0.8,
-        0.74,
-        0.59,
-        0.0
-      ],
-      "heuristic_mean": -0.05,
-      "flash_low_mean": -0.326,
-      "flash_low_ci95": 0.809,
-      "flash_low_acc": 0.4,
-      "flash_low_scores": [
-        0.7,
-        -1.0,
-        -1.0,
-        0.67,
-        -1.0
-      ],
-      "paired_gap_solver_minus_flash": 0.882,
-      "paired_gap_ci95": [
-        0.148,
-        1.616
-      ],
+      "argon_high_n": 0,
+      "argon_high_seeds": null,
       "argon_high_mean": null,
       "argon_high_ci95": null,
       "argon_high_acc": null,
@@ -21833,11 +21881,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.35,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.298,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.896,
       "strategy_json": {
         "rules": [
           {
@@ -21905,11 +21953,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.308,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.014,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.772,
       "strategy_json": {
         "rules": [
           {
@@ -22005,11 +22053,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.348,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.002,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.786,
       "strategy_json": {
         "rules": [
           {
@@ -23290,11 +23338,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.046,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.37,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 1.0,
       "strategy_json": {
         "rules": [
           {
@@ -23647,11 +23695,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.026,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.328,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.47,
       "strategy_json": {
         "rules": [
           {
@@ -24436,11 +24484,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.01,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.284,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.786,
       "strategy_json": {
         "rules": [
           {
@@ -24703,11 +24751,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.324,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.016,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.614,
       "strategy_json": {
         "rules": [
           {
@@ -24927,11 +24975,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.06,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.05,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.79,
       "strategy_json": {
         "rules": [
           {
@@ -24968,11 +25016,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.324,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.058,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.476,
       "strategy_json": {
         "rules": [
           {
@@ -25089,9 +25137,9 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.03,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
-      "flash_low_early_stopped": false,
+      "evaluated": true,
+      "flash_low_mean": 0.6825,
+      "flash_low_early_stopped": true,
       "accepted": false,
       "paired_gap": null,
       "strategy_json": {
@@ -25179,9 +25227,9 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.082,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
-      "flash_low_early_stopped": false,
+      "evaluated": true,
+      "flash_low_mean": 0.64,
+      "flash_low_early_stopped": true,
       "accepted": false,
       "paired_gap": null,
       "strategy_json": {
@@ -25305,11 +25353,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.64,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.43,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.084,
       "strategy_json": {
         "rules": [
           {
@@ -25403,11 +25451,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": 0.568,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.314,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.916,
       "strategy_json": {
         "rules": [
           {
@@ -25462,11 +25510,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.052,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.372,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.254,
       "strategy_json": {
         "rules": [
           {
@@ -26708,11 +26756,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.278,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.034,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.538,
       "strategy_json": {
         "rules": [
           {
@@ -26916,9 +26964,9 @@
       "solver_acc": 1.0,
       "heuristic_mean": 0.642,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
-      "flash_low_early_stopped": false,
+      "evaluated": true,
+      "flash_low_mean": 0.7575,
+      "flash_low_early_stopped": true,
       "accepted": false,
       "paired_gap": null,
       "strategy_json": {
@@ -27047,11 +27095,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.074,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.34,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.216,
       "strategy_json": {
         "rules": [
           {
@@ -27567,11 +27615,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": 0.252,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.394,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 1.19,
       "strategy_json": {
         "rules": [
           {
@@ -27804,11 +27852,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.388,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.03,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.734,
       "strategy_json": {
         "rules": [
           {
@@ -28336,11 +28384,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.324,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.016,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.77,
       "strategy_json": {
         "rules": [
           {
@@ -28537,11 +28585,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.28,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.304,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.326,
       "strategy_json": {
         "rules": [
           {
@@ -28676,9 +28724,9 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.702,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
-      "flash_low_early_stopped": false,
+      "evaluated": true,
+      "flash_low_mean": 0.7575,
+      "flash_low_early_stopped": true,
       "accepted": false,
       "paired_gap": null,
       "strategy_json": {
@@ -28761,11 +28809,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.574,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.024,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.584,
       "strategy_json": {
         "rules": [
           {
@@ -28923,11 +28971,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.686,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.174,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.34,
       "strategy_json": {
         "rules": [
           {
@@ -29057,11 +29105,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.662,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.034,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.494,
       "strategy_json": {
         "rules": [
           {
@@ -29433,11 +29481,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.316,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.422,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.152,
       "strategy_json": {
         "rules": [
           {
@@ -30867,11 +30915,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": 0.646,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.4,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.322,
       "strategy_json": {
         "rules": [
           {
@@ -30990,11 +31038,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.082,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.3,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.298,
       "strategy_json": {
         "rules": [
           {
@@ -31147,11 +31195,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.34,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.056,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.596,
       "strategy_json": {
         "rules": [
           {
@@ -31224,11 +31272,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.066,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.07,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.652,
       "strategy_json": {
         "rules": [
           {
@@ -31342,11 +31390,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.314,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.41,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.346,
       "strategy_json": {
         "rules": [
           {
@@ -31401,11 +31449,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.03,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.28,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.942,
       "strategy_json": {
         "rules": [
           {
@@ -31619,11 +31667,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.022,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.63,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 1.15,
       "strategy_json": {
         "rules": [
           {
@@ -31691,11 +31739,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.674,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.138,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.694,
       "strategy_json": {
         "rules": [
           {
@@ -31763,9 +31811,9 @@
       "solver_acc": 1.0,
       "heuristic_mean": 0.278,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
-      "flash_low_early_stopped": false,
+      "evaluated": true,
+      "flash_low_mean": 0.7525,
+      "flash_low_early_stopped": true,
       "accepted": false,
       "paired_gap": null,
       "strategy_json": {
@@ -31853,11 +31901,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.672,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.198,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.348,
       "strategy_json": {
         "rules": [
           {
@@ -31979,11 +32027,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.048,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.058,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.59,
       "strategy_json": {
         "rules": [
           {
@@ -32056,11 +32104,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": 0.716,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.07,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.66,
       "strategy_json": {
         "rules": [
           {
@@ -32151,11 +32199,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.368,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.386,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.124,
       "strategy_json": {
         "rules": [
           {
@@ -32323,9 +32371,9 @@
       "solver_acc": 1.0,
       "heuristic_mean": 0.726,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
-      "flash_low_early_stopped": false,
+      "evaluated": true,
+      "flash_low_mean": 0.7275,
+      "flash_low_early_stopped": true,
       "accepted": false,
       "paired_gap": null,
       "strategy_json": {
@@ -32395,11 +32443,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.674,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.092,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.694,
       "strategy_json": {
         "rules": [
           {
@@ -32490,11 +32538,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": 0.302,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.048,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.714,
       "strategy_json": {
         "rules": [
           {
@@ -32693,9 +32741,9 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.25,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
-      "flash_low_early_stopped": false,
+      "evaluated": true,
+      "flash_low_mean": 0.695,
+      "flash_low_early_stopped": true,
       "accepted": false,
       "paired_gap": null,
       "strategy_json": {
@@ -32770,11 +32818,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": 0.266,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.002,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.756,
       "strategy_json": {
         "rules": [
           {
@@ -33009,11 +33057,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.07,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.63,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 1.226,
       "strategy_json": {
         "rules": [
           {
@@ -33492,11 +33540,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.046,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.242,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.388,
       "strategy_json": {
         "rules": [
           {
@@ -33636,11 +33684,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.046,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.682,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 1.312,
       "strategy_json": {
         "rules": [
           {
@@ -33798,11 +33846,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.034,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.344,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.246,
       "strategy_json": {
         "rules": [
           {
@@ -34592,11 +34640,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": 0.28,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.33,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.234,
       "strategy_json": {
         "rules": [
           {
@@ -34664,11 +34712,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.026,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.36,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 1.158,
       "strategy_json": {
         "rules": [
           {
@@ -34746,9 +34794,9 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.062,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
-      "flash_low_early_stopped": false,
+      "evaluated": true,
+      "flash_low_mean": 0.655,
+      "flash_low_early_stopped": true,
       "accepted": false,
       "paired_gap": null,
       "strategy_json": {
@@ -34882,11 +34930,11 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.058,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.03,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.71,
       "strategy_json": {
         "rules": [
           {
@@ -34941,11 +34989,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.034,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.004,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.526,
       "strategy_json": {
         "rules": [
           {
@@ -35416,9 +35464,9 @@
       "solver_acc": 1.0,
       "heuristic_mean": -0.062,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
-      "flash_low_early_stopped": false,
+      "evaluated": true,
+      "flash_low_mean": 0.6325,
+      "flash_low_early_stopped": true,
       "accepted": false,
       "paired_gap": null,
       "strategy_json": {
@@ -35745,11 +35793,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.062,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.39,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.124,
       "strategy_json": {
         "rules": [
           {
@@ -36097,11 +36145,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.04,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": 0.344,
       "flash_low_early_stopped": false,
       "accepted": false,
-      "paired_gap": null,
+      "paired_gap": 0.174,
       "strategy_json": {
         "rules": [
           {
@@ -36233,11 +36281,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.014,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.642,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 1.208,
       "strategy_json": {
         "rules": [
           {
@@ -37617,11 +37665,11 @@
       "solver_acc": 0.8,
       "heuristic_mean": -0.364,
       "solver_pass": true,
-      "evaluated": false,
-      "flash_low_mean": null,
+      "evaluated": true,
+      "flash_low_mean": -0.062,
       "flash_low_early_stopped": false,
-      "accepted": false,
-      "paired_gap": null,
+      "accepted": true,
+      "paired_gap": 0.598,
       "strategy_json": {
         "rules": [
           {

@@ -50,11 +50,63 @@ EVASIVE_MARKERS: tuple[str, ...] = (
 
 STAGE2_TRAIN_RANGE: tuple[int, int] = (102_000, 102_600)
 STAGE3_TRAIN_RANGE: tuple[int, int] = (102_600, 103_200)
-HELDOUT_EVAL_RANGE: tuple[int, int] = (800_000, 800_030)
+HELDOUT_EVAL_RANGE: tuple[int, int] = (800_000, 800_060)
+HELDOUT_N90_SUBSET_COUNT: int = 30
 DEV_HARD_EVAL_RANGE: tuple[int, int] = (0, 30)
 HELDOUT_SECRET_TAG = "canary-tiebreak-heldout-v14-eval-01"
-DEFAULT_CHECKPOINT_DIR = "/localscratch/fleet-silas/tiebreak-shared/empirical_bayes"
+DEFAULT_CHECKPOINT_DIR = "/tmp/fleet-silas/shared/tiebreak/empirical_bayes"
 DEFAULT_RESULTS_DIR = "results/tiebreak/empirical_bayes"
+
+ABLATION_VARIANTS: tuple[str, ...] = (
+    "eb_naive_prior",
+    "eb_likelihood_only",
+    "eb_ev_stop_only",
+    "eb_no_canary_planting",
+    "eb_experience_opt",
+)
+
+ABLATION_MECHANISM_NOTES: dict[str, dict[str, Any]] = {
+    "eb_naive_prior": {
+        "mechanism": "Untrained prior + uncalibrated p>=0.50 stopping + default 0.90 splits",
+        "learned_likelihoods": False,
+        "ev_stopping": False,
+        "active_canary_planting": True,
+        "learned_split_and_margin": False,
+        "negative_ablation": True,
+    },
+    "eb_likelihood_only": {
+        "mechanism": "Learned log-likelihoods on TRAIN_SEEDS, no EV-stopping, default 0.90 splits",
+        "learned_likelihoods": True,
+        "ev_stopping": False,
+        "active_canary_planting": True,
+        "learned_split_and_margin": False,
+        "negative_ablation": False,
+    },
+    "eb_ev_stop_only": {
+        "mechanism": "Naive prior + 1/(1+V) EV-stopping without learned likelihoods (negative ablation)",
+        "learned_likelihoods": False,
+        "ev_stopping": True,
+        "active_canary_planting": True,
+        "learned_split_and_margin": False,
+        "negative_ablation": True,
+    },
+    "eb_no_canary_planting": {
+        "mechanism": "Learned likelihoods + EV-stopping, canary_cov=0.0 passive logs/messages/docs only (negative ablation)",
+        "learned_likelihoods": True,
+        "ev_stopping": True,
+        "active_canary_planting": False,
+        "learned_split_and_margin": False,
+        "negative_ablation": True,
+    },
+    "eb_experience_opt": {
+        "mechanism": "Full learned likelihoods + learned canary-split sizing + learned tau_margin EV-stopping",
+        "learned_likelihoods": True,
+        "ev_stopping": True,
+        "active_canary_planting": True,
+        "learned_split_and_margin": True,
+        "negative_ablation": False,
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -125,6 +177,75 @@ def make_naive_prior_params() -> EmpiricalBayesParams:
         naive_p_threshold=0.50,
         stage="eb_naive_prior",
     )
+
+
+def make_ev_stop_only_params() -> EmpiricalBayesParams:
+    naive = make_naive_prior_params()
+    return EmpiricalBayesParams(
+        w_canary_hit=naive.w_canary_hit,
+        w_canary_miss=naive.w_canary_miss,
+        w_doc_hit=naive.w_doc_hit,
+        w_after_hours=naive.w_after_hours,
+        w_evasive=naive.w_evasive,
+        w_angry_msg=naive.w_angry_msg,
+        tau_margin=0.0,
+        unsurfaced_v_discount=0.0,
+        canary_coverage=0.90,
+        tiny_pool_size=0,
+        use_ev_stopping=True,
+        naive_p_threshold=0.50,
+        stage="eb_ev_stop_only",
+    )
+
+
+def make_no_canary_planting_params(
+    likelihood_params: EmpiricalBayesParams,
+    opt_params: EmpiricalBayesParams,
+) -> EmpiricalBayesParams:
+    return EmpiricalBayesParams(
+        w_canary_hit=likelihood_params.w_canary_hit,
+        w_canary_miss=likelihood_params.w_canary_miss,
+        w_doc_hit=likelihood_params.w_doc_hit,
+        w_after_hours=likelihood_params.w_after_hours,
+        w_evasive=likelihood_params.w_evasive,
+        w_angry_msg=likelihood_params.w_angry_msg,
+        tau_margin=opt_params.tau_margin,
+        unsurfaced_v_discount=opt_params.unsurfaced_v_discount,
+        canary_coverage=0.0,
+        tiny_pool_size=0,
+        use_ev_stopping=True,
+        naive_p_threshold=0.50,
+        stage="eb_no_canary_planting",
+    )
+
+
+def build_ablation_variant_params(
+    stage1_params: EmpiricalBayesParams,
+    stage2_params: EmpiricalBayesParams,
+    stage3_params: EmpiricalBayesParams,
+) -> dict[str, EmpiricalBayesParams]:
+    likelihood_only = EmpiricalBayesParams(
+        w_canary_hit=stage2_params.w_canary_hit,
+        w_canary_miss=stage2_params.w_canary_miss,
+        w_doc_hit=stage2_params.w_doc_hit,
+        w_after_hours=stage2_params.w_after_hours,
+        w_evasive=stage2_params.w_evasive,
+        w_angry_msg=stage2_params.w_angry_msg,
+        tau_margin=0.0,
+        unsurfaced_v_discount=0.0,
+        canary_coverage=0.90,
+        tiny_pool_size=0,
+        use_ev_stopping=False,
+        naive_p_threshold=0.50,
+        stage="eb_likelihood_only",
+    )
+    return {
+        "eb_naive_prior": stage1_params,
+        "eb_likelihood_only": likelihood_only,
+        "eb_ev_stop_only": make_ev_stop_only_params(),
+        "eb_no_canary_planting": make_no_canary_planting_params(likelihood_only, stage3_params),
+        "eb_experience_opt": stage3_params,
+    }
 
 
 def _parse_instruction_rules(instruction: str) -> dict[str, Any]:
@@ -507,6 +628,8 @@ class EmpiricalBayesPolicy:
         k = max(2, int(self.rules["max_variants"]))
         n_total = max(1, len(self.tracker.employees))
         cov = float(self.params.canary_coverage)
+        if cov <= 0.0:
+            return []
         tiny_sz = int(self.params.tiny_pool_size)
 
         chosen: list[dict[str, str]] = []
@@ -964,7 +1087,7 @@ def fit_empirical_likelihoods(
         tiny_pool_size=0,
         use_ev_stopping=False,
         naive_p_threshold=0.50,
-        stage="eb_likelihood_learned",
+        stage="eb_likelihood_only",
     )
 
     stage2_train_scores: list[float] = []
@@ -1009,6 +1132,7 @@ def fit_empirical_likelihoods(
             "angry_cnt_mole_inn": [ang_cnt[1], ang_cnt[0]],
         },
         "train_mean_score_eb_naive_prior": round(float(np.mean(naive_scores)), 6),
+        "train_mean_score_eb_likelihood_only": round(float(np.mean(stage2_train_scores)), 6),
         "train_mean_score_eb_likelihood_learned": round(float(np.mean(stage2_train_scores)), 6),
     }
     return stage2_params, stats
@@ -1336,12 +1460,22 @@ def _invalid_episode_count(eps: list[Any]) -> int:
     return bad
 
 
+def _planted_canary_count(ep: Any) -> int:
+    cnt = 0
+    for st in ep.steps:
+        tool, _, res = _step_fields(st)
+        if tool == "plant_canary" and res.get("ok"):
+            cnt += 1
+    return cnt
+
+
 def summarize_episodes(eps: list[Any], luck_vals: list[float]) -> dict[str, Any]:
     n = max(1, len(eps))
     scores = [float(e.score) for e in eps]
     score_ci = bootstrap_ci(scores)
     luck_ci = bootstrap_ci(luck_vals)
     acc_days = [int(e.final_day) for e in eps if e.accused is not None]
+    can_counts = [_planted_canary_count(e) for e in eps]
     n_correct = sum(1 for e in eps if e.accused is not None and bool(e.correct))
     n_wrong = sum(1 for e in eps if e.accused is not None and not bool(e.correct))
     n_abstain = sum(1 for e in eps if e.accused is None)
@@ -1354,6 +1488,8 @@ def summarize_episodes(eps: list[Any], luck_vals: list[float]) -> dict[str, Any]
         "abstain_rate": round(n_abstain / n, 6),
         "accused_rate": round((n_correct + n_wrong) / n, 6),
         "mean_accuse_day": round(float(np.mean(acc_days)), 4) if acc_days else None,
+        "mean_canaries_planted": round(float(np.mean(can_counts)), 4) if can_counts else 0.0,
+        "total_canaries_planted": int(sum(can_counts)),
         "correct_count": n_correct,
         "wrong_count": n_wrong,
         "abstain_count": n_abstain,
@@ -1381,6 +1517,102 @@ def _load_committed_dev_hard(repo_root: Path, subdir: str, expected_seeds: list[
     return [by_seed[s] for s in expected_seeds]
 
 
+HELDOUT_DELTA_PAIRS: tuple[tuple[str, str, str], ...] = (
+    ("eb_likelihood_only_minus_eb_naive_prior", "eb_likelihood_only", "eb_naive_prior"),
+    ("eb_ev_stop_only_minus_eb_naive_prior", "eb_ev_stop_only", "eb_naive_prior"),
+    ("eb_no_canary_planting_minus_eb_naive_prior", "eb_no_canary_planting", "eb_naive_prior"),
+    ("eb_experience_opt_minus_eb_no_canary_planting", "eb_experience_opt", "eb_no_canary_planting"),
+    ("eb_experience_opt_minus_eb_ev_stop_only", "eb_experience_opt", "eb_ev_stop_only"),
+    ("eb_experience_opt_minus_eb_likelihood_only", "eb_experience_opt", "eb_likelihood_only"),
+    ("eb_experience_opt_minus_eb_naive_prior", "eb_experience_opt", "eb_naive_prior"),
+    ("eb_experience_opt_minus_heuristic", "eb_experience_opt", "heuristic"),
+    ("eb_experience_opt_minus_solver", "eb_experience_opt", "solver"),
+)
+
+
+def _summarize_heldout_prefix(
+    heldout_eps: dict[str, dict[str, list[Any]]],
+    heldout_luck: dict[str, dict[str, list[float]]],
+    agent_names: list[str],
+    seeds_prefix: list[int],
+    heldout_secret: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    k = len(seeds_prefix)
+    by_tier: dict[str, Any] = {}
+    overall: dict[str, Any] = {}
+    paired_deltas: dict[str, Any] = {"by_tier": {}, "overall": {}}
+
+    for tier in TIERS:
+        by_tier[tier] = {
+            name: summarize_episodes(heldout_eps[name][tier][:k], heldout_luck[name][tier][:k])
+            for name in agent_names
+        }
+    for name in agent_names:
+        pooled_eps = [ep for t in TIERS for ep in heldout_eps[name][t][:k]]
+        pooled_luck = [lv for t in TIERS for lv in heldout_luck[name][t][:k]]
+        overall[name] = summarize_episodes(pooled_eps, pooled_luck)
+
+    for tier in TIERS:
+        paired_deltas["by_tier"][tier] = {}
+        for key, a_name, b_name in HELDOUT_DELTA_PAIRS:
+            a_sc = [float(e.score) for e in heldout_eps[a_name][tier][:k]]
+            b_sc = [float(e.score) for e in heldout_eps[b_name][tier][:k]]
+            a_lu = heldout_luck[a_name][tier][:k]
+            b_lu = heldout_luck[b_name][tier][:k]
+            paired_deltas["by_tier"][tier][key] = {
+                "score_delta": paired_bootstrap_delta(a_sc, b_sc),
+                "luck_adjusted_delta": paired_bootstrap_delta(a_lu, b_lu),
+            }
+
+    for key, a_name, b_name in HELDOUT_DELTA_PAIRS:
+        a_sc = [float(e.score) for t in TIERS for e in heldout_eps[a_name][t][:k]]
+        b_sc = [float(e.score) for t in TIERS for e in heldout_eps[b_name][t][:k]]
+        a_lu = [lv for t in TIERS for lv in heldout_luck[a_name][t][:k]]
+        b_lu = [lv for t in TIERS for lv in heldout_luck[b_name][t][:k]]
+        paired_deltas["overall"][key] = {
+            "score_delta": paired_bootstrap_delta(a_sc, b_sc),
+            "luck_adjusted_delta": paired_bootstrap_delta(a_lu, b_lu),
+        }
+
+    pooled_before_eps = [ep for t in TIERS for ep in heldout_eps["eb_naive_prior"][t][:k]]
+    pooled_after_eps = [ep for t in TIERS for ep in heldout_eps["eb_experience_opt"][t][:k]]
+    paired_episode_deltas = [
+        round(float(a.score) - float(b.score), 6)
+        for a, b in zip(pooled_after_eps, pooled_before_eps)
+    ]
+    headline_delta = paired_deltas["overall"]["eb_experience_opt_minus_eb_naive_prior"]["score_delta"]
+    gate_metrics = {
+        "n": len(pooled_after_eps),
+        "before_mean_score": overall["eb_naive_prior"]["score"]["mean"],
+        "after_mean_score": overall["eb_experience_opt"]["score"]["mean"],
+        "before_valid_call_rate": _valid_call_rate(pooled_before_eps),
+        "after_valid_call_rate": _valid_call_rate(pooled_after_eps),
+        "before_invalid_episodes": _invalid_episode_count(pooled_before_eps),
+        "after_invalid_episodes": _invalid_episode_count(pooled_after_eps),
+        "paired_mean_delta": headline_delta["mean"],
+        "paired_ci95_low": headline_delta["ci95_low"],
+        "paired_ci95_high": headline_delta["ci95_high"],
+        "paired_episode_deltas": paired_episode_deltas,
+    }
+
+    secret_fp = hashlib.sha256(heldout_secret.encode("utf-8")).hexdigest()[:12]
+    block = {
+        "world_secret_tag": heldout_secret,
+        "world_secret_sha256_12": secret_fp,
+        "eval_seed_range": f"{seeds_prefix[0]}..{seeds_prefix[-1]}",
+        "eval_seeds": {"start": seeds_prefix[0], "stop": seeds_prefix[-1] + 1},
+        "tiers": list(TIERS),
+        "n_per_tier": k,
+        "n_total_per_agent": k * len(TIERS),
+        "episodes_replayed": k * len(TIERS) * len(agent_names),
+        "replay_verified": True,
+        "by_tier": by_tier,
+        "overall": overall,
+        "paired_deltas": paired_deltas,
+    }
+    return block, gate_metrics
+
+
 def evaluate_heldout_and_dev(
     stage1_params: EmpiricalBayesParams,
     stage2_params: EmpiricalBayesParams,
@@ -1396,22 +1628,26 @@ def evaluate_heldout_and_dev(
 
     solver_factory = make_policy_factory("solver")
     heuristic_factory = make_policy_factory("heuristic")
+    variant_params = build_ablation_variant_params(stage1_params, stage2_params, stage3_params)
 
     agent_specs: list[tuple[str, Any]] = [
-        ("eb_naive_prior", lambda s: EmpiricalBayesPolicy(stage1_params, seed=s, name="eb_naive_prior")),
         (
-            "eb_likelihood_learned",
-            lambda s: EmpiricalBayesPolicy(stage2_params, seed=s, name="eb_likelihood_learned"),
-        ),
-        ("eb_experience_opt", lambda s: EmpiricalBayesPolicy(stage3_params, seed=s, name="eb_experience_opt")),
+            v_name,
+            (lambda vp, vn: lambda s: EmpiricalBayesPolicy(vp, seed=s, name=vn))(
+                variant_params[v_name], v_name
+            ),
+        )
+        for v_name in ABLATION_VARIANTS
+    ] + [
         ("heuristic", heuristic_factory),
         ("solver", solver_factory),
     ]
+    agent_names = [name for name, _ in agent_specs]
 
     prev_secret = os.environ.get("CANARY_WORLD_SECRET")
     prev_set_secret = getattr(canary_world, "_SET_SECRET", None)
-    heldout_eps: dict[str, dict[str, list[Any]]] = {name: {} for name, _ in agent_specs}
-    heldout_luck: dict[str, dict[str, list[float]]] = {name: {} for name, _ in agent_specs}
+    heldout_eps: dict[str, dict[str, list[Any]]] = {name: {} for name in agent_names}
+    heldout_luck: dict[str, dict[str, list[float]]] = {name: {} for name in agent_names}
     n_replayed_heldout = 0
 
     try:
@@ -1436,61 +1672,75 @@ def evaluate_heldout_and_dev(
         else:
             os.environ["CANARY_WORLD_SECRET"] = prev_secret
 
-    heldout_summary: dict[str, Any] = {"by_tier": {}, "overall": {}, "paired_deltas": {"by_tier": {}, "overall": {}}}
-    for tier in TIERS:
-        heldout_summary["by_tier"][tier] = {
-            name: summarize_episodes(heldout_eps[name][tier], heldout_luck[name][tier])
-            for name, _ in agent_specs
-        }
-    for name, _ in agent_specs:
-        pooled_eps = [ep for t in TIERS for ep in heldout_eps[name][t]]
-        pooled_luck = [lv for t in TIERS for lv in heldout_luck[name][t]]
-        heldout_summary["overall"][name] = summarize_episodes(pooled_eps, pooled_luck)
+    heldout_full_block, gate_metrics = _summarize_heldout_prefix(
+        heldout_eps=heldout_eps,
+        heldout_luck=heldout_luck,
+        agent_names=agent_names,
+        seeds_prefix=heldout_seeds,
+        heldout_secret=heldout_secret,
+    )
+    heldout_full_block["episodes_replayed"] = n_replayed_heldout
 
-    pooled_before_eps = [ep for t in TIERS for ep in heldout_eps["eb_naive_prior"][t]]
-    pooled_after_eps = [ep for t in TIERS for ep in heldout_eps["eb_experience_opt"][t]]
-    paired_episode_deltas = [
-        round(float(a.score) - float(b.score), 6)
-        for a, b in zip(pooled_after_eps, pooled_before_eps)
-    ]
-    gate_metrics = {
-        "n": len(pooled_after_eps),
-        "before_mean_score": heldout_summary["overall"]["eb_naive_prior"]["score"]["mean"],
-        "after_mean_score": heldout_summary["overall"]["eb_experience_opt"]["score"]["mean"],
-        "before_valid_call_rate": _valid_call_rate(pooled_before_eps),
-        "after_valid_call_rate": _valid_call_rate(pooled_after_eps),
-        "before_invalid_episodes": _invalid_episode_count(pooled_before_eps),
-        "after_invalid_episodes": _invalid_episode_count(pooled_after_eps),
-        "paired_episode_deltas": paired_episode_deltas,
-    }
+    n90_k = min(HELDOUT_N90_SUBSET_COUNT, len(heldout_seeds))
+    heldout_n90_block, gate_metrics_n90 = _summarize_heldout_prefix(
+        heldout_eps=heldout_eps,
+        heldout_luck=heldout_luck,
+        agent_names=agent_names,
+        seeds_prefix=heldout_seeds[:n90_k],
+        heldout_secret=heldout_secret,
+    )
+    heldout_n90_block["before_after_gate"] = gate_metrics_n90
 
-    delta_pairs = [
-        ("eb_likelihood_learned_minus_eb_naive_prior", "eb_likelihood_learned", "eb_naive_prior"),
-        ("eb_experience_opt_minus_eb_likelihood_learned", "eb_experience_opt", "eb_likelihood_learned"),
-        ("eb_experience_opt_minus_eb_naive_prior", "eb_experience_opt", "eb_naive_prior"),
-        ("eb_experience_opt_minus_heuristic", "eb_experience_opt", "heuristic"),
-        ("eb_experience_opt_minus_solver", "eb_experience_opt", "solver"),
-    ]
-    for tier in TIERS:
-        heldout_summary["paired_deltas"]["by_tier"][tier] = {}
-        for key, a_name, b_name in delta_pairs:
-            a_sc = [float(e.score) for e in heldout_eps[a_name][tier]]
-            b_sc = [float(e.score) for e in heldout_eps[b_name][tier]]
-            a_lu = heldout_luck[a_name][tier]
-            b_lu = heldout_luck[b_name][tier]
-            heldout_summary["paired_deltas"]["by_tier"][tier][key] = {
-                "score_delta": paired_bootstrap_delta(a_sc, b_sc),
-                "luck_adjusted_delta": paired_bootstrap_delta(a_lu, b_lu),
+    ablation_rows: list[dict[str, Any]] = []
+    zero_delta = {"mean": 0.0, "ci95_low": 0.0, "ci95_high": 0.0, "ci95_halfwidth": 0.0}
+    for v_name in ABLATION_VARIANTS:
+        meta_info = ABLATION_MECHANISM_NOTES[v_name]
+        v_sc_full = [float(e.score) for t in TIERS for e in heldout_eps[v_name][t]]
+        n_sc_full = [float(e.score) for t in TIERS for e in heldout_eps["eb_naive_prior"][t]]
+        o_sc_full = [float(e.score) for t in TIERS for e in heldout_eps["eb_experience_opt"][t]]
+        v_lu_full = [lv for t in TIERS for lv in heldout_luck[v_name][t]]
+        n_lu_full = [lv for t in TIERS for lv in heldout_luck["eb_naive_prior"][t]]
+        o_lu_full = [lv for t in TIERS for lv in heldout_luck["eb_experience_opt"][t]]
+
+        delta_vs_naive = (
+            zero_delta
+            if v_name == "eb_naive_prior"
+            else paired_bootstrap_delta(v_sc_full, n_sc_full)
+        )
+        luck_delta_vs_naive = (
+            zero_delta
+            if v_name == "eb_naive_prior"
+            else paired_bootstrap_delta(v_lu_full, n_lu_full)
+        )
+        delta_vs_opt = (
+            zero_delta
+            if v_name == "eb_experience_opt"
+            else paired_bootstrap_delta(v_sc_full, o_sc_full)
+        )
+        ablation_rows.append(
+            {
+                "variant": v_name,
+                **meta_info,
+                "parameters": variant_params[v_name].to_dict(),
+                "n180_overall": heldout_full_block["overall"][v_name],
+                "n180_by_tier": {t: heldout_full_block["by_tier"][t][v_name] for t in TIERS},
+                "n90_overall": heldout_n90_block["overall"][v_name],
+                "paired_score_delta_vs_naive_prior": delta_vs_naive,
+                "paired_luck_delta_vs_naive_prior": luck_delta_vs_naive,
+                "paired_score_delta_vs_experience_opt": delta_vs_opt,
             }
-    for key, a_name, b_name in delta_pairs:
-        a_sc = [float(e.score) for t in TIERS for e in heldout_eps[a_name][t]]
-        b_sc = [float(e.score) for t in TIERS for e in heldout_eps[b_name][t]]
-        a_lu = [lv for t in TIERS for lv in heldout_luck[a_name][t]]
-        b_lu = [lv for t in TIERS for lv in heldout_luck[b_name][t]]
-        heldout_summary["paired_deltas"]["overall"][key] = {
-            "score_delta": paired_bootstrap_delta(a_sc, b_sc),
-            "luck_adjusted_delta": paired_bootstrap_delta(a_lu, b_lu),
-        }
+        )
+
+    component_ablation_matrix = {
+        "eval_seed_range": f"{heldout_seeds[0]}..{heldout_seeds[-1]}",
+        "n_per_tier": len(heldout_seeds),
+        "n_total_per_variant": len(heldout_seeds) * len(TIERS),
+        "world_secret_tag": heldout_secret,
+        "world_secret_sha256_12": heldout_full_block["world_secret_sha256_12"],
+        "replay_verified": True,
+        "episodes_replayed": len(ABLATION_VARIANTS) * len(heldout_seeds) * len(TIERS),
+        "variants": ablation_rows,
+    }
 
     prev_dev_secret = os.environ.pop("CANARY_WORLD_SECRET", None)
     prev_dev_set_secret = getattr(canary_world, "_SET_SECRET", None)
@@ -1528,16 +1778,13 @@ def evaluate_heldout_and_dev(
         if prev_dev_secret is not None:
             os.environ["CANARY_WORLD_SECRET"] = prev_dev_secret
 
-    dev_agents_order = [
-        "eb_naive_prior",
-        "eb_likelihood_learned",
-        "eb_experience_opt",
+    dev_agents_order = list(ABLATION_VARIANTS) + [
         "heuristic",
         "opencode:google/gemini-4-carbon",
         "gemini:gemini-4-carbon",
         "solver",
     ]
-    dev_delta_pairs = delta_pairs + [
+    dev_delta_pairs = list(HELDOUT_DELTA_PAIRS) + [
         (
             "eb_experience_opt_minus_opencode_gemini_4_carbon",
             "eb_experience_opt",
@@ -1549,10 +1796,12 @@ def evaluate_heldout_and_dev(
             "gemini:gemini-4-carbon",
         ),
     ]
+    dev_range_str = f"{dev_seeds[0]}..{dev_seeds[-1]}"
     dev_summary: dict[str, Any] = {
+        "protocol_label": f"post-hoc locked dev hard {dev_range_str}",
         "tier": "hard",
         "world_key": "public",
-        "eval_seed_range": f"{dev_seeds[0]}..{dev_seeds[-1]}",
+        "eval_seed_range": dev_range_str,
         "n_seeds": len(dev_seeds),
         "agents": {
             name: summarize_episodes(dev_eps[name], dev_luck[name])
@@ -1573,19 +1822,12 @@ def evaluate_heldout_and_dev(
         },
     }
 
-    secret_fp = hashlib.sha256(heldout_secret.encode("utf-8")).hexdigest()[:12]
     return {
+        "variant_params": variant_params,
         "gate_metrics": gate_metrics,
-        "heldout": {
-            "world_secret_tag": heldout_secret,
-            "world_secret_sha256_12": secret_fp,
-            "eval_seed_range": f"{heldout_seeds[0]}..{heldout_seeds[-1]}",
-            "tiers": list(TIERS),
-            "n_per_tier": len(heldout_seeds),
-            "n_total_per_agent": len(heldout_seeds) * len(TIERS),
-            "episodes_replayed": n_replayed_heldout,
-            **heldout_summary,
-        },
+        "heldout": heldout_full_block,
+        "heldout_n90": heldout_n90_block,
+        "component_ablation_matrix": component_ablation_matrix,
         "dev_hard": {
             "episodes_replayed": n_replayed_dev,
             **dev_summary,
@@ -1605,23 +1847,50 @@ def _fmt_ci(d: dict[str, float], signed: bool = True) -> str:
 
 def format_markdown_report(summary: dict[str, Any]) -> str:
     ho = summary["heldout"]
+    ho90 = summary["heldout_n90"]
     dh = summary["dev_hard"]
+    ab_map = {row["variant"]: row for row in summary["component_ablation_matrix"]["variants"]}
+    all_eval_agents = list(ABLATION_VARIANTS) + ["heuristic", "solver"]
+
     lines: list[str] = []
-    lines.append("EmpiricalBayesPolicy Tiebreaker Report (Canary v1.4)")
-    lines.append("====================================================")
+    lines.append("EmpiricalBayesPolicy Tiebreaker and Component Ablation Report (Canary v1.4)")
+    lines.append("===========================================================================")
     lines.append("")
-    lines.append(f"- Train seed range: `{summary['train_seed_range']}` (Stage 2 likelihoods `{summary['stage2_seed_range']}`, Stage 3 stopping/splits `{summary['stage3_seed_range']}`)")
-    lines.append(f"- Held-out eval seed range: `{summary['eval_seed_range']}` across `easy, medium, hard` (`n={ho['n_per_tier']}/tier`, `{ho['n_total_per_agent']}` episodes/stage)")
-    lines.append(f"- Held-out world secret tag: `{summary['world_secret_tag']}` (sha256 prefix `{ho['world_secret_sha256_12']}`)")
-    lines.append(f"- Dev keyless benchmark: `hard` seeds `{dh['eval_seed_range']}` (`b\"public\"`, `n={dh['n_seeds']}`, paired vs `solver` and committed `gemini-4-carbon`)")
-    lines.append(f"- Tool-by-tool Env replay verified: `{summary['replay_verified']}` (`{summary['total_episodes_replayed']}` episodes replayed with zero mismatches)")
+    lines.append(
+        f"- Train seed range: `{summary['train_seed_range']}` "
+        f"(Stage 2 likelihoods `{summary['stage2_seed_range']}`, Stage 3 stopping/splits `{summary['stage3_seed_range']}`)"
+    )
+    lines.append(
+        f"- Primary held-out eval seed range: `{ho['eval_seed_range']}` across `easy, medium, hard` "
+        f"(`n={ho['n_per_tier']}/tier`, `{ho['n_total_per_agent']}` episodes/variant, matching `v3-4k-s0` `n=180` scale)"
+    )
+    lines.append(
+        f"- Retained held-out subset seed range: `{ho90['eval_seed_range']}` across `easy, medium, hard` "
+        f"(`n={ho90['n_per_tier']}/tier`, `{ho90['n_total_per_agent']}` episodes/variant for exact `n=90` cross-comparisons)"
+    )
+    lines.append(
+        f"- Held-out world secret tag: `{summary['world_secret_tag']}` "
+        f"(sha256 prefix `{ho['world_secret_sha256_12']}`, shared across all paired held-out variants)"
+    )
+    lines.append(
+        f"- Keyless reference benchmark: `{dh['protocol_label']}` "
+        f"(`b\"public\"`, `n={dh['n_seeds']}`, paired vs `solver` and committed `gemini-4-carbon`)"
+    )
+    lines.append(
+        f"- Tool-by-tool Env replay verified: `{summary['replay_verified']}` "
+        f"(`{summary['total_episodes_replayed']}` episodes replayed with zero mismatches)"
+    )
+
     lines.append("")
-    lines.append("1. Learned Parameter Progression (theta + Stopping + Canary Split Sizing)")
-    lines.append("-------------------------------------------------------------------------")
+    sec1 = "1. Learned Parameter and Component Ablation Configurations (TRAIN_SEEDS 102000..102779)"
+    lines.append(sec1)
+    lines.append("-" * len(sec1))
     lines.append("")
-    lines.append("| Stage | w_canary_hit | w_canary_miss | w_doc_hit | w_after_hours | w_evasive | w_angry_msg | tau_margin | unsurfaced_v_disc | canary_cov | tiny_pool | ev_stop |")
+    lines.append(
+        "| Variant | w_canary_hit | w_canary_miss | w_doc_hit | w_after_hours | w_evasive | w_angry_msg | tau_margin | unsurfaced_v_disc | canary_cov | tiny_pool | ev_stop |"
+    )
     lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|")
-    for st_name in ("eb_naive_prior", "eb_likelihood_learned", "eb_experience_opt"):
+    for st_name in ABLATION_VARIANTS:
         p = summary["parameters"][st_name]
         lines.append(
             f"| {st_name} | {p['w_canary_hit']:+.3f} | {p['w_canary_miss']:+.3f} | {p['w_doc_hit']:+.3f} | "
@@ -1631,45 +1900,108 @@ def format_markdown_report(summary: dict[str, Any]) -> str:
         )
 
     lines.append("")
-    sec2 = f"2. Held-Out Overall Progression (Seeds {summary['eval_seed_range']}, n={ho['n_total_per_agent']} Pooled Across Easy/Medium/Hard)"
+    sec2 = (
+        f"2. Component Ablation Matrix and Held-Out Overall Progression "
+        f"(Seeds {ho['eval_seed_range']}, n={ho['n_total_per_agent']}, Plus Exact Seeds {ho90['eval_seed_range']}, n={ho90['n_total_per_agent']})"
+    )
     lines.append(sec2)
     lines.append("-" * len(sec2))
     lines.append("")
-    lines.append("| Agent / Stage | n | Score [95% Bootstrap CI] | Luck-Adjusted EV [95% CI] | Accuracy | Wrong Accuse | Abstain | Mean Accuse Day |")
-    lines.append("|---|---:|---:|---:|---:|---:|---:|---:|")
-    for ag in ("eb_naive_prior", "eb_likelihood_learned", "eb_experience_opt", "heuristic", "solver"):
+    lines.append(
+        f"Primary held-out evaluation on `{ho['eval_seed_range']}` (`n={ho['n_per_tier']}/tier = {ho['n_total_per_agent']}` episodes, shared secret `{summary['world_secret_tag']}`, 100% Env replay-verified):"
+    )
+    lines.append("")
+    lines.append(
+        "| Agent / Variant | Mechanism Isolated | n | Canaries/Ep | Score [95% Bootstrap CI] | Luck-Adjusted EV [95% CI] | Accuracy | Wrong Accuse | Abstain | Mean Accuse Day |"
+    )
+    lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+    for ag in all_eval_agents:
         r = ho["overall"][ag]
+        mech = (
+            ab_map[ag]["mechanism"]
+            if ag in ab_map
+            else ("Scripted heuristic baseline" if ag == "heuristic" else "Exact Bayesian reference solver")
+        )
         day_s = f"{r['mean_accuse_day']:.1f}" if r["mean_accuse_day"] is not None else "-"
         lines.append(
-            f"| {ag} | {r['n']} | {_fmt_ci(r['score'])} | {_fmt_ci(r['luck_adjusted_ev'])} | "
-            f"{r['accuracy']:.3f} | {r['wrong_accuse_rate']:.3f} | {r['abstain_rate']:.3f} | {day_s} |"
+            f"| {ag} | {mech} | {r['n']} | {r['mean_canaries_planted']:.2f} | {_fmt_ci(r['score'])} | "
+            f"{_fmt_ci(r['luck_adjusted_ev'])} | {r['accuracy']:.3f} | {r['wrong_accuse_rate']:.3f} | "
+            f"{r['abstain_rate']:.3f} | {day_s} |"
         )
 
     lines.append("")
-    sec3 = f"3. Held-Out Per-Tier Results (Seeds {summary['eval_seed_range']}, n={ho['n_per_tier']}/tier)"
+    lines.append(
+        f"Retained exact `n={ho90['n_total_per_agent']}` subset on `{ho90['eval_seed_range']}` (`n={ho90['n_per_tier']}/tier`, shared secret `{summary['world_secret_tag']}`):"
+    )
+    lines.append("")
+    lines.append(
+        "| Agent / Variant | n | Canaries/Ep | Score [95% Bootstrap CI] | Luck-Adjusted EV [95% CI] | Accuracy | Wrong Accuse | Abstain | Mean Accuse Day |"
+    )
+    lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+    for ag in all_eval_agents:
+        r90 = ho90["overall"][ag]
+        day_s = f"{r90['mean_accuse_day']:.1f}" if r90["mean_accuse_day"] is not None else "-"
+        lines.append(
+            f"| {ag} | {r90['n']} | {r90['mean_canaries_planted']:.2f} | {_fmt_ci(r90['score'])} | "
+            f"{_fmt_ci(r90['luck_adjusted_ev'])} | {r90['accuracy']:.3f} | {r90['wrong_accuse_rate']:.3f} | "
+            f"{r90['abstain_rate']:.3f} | {day_s} |"
+        )
+
+    lines.append("")
+    sec3 = (
+        f"3. Held-Out Per-Tier Results (Seeds {ho['eval_seed_range']}, n={ho['n_per_tier']}/tier, "
+        f"and Seeds {ho90['eval_seed_range']}, n={ho90['n_per_tier']}/tier)"
+    )
     lines.append(sec3)
     lines.append("-" * len(sec3))
     lines.append("")
-    lines.append("| Tier | Agent / Stage | n | Score [95% Bootstrap CI] | Luck-Adjusted EV [95% CI] | Accuracy | Wrong Accuse | Abstain | Mean Accuse Day |")
-    lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|")
+    lines.append(f"Full held-out per-tier breakdown (`{ho['eval_seed_range']}`, `n={ho['n_per_tier']}/tier`):")
+    lines.append("")
+    lines.append(
+        "| Tier | Agent / Variant | n | Canaries/Ep | Score [95% Bootstrap CI] | Luck-Adjusted EV [95% CI] | Accuracy | Wrong Accuse | Abstain | Mean Accuse Day |"
+    )
+    lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|")
     for tier in TIERS:
-        for ag in ("eb_naive_prior", "eb_likelihood_learned", "eb_experience_opt", "heuristic", "solver"):
+        for ag in all_eval_agents:
             r = ho["by_tier"][tier][ag]
             day_s = f"{r['mean_accuse_day']:.1f}" if r["mean_accuse_day"] is not None else "-"
             lines.append(
-                f"| {tier} | {ag} | {r['n']} | {_fmt_ci(r['score'])} | {_fmt_ci(r['luck_adjusted_ev'])} | "
-                f"{r['accuracy']:.3f} | {r['wrong_accuse_rate']:.3f} | {r['abstain_rate']:.3f} | {day_s} |"
+                f"| {tier} | {ag} | {r['n']} | {r['mean_canaries_planted']:.2f} | {_fmt_ci(r['score'])} | "
+                f"{_fmt_ci(r['luck_adjusted_ev'])} | {r['accuracy']:.3f} | {r['wrong_accuse_rate']:.3f} | "
+                f"{r['abstain_rate']:.3f} | {day_s} |"
             )
 
     lines.append("")
-    lines.append("4. Paired Held-Out Before/After Deltas (95% Paired Bootstrap CI)")
-    lines.append("----------------------------------------------------------------")
+    lines.append(f"Retained `n={ho90['n_per_tier']}/tier` per-tier breakdown (`{ho90['eval_seed_range']}`):")
+    lines.append("")
+    lines.append(
+        "| Tier | Agent / Variant | n | Canaries/Ep | Score [95% Bootstrap CI] | Luck-Adjusted EV [95% CI] | Accuracy | Wrong Accuse | Abstain | Mean Accuse Day |"
+    )
+    lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+    for tier in TIERS:
+        for ag in all_eval_agents:
+            r90 = ho90["by_tier"][tier][ag]
+            day_s = f"{r90['mean_accuse_day']:.1f}" if r90["mean_accuse_day"] is not None else "-"
+            lines.append(
+                f"| {tier} | {ag} | {r90['n']} | {r90['mean_canaries_planted']:.2f} | {_fmt_ci(r90['score'])} | "
+                f"{_fmt_ci(r90['luck_adjusted_ev'])} | {r90['accuracy']:.3f} | {r90['wrong_accuse_rate']:.3f} | "
+                f"{r90['abstain_rate']:.3f} | {day_s} |"
+            )
+
+    lines.append("")
+    sec4 = "4. Paired Held-Out Ablation and Before/After Deltas (95% Paired Bootstrap CI)"
+    lines.append(sec4)
+    lines.append("-" * len(sec4))
     lines.append("")
     lines.append("| Scope | Comparison (After - Before) | Score Delta [95% CI] | Luck-Adjusted EV Delta [95% CI] |")
     lines.append("|---|---|---:|---:|")
     delta_labels = [
-        ("eb_likelihood_learned_minus_eb_naive_prior", "eb_likelihood_learned - eb_naive_prior"),
-        ("eb_experience_opt_minus_eb_likelihood_learned", "eb_experience_opt - eb_likelihood_learned"),
+        ("eb_likelihood_only_minus_eb_naive_prior", "eb_likelihood_only - eb_naive_prior"),
+        ("eb_ev_stop_only_minus_eb_naive_prior", "eb_ev_stop_only - eb_naive_prior"),
+        ("eb_no_canary_planting_minus_eb_naive_prior", "eb_no_canary_planting - eb_naive_prior"),
+        ("eb_experience_opt_minus_eb_no_canary_planting", "eb_experience_opt - eb_no_canary_planting"),
+        ("eb_experience_opt_minus_eb_ev_stop_only", "eb_experience_opt - eb_ev_stop_only"),
+        ("eb_experience_opt_minus_eb_likelihood_only", "eb_experience_opt - eb_likelihood_only"),
         ("eb_experience_opt_minus_eb_naive_prior", "eb_experience_opt - eb_naive_prior"),
         ("eb_experience_opt_minus_heuristic", "eb_experience_opt - heuristic"),
         ("eb_experience_opt_minus_solver", "eb_experience_opt - solver"),
@@ -1677,31 +2009,50 @@ def format_markdown_report(summary: dict[str, Any]) -> str:
     for key, label in delta_labels:
         d_ov = ho["paired_deltas"]["overall"][key]
         lines.append(
-            f"| overall (n={ho['n_total_per_agent']}) | {label} | {_fmt_ci(d_ov['score_delta'])} | {_fmt_ci(d_ov['luck_adjusted_delta'])} |"
+            f"| overall {ho['eval_seed_range']} (n={ho['n_total_per_agent']}) | {label} | {_fmt_ci(d_ov['score_delta'])} | {_fmt_ci(d_ov['luck_adjusted_delta'])} |"
         )
+    for key, label in delta_labels:
+        d_ov90 = ho90["paired_deltas"]["overall"][key]
+        lines.append(
+            f"| subset {ho90['eval_seed_range']} (n={ho90['n_total_per_agent']}) | {label} | {_fmt_ci(d_ov90['score_delta'])} | {_fmt_ci(d_ov90['luck_adjusted_delta'])} |"
+        )
+    tier_delta_subset = [
+        ("eb_likelihood_only_minus_eb_naive_prior", "eb_likelihood_only - eb_naive_prior"),
+        ("eb_ev_stop_only_minus_eb_naive_prior", "eb_ev_stop_only - eb_naive_prior"),
+        ("eb_experience_opt_minus_eb_no_canary_planting", "eb_experience_opt - eb_no_canary_planting"),
+        ("eb_experience_opt_minus_eb_likelihood_only", "eb_experience_opt - eb_likelihood_only"),
+        ("eb_experience_opt_minus_eb_naive_prior", "eb_experience_opt - eb_naive_prior"),
+        ("eb_experience_opt_minus_heuristic", "eb_experience_opt - heuristic"),
+    ]
     for tier in TIERS:
-        for key, label in delta_labels[:4]:
+        for key, label in tier_delta_subset:
             d_tr = ho["paired_deltas"]["by_tier"][tier][key]
             lines.append(
-                f"| {tier} (n={ho['n_per_tier']}) | {label} | {_fmt_ci(d_tr['score_delta'])} | {_fmt_ci(d_tr['luck_adjusted_delta'])} |"
+                f"| {tier} {ho['eval_seed_range']} (n={ho['n_per_tier']}) | {label} | {_fmt_ci(d_tr['score_delta'])} | {_fmt_ci(d_tr['luck_adjusted_delta'])} |"
             )
 
     lines.append("")
-    sec5 = f"5. Keyless Dev Hard {dh['eval_seed_range']} Paired Comparison vs Solver and Committed gemini-4-carbon (n={dh['n_seeds']})"
+    sec5 = (
+        f"5. Keyless Reference Comparison on Post-Hoc Locked Dev Hard {dh['eval_seed_range']} "
+        f"vs Solver and Committed gemini-4-carbon (n={dh['n_seeds']})"
+    )
     lines.append(sec5)
     lines.append("-" * len(sec5))
     lines.append("")
-    lines.append("| Agent / Stage | n | Score [95% Bootstrap CI] | Luck-Adjusted EV [95% CI] | Accuracy | Wrong Accuse | Abstain | Mean Accuse Day |")
+    lines.append(
+        f"- Seed protocol: `{dh['protocol_label']}` keyless public worlds (`b\"public\"`, locked after primary commitment to prevent cherry-picking; evaluated with zero LLM API calls against committed `gemini-4-carbon` episodes and in-process `solver`)."
+    )
+    lines.append("")
+    lines.append(
+        "| Agent / Variant | n | Score [95% Bootstrap CI] | Luck-Adjusted EV [95% CI] | Accuracy | Wrong Accuse | Abstain | Mean Accuse Day |"
+    )
     lines.append("|---|---:|---:|---:|---:|---:|---:|---:|")
-    for ag in (
-        "eb_naive_prior",
-        "eb_likelihood_learned",
-        "eb_experience_opt",
+    for ag in list(ABLATION_VARIANTS) + [
         "heuristic",
         "opencode:google/gemini-4-carbon",
         "gemini:gemini-4-carbon",
         "solver",
-    ):
+    ]:
         r = dh["agents"][ag]
         day_s = f"{r['mean_accuse_day']:.1f}" if r["mean_accuse_day"] is not None else "-"
         lines.append(
@@ -1710,11 +2061,15 @@ def format_markdown_report(summary: dict[str, Any]) -> str:
         )
 
     lines.append("")
-    lines.append("| Dev Hard Paired Comparison | Score Delta [95% CI] | Luck-Adjusted EV Delta [95% CI] |")
+    lines.append(
+        f"| Post-Hoc Locked Dev Hard {dh['eval_seed_range']} Paired Comparison | Score Delta [95% CI] | Luck-Adjusted EV Delta [95% CI] |"
+    )
     lines.append("|---|---:|---:|")
     for key, label in [
         ("eb_experience_opt_minus_eb_naive_prior", "eb_experience_opt - eb_naive_prior"),
-        ("eb_experience_opt_minus_eb_likelihood_learned", "eb_experience_opt - eb_likelihood_learned"),
+        ("eb_experience_opt_minus_eb_ev_stop_only", "eb_experience_opt - eb_ev_stop_only"),
+        ("eb_experience_opt_minus_eb_no_canary_planting", "eb_experience_opt - eb_no_canary_planting"),
+        ("eb_experience_opt_minus_eb_likelihood_only", "eb_experience_opt - eb_likelihood_only"),
         ("eb_experience_opt_minus_heuristic", "eb_experience_opt - heuristic"),
         ("eb_experience_opt_minus_opencode_gemini_4_carbon", "eb_experience_opt - opencode:google/gemini-4-carbon"),
         ("eb_experience_opt_minus_inproc_gemini_4_carbon", "eb_experience_opt - gemini:gemini-4-carbon"),
@@ -1743,7 +2098,7 @@ def format_markdown_report(summary: dict[str, Any]) -> str:
 def run_full_pipeline(
     stage2_count: int = 180,
     stage3_count: int = 180,
-    heldout_count: int = 30,
+    heldout_count: int = 60,
     dev_count: int = 30,
     checkpoint_dir: str = DEFAULT_CHECKPOINT_DIR,
     results_dir: str = DEFAULT_RESULTS_DIR,
@@ -1765,6 +2120,7 @@ def run_full_pipeline(
     stage1_params = make_naive_prior_params()
     stage2_params, stage2_stats = fit_empirical_likelihoods(stage2_seeds, laplace_alpha=1.0)
     stage3_params, stage3_stats = optimize_stopping_and_splits(stage2_params, stage3_seeds)
+    variant_params = build_ablation_variant_params(stage1_params, stage2_params, stage3_params)
 
     ckpt_path = Path(checkpoint_dir)
     ckpt_path.mkdir(parents=True, exist_ok=True)
@@ -1772,9 +2128,8 @@ def run_full_pipeline(
         "train_seed_range": f"{stage2_seeds[0]}..{stage3_seeds[-1]}",
         "stage2_seed_range": f"{stage2_seeds[0]}..{stage2_seeds[-1]}",
         "stage3_seed_range": f"{stage3_seeds[0]}..{stage3_seeds[-1]}",
-        "eb_naive_prior": stage1_params.to_dict(),
-        "eb_likelihood_learned": stage2_params.to_dict(),
-        "eb_experience_opt": stage3_params.to_dict(),
+        **{v_name: variant_params[v_name].to_dict() for v_name in ABLATION_VARIANTS},
+        "eb_likelihood_learned": variant_params["eb_likelihood_only"].to_dict(),
     }
     (ckpt_path / "checkpoints.json").write_text(
         json.dumps(checkpoints_payload, indent=2, sort_keys=True) + "\n",
@@ -1798,6 +2153,7 @@ def run_full_pipeline(
     secret_sha256_tag = "sha256:" + hashlib.sha256(heldout_secret.encode("utf-8")).hexdigest()[:16]
     headline_delta = eval_out["heldout"]["paired_deltas"]["overall"]["eb_experience_opt_minus_eb_naive_prior"]["score_delta"]
     headline_luck_delta = eval_out["heldout"]["paired_deltas"]["overall"]["eb_experience_opt_minus_eb_naive_prior"]["luck_adjusted_delta"]
+    headline_n90_delta = eval_out["heldout_n90"]["paired_deltas"]["overall"]["eb_experience_opt_minus_eb_naive_prior"]["score_delta"]
     summary: dict[str, Any] = {
         "run_id": "empirical-bayes-v14",
         "model": "EmpiricalBayesPolicy (likelihood + optimal stopping learned on TRAIN_SEEDS)",
@@ -1832,33 +2188,38 @@ def run_full_pipeline(
         },
         "notes": (
             f"Learned log-likelihood ratios ({stage2_count} eps) + optimal stopping/splits ({stage3_count} eps) "
-            f"strictly on TRAIN_SEEDS; paired held-out luck-adjusted EV delta {headline_luck_delta['mean']:+.3f}."
+            f"strictly on TRAIN_SEEDS; paired held-out n={gm['n']} (800000..{heldout_seeds[-1]}) "
+            f"luck-adjusted EV delta {headline_luck_delta['mean']:+.3f} "
+            f"(n={eval_out['heldout_n90']['n_total_per_agent']} subset score delta {headline_n90_delta['mean']:+.3f})."
         ),
         "world_secret_tag": heldout_secret,
         "train_seed_range": f"{stage2_seeds[0]}..{stage3_seeds[-1]}",
         "stage2_seed_range": f"{stage2_seeds[0]}..{stage2_seeds[-1]}",
         "stage3_seed_range": f"{stage3_seeds[0]}..{stage3_seeds[-1]}",
         "eval_seed_range": f"{heldout_seeds[0]}..{heldout_seeds[-1]}",
+        "eval_n90_seed_range": eval_out["heldout_n90"]["eval_seed_range"],
         "dev_eval_seed_range": f"{dev_seeds[0]}..{dev_seeds[-1]}",
+        "dev_protocol_label": eval_out["dev_hard"]["protocol_label"],
         "total_episodes_replayed": eval_out["total_episodes_replayed"],
         "workers": workers,
         "elapsed_seconds": elapsed,
         "parameters": {
-            "eb_naive_prior": stage1_params.to_dict(),
-            "eb_likelihood_learned": stage2_params.to_dict(),
-            "eb_experience_opt": stage3_params.to_dict(),
+            **{v_name: variant_params[v_name].to_dict() for v_name in ABLATION_VARIANTS},
+            "eb_likelihood_learned": variant_params["eb_likelihood_only"].to_dict(),
         },
         "learned_theta": {
-            "eb_naive_prior": stage1_params.theta_dict(),
-            "eb_likelihood_learned": stage2_params.theta_dict(),
-            "eb_experience_opt": stage3_params.theta_dict(),
+            **{v_name: variant_params[v_name].theta_dict() for v_name in ABLATION_VARIANTS},
+            "eb_likelihood_learned": variant_params["eb_likelihood_only"].theta_dict(),
         },
         "headline_heldout_improvement": headline_delta,
+        "headline_heldout_n90_improvement": headline_n90_delta,
+        "component_ablation_matrix": eval_out["component_ablation_matrix"],
         "training": {
             "stage2": stage2_stats,
             "stage3": stage3_stats,
         },
         "heldout": eval_out["heldout"],
+        "heldout_n90": eval_out["heldout_n90"],
         "dev_hard": eval_out["dev_hard"],
     }
 
@@ -1879,7 +2240,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--stage2-n", type=int, default=180)
     ap.add_argument("--stage3-n", type=int, default=180)
-    ap.add_argument("--heldout-n", type=int, default=30)
+    ap.add_argument("--heldout-n", type=int, default=60)
     ap.add_argument("--dev-n", type=int, default=30)
     ap.add_argument("--checkpoint-dir", default=DEFAULT_CHECKPOINT_DIR)
     ap.add_argument("--results-dir", default=DEFAULT_RESULTS_DIR)
@@ -1901,11 +2262,18 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "replay_verified": summary["replay_verified"],
                 "elapsed_seconds": summary["elapsed_seconds"],
-                "headline_heldout_improvement": summary["headline_heldout_improvement"],
-                "heldout_overall_eb_naive_prior": summary["heldout"]["overall"]["eb_naive_prior"]["score"],
-                "heldout_overall_eb_likelihood_learned": summary["heldout"]["overall"]["eb_likelihood_learned"]["score"],
-                "heldout_overall_eb_experience_opt": summary["heldout"]["overall"]["eb_experience_opt"]["score"],
-                "heldout_overall_solver": summary["heldout"]["overall"]["solver"]["score"],
+                "n": summary["n"],
+                "total_episodes_replayed": summary["total_episodes_replayed"],
+                "headline_heldout_n180_improvement": summary["headline_heldout_improvement"],
+                "headline_heldout_n90_improvement": summary["headline_heldout_n90_improvement"],
+                "heldout_n180_eb_naive_prior": summary["heldout"]["overall"]["eb_naive_prior"]["score"],
+                "heldout_n180_eb_likelihood_only": summary["heldout"]["overall"]["eb_likelihood_only"]["score"],
+                "heldout_n180_eb_ev_stop_only": summary["heldout"]["overall"]["eb_ev_stop_only"]["score"],
+                "heldout_n180_eb_no_canary_planting": summary["heldout"]["overall"]["eb_no_canary_planting"]["score"],
+                "heldout_n180_eb_experience_opt": summary["heldout"]["overall"]["eb_experience_opt"]["score"],
+                "heldout_n180_solver": summary["heldout"]["overall"]["solver"]["score"],
+                "heldout_n90_eb_experience_opt": summary["heldout_n90"]["overall"]["eb_experience_opt"]["score"],
+                "dev_hard_protocol": summary["dev_hard"]["protocol_label"],
                 "dev_hard_eb_experience_opt": summary["dev_hard"]["agents"]["eb_experience_opt"]["score"],
                 "dev_hard_opencode_carbon": summary["dev_hard"]["agents"]["opencode:google/gemini-4-carbon"]["score"],
                 "dev_hard_solver": summary["dev_hard"]["agents"]["solver"]["score"],

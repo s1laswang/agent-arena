@@ -79,7 +79,7 @@ Two things would not have fit on a laptop, and they did not fit on our V100 clus
 - wrong accusation is −1;
 - abstaining is 0.
 
-GRPO training scores actions by letting the solver finish the episode; evaluation never does. Sources: `fr8/analysis/out/ws4_table_v3s0_n180.md` and `ws4_table_8k_s1s2.md` (justSilas-fr8, two-sample Δ). The 8k seeds are reported per seed, not pooled: they ran different step counts on different GPUs.
+GRPO training scores actions by letting the solver finish the episode; evaluation never does. Sources: `fr8/analysis/out/ws4_table_v3.md` (all rows), `ws4_table_v3s0_n180.md` and `ws4_table_8k_s1s2.md` (justSilas-fr8, two-sample Δ). The 8k seeds are reported per seed, not pooled: they ran different step counts on different GPUs.
 
 | model | trained where | evaluated where | n (held-out episodes) | score ± 95% CI | accused | correct | abstain | Δ vs v2 (two-sample, n vs n) |
 |---|---|---|---|---|---|---|---|---|
@@ -93,7 +93,7 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | v3-8k s2 GRPO, 693 steps | [Verda] H100 spot `dbd083ca` | [Verda] H100 | 90 | −0.050 ± 0.049 | 0.07 | 0.01 | 0.93 | +0.408 ± 0.099 (90 vs 172) |
 | v3-8k s3 | [Verda] A100 on-demand | [Verda] | pending | pending | | | | |
 | v3-4k s1, 192 steps (partial) | [FR8] V100 (job 44572) | [FR8] V100 | 25 | −0.240 ± 0.171 | 0.24 | 0.00 | 0.76 | +0.217 ± 0.191 (25 vs 172) |
-| v3-4k s0 **evaluated at 8k context** (same weights; reported by X2, not yet verified by FR8) | [Verda] H100 | [Verda] A100 `68bbe201`, shared secret | 90 | −0.716 ± 0.105 | 0.78 | 0.03 (3/70 accusations right) | 0.22 | −0.259 ± 0.136 (90 vs 172) |
+| v3-4k s0 **evaluated at 8k context** (same weights; X2 run, verified by FR8 at 05:00) | [Verda] H100 | [Verda] A100 `68bbe201`, shared secret | 90 | −0.716 ± 0.105 | 0.78 | 0.03 (3/70 accusations right) | 0.22 | −0.258 ± 0.136 (90 vs 172) |
 | DAgger round 1 (SFT from v3-4k s0, 250 steps, 4,000 solver-labelled own-state examples) | [Verda] A100 40GB `e9ea8b2e` | [Verda], shared secret, at 4k and 8k context | pending (`docs/reports/dagger.md`) | pending | | | | |
 
 **Reading it honestly:**
@@ -110,8 +110,8 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
   - s1 (A100, 371 steps) scores −0.777 by over-accusing.
   - Seed and step count both differ, so the cause can't be identified from two runs.
   - On the same 3 h budget and 8k context, the H100 did 693 steps vs 371 on the A100 (1.9×).
-- **The 8k rows are confounded by inference context** (X2, 04:47, not yet verified by FR8).
-  - The *same* v3-4k s0 weights evaluated at 8k context score −0.716 ± 0.105 and accuse on 78% of episodes, vs −0.147 at 4k.
+- **The 8k rows are confounded by inference context** (X2, verified by FR8).
+  - The *same* v3-4k s0 weights evaluated at 8k context score −0.716 ± 0.105 and accuse on 78% of episodes, vs −0.147 at 4k: Δ −0.568 ± 0.123.
   - So most of 8k s1's over-accusing comes from running at 8k context, not from what 8k training taught: every adapter descends from v2's 4k SFT.
   - The 8k rows can't be read as a clean test of seeing more history. DAgger is evaluated at both 4k and 8k for this reason.
 - **8k context does not fix the diagnosis.**

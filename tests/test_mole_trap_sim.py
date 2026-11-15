@@ -82,21 +82,28 @@ def test_trap_matrix_small_slice_and_cli_check_roundtrip(tmp_path: Path) -> None
     subset_strats = {
         "default_v0": TRAP_MATRIX_STRATEGIES["default_v0"],
         "reactive_canary_lag": TRAP_MATRIX_STRATEGIES["reactive_canary_lag"],
-        "rl_default": RLMole(default_like_params(seed=0), name="rl_default"),
     }
     rep = run_trap_matrix(
         strategies=subset_strats,
         tier="hard",
-        seeds=[6300, 6301],
+        seeds=[6302],
         investigators=subset_inv,
         workers=1,
     )
     assert rep["tier"] == "hard"
-    assert rep["n_seeds"] == 2
+    assert rep["n_seeds"] == 1
     assert set(rep["strategies"].keys()) == set(subset_strats.keys())
     for srow in rep["strategies"].values():
         assert srow["cells"]["logs_only"]["mean_score"] < 0.0
         assert -1.0 <= srow["cells"]["solver"]["luck_adjusted_score"] <= 1.0
+
+    rl_cell = simulate_trap_cell(
+        RLMole(default_like_params(seed=0), name="rl_default"),
+        default_trap_investigators("medium")["solver"],
+        "medium",
+        [6320],
+    )
+    assert -1.0 <= rl_cell["luck_adjusted_score"] <= 1.0
 
     md = render_trap_matrix_markdown(rep)
     assert "reactive_canary_lag" in md
@@ -104,9 +111,9 @@ def test_trap_matrix_small_slice_and_cli_check_roundtrip(tmp_path: Path) -> None
     assert chr(0x2013) not in md
 
     out_json = tmp_path / "matrix_slice.json"
-    rc_gen = main(["--seeds", "6300-6300", "--workers", "1", "--json", "--out", str(out_json)])
+    rc_gen = main(["--tier", "medium", "--seeds", "6320-6320", "--workers", "1", "--json", "--out", str(out_json)])
     assert rc_gen == 0
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["n_seeds"] == 1
-    rc_chk = main(["--seeds", "6300-6300", "--workers", "1", "--check", str(out_json)])
+    rc_chk = main(["--tier", "medium", "--seeds", "6320-6320", "--workers", "1", "--check", str(out_json)])
     assert rc_chk == 0

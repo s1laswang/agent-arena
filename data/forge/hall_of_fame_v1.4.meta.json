@@ -1,0 +1,199 @@
+{
+  "code_sha": "c5bd1676",
+  "tiers_version": "v1.4",
+  "tier": "hard",
+  "train_seeds": "200:600",
+  "seeds": "6200:6230",
+  "n_seeds": 30,
+  "outcome_seeds": "6000:6010",
+  "min_solver_acc": 0.85,
+  "min_solver_ratio": 0.5,
+  "min_view_disagreement": 0.15,
+  "feasibility": "solver_score >= 0.5 x default-mole solver score AND solver_acc >= 0.85 on fresh v1.4 hard seeds AND min_regret > 0 across heuristic, hinted_heuristic, grok_tactics, gemini_carbon_proxy, codex_horizon_proxy AND all 7 fairness_audit checks + fuzz hunt passed on audit seeds",
+  "dedupe_method": "two-stage behavioural + outcome diversity: unique 64-view MoleView decision hash, unique world-level (agent, seed, day, event, doc_id|frame_target) outcome hash under do_nothing and solver on hard seeds 6000:6010, and pairwise representative-view disagreement >= 0.15",
+  "n_candidates_screened": 21,
+  "n_train_feasible": 4,
+  "n_survivors": 4,
+  "source_strategies": [
+    "cand_01_j5c_gen1_02",
+    "cand_02_j5c_gen1_00",
+    "cand_03_non_decoy_tiebreak_framer",
+    "cand_04_late_horizon_stall_hybrid"
+  ],
+  "outcome_groups": {
+    "cand_01_j5c_gen1_02": [
+      "cand_01_j5c_gen1_02"
+    ],
+    "cand_02_j5c_gen1_00": [
+      "cand_02_j5c_gen1_00"
+    ],
+    "cand_03_non_decoy_tiebreak_framer": [
+      "cand_03_non_decoy_tiebreak_framer"
+    ],
+    "cand_04_late_horizon_stall_hybrid": [
+      "cand_04_late_horizon_stall_hybrid"
+    ]
+  },
+  "group_sizes": {
+    "cand_01_j5c_gen1_02": 1,
+    "cand_02_j5c_gen1_00": 1,
+    "cand_03_non_decoy_tiebreak_framer": 1,
+    "cand_04_late_horizon_stall_hybrid": 1
+  },
+  "baseline_default_mole": {
+    "solver_score": 0.524333,
+    "solver_acc": 0.933333,
+    "min_regret": 0.060667,
+    "mean_regret": 0.118467,
+    "per_investigator": {
+      "codex_horizon_proxy": {
+        "score": 0.463667,
+        "acc": 0.933333,
+        "regret": 0.060667
+      },
+      "gemini_carbon_proxy": {
+        "score": 0.451,
+        "acc": 0.8,
+        "regret": 0.073333
+      },
+      "grok_tactics": {
+        "score": 0.426333,
+        "acc": 0.8,
+        "regret": 0.098
+      },
+      "heuristic": {
+        "score": 0.264333,
+        "acc": 0.966667,
+        "regret": 0.26
+      },
+      "hinted_heuristic": {
+        "score": 0.424,
+        "acc": 0.9,
+        "regret": 0.100333
+      }
+    }
+  },
+  "behavioral_diversity": {
+    "n_strategies": 4,
+    "unique_behavior_hashes": 4,
+    "unique_outcome_hashes": 4,
+    "all_behavior_hashes_unique": true,
+    "all_outcome_hashes_unique": true,
+    "min_pairwise_view_disagreement": 0.4688,
+    "mean_pairwise_view_disagreement": 0.7865,
+    "leak_rate_span": 0.0161,
+    "frame_rate_span": 0.0156,
+    "high_rc_share_span": 0.0968,
+    "distinct_leak_selectors": [
+      "most_recipients",
+      "newest",
+      "none",
+      "oldest",
+      "random_seeded"
+    ],
+    "distinct_frame_selectors": [
+      "decoy",
+      "most_restricted_peer",
+      "random_peer"
+    ]
+  },
+  "survivors": [
+    {
+      "rank": 1,
+      "candidate_id": "cand_03_non_decoy_tiebreak_framer",
+      "label": "non_decoy_tiebreak_framer",
+      "origin": "empirical_archetype",
+      "behavior_hash": "eb452649e501ad9f571a7a049b65cf6a",
+      "outcome_hash": "188b721c74eb39b7",
+      "behavior_profile": {
+        "behavior_hash": "eb452649e501ad9f571a7a049b65cf6a",
+        "leak_rate": 1.0,
+        "high_rc_share": 0.9194,
+        "frame_rate": 1.0
+      },
+      "holdout_solver_acc": 0.966667,
+      "holdout_solver_score": 0.628667,
+      "holdout_min_regret": 0.246333,
+      "holdout_mean_regret": 0.4244,
+      "min_regret_gain_vs_default": 0.185667,
+      "mean_regret_gain_vs_default": 0.305933,
+      "audit_solver_acc": 1.0,
+      "audit_solver_score": 0.568,
+      "audit_regret_gain": 0.127,
+      "fuzz_best_non_solver_score": 0.0
+    },
+    {
+      "rank": 2,
+      "candidate_id": "cand_01_j5c_gen1_02",
+      "label": "j5c_gen1_02",
+      "origin": "v14_mutator_gen1",
+      "behavior_hash": "4e0ec1826dbcbe66274acf44cbc5928e",
+      "outcome_hash": "d6b94d476a62e8b9",
+      "behavior_profile": {
+        "behavior_hash": "4e0ec1826dbcbe66274acf44cbc5928e",
+        "leak_rate": 0.9839,
+        "high_rc_share": 0.918,
+        "frame_rate": 1.0
+      },
+      "holdout_solver_acc": 1.0,
+      "holdout_solver_score": 0.604333,
+      "holdout_min_regret": 0.222667,
+      "holdout_mean_regret": 0.335533,
+      "min_regret_gain_vs_default": 0.162,
+      "mean_regret_gain_vs_default": 0.217067,
+      "audit_solver_acc": 1.0,
+      "audit_solver_score": 0.63,
+      "audit_regret_gain": 0.229,
+      "fuzz_best_non_solver_score": 0.0
+    },
+    {
+      "rank": 3,
+      "candidate_id": "cand_02_j5c_gen1_00",
+      "label": "j5c_gen1_00",
+      "origin": "v14_mutator_gen1",
+      "behavior_hash": "4e70874194ef17a00812c470328095c6",
+      "outcome_hash": "7719c1506a4c93d6",
+      "behavior_profile": {
+        "behavior_hash": "4e70874194ef17a00812c470328095c6",
+        "leak_rate": 1.0,
+        "high_rc_share": 0.8226,
+        "frame_rate": 1.0
+      },
+      "holdout_solver_acc": 0.966667,
+      "holdout_solver_score": 0.589667,
+      "holdout_min_regret": 0.207,
+      "holdout_mean_regret": 0.2912,
+      "min_regret_gain_vs_default": 0.146333,
+      "mean_regret_gain_vs_default": 0.172733,
+      "audit_solver_acc": 1.0,
+      "audit_solver_score": 0.631,
+      "audit_regret_gain": 0.155,
+      "fuzz_best_non_solver_score": 0.0
+    },
+    {
+      "rank": 4,
+      "candidate_id": "cand_04_late_horizon_stall_hybrid",
+      "label": "late_horizon_stall_hybrid",
+      "origin": "empirical_archetype",
+      "behavior_hash": "63e60e2cb0e7bf92c43bba61255ada88",
+      "outcome_hash": "015006ebe38be41b",
+      "behavior_profile": {
+        "behavior_hash": "63e60e2cb0e7bf92c43bba61255ada88",
+        "leak_rate": 1.0,
+        "high_rc_share": 0.8548,
+        "frame_rate": 0.9844
+      },
+      "holdout_solver_acc": 0.933333,
+      "holdout_solver_score": 0.558667,
+      "holdout_min_regret": 0.100667,
+      "holdout_mean_regret": 0.397733,
+      "min_regret_gain_vs_default": 0.04,
+      "mean_regret_gain_vs_default": 0.279267,
+      "audit_solver_acc": 0.9,
+      "audit_solver_score": 0.584,
+      "audit_regret_gain": 0.213,
+      "fuzz_best_non_solver_score": 0.0
+    }
+  ],
+  "write_command": "python -m canary.mole.hof_v14 build --tier hard --train-seeds 200-599 --holdout-seeds 6200-6229 --audit-seeds 6000-6009"
+}

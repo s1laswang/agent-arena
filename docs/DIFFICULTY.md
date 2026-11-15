@@ -38,6 +38,8 @@ Nothing on this page changes a rule or the instruction text. **CEO decision (bef
 
 ---
 
+- **W4. `access_constraints` on hard is a no-op.** The rule restricts canaries to employees cleared for the document, but `canary_level = 1` and every employee's clearance is 1–3, so it never binds. It is stated in the parameter block and changes no outcome; it is a leftover knob, disclosed here rather than silently removed (rules are frozen at v1.4).
+
 ## Part 1. The agent's main mistakes (v1.4 hard, the judges' harness)
 
 OpenCode + gemini-4-carbon over MCP, 30 dev seeds, paired with the reference solver: **65% of the solver (72% luck-adjusted)**.

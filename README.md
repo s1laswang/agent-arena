@@ -23,6 +23,7 @@ A simulated company has one **mole** who leaks documents to a rival. Every leak 
   - *Luck-adjusted* scores each accusation by its expected value under the solver's posterior, so it separates decisions from luck.
 - **Honest reading.** The same model run in-process reaches 95% [62%, 140%] on hard, and OpenCode reaches 111% on medium. The gap is on hard, in the judges' harness. A random accusation on day 1 (`guess_day1`) averages −0.95 on hard ([`results/solver_range/guess_day1_hard_judge40.md`](results/solver_range/guess_day1_hard_judge40.md)).
 - **Infra retries, disclosed.** Some OpenCode attempts ended on an empty model reply (a Gemini/OpenCode client failure, not a decision). Those attempts were retried and never counted. If they are instead scored 0, OpenCode hard is 56% [19%, 87%] of the solver (luck-adjusted 55% [34%, 77%]): the gap widens, so retrying is the conservative choice. Source: the "alternative" row in the paired table.
+- **Harness difference, disclosed.** The committed headline runs used OpenCode with only the 13 MCP tools: `bash`/`python3` were denied. The Harbor template's agent container allows `bash` and `python3`, which cannot reach the world, the seed or the ledger (isolation check: 11/11). So in a Harbor rerun the agent may also compute with Python. The judge rehearsal (`results/harbor/rehearsal/`) uses the Harbor setting, so it measures exactly what you will run.
 
 ## Reproduce: one command, no API keys
 

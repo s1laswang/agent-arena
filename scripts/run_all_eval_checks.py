@@ -449,7 +449,7 @@ def _load_repo_milestones(root: Path) -> dict[str, Any]:
             "committed_dir_present": (root / "data/runs/committed/v1.4/opencode-gpt-5.5").is_dir(),
         },
         "harbor_rehearsal_final": {
-            "commit": "c59ecfd0",
+            "commit": "aa1c679e",
             "env_tag": "afterquery-final",
             "table_present": (root / "results/harbor/rehearsal/TABLE.md").is_file(),
         },
@@ -992,8 +992,8 @@ def render_overview_md(core_summary: dict[str, Any]) -> str:
     hr_final = rm.get("harbor_rehearsal_final") or {}
     if hr_final.get("table_present"):
         lines.append(
-            f"- **Harbor judge-path rehearsal (`{hr_final.get('commit', 'c59ecfd0')}`, `results/harbor/rehearsal/TABLE.md`, tag `{hr_final.get('env_tag', 'afterquery-final')}` `1bc3e281`):** "
-            "Harbor 0.26.0 + OpenCode + `gemini-4-carbon` across `3` runs on `10` hard judge tasks (`900000-900009`; shell enabled in container, used in `20/28` trials) scored `+0.472` (`93%`), `+0.585` (`116%`), and `+0.656` (`153%`, partial `n = 7` valid) vs same-task oracle `+0.506` / `+0.429` (`do_nothing = stop_early = +0.000`); the `65%` MCP-only gap did **not** reproduce in the Harbor judge path."
+            f"- **Harbor judge-path rehearsal (`{hr_final.get('commit', 'aa1c679e')}`, `results/harbor/rehearsal/TABLE.md`, tag `{hr_final.get('env_tag', 'afterquery-final')}` `1bc3e281`):** "
+            "Harbor 0.26.0 + OpenCode + `gemini-4-carbon` across `3` runs on `10` hard judge tasks (`900000-900009`; shell enabled in container, used in `20/28` trials; `28/29` valid accusations correct) scored `+0.472` (`93%`), `+0.585` (`116%`), and `+0.626` (`131%`, `n = 9` valid; corrected in `aa1c679e` from the `08:52` partial `n = 7` `+0.656` / `153%` snapshot, full trials on `s1-rehearsal-final` `d0ead011`) vs same-task oracle `+0.506` (`do_nothing = stop_early = +0.000`); the `65%` MCP-only gap did **not** reproduce in the Harbor judge path."
         )
 
     lines.extend(

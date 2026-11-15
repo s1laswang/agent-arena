@@ -9,10 +9,11 @@
   },
   "summary_counts": {
     "historical_runs": 18,
-    "discovered_runs": 1,
-    "total_runs": 19,
-    "verified_improvements": 1,
+    "discovered_runs": 2,
+    "total_runs": 20,
+    "verified_improvements": 2,
     "verified_run_ids": [
+      "compact-linear-dagger-v14",
       "empirical-bayes-v14"
     ],
     "by_status": {
@@ -31,7 +32,7 @@
       "NEGATIVE_PAIRED_8K_NULL": 1,
       "NEGATIVE_DAGGER_INTERIM_BELOW_BASE": 1,
       "FAILED_REAPER_DELETED": 1,
-      "VERIFIED_IMPROVEMENT": 1
+      "VERIFIED_IMPROVEMENT": 2
     }
   },
   "calibrated_v14_dataset": {
@@ -1432,6 +1433,40 @@
     }
   ],
   "discovered_runs": [
+    {
+      "run_id": "compact-linear-dagger-v14",
+      "source": "discovered",
+      "summary_path": "results/tiebreak/dagger_ablation/summary.json",
+      "model": "CompactLinearDAggerPolicy (4-stage SFT vs BC vs On-Policy DAgger)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "heldout_n": 180,
+      "before_mean_score": 0.0,
+      "after_mean_score": 0.6267,
+      "paired_mean_delta": 0.6267,
+      "paired_ci95_low": 0.5775,
+      "paired_ci95_high": 0.6759,
+      "before_valid_call_rate": 1.0,
+      "after_valid_call_rate": 1.0,
+      "before_world_secret_tag": "sha256:ebf2f09716cf76d3",
+      "after_world_secret_tag": "sha256:ebf2f09716cf76d3",
+      "replay_verified": true,
+      "verified_improvement": true,
+      "status": "VERIFIED_IMPROVEMENT",
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": true,
+        "gate3_sample_and_replay": true,
+        "gate4_paired_ci95_positive": true,
+        "all_passed": true,
+        "reasons": []
+      },
+      "notes": "4-stage covariate-shift ablation strictly on TRAIN_SEEDS (109000..109509); held-out n=180 (800000..800059) score +0.000 -> +0.627 (DAgger vs calibrated BC +0.150, DAgger vs survivorship SFT +0.109)."
+    },
     {
       "run_id": "empirical-bayes-v14",
       "source": "discovered",

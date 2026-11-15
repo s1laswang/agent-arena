@@ -5,7 +5,7 @@ Deterministic readiness audit for `README.md` (`Tiebreak: a small model trained 
 - Track 1 Open-Weight LLM DAgger Status: `AWAITING_V100_COMPLETION`
 - README Addendum Action: `HOLD_README_QWEN_ADDENDUM_UNTIL_V100`
 - Track 1 Passing Runs (`Qwen2.5-1.5B` / `Qwen2.5-0.5B` / `TinyMLP`): `1 / 1`
-- Track 2 Non-LLM Parametric Controls Passing 5/5 Criteria: `2 / 2`
+- Track 2 Non-LLM Parametric Controls Passing 5/5 Criteria: `3 / 3`
 
 ## 1. Ready-to-Paste `README.md` Tiebreak Addendum (Track 1: Open-Weight LLM / Neural Policies)
 
@@ -30,12 +30,13 @@ Deterministic readiness audit for `README.md` (`Tiebreak: a small model trained 
 - **Open-Weight LLM DAgger Status (`AWAITING_V100_COMPLETION`)**: no `Qwen2.5` V100 LoRA run has completed all 5 gates yet (so the `README.md` Qwen addendum stays withheld per `PANEL-0500.md`), while Track 1 compact neural policy `tiny-mlp-dagger-v14` (Compact neural MLP (TinyMLPPolicy, non-LLM)) passes 5/5 gates at `+0.614 +/- 0.049 [+0.565, +0.663]` (paired delta `+1.470 [+1.385, +1.554]`, `n=180`).
 - **Published Raw-Context Qwen2.5-1.5B Progression (`README.md`, `justSilas-fr8`, Verda X2)**: reward training beat `v2` (`-0.457 +/- 0.086`, `n=172`) across `v3-4k s0` (`-0.147 +/- 0.063`, `n=180`), `v3-4k s1` (`-0.209 +/- 0.094`, `n=82`), and 600+ step 8k GRPO (`v3-8k s0` `-0.060 +/- 0.054` with paired `+0.728 +/- 0.134` vs `s3` `-0.788 +/- 0.117` under shared secret `1ca0c2a64d`; `v3-8k s2` `-0.050 +/- 0.049`, `v3-8k s1` `-0.777 +/- 0.118`), while Verda X2 `DAgger r1` ended as an honest null (`-0.542 +/- 0.214` at 8k `n=50` partial, paired `+0.242 +/- 0.304` `n=43` vs `v3-4k s0 @8k`; `-0.101 +/- 0.112` at 4k `n=41` partial, paired `-0.031 +/- 0.139` `n=32`), with none above `base` (`0.000`, `n=36`).
 - **5-Criterion Panel Fix E Gate**: every candidate run is machine-checked for (1) `heldout_mean_gt_zero` (`after.mean_score > 0` and `after_ci95_low > 0`), (2) `paired_delta_ci95_gt_zero` under one shared `world_secret_tag` on `HELDOUT_SEEDS [800000, 800200)`, (3) `train_eval_disjoint` strictly inside `TRAIN_SEEDS [100000, 200000)`, (4) `replay_and_zero_errors` (`n >= 30`, `replay_verified = True`, `invalid_episodes = 0`), and (5) AST-verified `autonomous_inference` (`0` `canary.solver` / `canary.world` imports).
-- **Track 2 Non-LLM Parametric Controls (Strictly Separated from Qwen LoRA)**: `empirical-bayes-v14` (`EmpiricalBayesPolicy`, held-out `+0.607 +/- 0.044 [+0.559, +0.648]`, paired delta `+1.028 [+0.915, +1.141]`, `n=180`); `scaling-logistic-v14` (`ScalingLogisticPolicy`, held-out `+0.611 +/- 0.069 [+0.542, +0.679]`, paired delta `+0.611 [+0.542, +0.679]`, `n=90`) pass all 5 mathematical and AST-isolation criteria on CPU, establishing a clean non-LLM empirical-Bayes / parametric upper-bound control that is never conflated with open-weight Qwen2.5 LoRA.
+- **Track 2 Non-LLM Parametric Controls (Strictly Separated from Qwen LoRA)**: `compact-linear-dagger-v14` (`CompactLinearDAggerPolicy`, held-out `+0.627 +/- 0.048 [+0.575, +0.672]`, paired delta `+0.627 [+0.578, +0.676]`, `n=180`); `empirical-bayes-v14` (`EmpiricalBayesPolicy`, held-out `+0.607 +/- 0.044 [+0.559, +0.648]`, paired delta `+1.028 [+0.915, +1.141]`, `n=180`); `scaling-logistic-v14` (`ScalingLogisticPolicy`, held-out `+0.611 +/- 0.069 [+0.542, +0.679]`, paired delta `+0.611 [+0.542, +0.679]`, `n=90`) pass all 5 mathematical and AST-isolation criteria on CPU, establishing a clean non-LLM empirical-Bayes / parametric upper-bound control that is never conflated with open-weight Qwen2.5 LoRA.
 
 ## 3. Track 2 Non-LLM Parametric and Empirical-Bayes Controls (Not Conflated With Qwen2.5 LoRA)
 
 | Run ID | Policy Family (Non-LLM) | Held-Out Score +/- 95% CI | Paired Delta [95% CI] | n | Shared Secret | AST Audited Module(s) | Verdict |
 |---|---|---|---|---:|---|---|---|
+| `compact-linear-dagger-v14` | `CompactLinearDAggerPolicy` (non-LLM control) | `+0.627 +/- 0.048 [+0.575, +0.672]` | `+0.627 [+0.578, +0.676]` | 180 | `paired (sha256:ebf2f097)` | `train/compact_dagger_ablation.py` | `PASS_NON_LLM_CONTROL` |
 | `empirical-bayes-v14` | `EmpiricalBayesPolicy` (non-LLM control) | `+0.607 +/- 0.044 [+0.559, +0.648]` | `+1.028 [+0.915, +1.141]` | 180 | `paired (sha256:ebf2f097)` | `train/empirical_bayes_policy.py` | `PASS_NON_LLM_CONTROL` |
 | `scaling-logistic-v14` | `ScalingLogisticPolicy` (non-LLM control) | `+0.611 +/- 0.069 [+0.542, +0.679]` | `+0.611 [+0.542, +0.679]` | 90 | `paired (sha256:ebf2f097)` | `scripts/tiebreak_scaling_calibration.py` | `PASS_NON_LLM_CONTROL` |
 
@@ -44,6 +45,7 @@ Deterministic readiness audit for `README.md` (`Tiebreak: a small model trained 
 | Run ID | Track | Family | C1 `heldout>0` | C2 `paired_ci>0` | C3 `disjoint_seeds` | C4 `replay_n>=30` | C5 `ast_isolated` | Passed | Verdict |
 |---|---|---|---|---|---|---|---|---:|---|
 | `tiny-mlp-dagger-v14` | `track_1` | `TinyMLP` | `PASS` | `PASS` | `PASS` | `PASS` | `PASS` | 5/5 | `PROMOTED_TRACK1_NEURAL` |
+| `compact-linear-dagger-v14` | `track_2` | `CompactLinearDAggerPolicy` | `PASS` | `PASS` | `PASS` | `PASS` | `PASS` | 5/5 | `PASS_NON_LLM_CONTROL` |
 | `empirical-bayes-v14` | `track_2` | `EmpiricalBayesPolicy` | `PASS` | `PASS` | `PASS` | `PASS` | `PASS` | 5/5 | `PASS_NON_LLM_CONTROL` |
 | `scaling-logistic-v14` | `track_2` | `ScalingLogisticPolicy` | `PASS` | `PASS` | `PASS` | `PASS` | `PASS` | 5/5 | `PASS_NON_LLM_CONTROL` |
 

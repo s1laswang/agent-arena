@@ -299,7 +299,7 @@ def test_chart_skipped_gracefully_without_matplotlib(tmp_path, monkeypatch):
 def test_cli_reproduce(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("CANARY_WORLD_SECRET", "test-reproduce")
     assert main(["--reproduce", "--repro-seeds", "2", "--results-dir", str(tmp_path)]) == 0
-    assert "## medium (headline)" in capsys.readouterr().out
+    assert "## hard (headline: the Harbor judge set)" in capsys.readouterr().out
     assert (Path(tmp_path) / "judge_table.md").exists()
 
 

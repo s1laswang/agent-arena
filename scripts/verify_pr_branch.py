@@ -49,10 +49,8 @@ RUN_SHARD_ROOT_PREFIXES: tuple[str, ...] = (
     "results/replication/",
     "results/selected_fleet_replication/",
 )
-HARBOR_ROOT_PREFIXES: tuple[str, ...] = (
-    "results/harbor/",
-    "results/harbor_negative/",
-)
+DASH_EXEMPT_FILENAMES = frozenset({"accuse.md", "trial.log", "exception.txt"})
+HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 
 FINALIZE_LANES = frozenset({
     "inproc-gemini-4-carbon",
@@ -74,6 +72,7 @@ SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("google_api_key", re.compile(r"(?<![A-Za-z0-9+/_-])AIza[0-9A-Za-z_-]{35}(?![0-9A-Za-z_-])")),
     ("openai_secret_key", re.compile(r"(?<![A-Za-z0-9+/_-])sk-(?:proj-)?[A-Za-z0-9_-]{20,}")),
     ("github_pat", re.compile(r"(?<![A-Za-z0-9+/_-])ghp_[A-Za-z0-9]{30,}")),
+    ("vertex_express_key", re.compile(r"(?<![A-Za-z0-9+/_-])AQ\.[0-9A-Za-z._-]{20,}")),
 )
 ENV_TEMPLATE_NAMES = frozenset({".env.example", ".env.sample", ".env.template"})
 BACKTICK_FENCE_RE = re.compile(r"^\s*(`{3,})([^`]*)$")
@@ -315,11 +314,62 @@ def _is_secret_path(path: str) -> bool:
     return False
 
 
+def _added_diff_lines(
+    repo: Path,
+    diff_from: str,
+    inspect_tree: str,
+    path: str,
+) -> list[tuple[int, str]] | None:
+    res = _git(
+        repo,
+        "diff",
+        "--no-color",
+        "--no-ext-diff",
+        "-U0",
+        diff_from,
+        inspect_tree,
+        "--",
+        path,
+    )
+    if res.returncode != 0:
+        return None
+    try:
+        diff_text = res.stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    added: list[tuple[int, str]] = []
+    cur_line: int | None = None
+    for raw_line in diff_text.splitlines():
+        if raw_line.startswith("diff --git "):
+            cur_line = None
+            continue
+        m_hunk = HUNK_HEADER_RE.match(raw_line)
+        if m_hunk:
+            cur_line = int(m_hunk.group(1))
+            continue
+        if cur_line is None:
+            continue
+        if raw_line.startswith("+"):
+            added.append((cur_line, raw_line[1:]))
+            cur_line += 1
+        elif raw_line.startswith(" "):
+            cur_line += 1
+    return added
+
+
+def _is_harbor_results_path(path: str) -> bool:
+    parts = path.split("/")
+    return len(parts) >= 3 and parts[0] == "results" and parts[1].startswith("harbor")
+
+
 def _should_scan_dashes(path: str, raw: bytes) -> bool:
     if b"\x00" in raw:
         return False
     lower = path.lower()
     if any(lower.endswith(ext) for ext in BINARY_SUFFIXES):
+        return False
+    fname = posixpath.basename(path)
+    if fname in DASH_EXEMPT_FILENAMES:
         return False
     if path.startswith("data/runs/") and ("/transcripts/" in path or lower.endswith(".jsonl")):
         return False
@@ -327,9 +377,8 @@ def _should_scan_dashes(path: str, raw: bytes) -> bool:
         ("/transcripts/" in path and lower.endswith(".txt")) or lower.endswith(".jsonl")
     ):
         return False
-    if path.startswith(HARBOR_ROOT_PREFIXES):
-        fname = posixpath.basename(path)
-        if fname == "TABLE.md" or not lower.endswith(".md"):
+    if _is_harbor_results_path(path):
+        if fname == "TABLE.md" or "/agent/" in path or not lower.endswith(".md"):
             return False
     return True
 
@@ -410,6 +459,7 @@ def verify_branch(
         inspect_tree = ""
 
     entries = _diff_entries(repo_path, diff_from, inspect_tree) if diff_from and inspect_tree else []
+    status_by_path = {p: st[:1] for st, p in entries}
     changed_paths = [p for _, p in entries]
     added_or_modified = [p for st, p in entries if st[:1] in {"A", "M", "T"}]
 
@@ -492,7 +542,12 @@ def verify_branch(
         except UnicodeDecodeError:
             continue
         dash_checked += 1
-        for idx, line in enumerate(text.splitlines(), start=1):
+        scan_lines: list[tuple[int, str]] | None = None
+        if status_by_path.get(p) == "M" and diff_from and inspect_tree:
+            scan_lines = _added_diff_lines(repo_path, diff_from, inspect_tree, p)
+        if scan_lines is None:
+            scan_lines = list(enumerate(text.splitlines(), start=1))
+        for idx, line in scan_lines:
             if EM_DASH in line or EN_DASH in line:
                 kinds = []
                 if EM_DASH in line:

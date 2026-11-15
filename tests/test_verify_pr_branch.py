@@ -312,6 +312,65 @@ def test_unicode_dashes_gate(tmp_path: Path, dash_char: str, label: str) -> None
     assert any(label in e for e in gates["unicode_dashes"]["errors"])
 
 
+def test_modified_files_scan_only_added_lines_for_unicode_dashes(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _commit_files(
+        repo,
+        {
+            "docs/reports/gap.md": f"Primary seeds 0{EN_DASH}29 headline.\nLine two.\n",
+            "results/harbor/rehearsal/README.md": f"Legacy note {EM_DASH} untouched.\n",
+        },
+        message="seed base files with pre-existing dashes",
+    )
+
+    _git(repo, "checkout", "-b", "append-clean")
+    _commit_files(
+        repo,
+        {
+            "docs/reports/gap.md": (
+                f"Primary seeds 0{EN_DASH}29 headline.\n"
+                "Line two.\n"
+                "G1 extension block: seeds 30-59 paired cleanly.\n"
+            ),
+            "results/harbor/rehearsal/README.md": (
+                f"Legacy note {EM_DASH} untouched.\n"
+                "Step C addendum: 30/30 valid trials.\n"
+            ),
+        },
+        message="append clean ASCII blocks to existing markdown files",
+    )
+
+    rep_clean = verify_branch(base="justSilas", branch="append-clean", repo=repo)
+    assert rep_clean["ok"] is True, rep_clean
+    assert _gate_map(rep_clean)["unicode_dashes"]["passed"] is True
+
+    _commit_files(
+        repo,
+        {
+            "docs/reports/gap.md": (
+                f"Primary seeds 0{EN_DASH}29 headline.\n"
+                "Line two.\n"
+                "G1 extension block: seeds 30-59 paired cleanly.\n"
+                f"Newly added bad range 30{EN_DASH}59.\n"
+            ),
+            "results/harbor/rehearsal/README.md": (
+                f"Legacy note {EM_DASH} untouched.\n"
+                "Step C addendum: 30/30 valid trials.\n"
+                f"Newly added clause {EM_DASH} forbidden.\n"
+            ),
+        },
+        message="introduce new unicode dashes in modified files",
+    )
+
+    rep_bad = verify_branch(base="justSilas", branch="append-clean", repo=repo)
+    assert rep_bad["ok"] is False
+    errs = _gate_map(rep_bad)["unicode_dashes"]["errors"]
+    assert errs == [
+        "docs/reports/gap.md:4: contains en-dash",
+        "results/harbor/rehearsal/README.md:3: contains em-dash",
+    ]
+
+
 def test_harbor_machine_logs_exempt_from_unicode_dashes(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path)
     _git(repo, "checkout", "-b", "harbor-logs")
@@ -323,31 +382,46 @@ def test_harbor_machine_logs_exempt_from_unicode_dashes(tmp_path: Path) -> None:
                 {"text": f"step {EN_DASH} output"}
             )
             + "\n",
+            "results/harbor-step-c/opencode-1/canary-hard-900001__xyz/agent/notes.md": (
+                f"agent scratch {EM_DASH} notes {EN_DASH} trace\n"
+            ),
             "results/harbor/rehearsal/opencode-1/canary-hard-900000__abc/exception.txt": f"Error {EM_DASH} timeout\n",
+            "results/harbor/rehearsal/opencode-1/canary-hard-900000__abc/trial.log": f"trial {EN_DASH} trace\n",
+            "results/custom_job/run1/trial.log": f"nested trial {EM_DASH} log\n",
+            "results/custom_job/run1/exception.txt": f"nested exc {EN_DASH} log\n",
             "results/harbor/rehearsal/opencode-1/canary-hard-900000__abc/result.json": json.dumps(
                 {"exc": f"boom {EM_DASH} trace"}
             )
             + "\n",
             "results/harbor/rehearsal/TABLE.md": f"| task | {EM_DASH} |\n",
+            "results/harbor-step-c/sub/TABLE.md": f"| task | {EN_DASH} |\n",
+            "results/harbor_3x10/TABLE.md": f"| task | {EM_DASH} |\n",
+            "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/accuse.md": f"| hard | {EN_DASH} |\n",
+            "results/selected_fleet_replication/v1.4/accuse.md": f"| hard | {EM_DASH} |\n",
             "results/harbor/rehearsal/README.md": "Clean human protocol note.\n",
         },
-        message="add harbor rehearsal machine logs and clean README",
+        message="add harbor rehearsal machine logs, accuse tables, and clean README",
     )
 
-    rep_ok = verify_branch(base="justSilas", branch="harbor-logs", repo=repo)
+    rep_ok = verify_branch(base="justSilas", branch="harbor-logs", repo=repo, allow_data=True)
     assert rep_ok["ok"] is True, rep_ok
     assert _gate_map(rep_ok)["unicode_dashes"]["passed"] is True
 
     _commit_files(
         repo,
-        {"results/harbor/rehearsal/README.md": f"Human prose {EM_DASH} forbidden dash\n"},
-        message="add dash in harbor README",
+        {
+            "results/harbor/rehearsal/README.md": f"Human prose {EM_DASH} forbidden dash\n",
+            "results/harbor-step-c/README.md": f"Step C prose {EN_DASH} forbidden dash\n",
+        },
+        message="add dash in harbor READMEs",
     )
-    rep_bad = verify_branch(base="justSilas", branch="harbor-logs", repo=repo)
+    rep_bad = verify_branch(base="justSilas", branch="harbor-logs", repo=repo, allow_data=True)
     assert rep_bad["ok"] is False
     dash_errs = _gate_map(rep_bad)["unicode_dashes"]["errors"]
-    assert len(dash_errs) == 1
-    assert "results/harbor/rehearsal/README.md:1" in dash_errs[0]
+    assert dash_errs == [
+        "results/harbor-step-c/README.md:1: contains en-dash",
+        "results/harbor/rehearsal/README.md:1: contains em-dash",
+    ]
 
 
 def test_results_transcripts_and_jsonl_exempt_from_unicode_dashes(tmp_path: Path) -> None:
@@ -435,10 +509,11 @@ def test_secret_leak_gate(tmp_path: Path) -> None:
     fake_google = "AI" + "za" + ("A" * 35)
     fake_openai = "s" + "k-" + ("B" * 24)
     fake_ghp = "gh" + "p_" + ("C" * 32)
+    fake_vertex = "A" + "Q." + "AbCdEf0123456789._-XyZwVu"
     _commit_files(
         repo,
         {
-            "docs/keys.txt": f"g={fake_google}\no={fake_openai}\nh={fake_ghp}\n",
+            "docs/keys.txt": f"g={fake_google}\no={fake_openai}\nh={fake_ghp}\nv={fake_vertex}\n",
             ".env": "FOO=bar\n",
             "data/worlds/judge/SALT": "secret-salt-value\n",
         },
@@ -453,11 +528,13 @@ def test_secret_leak_gate(tmp_path: Path) -> None:
     assert "google_api_key" in joined
     assert "openai_secret_key" in joined
     assert "github_pat" in joined
+    assert "vertex_express_key" in joined
     assert ".env: forbidden secret file path" in joined
     assert "data/worlds/judge/SALT: forbidden secret file path" in joined
     assert fake_google not in joined
     assert fake_openai not in joined
     assert fake_ghp not in joined
+    assert fake_vertex not in joined
 
 
 def test_timeout_episode_and_duplicate_tuples_gate(tmp_path: Path) -> None:

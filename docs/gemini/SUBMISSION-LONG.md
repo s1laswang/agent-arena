@@ -75,6 +75,7 @@ Gemini is used in all three of our Junction challenges, most heavily here.
   - box_2d spatial grounding;
   - speculative verification, which cut question-to-first-audio from 5.8 s to 0.7–1.75 s with real speech;
   - a 1,740-image eval (172 Gemini-written specs): 0/754 confident-wrong strength reads (upper bound 0.4%), and end-to-end unsafe reassurance 1.0% (49/4,730, Wilson 0.78–1.37%, measured before the allergen gate).
+  - Gemini-generated, ground-truthed label images also trained a PaliGemma 2 3B LoRA: "strength visible" recall 91.4% [86.5, 94.6] vs 65.6% for YOLOv8n on n=348 held-out images; not yet wired into the live product ([`GEMMA.md`](https://github.com/s1laswang/junction-meta-glasses/blob/main/GEMMA.md)).
 
 ## Reproduce
 ```bash

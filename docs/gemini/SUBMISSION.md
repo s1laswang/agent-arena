@@ -43,7 +43,7 @@ One ledgered client (`canary/gemini/ledger.py`, a row per call) drives four role
 
 ## Gemini across the team
 - **Valio Aimo** ([`docs/GEMINI.md`](https://github.com/s1laswang/junction-aimo-agents/blob/main/docs/GEMINI.md)): a gemini-3.8-flash buyer agent escalates 19% of steps to gemini-4-hydrogen; compaction cut cost per order by 59%.
-- **Meta glasses: HoldUp** ([`GEMINI.md`](https://github.com/s1laswang/junction-meta-glasses/blob/main/GEMINI.md)): a Live API label checker for blind and low-vision users; 0/754 confident-wrong strength reads in a 1,740-image eval.
+- **Meta glasses: HoldUp** ([`GEMINI.md`](https://github.com/s1laswang/junction-meta-glasses/blob/main/GEMINI.md)): a Live API label checker for blind and low-vision users; 0/754 confident-wrong strength reads in a 1,740-image eval. Gemini-generated, ground-truthed label images also trained a PaliGemma 2 3B LoRA: "strength visible" recall 91.4% [86.5, 94.6] vs 65.6% for YOLOv8n on n=348 held-out images; not yet wired into the live product ([`GEMMA.md`](https://github.com/s1laswang/junction-meta-glasses/blob/main/GEMMA.md)).
 
 ## Reproduce
 ```bash

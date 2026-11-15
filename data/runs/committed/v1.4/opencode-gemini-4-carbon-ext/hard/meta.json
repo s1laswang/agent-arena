@@ -17,8 +17,14 @@
  "tier": "hard",
  "tiers_version": "v1.4",
  "seeds": [
+  30,
   34,
-  37
+  37,
+  42,
+  45,
+  48,
+  57,
+  58
  ],
  "planned_seeds": [
   30,
@@ -52,19 +58,22 @@
   58,
   59
  ],
- "status": "INCOMPLETE: seeds [30, 31, 32, 33, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59] have no valid episode",
+ "status": "INCOMPLETE: seeds [31, 32, 33, 35, 36, 38, 39, 40, 41, 43, 44, 46, 47, 49, 50, 51, 52, 53, 54, 55, 56, 59] have no valid episode",
  "git_sha": "f9fb7a4adc014efde9387353de9678eb5413fdae",
  "git_shas": [
+  "2d87d0bea11aa05e3f12a770913260155b84d224",
+  "7232f8008423c8a52f3307946fd09ff466e4eaa1",
+  "ac5b5ef89546c50d745973a87cda8f05597c8075",
   "f9fb7a4adc014efde9387353de9678eb5413fdae"
  ],
  "smoke": false,
  "hint": null,
  "usage": {
-  "in": 5072743,
-  "cached_in": 4731850,
-  "out": 98508,
-  "cost_usd_est": 2.1401,
-  "cost_usd_upper": 11.1305
+  "in": 44853335,
+  "cached_in": 42720262,
+  "out": 475199,
+  "cost_usd_est": 13.2902,
+  "cost_usd_upper": 94.4585
  },
  "pricing": "gemini-4-carbon list prices per 1M tokens: input $2.00, cached input $0.10, output (incl. thinking) $10.00 through 2026-11-30 (aistudio.google.com/docs/pricing, checked 2026-11-14). cost_usd_est bills cached input at $0.10; the upper bound bills all input at $2.00. OpenCode runs also carry OpenCode's own reported cost (models.dev prices).",
  "provenance": "scripts/gemini_runner.py (one episode per process, resumable; infra-invalid attempts excluded and retried; stopped early per Arena CEO quota decision to preserve shared 2M/min carbon bucket for judge rehearsal), merged by scripts/merge_staging.py",
@@ -80,6 +89,7 @@
   "opencode-hard-32-031216: invalid: infra:provider_quota",
   "opencode-hard-32-031427: invalid: infra:provider_quota",
   "opencode-hard-32-031920: invalid: infra:provider_quota",
+  "opencode-hard-32-235000: invalid: infra:provider_quota",
   "opencode-hard-33-031145: invalid: infra:provider_quota",
   "opencode-hard-33-031427: invalid: infra:provider_quota",
   "opencode-hard-33-031623: invalid: infra:provider_quota",
@@ -100,6 +110,9 @@
   "opencode-hard-39-031427: invalid: infra:provider_quota",
   "opencode-hard-39-032126: invalid: infra:provider_quota",
   "opencode-hard-40-031316: invalid: infra:provider_quota",
-  "opencode-hard-40-032020: invalid: infra:provider_quota"
+  "opencode-hard-40-032020: invalid: infra:provider_quota",
+  "opencode-hard-43-235000: invalid: infra:provider_quota",
+  "opencode-hard-46-235000: invalid: infra:provider_quota",
+  "opencode-hard-59-235000: invalid: infra:provider_quota"
  ]
 }

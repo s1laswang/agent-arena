@@ -20,6 +20,10 @@ add v1       "V100 · J4 SFT LoRA 44397 · 4k"                        $J/eval-lo
 add v2       "V100 SFT LoRA 44410 (eval V100 + A100 68bbe201 off30) · 4k" $W/ws4-v2-44410 v2-off30
 add v3-4k-s0 "H100 · ${S0_STEPS:-609} GRPO steps · 4k"              v3-verda-s0 v3-4k-s0-off30
 [ -n "${FR8_S1_DIR:-}" ] && add v3-4k-s1 "V100 (FR8 44572) · ${S1_STEPS:-?} GRPO steps · 4k · partial" "$FR8_S1_DIR"
+# X2's shared-secret eval of the SAME 609-step 4k adapter at 8k inference context (adapter sha256[:12] 3d0cd43b8037)
+X2E=${X2_EVALS:-$HOME/junction-aimo-team/wt/x2-dagger/data/x2/evals}
+add v3-4k-s0@8k "H100 · 609 GRPO steps · trained 4k, EVAL 8k (X2, A100 68bbe201)" \
+    $X2E/v3-4k-s0-ctx8k-off0 $X2E/v3-4k-s0-ctx8k-off10 $X2E/v3-4k-s0-ctx8k-off20
 add v3-8k-s1 "${K8S1_GPU:-A100-80} · ${K8S1_STEPS:-?} GRPO steps · 8k" v3-verda-8k-s1
 add v3-8k-s2 "${K8S2_GPU:-H100} · ${K8S2_STEPS:-?} GRPO steps · 8k"    v3-verda-8k-s2
 python3 -m fr8.analysis.ws4_table "${ARGS[@]}" --pair base,v2,v3-4k-s0 "${INFO[@]}" --out "$OUT" >/dev/null

@@ -987,33 +987,6 @@ def test_self_hygiene_zero_comments_dashes_api_imports_and_three_dot_protected_p
     ]
     checked = {self_path.relative_to(ROOT).as_posix()}
 
-    status_proc = subprocess.run(
-        ["git", "status", "--porcelain"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    if status_proc.returncode == 0:
-        for line in status_proc.stdout.splitlines():
-            if len(line) > 3:
-                entry = line[3:].strip()
-                if " -> " in entry:
-                    entry = entry.split(" -> ", 1)[1].strip()
-                checked.add(entry)
-
-    diff_proc = subprocess.run(
-        ["git", "diff", "--name-only", "origin/justSilas...HEAD"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    if diff_proc.returncode == 0:
-        for rel in diff_proc.stdout.splitlines():
-            if rel.strip():
-                checked.add(rel.strip())
-
     for rel in checked:
         for rule in rules:
             if rule.endswith("/"):

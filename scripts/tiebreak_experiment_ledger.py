@@ -36,9 +36,12 @@ HISTORICAL_RUN_IDS: tuple[str, ...] = (
     "WS4-v3-4k-s1-44572",
     "WS4-v3-verda-s0-eval",
     "WS4-v3-4k-s0-ctx8k",
+    "WS4-v3-8k-s0-3bb7",
     "WS4-v3-8k-s1-ac58",
     "WS4-v3-8k-s2-dbd0",
     "WS4-v3-8k-s3-f437",
+    "WS4-dagger-r1-verda",
+    "Verda-base-backup-18ac",
 )
 
 FORBIDDEN_SECRET_PLACEHOLDERS = frozenset({
@@ -1321,14 +1324,29 @@ def _load_ws4_v3_4k_s1_714d_spot(repo_root: Path) -> dict[str, Any]:
     }
 
 
-def _load_ws4_v3_4k_s1_44572(external_data_root: Path) -> dict[str, Any]:
+def _load_ws4_v3_4k_s1_44572(repo_root: Path, external_data_root: Path) -> dict[str, Any]:
     grpo_steps = 192
     n_states = 2000
     train_seed_start = 150000
     before_secret = "f272803cdb679dbe"
     after_secret = "09f8bc6443018b18"
+    heldout_n = 82
+    mean_score_exact = -0.2088
+    ci95_exact = 0.0938
+    accused_count = 19
+    eval_cap_count = 63
+    accuracy_exact = 0.0122
+    invalid_call_rate = 0.0312
+    easy_n = 28
+    medium_n = 27
+    hard_n = 27
+    easy_score = -0.576
+    medium_score = 0.0
+    hard_score = -0.037
 
-    ts_file = external_data_root / "v3" / "run-44572" / "lora" / "train_summary.json"
+    ts_repo = repo_root / "data" / "fr8" / "ws4" / "v3-s1-44572-train" / "train_summary.json"
+    ts_ext = external_data_root / "v3" / "run-44572" / "lora" / "train_summary.json"
+    ts_file = ts_repo if ts_repo.is_file() else ts_ext
     if ts_file.is_file():
         ts = json.loads(ts_file.read_text(encoding="utf-8"))
         grpo_steps = int(ts.get("steps", 192))
@@ -1342,28 +1360,57 @@ def _load_ws4_v3_4k_s1_44572(external_data_root: Path) -> dict[str, Any]:
         if m:
             after_secret = m.group(1)
 
+    sum_repo = repo_root / "data" / "fr8" / "ws4" / "v3-s1-44572" / "summary.json"
+    sum_ext = external_data_root / "v3" / "runs" / "v3-s1-44572" / "summary.json"
+    sum_file = sum_repo if sum_repo.is_file() else sum_ext
+    if sum_file.is_file():
+        by_tier = json.loads(sum_file.read_text(encoding="utf-8"))["by_tier"]
+        s_all = by_tier["all"]
+        heldout_n = int(s_all["n"])
+        mean_score_exact = round(float(s_all["mean_score"]), 4)
+        ci95_exact = round(float(s_all["ci95"]), 4)
+        accuracy_exact = round(float(s_all["accuracy"]), 4)
+        end_r = s_all.get("end_reasons") or {}
+        accused_count = int(end_r.get("accused", 19))
+        eval_cap_count = int(end_r.get("eval_cap", 63))
+        invalid_call_rate = round(float(s_all["invalid_call_rate"]), 4)
+        easy_n = int(by_tier["easy"]["n"])
+        medium_n = int(by_tier["medium"]["n"])
+        hard_n = int(by_tier["hard"]["n"])
+        easy_score = round(float(by_tier["easy"]["mean_score"]), 3)
+        medium_score = round(float(by_tier["medium"]["mean_score"]), 3)
+        hard_score = round(float(by_tier["hard"]["mean_score"]), 3)
+
+    mean_score = round(mean_score_exact, 3)
+    ci95 = round(ci95_exact, 3)
+    valid_short = round(1.0 - invalid_call_rate, 2)
+    accused_rate = round(accused_count / max(heldout_n, 1), 2)
+    abstain_rate = round(eval_cap_count / max(heldout_n, 1), 2)
+    accuracy_short = round(accuracy_exact, 2)
+    correct_count = round(accuracy_exact * heldout_n)
+
     return {
         "run_id": "WS4-v3-4k-s1-44572",
         "source": "historical",
-        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s1, 192 GRPO steps partial)",
-        "method": "Guided decision-point GRPO on FR8 V100 job 44572 (4.0h, 192 steps, max_ctx=4096; partial eval 44573)",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s1, 192 GRPO steps, FR8 V100 n=82)",
+        "method": "Guided decision-point GRPO on FR8 V100 job 44572 (4.0h, ~191-192 steps, max_ctx=4096; finalized eval 44573 n=82)",
         "tiers_version": "v1.4",
         "tiers": ["easy", "medium", "hard"],
         "context_len": 4096,
-        "heldout_n": 25,
+        "heldout_n": heldout_n,
         "before_mean_score": 0.0,
-        "after_mean_score": -0.24,
-        "after_ci95": 0.171,
-        "paired_mean_delta": -0.24,
-        "paired_ci95_low": -0.411,
-        "paired_ci95_high": -0.069,
+        "after_mean_score": mean_score,
+        "after_ci95": ci95,
+        "paired_mean_delta": mean_score,
+        "paired_ci95_low": round(mean_score - ci95, 3),
+        "paired_ci95_high": round(mean_score + ci95, 3),
         "before_valid_call_rate": 0.03,
-        "after_valid_call_rate": 0.97,
+        "after_valid_call_rate": valid_short,
         "before_world_secret_tag": before_secret,
         "after_world_secret_tag": after_secret,
         "replay_verified": False,
         "verified_improvement": False,
-        "status": "NEGATIVE_FLAT_PARTIAL",
+        "status": "NEGATIVE_FLAT_V100_REPLICATE",
         "details": {
             "train_slurm_job_id": 44572,
             "eval_slurm_job_id": 44573,
@@ -1376,22 +1423,33 @@ def _load_ws4_v3_4k_s1_44572(external_data_root: Path) -> dict[str, Any]:
             "grpo_replicate": 1,
             "forced_accuse_whom_first_w96": 0.224,
             "forced_accuse_whom_last_w96": 0.267,
-            "heldout_seed_range": "800000..800008",
-            "by_tier_n": {"easy": 9, "medium": 8, "hard": 8},
-            "accused_count": 6,
-            "accused_rate": 0.24,
-            "correct_count": 0,
-            "accuracy": 0.0,
-            "abstain_rate": 0.76,
-            "easy_score": -0.667,
-            "medium_score": 0.0,
-            "hard_score": 0.0,
-            "two_sample_delta_vs_base_mean": -0.24,
-            "two_sample_delta_vs_base_ci95": 0.171,
-            "two_sample_delta_vs_v2_mean": 0.217,
-            "two_sample_delta_vs_v2_ci95": 0.191,
-            "two_sample_delta_vs_v3_4k_s0_mean": -0.093,
-            "two_sample_delta_vs_v3_4k_s0_ci95": 0.182,
+            "heldout_seed_range": "800000..800027",
+            "by_tier_n": {"easy": easy_n, "medium": medium_n, "hard": hard_n},
+            "mean_score_exact": mean_score_exact,
+            "ci95_exact": ci95_exact,
+            "accused_count": accused_count,
+            "eval_cap_count": eval_cap_count,
+            "abstain_count": eval_cap_count,
+            "accused_rate": accused_rate,
+            "correct_count": correct_count,
+            "accuracy": accuracy_short,
+            "accuracy_exact": accuracy_exact,
+            "precision_when_accused": round(correct_count / max(accused_count, 1), 2),
+            "abstain_rate": abstain_rate,
+            "invalid_call_rate": invalid_call_rate,
+            "easy_score": easy_score,
+            "medium_score": medium_score,
+            "hard_score": hard_score,
+            "two_sample_delta_vs_base_mean": -0.209,
+            "two_sample_delta_vs_base_ci95": 0.094,
+            "two_sample_delta_vs_v2_mean": 0.249,
+            "two_sample_delta_vs_v2_ci95": 0.127,
+            "two_sample_delta_vs_v3_4k_s0_mean": -0.061,
+            "two_sample_delta_vs_v3_4k_s0_ci95": 0.113,
+            "partial_n25_mean_score": -0.24,
+            "partial_n25_ci95": 0.171,
+            "partial_n25_accused_rate": 0.24,
+            "partial_n25_accuracy": 0.0,
         },
         "gates": {
             "gate1_seed_hygiene": True,
@@ -1401,19 +1459,21 @@ def _load_ws4_v3_4k_s1_44572(external_data_root: Path) -> dict[str, Any]:
             "all_passed": False,
             "reasons": [
                 f"unpaired per-process world secret ({before_secret} vs {after_secret})",
-                "partial held-out n=25 < 30 (9 easy, 8 medium, 8 hard); 19/25 episodes hit eval_cap=120",
-                "flat training dynamics (whom-acc 0.22 -> 0.27 over 192 V100 steps) and negative held-out score (-0.240 +/- 0.171, 0/6 correct)",
+                f"{eval_cap_count}/{heldout_n} episodes hit eval_cap=120 (28 easy, 27 medium, 27 hard)",
+                f"flat training dynamics (whom-acc 0.22 -> 0.27 over ~191-192 V100 steps) and negative held-out score ({mean_score:.3f} +/- {ci95:.3f}, 1/19 correct; earlier partial n=25 was -0.240 +/- 0.171)",
             ],
         },
         "evidence": [
             "docs/reports/fr8.md",
-            "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_table_v3.md",
-            "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_whom_v3.md",
+            "origin/justSilas-fr8@94d33248:fr8/analysis/out/ws4_table_final.md",
+            "origin/justSilas-fr8@94d33248:data/fr8/ws4/v3-s1-44572/summary.json",
             "/home/silas/agent-arena-data/v3/run-44572/lora/train_summary.json",
         ],
         "notes": (
-            "FR8 V100 192-step 4k GRPO s1 replicate had flat training whom-accuracy (0.224 -> 0.267, W=96) "
-            "and scored -0.240 +/- 0.171 on partial held-out n=25 (valid 0.97, accused 0.24, correct 0.00)."
+            "Finalized FR8 V100 ~191-192-step 4k GRPO s1 replicate (job 44572/44573) scored -0.209 +/- 0.094 "
+            "on held-out n=82 (valid 0.97, accused 0.23 = 19/82, correct 0.01 = 1/82, abstain 0.77 = 63/82; "
+            "two-sample +0.249 +/- 0.127 vs v2; earlier partial n=25 was -0.240 +/- 0.171) after flat training "
+            "whom-accuracy (0.224 -> 0.267)."
         ),
     }
 
@@ -1605,7 +1665,7 @@ def _load_ws4_v3_4k_s0_ctx8k() -> dict[str, Any]:
             "gate4_paired_ci95_positive": False,
             "all_passed": False,
             "reasons": [
-                "shared secret 1ca0c2a64d is paired with WS4-v3-8k-s3-f437, but untrained base never ran under 1ca0c2a64d",
+                "shared secret 1ca0c2a64d is paired with WS4-v3-8k-s0-3bb7, WS4-v3-8k-s3-f437, and WS4-dagger-r1-verda, but untrained base never ran under 1ca0c2a64d",
                 "inference-length confound: raising eval max_ctx from 4096 to 8192 flipped medium/hard accusations from 0.00/0.03 to 0.80/0.90 (0 correct)",
                 "severe held-out regression (-0.716 +/- 0.105, n=90; two-sample -0.568 +/- 0.123 vs 4k inference)",
             ],
@@ -1619,6 +1679,127 @@ def _load_ws4_v3_4k_s0_ctx8k() -> dict[str, Any]:
             "Evaluating the exact same 609-step 4k adapter (3d0cd43b8037) at max_ctx=8192 under shared secret "
             "1ca0c2a64d dropped held-out n=90 from -0.147 to -0.716 +/- 0.105 (two-sample -0.568 +/- 0.123 vs 4k; "
             "accused 0.78, 3/70 correct), proving longer inference context alone triggers reckless accusations."
+        ),
+    }
+
+
+def _load_ws4_v3_8k_s0_3bb7(repo_root: Path) -> dict[str, Any]:
+    grpo_steps = 637
+    heldout_n = 90
+    mean_score_exact = -0.0604
+    ci95_exact = 0.0536
+    accused_count = 7
+    eval_cap_count = 68
+    horizon_count = 15
+    accuracy_exact = 0.0111
+    invalid_call_rate = 0.0216
+
+    ts_file = repo_root / "data" / "fr8" / "verda" / "h100-3bb7" / "run-verda-8k-s0" / "lora" / "train_summary.json"
+    sum_file = repo_root / "data" / "fr8" / "verda" / "h100-3bb7" / "runs" / "v3-verda-8k-s0" / "summary.json"
+
+    if ts_file.is_file():
+        grpo_steps = int(json.loads(ts_file.read_text(encoding="utf-8")).get("steps", 637))
+    if sum_file.is_file():
+        s_all = json.loads(sum_file.read_text(encoding="utf-8"))["by_tier"]["all"]
+        heldout_n = int(s_all["n"])
+        mean_score_exact = round(float(s_all["mean_score"]), 4)
+        ci95_exact = round(float(s_all["ci95"]), 4)
+        accuracy_exact = round(float(s_all["accuracy"]), 4)
+        end_r = s_all.get("end_reasons") or {}
+        accused_count = int(end_r.get("accused", 7))
+        eval_cap_count = int(end_r.get("eval_cap", 68))
+        horizon_count = int(end_r.get("horizon", 15))
+        invalid_call_rate = round(float(s_all["invalid_call_rate"]), 4)
+
+    mean_score = round(mean_score_exact, 3)
+    ci95 = round(ci95_exact, 3)
+    valid_short = round(1.0 - invalid_call_rate, 2)
+    abstain_count = eval_cap_count + horizon_count
+    accused_rate = round(accused_count / max(heldout_n, 1), 2)
+    abstain_rate = round(abstain_count / max(heldout_n, 1), 2)
+    accuracy_short = round(accuracy_exact, 2)
+
+    return {
+        "run_id": "WS4-v3-8k-s0-3bb7",
+        "source": "historical",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-8k s0, 637 GRPO steps, shared secret)",
+        "method": "Guided decision-point GRPO at 8k context on Verda H100 3bb74f5a (3.0h, 637 steps; eval under shared secret 1ca0c2a64d)",
+        "tiers_version": "v1.4",
+        "tiers": ["easy", "medium", "hard"],
+        "context_len": 8192,
+        "heldout_n": heldout_n,
+        "before_mean_score": 0.0,
+        "after_mean_score": mean_score,
+        "after_ci95": ci95,
+        "paired_mean_delta": mean_score,
+        "paired_ci95_low": round(mean_score - ci95, 3),
+        "paired_ci95_high": round(mean_score + ci95, 3),
+        "before_valid_call_rate": 0.03,
+        "after_valid_call_rate": valid_short,
+        "before_world_secret_tag": None,
+        "after_world_secret_tag": "1ca0c2a64d",
+        "replay_verified": False,
+        "verified_improvement": False,
+        "status": "NEGATIVE_ABSTAIN_COLLAPSE",
+        "details": {
+            "verda_instance": "3bb74f5a",
+            "gpu": "H100-80GB on-demand",
+            "grpo_steps": grpo_steps,
+            "train_hours": 3.0,
+            "grpo_replicate": 0,
+            "shared_world_secret_tag": "1ca0c2a64d",
+            "heldout_seed_range": "800000..800029",
+            "mean_score_exact": mean_score_exact,
+            "ci95_exact": ci95_exact,
+            "accused_count": accused_count,
+            "eval_cap_count": eval_cap_count,
+            "horizon_count": horizon_count,
+            "abstain_count": abstain_count,
+            "accused_rate": accused_rate,
+            "correct_count": 1,
+            "accuracy": accuracy_short,
+            "accuracy_exact": accuracy_exact,
+            "precision_when_accused": 0.14,
+            "abstain_rate": abstain_rate,
+            "invalid_call_rate": invalid_call_rate,
+            "easy_score": -0.033,
+            "medium_score": -0.067,
+            "hard_score": -0.081,
+            "two_sample_delta_vs_v2_mean": 0.397,
+            "two_sample_delta_vs_v2_ci95": 0.101,
+            "two_sample_delta_vs_v3_4k_s0_mean": 0.087,
+            "two_sample_delta_vs_v3_4k_s0_ci95": 0.083,
+            "paired_counterpart_run_id": "WS4-v3-8k-s3-f437",
+            "paired_vs_8k_s3_mean_delta": 0.728,
+            "paired_vs_8k_s3_ci95": 0.134,
+            "paired_vs_8k_s3_n": 90,
+            "paired_vs_4k_ctx8k_mean_delta": 0.655,
+            "paired_vs_4k_ctx8k_ci95": 0.116,
+        },
+        "gates": {
+            "gate1_seed_hygiene": True,
+            "gate2_paired_world_secret": False,
+            "gate3_sample_and_replay": False,
+            "gate4_paired_ci95_positive": False,
+            "all_passed": False,
+            "reasons": [
+                "unpaired vs untrained FR8 base; truly paired under shared secret 1ca0c2a64d against WS4-v3-8k-s3-f437 (+0.728 +/- 0.134, n=90)",
+                f"{eval_cap_count}/{heldout_n} episodes hit eval_cap=120 and {horizon_count}/{heldout_n} hit horizon (83/90 abstained)",
+                f"collapsed to 92% abstention ({mean_score:.3f} +/- {ci95:.3f}, accused {accused_rate:.2f} = 7/90, correct {accuracy_short:.2f} = 1/90)",
+            ],
+        },
+        "evidence": [
+            "VERDA.md",
+            "origin/justSilas-fr8@94d33248:fr8/analysis/out/ws4_table_final.md",
+            "origin/justSilas-fr8@94d33248:fr8/analysis/out/ws4_table_8k_shared_secret_paired.md",
+            "origin/justSilas-fr8@94d33248:data/fr8/verda/h100-3bb7/runs/v3-verda-8k-s0/summary.json",
+            "origin/justSilas-fr8@94d33248:data/fr8/verda/h100-3bb7/run-verda-8k-s0/lora/train_summary.json",
+        ],
+        "notes": (
+            "Verda H100 637-step 8k GRPO s0 under shared secret 1ca0c2a64d collapsed to conservative abstention "
+            "on held-out n=90 (800000..800029): -0.060 +/- 0.054 (-0.0604 +/- 0.0536, valid 0.98, accused 0.08 = "
+            "7/90, correct 0.01 = 1/90, abstain 0.92 = 83/90; two-sample +0.397 +/- 0.101 vs v2; truly paired "
+            "+0.728 +/- 0.134 vs WS4-v3-8k-s3-f437 on n=90 identical worlds)."
         ),
     }
 
@@ -1926,6 +2107,8 @@ def _load_ws4_v3_8k_s3_f437(repo_root: Path) -> dict[str, Any]:
             "matching_step0_rosters_total": 60,
             "paired_vs_4k_ctx8k_mean_delta": -0.073,
             "paired_vs_4k_ctx8k_ci95": 0.173,
+            "paired_vs_8k_s0_mean_delta": -0.728,
+            "paired_vs_8k_s0_ci95": 0.134,
             "two_sample_delta_vs_base_mean": -0.788,
             "two_sample_delta_vs_base_ci95": 0.117,
             "two_sample_delta_vs_v3_4k_s0_mean": -0.641,
@@ -1938,21 +2121,198 @@ def _load_ws4_v3_8k_s3_f437(repo_root: Path) -> dict[str, Any]:
             "gate4_paired_ci95_positive": False,
             "all_passed": False,
             "reasons": [
-                "unpaired vs untrained FR8 base; truly paired under shared secret 1ca0c2a64d against WS4-v3-4k-s0-ctx8k (60/60 matching rosters)",
+                "unpaired vs untrained FR8 base; truly paired under shared secret 1ca0c2a64d against WS4-v3-4k-s0-ctx8k (60/60 matching rosters) and WS4-v3-8k-s0-3bb7",
                 f"{eval_cap_count}/{heldout_n} episodes hit eval_cap=120",
-                "negative held-out score (-0.788 +/- 0.117, n=90) and null truly paired 8k-vs-4k@8k delta (-0.073 +/- 0.173)",
+                "negative held-out score (-0.788 +/- 0.117, n=90), null truly paired 8k-vs-4k@8k delta (-0.073 +/- 0.173), and -0.728 +/- 0.134 vs 637-step s0",
             ],
         },
         "evidence": [
             "origin/justSilas-fr8@8f920b2f:docs/reports/fr8.md",
             "origin/justSilas-fr8@8f920b2f:fr8/analysis/out/ws4_table_v3.md",
+            "origin/justSilas-fr8@94d33248:fr8/analysis/out/ws4_table_8k_shared_secret_paired.md",
             "origin/justSilas-fr8@8f920b2f:data/fr8/verda/a100-f437/runs/v3-verda-8k-s3/summary.json",
             "origin/justSilas-fr8@8f920b2f:data/fr8/verda/a100-f437/run-verda-8k-s3/lora/train_summary.json",
         ],
         "notes": (
             "Verda A100-80GB 344-step 8k GRPO s3 under shared secret 1ca0c2a64d scored -0.788 +/- 0.117 on "
             "held-out n=90 (valid 0.94, accused 0.96, correct 0.09); truly paired vs v3-4k-s0@8k on 60/60 "
-            "matching step-0 rosters gave -0.073 +/- 0.173, showing 8k training adds nothing at 8k inference."
+            "matching step-0 rosters gave -0.073 +/- 0.173, and vs 637-step s0 gave -0.728 +/- 0.134."
+        ),
+    }
+
+
+def _load_ws4_dagger_r1_verda(repo_root: Path) -> dict[str, Any]:
+    sft_steps = 250
+    sft_examples = 4000
+    sft_tokens = 25709119
+    sft_seconds = 3331
+    ds_file = repo_root / "data" / "x2" / "dagger-r1" / "lora" / "dagger_summary.json"
+    if ds_file.is_file():
+        ds = json.loads(ds_file.read_text(encoding="utf-8"))
+        sft_steps = int(ds.get("steps", 250))
+        sft_examples = int(ds.get("examples", 4000))
+        sft_tokens = int(ds.get("tokens", 25709119))
+        sft_seconds = int(ds.get("seconds", 3331))
+
+    return {
+        "run_id": "WS4-dagger-r1-verda",
+        "source": "historical",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (DAgger r1, 250 SFT steps from v3-4k s0, shared secret)",
+        "method": (
+            "On-policy DAgger round 1: 300 vLLM rollouts on TRAIN 170000..170099 (24,074 relabelled states, "
+            "2,603/2,603 solver match) -> 250 SFT steps on 4,000 own-policy states at 8k ctx "
+            "(Verda A100-40 e9ea8b2e + A100-80 68bbe201; max_new_tokens=256, shared secret 1ca0c2a64d)"
+        ),
+        "tiers_version": "v1.4",
+        "tiers": ["easy", "medium", "hard"],
+        "context_len": 8192,
+        "heldout_n": 50,
+        "before_mean_score": 0.0,
+        "after_mean_score": -0.542,
+        "after_ci95": 0.214,
+        "paired_mean_delta": -0.542,
+        "paired_ci95_low": -0.756,
+        "paired_ci95_high": -0.328,
+        "before_valid_call_rate": 0.03,
+        "after_valid_call_rate": 1.00,
+        "before_world_secret_tag": None,
+        "after_world_secret_tag": "1ca0c2a64d",
+        "replay_verified": False,
+        "verified_improvement": False,
+        "status": "NEGATIVE_DAGGER_INTERIM_BELOW_BASE",
+        "details": {
+            "verda_train_instance": "e9ea8b2e",
+            "verda_eval_instance": "68bbe201",
+            "verda_gpus": ["A100-40GB on-demand (e9ea8b2e)", "A100-80GB on-demand (68bbe201)"],
+            "dagger_seed_range": "170000..170099",
+            "vllm_rollout_episodes": 300,
+            "relabelled_states": 24074,
+            "solver_match_checked": 2603,
+            "solver_match_equal": 2603,
+            "student_expert_agreement_before": 0.43,
+            "student_expert_agreement_after": 0.68,
+            "sft_steps": sft_steps,
+            "sft_examples": sft_examples,
+            "sft_tokens": sft_tokens,
+            "sft_seconds": sft_seconds,
+            "max_new_tokens": 256,
+            "shared_world_secret_tag": "1ca0c2a64d",
+            "heldout_seed_range": "800000..800026",
+            "by_tier_n": {"easy": 18, "medium": 17, "hard": 15},
+            "inf8k_heldout_n": 50,
+            "inf8k_mean_score": -0.542,
+            "inf8k_mean_score_short": -0.54,
+            "inf8k_ci95": 0.214,
+            "inf8k_accused_count": 46,
+            "inf8k_accused_rate": 0.92,
+            "inf8k_correct_count": 10,
+            "inf8k_accuracy": 0.20,
+            "inf8k_precision_when_accused": 0.22,
+            "inf8k_abstain_rate": 0.08,
+            "inf4k_heldout_n": 41,
+            "inf4k_mean_score": -0.101,
+            "inf4k_mean_score_short": -0.10,
+            "inf4k_ci95": 0.112,
+            "inf4k_accused_count": 6,
+            "inf4k_accused_rate": 0.15,
+            "inf4k_correct_count": 1,
+            "inf4k_accuracy": 0.02,
+            "inf4k_abstain_rate": 0.85,
+            "paired_vs_4k_ctx8k_cap256_mean_delta": 0.242,
+            "paired_vs_4k_ctx8k_cap256_ci95": 0.304,
+            "paired_vs_4k_ctx8k_cap256_n": 43,
+            "paired_vs_4k_ctx4k_cap256_mean_delta": -0.031,
+            "paired_vs_4k_ctx4k_cap256_ci95": 0.139,
+            "paired_vs_4k_ctx4k_cap256_n": 32,
+            "partial_due_to_reaper_deletion": True,
+        },
+        "gates": {
+            "gate1_seed_hygiene": True,
+            "gate2_paired_world_secret": False,
+            "gate3_sample_and_replay": False,
+            "gate4_paired_ci95_positive": False,
+            "all_passed": False,
+            "reasons": [
+                "unpaired vs untrained FR8 base; partial held-out n=50 at 8k and n=41 at 4k pulled ~05:35 before 07:30/08:00 reapers deleted 68bbe201 and e9ea8b2e",
+                "interim held-out scores remained below base 0.000 at both 8k (-0.542 +/- 0.214, ~-0.54, 92% accused) and 4k (-0.101 +/- 0.112, ~-0.10, 85% abstain)",
+                "paired deltas vs v3-4k-s0 under shared secret 1ca0c2a64d crossed zero (+0.242 +/- 0.304 on n=43 at 8k; -0.031 +/- 0.139 on n=32 at 4k)",
+            ],
+        },
+        "evidence": [
+            "README.md",
+            "VERDA.md",
+            "origin/x2-dagger:docs/reports/dagger.md",
+            "origin/x2-dagger:fr8/analysis/out/ws4_table_x2_dagger.md",
+            "origin/x2-dagger:data/x2/dagger-r1/lora/dagger_summary.json",
+        ],
+        "notes": (
+            "Verda A100-40 e9ea8b2e + A100-80 68bbe201 DAgger round 1 (250 SFT steps on 4,000 solver-labelled "
+            "own-policy states from 300 vLLM rollouts / 24,074 relabelled states, 2,603/2,603 solver match) "
+            "doubled 8k whom-precision (0.10 -> 0.22) and state agreement (43% -> 68%) but stayed below base "
+            "under shared secret 1ca0c2a64d: interim -0.542 +/- 0.214 (-0.54, partial n=50) at 8k and "
+            "-0.101 +/- 0.112 (-0.10, partial n=41) at 4k."
+        ),
+    }
+
+
+def _load_verda_base_backup_18ac() -> dict[str, Any]:
+    return {
+        "run_id": "Verda-base-backup-18ac",
+        "source": "historical",
+        "model": "Qwen2.5-1.5B-Instruct (backup base eval on Verda A100 18acfa5d)",
+        "method": "Zero-shot backup base evaluation on held-out seeds 800006..800035/tier on Verda A100-80GB 18acfa5d (shared CPU host with X1 runners)",
+        "tiers_version": "v1.4",
+        "tiers": ["easy", "medium", "hard"],
+        "context_len": 4096,
+        "heldout_n": 0,
+        "before_mean_score": None,
+        "after_mean_score": None,
+        "after_ci95": None,
+        "paired_mean_delta": None,
+        "paired_ci95_low": None,
+        "paired_ci95_high": None,
+        "before_valid_call_rate": None,
+        "after_valid_call_rate": None,
+        "before_world_secret_tag": None,
+        "after_world_secret_tag": None,
+        "replay_verified": False,
+        "verified_improvement": False,
+        "status": "FAILED_REAPER_DELETED",
+        "details": {
+            "verda_instance": "18acfa5d",
+            "verda_instance_full": "18acfa5d-b5f9-4e64-a652-0de05a9f4c15",
+            "gpu": "A100-80GB on-demand (1A100.22V)",
+            "region": "FIN-01",
+            "heldout_seed_range": "800006..800035",
+            "reaper_deadline_eet": "07:30",
+            "reaper_deleted_before_pull": True,
+            "also_lost_at_reaper_instance": "924e81d8",
+            "also_lost_at_reaper_workload": "J1 Qwen3-14B bf16 vLLM open-weight eval",
+            "verda_total_instances_deleted": 9,
+            "verda_measured_spend_eur": 104.46,
+            "verda_start_balance_eur": 200.0,
+            "verda_end_balance_eur": 95.54,
+            "eval_episodes_pulled": 0,
+        },
+        "gates": {
+            "gate1_seed_hygiene": True,
+            "gate2_paired_world_secret": False,
+            "gate3_sample_and_replay": False,
+            "gate4_paired_ci95_positive": False,
+            "all_passed": False,
+            "reasons": [
+                "Verda A100-80GB instance 18acfa5d was deleted by its 07:30 on-instance reaper before backup base-eval outputs were pulled (not in puller list while FR8 session was idle)",
+                "heldout_n=0 < 30; 0 evaluation episodes recovered (J1 Qwen3-14B on 924e81d8 was also lost at 07:30 reaper deletion)",
+            ],
+        },
+        "evidence": [
+            "VERDA.md",
+            "origin/justSilas-fr8@94d33248:fr8/verda/README.md",
+        ],
+        "notes": (
+            "Verda A100-80GB 18acfa5d backup base eval (launched 02:17 when FR8 SSH was down) was deleted by "
+            "its 07:30 on-instance reaper before pull (n=0 recovered; J1 Qwen3-14B on 924e81d8 also lost at "
+            "reaper; €104.46 total measured Verda spend across all 9 deleted instances)."
         ),
     }
 
@@ -1971,12 +2331,15 @@ def load_historical_runs(
         _load_ws4_v3_oom(external_data_root),
         _load_ws4_v3_44553(external_data_root),
         _load_ws4_v3_4k_s1_714d_spot(repo_root),
-        _load_ws4_v3_4k_s1_44572(external_data_root),
+        _load_ws4_v3_4k_s1_44572(repo_root, external_data_root),
         _load_ws4_v3_verda_s0_eval(repo_root),
         _load_ws4_v3_4k_s0_ctx8k(),
+        _load_ws4_v3_8k_s0_3bb7(repo_root),
         _load_ws4_v3_8k_s1_ac58(repo_root),
         _load_ws4_v3_8k_s2_dbd0(repo_root),
         _load_ws4_v3_8k_s3_f437(repo_root),
+        _load_ws4_dagger_r1_verda(repo_root),
+        _load_verda_base_backup_18ac(),
     ]
 
 
@@ -2171,28 +2534,39 @@ def render_markdown_report(ledger: dict[str, Any]) -> str:
     tr_m = cal.get("train") or {}
     va_m = cal.get("val") or {}
 
+    verified_ids_str = (
+        ", ".join(f"`{rid}`" for rid in counts["verified_run_ids"])
+        if counts["verified_run_ids"]
+        else "none"
+    )
+
     lines: list[str] = [
         f"{h1} Small-Model Tiebreaker: Honest Experiment Ledger and Architecture Diagnosis",
         "",
         "Rubric target: train a smaller model on Canary experience (`TRAIN_SEEDS = [100000, 200000)`) "
         "that measurably improves on held-out seeds (`HELDOUT_SEEDS = [800000, 800200)`), with honest "
         "before/after comparisons and every run logged, including OOMs, zero-variance collapses, spot "
-        "preemptions, inference-context confounds, and negative-reward regressions.",
+        "preemptions, on-instance reaper deletions, inference-context confounds, and negative-reward regressions.",
         "",
         f"- Historical runs logged: `{counts['historical_runs']}`",
         f"- Dynamically discovered squad runs: `{counts['discovered_runs']}`",
-        f"- Verified improvements passing all 4 strict gates: `{counts['verified_improvements']}`",
+        f"- Verified improvements passing all 4 strict gates: `{counts['verified_improvements']}` ({verified_ids_str})",
         "",
         f"{h2} 1. Architecture Diagnosis: Why Raw-Transcript Open-Weight LLM Runs Failed the Bar",
         "",
-        "Across all 15 FR8 V100 and Verda A100/H100 open-weight `Qwen2.5-1.5B-Instruct` runs (`J4-*` and "
-        "`WS4-*`), LoRA SFT and decision-point GRPO mastered protocol syntax (`0.03 -> 1.00` valid tool calls) "
-        "and fixed `v2`'s reckless accusations (`+0.310 +/- 0.107` two-sample for `v3-4k-s0` vs `v2`), **yet no "
-        "autonomous open-weight LLM run met the tiebreaker bar** (held-out mean `> 0.0` above pooled untrained "
-        "base `0.000` on `n=36` with 95% CI excluding `0`): `v3-4k-s0` scored `-0.147 +/- 0.063` (`n=180`), "
-        "`v3-8k-s2` `-0.050 +/- 0.049` (`n=90`), `v3-8k-s1` `-0.777 +/- 0.118` (`n=90`), `v3-8k-s3` "
-        "`-0.788 +/- 0.117` (`n=90`), and partial `v3-4k-s1` (`44572`) `-0.240 +/- 0.171` (`n=25`). "
-        "Forensics isolate four root causes:",
+        f"Across all `{counts['historical_runs']}` historical FR8 V100 and Verda A100/H100 open-weight "
+        "`Qwen2.5-1.5B-Instruct` runs (`0 / 18` open-weight LLM runs above base `0.000`: `2` untrained base "
+        "entries pooling to `n=36` at `0.000`, `J4-v1-44397` on v1.3 plus `7` v1.4 trained `v2`/`v3` models in "
+        "`ws4_table_final.md` logged across `8` entries, `1` same-weights `ctx8k` confound eval, `1` on-policy "
+        "DAgger r1 interim run, and `5` `n=0` failed/reaper-lost/spot-preempted/OOM/zero-var runs), LoRA SFT and "
+        "decision-point GRPO mastered protocol syntax (`0.03 -> 1.00` valid tool calls) and fixed `v2`'s reckless "
+        "accusations (`+0.310 +/- 0.107` to `+0.408 +/- 0.099` two-sample vs `v2`), **yet no autonomous "
+        "open-weight LLM run met the tiebreaker bar** (held-out mean `> 0.0` above pooled untrained base `0.000` "
+        "on `n=36` with 95% CI excluding `0`): `v3-4k-s0` scored `-0.147 +/- 0.063` (`n=180`), finalized FR8 V100 "
+        "`v3-4k-s1` (`44572`) `-0.209 +/- 0.094` (`n=82`), `v3-8k-s0` `-0.060 +/- 0.054` (`n=90`), `v3-8k-s2` "
+        "`-0.050 +/- 0.049` (`n=90`), `v3-8k-s1` `-0.777 +/- 0.118` (`n=90`), `v3-8k-s3` `-0.788 +/- 0.117` "
+        "(`n=90`), and interim DAgger r1 `-0.542 +/- 0.214` (`-0.54`, `n=50`) at 8k and `-0.101 +/- 0.112` "
+        "(`-0.10`, `n=41`) at 4k. Forensics isolate five findings:",
         "",
         f"{h3} 1.1 Header Tax and Evidence Truncation (`2,842 / 4,096` Tokens)",
         "",
@@ -2211,16 +2585,20 @@ def render_markdown_report(ledger: dict[str, Any]) -> str:
         "",
         f"{h3} 1.2 Off-Policy Evidence-Gathering State Shift (`0.19 -> 0.89` Solver States vs `6/38 = 0.16` Held-Out)",
         "",
-        "- Decision-point GRPO (`WS4-v3-*`) overcame three infrastructure/variance failures, all logged in full: "
-        "V100 SDPA group-prefill OOM (`WS4-v3-44548-44550`, `5.49-5.52 GiB` alloc failure above `~26.5 GiB`), "
-        "unguided continue-only collapse (`WS4-v3-44553`, `8/10` zero-variance groups), and Verda A100 spot "
-        "preemption (`WS4-v3-4k-s1-714d-spot`, instance `714d8144` preempted `~30m` into training with `0` eval "
-        "episodes).",
+        "- Five `n=0` operational/training failures are logged in full without omission: `J4-pilot-44200` (`28 GB` "
+        "RAM tokenization OOM), `WS4-v3-44548-44550` (V100 SDPA group-prefill OOM, `5.49-5.52 GiB` alloc failure "
+        "above `~26.5 GiB`), `WS4-v3-44553` (unguided continue-only collapse, `8/10` zero-variance groups), "
+        "`WS4-v3-4k-s1-714d-spot` (Verda A100 spot `714d8144` preempted `~30m` into training), and "
+        "`Verda-base-backup-18ac` (Verda A100 `18acfa5d` backup base eval deleted by its `07:30` on-instance "
+        "reaper before pull; J1 `Qwen3-14B` on `924e81d8` was also lost at reaper deletion, out of `€104.46` total "
+        "measured Verda spend across all `9` deleted instances).",
         "- On Verda H100 `3bb74f5a` (`WS4-v3-verda-s0-eval`, `609` GRPO steps), guided forced-accuse exploration "
         "drove culprit identification accuracy on training decision states from `0.19` (`0.190 +/- 0.042`) to "
         "`0.89` (`0.892 +/- 0.030`) across `1,218` draws from the `2,000`-state pool (ruling out memorization), "
-        "while FR8 V100 replicate `WS4-v3-4k-s1-44572` (`192` steps) stayed flat (`0.22 -> 0.27`, partial held-out "
-        "`n=25` `-0.240 +/- 0.171`, `0/6` correct).",
+        "while finalized FR8 V100 replicate `WS4-v3-4k-s1-44572` (`~191-192` GRPO steps) had flat training "
+        "whom-accuracy (`0.22 -> 0.27`) and scored `-0.209 +/- 0.094` on held-out `n=82` (`valid 0.97`, "
+        "`accused 0.23` = `19/82`, `correct 0.01` = `1/82`, `abstain 0.77` = `63/82`, two-sample "
+        "`+0.249 +/- 0.127` vs `v2`; earlier partial `n=25` readout was `-0.240 +/- 0.171`).",
         "- Yet when `v3-4k-s0` played full held-out episodes autonomously (`n=180` across `800000..800059`, "
         "combining `s0` `n=90` `-0.103 +/- 0.081` and `off30` `n=90` `-0.192 +/- 0.096`), accusation precision "
         "fell to `6/38 = 0.16` (`accused 0.21`, overall `-0.147 +/- 0.063`, `+0.310 +/- 0.107` two-sample vs "
@@ -2229,32 +2607,49 @@ def render_markdown_report(ledger: dict[str, Any]) -> str:
         "to gather diagnostic evidence in its own rollouts (mirroring `gemini-4-carbon`'s `8.5` vs `14.1` solver "
         "canaries).",
         "",
-        f"{h3} 1.3 Inference-Length Confound (`-0.147 -> -0.716` at 8k) and Truly Paired 8k-vs-4k Null (`-0.073 +/- 0.173`)",
+        f"{h3} 1.3 Inference-Length Confound (`-0.147 -> -0.716` at 8k), 4-Seed 8k Split, and Paired Readouts",
         "",
-        "- Extending GRPO to `max_ctx=8192` split across replicates: `WS4-v3-8k-s1-ac58` (Verda A100-80 spot, "
-        "`371` steps) over-accused (`0.94` accused, `0.09` correct, `-0.777 +/- 0.118`, `n=90`), whereas "
-        "`WS4-v3-8k-s2-dbd0` (Verda H100 spot, `693` steps) collapsed to `93%` abstention (`0.07` accused, `0.01` "
-        "correct, `-0.050 +/- 0.049`, `n=90`). At matched steps (`271-370`), 8k did not learn culprit identity "
-        "faster than 4k (`0.41` vs `0.37`).",
+        "- Across all four `max_ctx=8192` GRPO replicates (`n=90` each on `800000..800029`), the two ~650-step "
+        "H100 seeds collapsed to conservative abstention (`WS4-v3-8k-s0-3bb7`, Verda H100 `3bb74f5a`, `637` steps, "
+        "`-0.060 +/- 0.054`, valid `0.98`, accused `0.08` = `7/90`, correct `0.01` = `1/90`, abstain `0.92` = "
+        "`83/90`, two-sample `+0.397 +/- 0.101` vs `v2`; and `WS4-v3-8k-s2-dbd0`, Verda H100 spot `dbd083ca`, "
+        "`693` steps, `-0.050 +/- 0.049`, `0.07` accused, `0.01` correct, `0.93` abstain), whereas the two "
+        "~350-step A100 seeds over-accused (`WS4-v3-8k-s1-ac58`, `371` steps, `-0.777 +/- 0.118`, `0.94` accused, "
+        "`0.09` correct; and `WS4-v3-8k-s3-f437`, `344` steps, `-0.788 +/- 0.117`, `0.96` accused, `0.09` "
+        "correct). On identical shared-secret worlds (`1ca0c2a64d`), `s0` minus `s3` is **`+0.728 +/- 0.134`** "
+        "(`n=90`). At matched steps (`271-370`), 8k did not learn culprit identity faster than 4k (`0.41` vs "
+        "`0.37`).",
         "- **Inference-length confound (`WS4-v3-4k-s0-ctx8k`)**: evaluating the *exact same* `609`-step 4k-trained "
         "adapter (`sha256[:12] = 3d0cd43b8037`) at `max_ctx=8192` under shared secret `1ca0c2a64d` (`n=90`, "
         "`800000..800029`) flipped medium/hard accusation rates from `0.00 / 0.03` at 4k to `0.80 / 0.90` at 8k "
         "(`0` correct), dropping held-out score from `-0.147` to `-0.716 +/- 0.105` (two-sample `-0.568 +/- 0.123` "
         "vs 4k inference). Longer inference context alone destabilizes policies initialized from 4k SFT.",
-        "- **Truly paired 8k-vs-4k null (`WS4-v3-8k-s3-f437`)**: evaluating 8k-trained `v3-8k-s3` (Verda A100-80, "
-        "`344` steps, `-0.788 +/- 0.117`, valid `0.94`, accused `0.96`, correct `0.09`, `n=90`) under the *same* "
-        "shared secret `1ca0c2a64d` as `WS4-v3-4k-s0-ctx8k` (`60/60` matching step-0 rosters) yielded a truly "
-        "paired delta (8k-trained minus 4k-trained at 8k inference) of **`-0.073 +/- 0.173`** (`n=90`), confirming "
-        "8k off-policy GRPO adds zero gain without on-policy state relabeling (DAgger).",
+        "- **Truly paired 8k-vs-4k null (`WS4-v3-8k-s3-f437`)**: evaluating 8k-trained `v3-8k-s3` (`344` steps, "
+        "`-0.788 +/- 0.117`, valid `0.94`, `n=90`) under the *same* shared secret `1ca0c2a64d` as "
+        "`WS4-v3-4k-s0-ctx8k` (`60/60` matching step-0 rosters) yielded a truly paired delta (8k-trained minus "
+        "4k-trained at 8k inference) of **`-0.073 +/- 0.173`** (`n=90`), confirming 8k off-policy GRPO adds zero "
+        "gain at 8k inference.",
         "",
-        f"{h3} 1.4 World-Secret Pairing Hygiene and Seed-Split Disclosure (Panel Fix A)",
+        f"{h3} 1.4 On-Policy DAgger Round 1 Honest Null (`WS4-dagger-r1-verda`)",
+        "",
+        "- On Verda A100-40 `e9ea8b2e` + A100-80 `68bbe201`, DAgger round 1 rolled out `v3-4k-s0` via vLLM across "
+        "`300` `TRAIN_SEEDS` episodes (`170000..170099`), relabelled `24,074` states with the reference solver "
+        "(verified `2,603/2,603` exact step match on `45` solver episodes), and ran `250` LoRA SFT steps on `4,000` "
+        "own-policy states at `8k` context (`max_new_tokens=256`).",
+        "- DAgger improved own-state solver agreement (`43% -> 68%`) and doubled 8k held-out whom-precision "
+        "(`0.10 -> 0.22`), but premature commitment persisted (`92%` accused at 8k): interim held-out readouts "
+        "pulled before the `07:30`/`08:00` reapers scored **`-0.542 +/- 0.214` (`-0.54`, partial `n=50`)** at `8k` "
+        "(paired `+0.242 +/- 0.304` vs `v3-4k-s0@8k`, `n=43`) and **`-0.101 +/- 0.112` (`-0.10`, partial `n=41`)** "
+        "at `4k` (paired `-0.031 +/- 0.139`, `n=32`) under shared secret `1ca0c2a64d`, remaining below base `0.000`.",
+        "",
+        f"{h3} 1.5 World-Secret Pairing Hygiene and Seed-Split Disclosure (Panel Fix A)",
         "",
         "- Without `CANARY_WORLD_SECRET` or `data/worlds/judge/SALT`, `canary.world` draws a per-process "
-        "`os.urandom(32)` key on `HELDOUT_SEEDS` (`800000..800199`), e.g. `f272803cdb679dbe` (`WS4-base-44411`) "
-        "and `404f83e6a15c3f1c` (`44584` in `WS4-base-pooled`) vs `c86b9c8a54f8b269` (`WS4-v2-44412`). Unshared "
-        "runs therefore admit only two-sample comparisons, whereas shared-secret runs (`1ca0c2a64d` for "
-        "`WS4-v3-4k-s0-ctx8k` vs `WS4-v3-8k-s3-f437`, and `sha256:ebf2f09716cf76d3` for `empirical-bayes-v14`) "
-        "support exact world-paired CIs.",
+        "`os.urandom(32)` key on `HELDOUT_SEEDS` (`800000..800199`), e.g. `f272803cdb679dbe` (`WS4-base-44411`), "
+        "`404f83e6a15c3f1c` (`44584` in `WS4-base-pooled`), and `09f8bc6443018b18` (`WS4-v3-4k-s1-44572`) vs "
+        "`c86b9c8a54f8b269` (`WS4-v2-44412`). Unshared runs therefore admit only two-sample comparisons, whereas "
+        "shared-secret runs (`1ca0c2a64d` across `WS4-v3-4k-s0-ctx8k`, `WS4-v3-8k-s0-3bb7`, `WS4-v3-8k-s3-f437`, "
+        "and `WS4-dagger-r1-verda`, plus `sha256:ebf2f09716cf76d3` for squad runs) support exact world-paired CIs.",
         "- `DEV_SEEDS` (`0..9999`) use the public key in `canary/world.py`; where dev seeds `0..29` appear in "
         "frontier or secondary diagnostic tables, that slice is **post-hoc locked** right after episode commitment "
         "(not pre-registered). All tiebreaker training strictly uses `TRAIN_SEEDS` (`100000..199999`) and primary "
@@ -2262,24 +2657,27 @@ def render_markdown_report(ledger: dict[str, Any]) -> str:
         "",
         f"{h2} 2. Honest Separation: Open-Weight LLMs vs Structured Compact Policies",
         "",
-        "To keep claims unambiguous, we separate open-weight LLM runs from structured compact policies:",
+        "To keep claims unambiguous, we separate open-weight LLM runs from structured compact policies, while "
+        "dynamically discovering every squad `results/tiebreak/*/summary.json` artifact under the same 4 gates:",
         "",
-        "1. **Open-Weight Autoregressive LLM Track (`Qwen2.5-1.5B` / `Qwen2.5-0.5B`)**: across `15` logged raw-"
-        "transcript SFT + GRPO runs (`J4-*`, `WS4-*`), **the tiebreaker bar is not met (`0 / 15` "
-        "`VERIFIED_IMPROVEMENT`)**. Compact working-memory rendering (`train/compact_render.py`, `<900` tokens "
-        "retaining employee clearances, `(doc_id, variant -> recipients)` maps, leak feed hits, `known_v`, and "
-        "breakeven `1 / (1 + known_v)`) plus calibrated SFT/DPO/DAgger (`train/export_calibrated_sft.py`) remove "
-        "the `2,842`-token header tax for follow-up `Qwen2.5-0.5B` / `1.5B` runs, evaluated under the same 4 "
-        "strict gates.",
+        "1. **Open-Weight Autoregressive LLM Track (`Qwen2.5-1.5B` / `Qwen2.5-0.5B`)**: across all `18` logged "
+        "historical open-weight runs (`J4-*`, `WS4-*`, `Verda-base-backup-18ac`), **the tiebreaker bar is not met "
+        "(`0 / 18` open-weight LLM runs above base `0.000`, `0 / 18` `VERIFIED_IMPROVEMENT`)**. Compact working-"
+        "memory rendering (`train/compact_render.py`, `<900` tokens retaining employee clearances, `(doc_id, "
+        "variant -> recipients)` maps, leak feed hits, `known_v`, and breakeven `1 / (1 + known_v)`) plus "
+        "calibrated SFT/DPO/DAgger (`train/export_calibrated_sft.py`) remove the `2,842`-token header tax for "
+        "squad `Qwen2.5-0.5B` / `1.5B` runs in `results/tiebreak/*/summary.json`, automatically audited by the "
+        "same 4 strict gates.",
         "2. **Structured Compact Policy Track (`EmpiricalBayesPolicy`, `TinyMLPPolicy`)**: non-LLM compact "
-        "policies act on lossless summary statistics rather than raw JSON transcripts. `empirical-bayes-v14` "
-        "(`EmpiricalBayesPolicy`, `11` parameters fitted strictly on `TRAIN_SEEDS`: `180` Stage-1 likelihood "
-        "episodes + `180` Stage-2/3 stopping/allocation episodes) passes all 4 strict gates on world-paired "
-        "`HELDOUT_SEEDS` (`n=180` across `800000..800059`, shared `sha256:ebf2f09716cf76d3`, `180/180` replay-"
-        "verified): `-0.421 -> +0.607` (paired score delta `+1.028 [+0.915, +1.141]`, luck-adjusted EV delta "
-        "`+1.000`). This proves calibrated likelihoods and stopping thresholds are sample-efficiently learnable "
-        "from `TRAIN_SEEDS` experience once working memory is preserved, without overstating open-weight LLM RL "
-        "results.",
+        f"policies act on lossless summary statistics rather than raw JSON transcripts (`{counts['discovered_runs']}` "
+        f"squad summary artifact(s) currently discovered, `{counts['verified_improvements']}` passing all 4 strict "
+        "gates). `empirical-bayes-v14` (`EmpiricalBayesPolicy`, `11` parameters fitted strictly on `TRAIN_SEEDS`: "
+        "`180` Stage-1 likelihood episodes + `180` Stage-2/3 stopping/allocation episodes) passes all 4 strict "
+        "gates on world-paired `HELDOUT_SEEDS` (`n=180` across `800000..800059`, shared `sha256:ebf2f09716cf76d3`, "
+        "`180/180` replay-verified): `-0.421 -> +0.607` (paired score delta `+1.028 [+0.915, +1.141]`, luck-"
+        "adjusted EV delta `+1.000`). This proves calibrated likelihoods and stopping thresholds are sample-"
+        "efficiently learnable from `TRAIN_SEEDS` experience once working memory is preserved, without overstating "
+        "open-weight LLM RL results.",
         "",
         f"{h2} 3. Canonical Calibrated v1.4 Dataset Statistics",
         "",

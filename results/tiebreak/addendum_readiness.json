@@ -11,19 +11,21 @@
     "autonomous_inference": "AST-verified zero canary.solver or canary.world imports or calls on inference paths"
   },
   "readiness_summary": {
-    "discovered_runs_total": 2,
+    "discovered_runs_total": 3,
     "unclassified_runs_count": 0,
-    "track1_discovered_count": 0,
-    "track1_passing_count": 0,
+    "track1_discovered_count": 1,
+    "track1_passing_count": 1,
     "track1_llm_passing_count": 0,
-    "track1_neural_mlp_passing_count": 0,
+    "track1_neural_mlp_passing_count": 1,
     "track1_failed_count": 0,
     "track1_llm_dagger_status": "AWAITING_V100_COMPLETION",
-    "track1_overall_status": "AWAITING_V100_COMPLETION",
+    "track1_overall_status": "PASS_NEURAL_MLP_AWAITING_V100_LLM",
     "readme_qwen_addendum_eligible": false,
-    "track1_any_passed": false,
-    "readme_addendum_action": "DO_NOT_APPEND_YET",
-    "promoted_track1_run_ids": [],
+    "track1_any_passed": true,
+    "readme_addendum_action": "HOLD_README_QWEN_ADDENDUM_UNTIL_V100",
+    "promoted_track1_run_ids": [
+      "tiny-mlp-dagger-v14"
+    ],
     "promoted_track1_llm_run_ids": [],
     "track2_discovered_count": 2,
     "track2_passing_count": 2,
@@ -41,37 +43,190 @@
       "mean_score": 0.0,
       "ci95": null,
       "n": 36,
+      "paired_delta_display": "two-sample / n/a",
+      "world_secret_display": "per-process (unpaired)",
+      "status_badge": "PUBLISHED_BASELINE",
       "note": "cannot play: 3% valid tool calls; per-process world secret"
     },
     {
+      "row_id": "v1",
+      "label": "v1 (J4 SFT on solver episodes, FR8 V100)",
+      "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+      "mean_score": -0.25,
+      "ci95": 0.256,
+      "n": 12,
+      "paired_delta_display": "two-sample (+0.207 +/- 0.270 vs v2)",
+      "world_secret_display": "per-process (unpaired)",
+      "status_badge": "PUBLISHED_BASELINE",
+      "note": "two-sample; 450 steps (5% epoch), 25% accuse rate, 0% correct"
+    },
+    {
       "row_id": "v2",
-      "label": "v2 (SFT on solver play)",
+      "label": "v2 (SFT on solver play, FR8 V100)",
       "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
       "mean_score": -0.457,
       "ci95": 0.086,
       "n": 172,
-      "note": "two-sample; blind accusations under 4k header crowding"
+      "paired_delta_display": "two-sample (-0.457 +/- 0.086 vs base)",
+      "world_secret_display": "per-process (unpaired)",
+      "status_badge": "PUBLISHED_BASELINE",
+      "note": "two-sample; blind accusations (55% accuse, 8/94 = 0.09 precision) under 4k header crowding"
     },
     {
-      "row_id": "v3_4k",
-      "label": "v3-4k (GRPO on environment reward, Verda H100)",
+      "row_id": "v3_4k_s0",
+      "label": "v3-4k s0 (GRPO, 609 steps, Verda H100)",
       "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
       "mean_score": -0.147,
       "ci95": 0.063,
       "n": 180,
-      "note": "two-sample; +0.310 +/- 0.107 vs v2, 100% valid calls"
+      "paired_delta_display": "two-sample (+0.310 +/- 0.107 vs v2)",
+      "world_secret_display": "per-process (unpaired)",
+      "status_badge": "PUBLISHED_BASELINE",
+      "note": "two-sample; +0.310 +/- 0.107 vs v2, 100% valid calls, 79% abstain"
+    },
+    {
+      "row_id": "v3_4k_s1",
+      "label": "v3-4k s1 (GRPO, FR8 V100)",
+      "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+      "mean_score": -0.209,
+      "ci95": 0.094,
+      "n": 82,
+      "paired_delta_display": "two-sample (+0.249 +/- 0.127 vs v2)",
+      "world_secret_display": "per-process (unpaired)",
+      "status_badge": "PUBLISHED_BASELINE",
+      "note": "two-sample; +0.249 +/- 0.127 vs v2, 97% valid calls, 77% abstain"
+    },
+    {
+      "row_id": "v3_8k_s0",
+      "label": "v3-8k s0 (GRPO, 8k ctx, 637 steps, Verda H100)",
+      "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+      "mean_score": -0.06,
+      "ci95": 0.054,
+      "n": 90,
+      "paired_delta_display": "+0.728 +/- 0.134 (paired vs v3-8k s3)",
+      "world_secret_display": "shared (1ca0c2a64d)",
+      "status_badge": "PUBLISHED_BASELINE",
+      "note": "shared secret 1ca0c2a64d; paired +0.728 +/- 0.134 vs s3, 92% abstain"
+    },
+    {
+      "row_id": "v3_8k_s1",
+      "label": "v3-8k s1 (GRPO, 8k ctx, 371 steps, Verda A100 spot)",
+      "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+      "mean_score": -0.777,
+      "ci95": 0.118,
+      "n": 90,
+      "paired_delta_display": "two-sample (-0.319 +/- 0.146 vs v2)",
+      "world_secret_display": "per-process (unpaired)",
+      "status_badge": "PUBLISHED_BASELINE",
+      "note": "two-sample; 94% accuse rate (8k context over-accusing)"
     },
     {
       "row_id": "v3_8k_s2",
-      "label": "v3-8k seed 2 (GRPO, 8k context, Verda H100 spot)",
+      "label": "v3-8k s2 (GRPO, 8k ctx, 693 steps, Verda H100 spot)",
       "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
       "mean_score": -0.05,
       "ci95": 0.049,
       "n": 90,
+      "paired_delta_display": "two-sample (+0.408 +/- 0.099 vs v2)",
+      "world_secret_display": "per-process (unpaired)",
+      "status_badge": "PUBLISHED_BASELINE",
       "note": "two-sample; 93% abstention, 95% CI [-0.099, -0.001] below 0"
+    },
+    {
+      "row_id": "v3_8k_s3",
+      "label": "v3-8k s3 (GRPO, 8k ctx, 344 steps, Verda A100)",
+      "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+      "mean_score": -0.788,
+      "ci95": 0.117,
+      "n": 90,
+      "paired_delta_display": "-0.073 +/- 0.173 (paired vs v3-4k s0 @8k)",
+      "world_secret_display": "shared (1ca0c2a64d)",
+      "status_badge": "PUBLISHED_BASELINE",
+      "note": "shared secret 1ca0c2a64d; paired -0.073 +/- 0.173 vs 4k@8k, 96% accuse rate"
+    },
+    {
+      "row_id": "dagger_r1_8k",
+      "label": "DAgger r1 @8k (Verda X2, cap 256, partial n=50, honest null)",
+      "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+      "mean_score": -0.542,
+      "ci95": 0.214,
+      "n": 50,
+      "paired_delta_display": "+0.242 +/- 0.304 (paired n=43 vs v3-4k s0 @8k)",
+      "world_secret_display": "shared (1ca0c2a64d)",
+      "status_badge": "PUBLISHED_HONEST_NULL",
+      "note": "partial n=50 (box reaper); shared secret 1ca0c2a64d, paired +0.242 +/- 0.304 (n=43) vs v3-4k s0 @8k (-0.754 +/- 0.177)"
+    },
+    {
+      "row_id": "dagger_r1_4k",
+      "label": "DAgger r1 @4k (Verda X2, cap 256, partial n=41, honest null)",
+      "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+      "mean_score": -0.101,
+      "ci95": 0.112,
+      "n": 41,
+      "paired_delta_display": "-0.031 +/- 0.139 (paired n=32 vs v3-4k s0 @4k)",
+      "world_secret_display": "shared (1ca0c2a64d)",
+      "status_badge": "PUBLISHED_HONEST_NULL",
+      "note": "partial n=41 (box reaper); shared secret 1ca0c2a64d, paired -0.031 +/- 0.139 (n=32) vs v3-4k s0 @4k (-0.094 +/- 0.103)"
     }
   ],
-  "track_1_runs": [],
+  "track_1_runs": [
+    {
+      "run_id": "tiny-mlp-dagger-v14",
+      "summary_path": "results/tiebreak/neural_mlp_dagger/mlp_summary.json",
+      "track": "track_1",
+      "track_label": "Track 1: Open-Weight LLM / Neural Policies",
+      "family": "TinyMLP",
+      "subfamily": "neural_mlp",
+      "architecture_label": "Compact neural MLP (TinyMLPPolicy, non-LLM)",
+      "is_open_weight_llm": false,
+      "model": "TinyMLP (2-layer Neural MLP + On-Policy DAgger r2)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "n": 180,
+      "before_mean_score": -0.855556,
+      "after_mean_score": 0.614056,
+      "after_ci95_low": 0.56512,
+      "after_ci95_high": 0.662991,
+      "after_ci95_source": "explicit_after_ci95_low",
+      "paired_mean_delta": 1.469611,
+      "paired_ci95_low": 1.385045,
+      "paired_ci95_high": 1.554177,
+      "before_valid_call_rate": 1.0,
+      "after_valid_call_rate": 1.0,
+      "before_world_secret_tag": "sha256:ebf2f09716cf76d3",
+      "after_world_secret_tag": "sha256:ebf2f09716cf76d3",
+      "world_secret_paired": true,
+      "replay_verified": true,
+      "zero_invalid_episodes": true,
+      "inference_modules_checked": [
+        "train/neural_mlp_tiebreak.py"
+      ],
+      "inference_policy_classes": [
+        "train/neural_mlp_tiebreak.py:TinyMLPPolicy"
+      ],
+      "criteria": {
+        "heldout_mean_gt_zero": true,
+        "paired_delta_ci95_gt_zero": true,
+        "train_eval_disjoint": true,
+        "replay_and_zero_errors": true,
+        "autonomous_inference": true
+      },
+      "criteria_passed_count": 5,
+      "passed_panel_fix_e_bar": true,
+      "failed_criteria": [],
+      "verdict": "PROMOTED_TRACK1_NEURAL",
+      "gates": {
+        "reasons": []
+      },
+      "notes": "Non-LLM 2-layer NumPy TinyMLP (28->128->64->5, 12293 params; strictly separated from Qwen2.5 LoRA) trained strictly on TRAIN_SEEDS 107000..107599 across 4 stages; world-paired held-out n=180 (800000..800059), 100% Env replay-verified.",
+      "train_seed_range": "107000..107599",
+      "eval_seed_range": "800000..800059"
+    }
+  ],
   "track_2_runs": [
     {
       "run_id": "empirical-bayes-v14",

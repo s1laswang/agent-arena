@@ -533,6 +533,54 @@ def test_selected_fleet_replication_shard_gates(tmp_path: Path) -> None:
     assert len(gates["replay_mismatch"]["errors"]) == 1
 
 
+def test_frontier_replication_shard_replay_and_gates(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "frontier-rep-clean")
+
+    ep_ok = _make_episode(tier="hard", seed=34, agent="opencode:google/gemini-4-carbon")
+    shard = "results/frontier_replication/v1.4/opencode-gemini-4-carbon-ext/hard"
+    _commit_files(
+        repo,
+        {
+            f"{shard}/episodes.jsonl": json.dumps(ep_ok) + "\n",
+            f"{shard}/meta.json": json.dumps({"tiers_version": "v1.4", "seeds": [34]}) + "\n",
+            f"{shard}/transcripts/34.txt": f"assistant {EN_DASH} trace\n",
+        },
+        message="add clean frontier_replication v1.4 shard",
+    )
+
+    rep_ok = verify_branch(base="justSilas", branch="frontier-rep-clean", repo=repo)
+    assert rep_ok["ok"] is True, rep_ok
+    gates_ok = _gate_map(rep_ok)
+    assert gates_ok["timeout_episode"]["summary"] == "1 episode file(s) checked, 0 episode violation(s)"
+    assert gates_ok["orphan_transcript"]["summary"] == "1 shard manifest(s) checked, 0 manifest/transcript issue(s)"
+    assert "1 v1.4 episode(s) replayed, 0 mismatch(es)" in gates_ok["replay_mismatch"]["summary"]
+
+    _git(repo, "checkout", "-B", "frontier-rep-bad", "justSilas")
+    ep_bad = _make_episode(tier="hard", seed=34, agent="opencode:google/gemini-4-carbon")
+    ep_bad["meta"]["rc"] = "timeout"
+    ep_bad["score"] = 0.222222
+    _commit_files(
+        repo,
+        {
+            f"{shard}/episodes.jsonl": json.dumps(ep_bad) + "\n",
+            f"{shard}/meta.json": json.dumps({"tiers_version": "v1.4", "seeds": [34, 35]}) + "\n",
+            f"{shard}/transcripts/34.txt": "ok\n",
+            f"{shard}/transcripts/99.txt": "orphan\n",
+        },
+        message="add malformed frontier_replication v1.4 shard",
+    )
+
+    rep_bad = verify_branch(base="justSilas", branch="frontier-rep-bad", repo=repo)
+    assert rep_bad["ok"] is False
+    gates_bad = _gate_map(rep_bad)
+    assert gates_bad["protected_core"]["passed"] is True
+    assert gates_bad["timeout_episode"]["passed"] is False
+    assert gates_bad["orphan_transcript"]["passed"] is False
+    assert gates_bad["replay_mismatch"]["passed"] is False
+    assert len(gates_bad["replay_mismatch"]["errors"]) == 1
+
+
 def test_co_authored_by_gate(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path)
     _git(repo, "checkout", "-b", "with-coauthor")

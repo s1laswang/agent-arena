@@ -48,6 +48,7 @@ RUN_SHARD_ROOT_PREFIXES: tuple[str, ...] = (
     "data/runs/committed/",
     "results/replication/",
     "results/selected_fleet_replication/",
+    "results/frontier_replication/",
 )
 DASH_EXEMPT_FILENAMES = frozenset({"accuse.md", "trial.log", "exception.txt"})
 HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
@@ -830,6 +831,7 @@ def verify_branch(
                 p.startswith("data/runs/committed/v1.4/")
                 or p.startswith("results/replication/v1.4/")
                 or p.startswith("results/selected_fleet_replication/v1.4/")
+                or p.startswith("results/frontier_replication/v1.4/")
                 or tiers_ver == "v1.4"
             )
             if not is_v14:

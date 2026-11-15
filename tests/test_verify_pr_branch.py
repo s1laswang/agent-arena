@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import io
 import json
 from pathlib import Path
 import subprocess
+import tokenize
 from typing import Any
 
 import pytest
@@ -91,7 +93,7 @@ def test_clean_pass_and_cli_modes(tmp_path: Path, capsys: pytest.CaptureFixture[
         + "    return a + b\n"
     )
     ep = _make_episode(tier="hard", seed=30, agent="opencode:google/gemini-4-carbon")
-    shard = "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard-s30-59"
+    shard = "results/replication/v1.4/opencode-gemini-4-carbon/hard-s30-59"
     meta = {
         "agent": ep["agent"],
         "tier": "hard",
@@ -103,12 +105,12 @@ def test_clean_pass_and_cli_modes(tmp_path: Path, capsys: pytest.CaptureFixture[
         repo,
         {
             "scripts/helper.py": clean_py,
-            "docs/note.md": "Clean summary - ASCII hyphen only.\n",
+            "docs/note.md": "Clean summary - see [README](../README.md) and [web](https://example.com).\n",
             f"{shard}/episodes.jsonl": json.dumps(ep) + "\n",
             f"{shard}/meta.json": json.dumps(meta, indent=2) + "\n",
-            f"{shard}/transcripts/30.txt": "step 1 ok\n",
+            f"{shard}/transcripts/30.txt": f"step 1 ok {EN_DASH} model output\n",
         },
-        message="feat: add helper and clean hard-s30-59 shard",
+        message="feat: add helper and clean replication shard",
     )
 
     rc_json = main(["--repo", str(repo), "--base", "justSilas", "--branch", "feat", "--json"])
@@ -119,13 +121,13 @@ def test_clean_pass_and_cli_modes(tmp_path: Path, capsys: pytest.CaptureFixture[
     assert parsed["ff_base"] is True
     assert parsed["changed_files"] == 5
     gates = _gate_map(parsed)
-    assert len(gates) == 10
+    assert len(gates) == 11
     assert all(g["passed"] for g in parsed["gates"])
 
     rc_txt = main(["--repo", str(repo), "--base", "justSilas", "--branch", "feat"])
     out_txt = capsys.readouterr().out
     assert rc_txt == 0
-    assert "OVERALL: PASS (10/10 gates passed)" in out_txt
+    assert "OVERALL: PASS (11/11 gates passed)" in out_txt
 
 
 def test_merge_conflict_and_require_ff_base(tmp_path: Path) -> None:
@@ -165,10 +167,15 @@ def test_merge_conflict_and_require_ff_base(tmp_path: Path) -> None:
     [
         "canary/env.py",
         "canary/rules.py",
+        "canary/world.py",
+        "canary/mcp_server.py",
         "canary/solver/core.py",
         "canary/reproduce.py",
         "harbor/build.py",
-        "harbor/new_file.txt",
+        "Makefile",
+        "configs/v14.yaml",
+        ".github/protected-paths.txt",
+        ".github/workflows/ci.yml",
     ],
 )
 def test_protected_core_gate(tmp_path: Path, core_path: str) -> None:
@@ -182,9 +189,75 @@ def test_protected_core_gate(tmp_path: Path, core_path: str) -> None:
     assert gates["protected_core"]["passed"] is False
     assert any(core_path in e for e in gates["protected_core"]["errors"])
 
+    rep_data = verify_branch(base="justSilas", branch="touch-core", repo=repo, allow_data=True)
+    assert rep_data["ok"] is False
+    assert _gate_map(rep_data)["protected_core"]["passed"] is False
+
     rep_allowed = verify_branch(base="justSilas", branch="touch-core", repo=repo, allow_core=True)
     assert rep_allowed["ok"] is True
     assert _gate_map(rep_allowed)["protected_core"]["passed"] is True
+
+
+def test_protected_paths_from_base_and_allow_data_flag(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _init_repo(tmp_path)
+    protected_txt = (
+        f"{HASH_CHAR} Protected list from base\n"
+        "custom_guard/\n"
+        "exact_guard.txt\n"
+        "data/runs/committed/\n"
+        "results/judge_table.md\n"
+        ".github/protected-paths.txt\n"
+    )
+    _commit_files(
+        repo,
+        {".github/protected-paths.txt": protected_txt},
+        message="add protected-paths.txt on base",
+    )
+
+    _git(repo, "checkout", "-b", "data-pr")
+    ep = _make_episode(tier="hard", seed=30, agent="opencode:google/gemini-4-carbon")
+    shard = "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard-s30-33"
+    _commit_files(
+        repo,
+        {
+            f"{shard}/episodes.jsonl": json.dumps(ep) + "\n",
+            f"{shard}/meta.json": json.dumps({"tiers_version": "v1.4", "seeds": [30]}) + "\n",
+            "results/judge_table.md": "| updated |\n",
+        },
+        message="stage committed data shard",
+    )
+
+    rep_blocked = verify_branch(base="justSilas", branch="data-pr", repo=repo)
+    assert rep_blocked["ok"] is False
+    err_blocked = "\n".join(_gate_map(rep_blocked)["protected_core"]["errors"])
+    assert shard in err_blocked
+    assert "results/judge_table.md" in err_blocked
+
+    rc_allow_data = main(
+        ["--repo", str(repo), "--base", "justSilas", "--branch", "data-pr", "--allow-data"]
+    )
+    out = capsys.readouterr().out
+    assert rc_allow_data == 0, out
+    assert "OVERALL: PASS" in out
+
+    _git(repo, "checkout", "-B", "weaken-guard", "justSilas")
+    _commit_files(
+        repo,
+        {
+            ".github/protected-paths.txt": "\n",
+            "custom_guard/secret.py": "X = 1\n",
+            "exact_guard.txt": "changed\n",
+        },
+        message="attempt to weaken base guard",
+    )
+    rep_weaken = verify_branch(base="justSilas", branch="weaken-guard", repo=repo)
+    assert rep_weaken["ok"] is False
+    err_weaken = "\n".join(_gate_map(rep_weaken)["protected_core"]["errors"])
+    assert "custom_guard/secret.py" in err_weaken
+    assert "exact_guard.txt" in err_weaken
+    assert ".github/protected-paths.txt" in err_weaken
 
 
 @pytest.mark.parametrize(
@@ -201,9 +274,10 @@ def test_finalize_reserved_path_gate(tmp_path: Path, reserved_path: str) -> None
     _git(repo, "checkout", "-b", "touch-reserved")
     _commit_files(repo, {reserved_path: "{}\n"}, message="write reserved finalize path")
 
-    rep = verify_branch(base="justSilas", branch="touch-reserved", repo=repo)
+    rep = verify_branch(base="justSilas", branch="touch-reserved", repo=repo, allow_data=True)
     assert rep["ok"] is False
     gates = _gate_map(rep)
+    assert gates["protected_core"]["passed"] is True
     assert gates["finalize_reserved_path"]["passed"] is False
     assert any(reserved_path in e for e in gates["finalize_reserved_path"]["errors"])
 
@@ -236,6 +310,44 @@ def test_unicode_dashes_gate(tmp_path: Path, dash_char: str, label: str) -> None
     gates = _gate_map(rep)
     assert gates["unicode_dashes"]["passed"] is False
     assert any(label in e for e in gates["unicode_dashes"]["errors"])
+
+
+def test_harbor_machine_logs_exempt_from_unicode_dashes(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "harbor-logs")
+    _commit_files(
+        repo,
+        {
+            "results/harbor/rehearsal/opencode-1/canary-hard-900000__abc/agent/opencode.txt": f"model {EM_DASH} log\n",
+            "results/harbor/rehearsal/opencode-1/canary-hard-900000__abc/agent/trajectory.json": json.dumps(
+                {"text": f"step {EN_DASH} output"}
+            )
+            + "\n",
+            "results/harbor/rehearsal/opencode-1/canary-hard-900000__abc/exception.txt": f"Error {EM_DASH} timeout\n",
+            "results/harbor/rehearsal/opencode-1/canary-hard-900000__abc/result.json": json.dumps(
+                {"exc": f"boom {EM_DASH} trace"}
+            )
+            + "\n",
+            "results/harbor/rehearsal/TABLE.md": f"| task | {EM_DASH} |\n",
+            "results/harbor/rehearsal/README.md": "Clean human protocol note.\n",
+        },
+        message="add harbor rehearsal machine logs and clean README",
+    )
+
+    rep_ok = verify_branch(base="justSilas", branch="harbor-logs", repo=repo)
+    assert rep_ok["ok"] is True, rep_ok
+    assert _gate_map(rep_ok)["unicode_dashes"]["passed"] is True
+
+    _commit_files(
+        repo,
+        {"results/harbor/rehearsal/README.md": f"Human prose {EM_DASH} forbidden dash\n"},
+        message="add dash in harbor README",
+    )
+    rep_bad = verify_branch(base="justSilas", branch="harbor-logs", repo=repo)
+    assert rep_bad["ok"] is False
+    dash_errs = _gate_map(rep_bad)["unicode_dashes"]["errors"]
+    assert len(dash_errs) == 1
+    assert "results/harbor/rehearsal/README.md:1" in dash_errs[0]
 
 
 def test_co_authored_by_gate(tmp_path: Path) -> None:
@@ -320,7 +432,9 @@ def test_timeout_episode_and_duplicate_tuples_gate(tmp_path: Path) -> None:
         message="add invalid and duplicate episodes",
     )
 
-    rep = verify_branch(base="justSilas", branch="bad-episodes", repo=repo, skip_replay=True)
+    rep = verify_branch(
+        base="justSilas", branch="bad-episodes", repo=repo, allow_data=True, skip_replay=True
+    )
     assert rep["ok"] is False
     gates = _gate_map(rep)
     assert gates["timeout_episode"]["passed"] is False
@@ -348,7 +462,9 @@ def test_orphan_transcript_and_manifest_seeds_gate(tmp_path: Path) -> None:
         message="add shard with mismatched seeds and orphan transcript",
     )
 
-    rep = verify_branch(base="justSilas", branch="orphan-shard", repo=repo, skip_replay=True)
+    rep = verify_branch(
+        base="justSilas", branch="orphan-shard", repo=repo, allow_data=True, skip_replay=True
+    )
     assert rep["ok"] is False
     gates = _gate_map(rep)
     assert gates["orphan_transcript"]["passed"] is False
@@ -373,7 +489,7 @@ def test_replay_mismatch_and_skip_replay_gate(tmp_path: Path) -> None:
         message="add tampered episode score",
     )
 
-    rep = verify_branch(base="justSilas", branch="tampered-replay", repo=repo)
+    rep = verify_branch(base="justSilas", branch="tampered-replay", repo=repo, allow_data=True)
     assert rep["ok"] is False
     gates = _gate_map(rep)
     assert gates["replay_mismatch"]["passed"] is False
@@ -383,10 +499,208 @@ def test_replay_mismatch_and_skip_replay_gate(tmp_path: Path) -> None:
         base="justSilas",
         branch="tampered-replay",
         repo=repo,
+        allow_data=True,
         skip_replay=True,
     )
     assert rep_skipped["ok"] is True
     assert _gate_map(rep_skipped)["replay_mismatch"]["passed"] is True
+
+
+def test_markdown_links_gate_valid_excluded_and_fences(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "clean-links")
+    md_body = "\n".join(
+        [
+            f"{HASH_CHAR} Guide",
+            "",
+            "- History table: [v1.3](../results/history/fresh_table_v1.3.md)",
+            "- History folder: [history dir](../results/history/)",
+            f'- Readme section: [readme](../README.md{HASH_CHAR}headline "Main Readme")',
+            "- Code label: [`core.py`](../canary/solver/core.py)",
+            "- Root-relative: [root](/README.md)",
+            "- Chart image: ![chart](../results/gap_chart.png)",
+            "- External HTTP: [plain](http://example.com/missing.md)",
+            "- External HTTPS: [tls](https://example.com/missing_(1).md)",
+            "- External mailto: [mail](mailto:ops@example.com)",
+            f"- Intra-file anchor: [jump]({HASH_CHAR}guide)",
+            "- Inline code syntax example: `[broken](does_not_exist.md)`",
+            "",
+            "```markdown",
+            "[fenced backtick broken](missing_backtick.md)",
+            "```",
+            "",
+            "~~~md",
+            "[fenced tilde broken](missing_tilde.md)",
+            "~~~",
+            "",
+        ]
+    )
+    _commit_files(
+        repo,
+        {
+            "results/history/fresh_table_v1.3.md": "v1.3 table\n",
+            "results/gap_chart.png": "placeholder\n",
+            "docs/guide.md": md_body,
+        },
+        message="docs: add clean links and history targets",
+    )
+
+    rep = verify_branch(base="justSilas", branch="clean-links", repo=repo)
+    assert rep["ok"] is True, rep
+    gates = _gate_map(rep)
+    assert gates["markdown_links"]["passed"] is True
+    assert gates["markdown_links"]["errors"] == []
+    assert "6 relative link(s), 0 broken" in gates["markdown_links"]["summary"]
+
+
+def test_markdown_links_gate_catches_broken_and_moved_targets(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _commit_files(
+        repo,
+        {"results/fresh_table_v1.3.md": "legacy v1.3 table\n"},
+        message="add pre-PR32 table path",
+    )
+
+    _git(repo, "checkout", "-b", "stale-doc-pr")
+    stale_md = "\n".join(
+        [
+            "Moved target: [v1.3](../results/fresh_table_v1.3.md)",
+            "Missing sibling: [gone](nonexistent_doc.md)",
+            "Escaped root: [outside](../../outside.md)",
+            "Code-labelled missing: [`missing.py`](missing_script.py)",
+            "",
+        ]
+    )
+    _commit_files(repo, {"docs/summary.md": stale_md}, message="docs: link to legacy table")
+
+    _git(repo, "checkout", "justSilas")
+    (repo / "results" / "history").mkdir(parents=True, exist_ok=True)
+    _git(repo, "mv", "results/fresh_table_v1.3.md", "results/history/fresh_table_v1.3.md")
+    _git(repo, "commit", "-m", "move v1.3 table to results/history")
+
+    rep = verify_branch(base="justSilas", branch="stale-doc-pr", repo=repo)
+    assert rep["ok"] is False
+    gates = _gate_map(rep)
+    assert gates["markdown_links"]["passed"] is False
+    assert len(gates["markdown_links"]["errors"]) == 4
+    joined = "\n".join(gates["markdown_links"]["errors"])
+    assert "results/fresh_table_v1.3.md" in joined
+    assert "docs/nonexistent_doc.md" in joined
+    assert "../outside.md" in joined
+    assert "docs/missing_script.py" in joined
+
+
+def _build_opencode_artifact_episode(
+    tier: str = "hard",
+    seed: int = 30,
+    fill_to_cap: bool = True,
+    tamper: str | None = None,
+) -> dict[str, Any]:
+    env = Env(tier, seed)
+    n_status = (env.p.tool_call_cap - 2) if fill_to_cap else 3
+    for _ in range(n_status):
+        env.call("status", {})
+    env.call("read_access_logs", {"day_from": 999, "day_to": 999})
+    env.call("accuse", {"employee": "e00"})
+    ep = asdict(env.result("opencode:google/gemini-3.5-flash"))
+    ep["meta"] = {"rc": 0, "valid": True}
+
+    first_payload_bytes = len(json.dumps(ep["steps"][0]["result"]).encode("utf-8"))
+    reported_bytes = first_payload_bytes + (1 if tamper == "wrong_trunc_bytes" else 0)
+    ep["steps"][0]["result"] = {
+        "raw": (
+            f"\n\n...{reported_bytes} bytes truncated...\n\n"
+            "The tool call succeeded but the output was truncated. "
+            "Full output saved to: /tmp/oc/tool-output/tool_1\n"
+        )
+    }
+
+    err_step = ep["steps"][-2]
+    err_step["result"] = {"ok": False, "error": json.dumps(err_step["result"])}
+
+    refused_result = {
+        "ok": False,
+        "error": "Model tried to call unavailable tool 'invalid'. Available tools: canary_accuse.",
+    }
+    if tamper == "disguised_env_call":
+        ep["steps"][1]["result"] = dict(refused_result)
+    elif tamper == "tampered_step_result":
+        ep["steps"][1]["result"] = {"ok": True, "data": {"tampered": True}, "error": None}
+    else:
+        for idx, client_tool in enumerate(("bash", "read", "invalid")):
+            ep["steps"].insert(
+                1 + idx,
+                {
+                    "t": 1 + idx,
+                    "day": 1,
+                    "tool": client_tool,
+                    "args": {"command": "ls"},
+                    "result": dict(refused_result),
+                },
+            )
+    return ep
+
+
+def test_replay_accepts_opencode_client_artifacts_at_tool_cap(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "oc-artifacts-clean")
+
+    ep = _build_opencode_artifact_episode(tier="hard", seed=30, fill_to_cap=True, tamper=None)
+    shard = "results/replication/v1.4/opencode-gemini-3.5-flash/hard-s30"
+    _commit_files(
+        repo,
+        {
+            f"{shard}/episodes.jsonl": json.dumps(ep) + "\n",
+            f"{shard}/meta.json": json.dumps({"tiers_version": "v1.4", "seeds": [30]}) + "\n",
+        },
+        message="add opencode episode with client-only tools and truncated output at tool cap",
+    )
+
+    rep = verify_branch(base="justSilas", branch="oc-artifacts-clean", repo=repo)
+    assert rep["ok"] is True, rep
+    gates = _gate_map(rep)
+    assert gates["replay_mismatch"]["passed"] is True
+    assert "3 client-only skipped, 1 truncated checked" in gates["replay_mismatch"]["summary"]
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    ["wrong_trunc_bytes", "disguised_env_call", "tampered_step_result"],
+)
+def test_replay_catches_tampering_behind_opencode_artifacts(tmp_path: Path, tamper: str) -> None:
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", f"oc-tamper-{tamper}")
+
+    ep = _build_opencode_artifact_episode(tier="medium", seed=4, fill_to_cap=False, tamper=tamper)
+    shard = "results/replication/v1.4/opencode-gemini-3.5-flash/medium-s04"
+    _commit_files(
+        repo,
+        {
+            f"{shard}/episodes.jsonl": json.dumps(ep) + "\n",
+            f"{shard}/meta.json": json.dumps({"tiers_version": "v1.4", "seeds": [4]}) + "\n",
+        },
+        message=f"add tampered opencode episode ({tamper})",
+    )
+
+    rep = verify_branch(base="justSilas", branch=f"oc-tamper-{tamper}", repo=repo)
+    assert rep["ok"] is False
+    gates = _gate_map(rep)
+    assert gates["replay_mismatch"]["passed"] is False
+    assert len(gates["replay_mismatch"]["errors"]) == 1
+    assert "step_mismatches=" in gates["replay_mismatch"]["errors"][0]
+
+
+def test_self_hygiene_zero_comments_and_dashes() -> None:
+    for py_rel in ("scripts/verify_pr_branch.py", "tests/test_verify_pr_branch.py"):
+        raw = (ROOT / py_rel).read_bytes()
+        comments = [
+            tok for tok in tokenize.tokenize(io.BytesIO(raw).readline)
+            if tok.type == tokenize.COMMENT
+        ]
+        assert comments == [], f"unexpected comments in {py_rel}: {comments}"
+        txt = raw.decode("utf-8")
+        assert EM_DASH not in txt
+        assert EN_DASH not in txt
 
 
 def test_live_repo_prs_smoke() -> None:

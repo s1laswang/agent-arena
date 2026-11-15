@@ -1,7 +1,183 @@
 {
   "schema_version": 1,
   "tiers_version": "v1.4",
+  "upstream_reconciled_commit": "58716742",
   "replication_root": "results/frontier_replication/v1.4",
+  "corpus_reconciliation": {
+    "committed_v14": {
+      "root": "data/runs/committed/v1.4",
+      "total_episodes": 442,
+      "replay_verified_episodes": 442
+    },
+    "fr8_replication_v14": {
+      "root": "results/frontier_replication/v1.4",
+      "total_episodes": 305,
+      "replay_verified_episodes": 305,
+      "frontier_target_episodes": 90,
+      "frontier_landed_episodes": 35,
+      "frontier_missing_episodes": 55
+    },
+    "combined_v14_total_episodes": 747,
+    "combined_v14_replay_verified_episodes": 747,
+    "carbon_hard_30_59_extension": {
+      "seed_range": [
+        30,
+        59
+      ],
+      "target_count": 30,
+      "committed_g1_partial": {
+        "run_dir": "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard",
+        "landed_seeds": [
+          34,
+          37
+        ],
+        "n": 2,
+        "provider_quota_excluded": 31
+      },
+      "fr8_replication": {
+        "run_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon",
+        "landed_seeds": [
+          30,
+          34,
+          42,
+          45,
+          57
+        ],
+        "n": 5,
+        "fr8_tree_remaining_count": 25
+      },
+      "combined_distinct_landed_seeds": [
+        30,
+        34,
+        37,
+        42,
+        45,
+        57
+      ],
+      "combined_distinct_count": 6,
+      "shared_overlap_seeds": [
+        34
+      ],
+      "shared_overlap_count": 1,
+      "combined_remaining_seeds": [
+        31,
+        32,
+        33,
+        35,
+        36,
+        38,
+        39,
+        40,
+        41,
+        43,
+        44,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        58,
+        59
+      ],
+      "combined_remaining_count": 24
+    }
+  },
+  "provenance_honesty": {
+    "panel_doc": "docs/agents/PANEL-0500.md",
+    "panel_status_commit": "8b9afa61",
+    "panel_fix_a_commit": "92708834",
+    "panel_fix_d_commit": "1bc3e281",
+    "upstream_reconciled_commit": "58716742",
+    "cohorts": {
+      "primary_carbon_0_29": {
+        "classification": "post_hoc_lock",
+        "seed_range": [
+          0,
+          29
+        ],
+        "episodes_commit": "8fd4dec",
+        "lock_commit": "671ed96",
+        "lock_delay_s": 28,
+        "solver_reference_dirs": [
+          "data/runs/committed/v1.4/reference/solver-hard-20261114-121126",
+          "data/runs/committed/v1.4/reference/solver-hard-seeds20to29"
+        ],
+        "note": "Primary 0-29 seed lock (671ed96) landed 28s after episodes commit (8fd4dec); classified as a post-hoc lock against reruns and cherry-picking, not a pre-registration."
+      },
+      "g1_carbon_hard_30_59": {
+        "classification": "pre_registered",
+        "seed_range": [
+          30,
+          59
+        ],
+        "pre_registered_commit": "f9fb7a4a",
+        "committed_dir": "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard",
+        "committed_landed_seeds": [
+          34,
+          37
+        ],
+        "committed_n": 2,
+        "committed_provider_quota_excluded": 31,
+        "fr8_replication_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon",
+        "fr8_replication_landed_seeds": [
+          30,
+          34,
+          42,
+          45,
+          57
+        ],
+        "fr8_replication_n": 5,
+        "combined_distinct_seeds": [
+          30,
+          34,
+          37,
+          42,
+          45,
+          57
+        ],
+        "combined_distinct_n": 6
+      },
+      "g2_argon_hydrogen_hard_0_29": {
+        "classification": "pre_registered",
+        "models": [
+          "google/gemini-4-argon",
+          "google/gemini-4-hydrogen"
+        ],
+        "tier": "hard",
+        "seed_range": [
+          0,
+          29
+        ],
+        "pre_registered_commit": "f9fb7a4a",
+        "committed_n": 0
+      },
+      "gpt_5_5_hard_0_29": {
+        "classification": "pre_registered",
+        "cohort_id": "opencode-openai-gpt-5.5-hard-0-29",
+        "agent": "opencode:openai/gpt-5.5",
+        "model": "openai/gpt-5.5",
+        "tier": "hard",
+        "seed_range": [
+          0,
+          29
+        ],
+        "timeout_s": 7200,
+        "max_spend_usd": 200.0,
+        "stop_launch_at": "08:15",
+        "hard_drop_at": "08:45",
+        "pre_registered_commit": "cf394894",
+        "execution_owner": "silas_cf394894_panel_fix_c_no_key",
+        "panel_fix_c_status": "no_openai_or_anthropic_api_key",
+        "committed_n": 0
+      }
+    }
+  },
   "gemini_sessions": {
     "source_doc": "docs/agents/GEMINI-SESSIONS.md",
     "source_commit": "f9fb7a4a",
@@ -10,6 +186,7 @@
     "g1_carbon_hard_ext60": {
       "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
       "execution_owner": "silas_g1_ext60",
+      "pre_registered_commit": "f9fb7a4a",
       "fr8_dispatch_enabled": false,
       "model": "google/gemini-4-carbon",
       "tier": "hard",
@@ -17,6 +194,13 @@
         30,
         59
       ],
+      "committed_ext_dir": "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard",
+      "committed_landed_seeds": [
+        34,
+        37
+      ],
+      "committed_landed_count": 2,
+      "committed_provider_quota_excluded": 31,
       "fr8_landed_seeds": [
         30,
         34,
@@ -24,10 +208,21 @@
         45,
         57
       ],
-      "remaining_count": 25
+      "remaining_count": 25,
+      "combined_distinct_landed_seeds": [
+        30,
+        34,
+        37,
+        42,
+        45,
+        57
+      ],
+      "combined_distinct_count": 6,
+      "combined_remaining_count": 24
     },
     "g2_frontier_families_hard_0_29": {
       "execution_owner": "silas_g2_families",
+      "pre_registered_commit": "f9fb7a4a",
       "fr8_dispatch_enabled": false,
       "models": [
         "google/gemini-4-argon",
@@ -40,6 +235,24 @@
       ],
       "allowed_during_carbon_blackout": true
     },
+    "gpt55_hard_0_29": {
+      "cohort_id": "opencode-openai-gpt-5.5-hard-0-29",
+      "agent": "opencode:openai/gpt-5.5",
+      "model": "openai/gpt-5.5",
+      "tier": "hard",
+      "seed_range": [
+        0,
+        29
+      ],
+      "timeout_s": 7200,
+      "max_spend_usd": 200.0,
+      "stop_launch_at": "08:15",
+      "hard_drop_at": "08:45",
+      "pre_registered_commit": "cf394894",
+      "execution_owner": "silas_cf394894_panel_fix_c_no_key",
+      "fr8_dispatch_enabled": false,
+      "allowed_during_carbon_blackout": true
+    },
     "carbon_quota_blackout": {
       "window_start_utc": "2026-11-15T04:30:00Z",
       "window_end_utc": "2026-11-15T06:15:00Z",
@@ -49,7 +262,8 @@
       ],
       "allowed_models": [
         "google/gemini-4-argon",
-        "google/gemini-4-hydrogen"
+        "google/gemini-4-hydrogen",
+        "openai/gpt-5.5"
       ],
       "reason": "rehearsal_carbon_blackout_0630_0815_eet"
     }
@@ -59,22 +273,34 @@
     "python": "/tmp/fleet-silas/shared/agent-arena-venv/bin/python",
     "path_prefix": "PATH=/home/silas/momin/bin:$PATH",
     "timeout_s": 3600,
+    "gpt55_timeout_s": 7200,
     "jobs_per_worker": 1,
     "max_workers_per_wave": 3
   },
   "summary": {
     "passed": true,
     "pure_cpu_mode": true,
+    "committed_v14_total_episodes": 442,
+    "committed_v14_replay_verified_episodes": 442,
     "replication_total_episodes": 305,
     "replication_replay_verified_episodes": 305,
+    "combined_v14_total_episodes": 747,
+    "combined_v14_replay_verified_episodes": 747,
     "target_frontier_episodes": 90,
     "landed_frontier_episodes": 35,
     "missing_frontier_episodes": 55,
+    "g1_committed_ext_episodes": 2,
+    "g1_committed_ext_provider_quota_excluded": 31,
+    "g1_fr8_replication_episodes": 5,
+    "g1_combined_distinct_hard_ext_episodes": 6,
+    "g1_combined_remaining_hard_ext_episodes": 24,
     "fr8_dispatch_active_episodes": 0,
     "wave_count": 0,
     "max_workers_in_any_wave": 0,
     "template_wave_count": 19,
-    "template_commands_validated": 55
+    "template_commands_validated": 55,
+    "cross_family_template_wave_count": 30,
+    "cross_family_template_commands_validated": 90
   },
   "cohorts": [
     {
@@ -88,6 +314,7 @@
         30,
         59
       ],
+      "timeout_s": 3600,
       "target_count": 30,
       "landed_count": 5,
       "missing_count": 25,
@@ -128,7 +355,8 @@
       "invalid_seeds": [],
       "baseline_landed_verified": true,
       "execution_owner": "silas_g1_ext60",
-      "fr8_dispatch_enabled": false
+      "fr8_dispatch_enabled": false,
+      "pre_registered_commit": "f9fb7a4a"
     },
     {
       "cohort_id": "opencode-gemini-3.5-flash-medium-0-29",
@@ -141,6 +369,7 @@
         0,
         29
       ],
+      "timeout_s": 3600,
       "target_count": 30,
       "landed_count": 30,
       "missing_count": 0,
@@ -193,6 +422,7 @@
         30,
         59
       ],
+      "timeout_s": 3600,
       "target_count": 30,
       "landed_count": 0,
       "missing_count": 30,
@@ -235,6 +465,68 @@
       "fr8_dispatch_enabled": false
     }
   ],
+  "template_cohorts": [
+    {
+      "cohort_id": "opencode-gemini-4-argon-hard-0-29",
+      "priority": 10,
+      "agent_dir": "opencode-gemini-4-argon",
+      "agent": "opencode:google/gemini-4-argon",
+      "model": "google/gemini-4-argon",
+      "tier": "hard",
+      "seed_range": [
+        0,
+        29
+      ],
+      "target_count": 30,
+      "landed_count": 0,
+      "missing_count": 30,
+      "timeout_s": 3600,
+      "pre_registered_commit": "f9fb7a4a",
+      "execution_owner": "silas_g2_families",
+      "fr8_dispatch_enabled": false
+    },
+    {
+      "cohort_id": "opencode-gemini-4-hydrogen-hard-0-29",
+      "priority": 11,
+      "agent_dir": "opencode-gemini-4-hydrogen",
+      "agent": "opencode:google/gemini-4-hydrogen",
+      "model": "google/gemini-4-hydrogen",
+      "tier": "hard",
+      "seed_range": [
+        0,
+        29
+      ],
+      "target_count": 30,
+      "landed_count": 0,
+      "missing_count": 30,
+      "timeout_s": 3600,
+      "pre_registered_commit": "f9fb7a4a",
+      "execution_owner": "silas_g2_families",
+      "fr8_dispatch_enabled": false
+    },
+    {
+      "cohort_id": "opencode-openai-gpt-5.5-hard-0-29",
+      "priority": 12,
+      "agent_dir": "opencode-openai-gpt-5.5",
+      "agent": "opencode:openai/gpt-5.5",
+      "model": "openai/gpt-5.5",
+      "tier": "hard",
+      "seed_range": [
+        0,
+        29
+      ],
+      "target_count": 30,
+      "landed_count": 0,
+      "missing_count": 30,
+      "timeout_s": 7200,
+      "pre_registered_commit": "cf394894",
+      "execution_owner": "silas_cf394894_panel_fix_c_no_key",
+      "fr8_dispatch_enabled": false,
+      "max_spend_usd": 200.0,
+      "stop_launch_at": "08:15",
+      "hard_drop_at": "08:45"
+    }
+  ],
   "preflight": {
     "passed": true,
     "zero_live_llm_calls": true,
@@ -257,6 +549,7 @@
         },
         "autoupdate": false,
         "share": "disabled",
+        "provider_routes_verified": 7,
         "errors": []
       },
       "child_env_isolation": {
@@ -275,7 +568,29 @@
           "CANARY_TOKEN",
           "OPENCODE_CONFIG"
         ],
+        "mcp_server_stripped_provider_keys": [
+          "OPENAI_API_KEY",
+          "GEMINI_API_KEY",
+          "GOOGLE_API_KEY",
+          "ANTHROPIC_API_KEY"
+        ],
+        "google_cli_active_key": "GOOGLE_GENERATIVE_AI_API_KEY",
+        "openai_cli_active_key": "OPENAI_API_KEY",
         "isolated_xdg_home_verified": true,
+        "errors": []
+      },
+      "gemini_runner_cf394894_controls": {
+        "passed": true,
+        "source_commit": "cf394894",
+        "provider_routes_verified": 7,
+        "controls_verified": [
+          "provider_model_google_and_openai",
+          "--max-spend-usd",
+          "--assume-cost-usd",
+          "--stop-launch-at",
+          "--tiers-version"
+        ],
+        "zero_live_subprocesses": true,
         "errors": []
       },
       "clean_workdir_isolation": {
@@ -291,12 +606,17 @@
         "passed": true,
         "synthetic_cases_verified": 9,
         "real_transcripts_checked": 35,
+        "committed_g1_ext_transcripts_checked": 2,
         "carbon_hard_step_counts": {
           "30": 112,
           "34": 83,
           "42": 74,
           "45": 156,
           "57": 76
+        },
+        "committed_g1_ext_step_counts": {
+          "34": 51,
+          "37": 64
         },
         "flash_medium_s28_steps": 42,
         "errors": []
@@ -309,8 +629,13 @@
         "commands_validated": 55,
         "g2_family_waves_validated": 20,
         "g2_family_commands_validated": 60,
+        "gpt55_waves_validated": 10,
+        "gpt55_commands_validated": 30,
+        "cross_family_waves_validated": 30,
+        "cross_family_commands_validated": 90,
         "max_workers_per_wave": 3,
         "timeout_s": 3600,
+        "gpt55_timeout_s": 7200,
         "jobs_per_worker": 1,
         "errors": []
       },
@@ -322,10 +647,43 @@
         "blocked_model": "google/gemini-4-carbon",
         "allowed_models_during_blackout": [
           "google/gemini-4-argon",
-          "google/gemini-4-hydrogen"
+          "google/gemini-4-hydrogen",
+          "openai/gpt-5.5"
         ],
+        "fr8_zero_api_lock_enforced": true,
         "reason": "rehearsal_carbon_blackout_0630_0815_eet",
-        "synthetic_timestamps_verified": 14,
+        "synthetic_timestamps_verified": 24,
+        "errors": []
+      },
+      "v14_corpus_reconciliation": {
+        "passed": true,
+        "committed_v14_episodes": 442,
+        "committed_v14_replay_verified": 442,
+        "replication_v14_episodes": 305,
+        "replication_v14_replay_verified": 305,
+        "combined_v14_episodes": 747,
+        "combined_v14_replay_verified": 747,
+        "g1_committed_landed_seeds": [
+          34,
+          37
+        ],
+        "g1_committed_provider_quota_excluded": 31,
+        "g1_fr8_landed_seeds": [
+          30,
+          34,
+          42,
+          45,
+          57
+        ],
+        "g1_combined_distinct_seeds": [
+          30,
+          34,
+          37,
+          42,
+          45,
+          57
+        ],
+        "g1_combined_remaining_count": 24,
         "errors": []
       }
     },

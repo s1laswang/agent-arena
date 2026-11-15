@@ -1,0 +1,34 @@
+{
+ "source": "four committed files, they disagree because each counts a different set of calls and a different price basis; the game must show one number and cite its file",
+ "figures": [
+  {
+   "file": "results/gemini/dashboard.html (embedded usage.totals), same as docs/gemini/SUBMISSION.md",
+   "calls": 24855,
+   "cost_usd": 226.337,
+   "basis": "usage ledger, list price"
+  },
+  {
+   "file": "results/gemini/ladder.md and ladder.json ledger",
+   "calls": 36164,
+   "cost_usd_ledger": 236.27,
+   "cost_usd_list_price": 298.75,
+   "basis": "ladder ledger only, 618 run ids"
+  },
+  {
+   "file": "results/gemini/ablations.md and docs/gemini/SUBMISSION.md",
+   "calls": 29150,
+   "cost_usd_paid": 214.89,
+   "cost_usd_no_cache_counterfactual": 893.08,
+   "cache_saved_pct": 75.9,
+   "basis": "programme-wide, paid vs all input at full price"
+  },
+  {
+   "file": "results/gemini/usage_ledger.jsonl.gz (summed cost_usd)",
+   "calls": 24855,
+   "cost_usd": 198.71,
+   "basis": "row-wise cost_usd field, differs from dashboard 226.34"
+  }
+ ],
+ "missing": "results/gemini/usage_total.json does not exist",
+ "recommended_for_game": "use per-episode cost from rounds.json; if a total is shown, cite dashboard.html 24,855 calls and $226.34"
+}

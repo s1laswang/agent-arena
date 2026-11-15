@@ -1,0 +1,97 @@
+{
+ "source": "results/gemini/ladder.json reference",
+ "rows": [
+  {
+   "agent": "solver",
+   "tier": "medium",
+   "n": 22,
+   "mean": 0.6518181818181819,
+   "ci": 0.10012063687559451,
+   "accuracy": 0.9090909090909091
+  },
+  {
+   "agent": "solver",
+   "tier": "hard",
+   "n": 40,
+   "mean": 0.441,
+   "ci": 0.141175131680931,
+   "accuracy": 0.9
+  },
+  {
+   "agent": "grok_tactics",
+   "tier": "medium",
+   "n": 22,
+   "mean": 0.5272727272727272,
+   "ci": 0.141268064351111,
+   "accuracy": 0.7727272727272727
+  },
+  {
+   "agent": "grok_tactics",
+   "tier": "hard",
+   "n": 40,
+   "mean": 0.3795,
+   "ci": 0.10358741330331495,
+   "accuracy": 0.875
+  },
+  {
+   "agent": "heuristic",
+   "tier": "medium",
+   "n": 22,
+   "mean": -0.2659090909090909,
+   "ci": 0.34439089889204305,
+   "accuracy": 0.45454545454545453
+  },
+  {
+   "agent": "heuristic",
+   "tier": "hard",
+   "n": 40,
+   "mean": 0.1335,
+   "ci": 0.1549524794317641,
+   "accuracy": 0.85
+  },
+  {
+   "agent": "do_nothing",
+   "tier": "medium",
+   "n": 22,
+   "mean": 0.0,
+   "ci": 0.0,
+   "accuracy": 0.0
+  },
+  {
+   "agent": "do_nothing",
+   "tier": "hard",
+   "n": 40,
+   "mean": 0.0,
+   "ci": 0.0,
+   "accuracy": 0.0
+  }
+ ],
+ "solver_per_seed_source": "data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl and solver-hard-seeds20to29/episodes.jsonl",
+ "solver_seeds_used": {
+  "0": {
+   "accused": "e38",
+   "score": 0.64,
+   "accuse_day": 9
+  },
+  "1": {
+   "accused": "e33",
+   "score": 0.69,
+   "accuse_day": 7
+  },
+  "3": {
+   "accused": "e29",
+   "score": 0.28,
+   "accuse_day": 18
+  },
+  "5": {
+   "accused": "e27",
+   "score": 0.52,
+   "accuse_day": 9
+  },
+  "8": {
+   "accused": "e06",
+   "score": 0.26,
+   "accuse_day": 21
+  }
+ }
+}

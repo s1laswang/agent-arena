@@ -1,0 +1,115 @@
+{
+ "source": "results/gemini/failure_gallery.json (rendered in docs/reports/failure_gallery.md)",
+ "net_gap_total": 90.795,
+ "episodes_decomposed": 295,
+ "cards": [
+  {
+   "category": "wrong_accusation_premature",
+   "name": "Premature Accusation on Weak Evidence",
+   "kind": "outcome",
+   "explanation": "Agents prematurely trigger the irreversible accusation action when the suspect pool is still wide and confidence in the leading suspect is very low (often between 10% and 30%). Instead of using remaining turns or planting canaries to isolate the mole, they jump to conclusions based on circumstantial evidence like document recipient overlap or normal after-hours logs. This results in accusing innocent employees and incurring the maximum penalty of -1.0.",
+   "value": 63.005,
+   "share_of_net_gap": 0.6939,
+   "episodes": 37
+  },
+  {
+   "category": "slow_commit_leak_damage",
+   "name": "Delayed Accusation and Over-Investigation",
+   "kind": "timing",
+   "explanation": "Rather than concluding the investigation and accusing a suspect when expected utility peaks, agents continue to advance the day in search of further confirmation or canary leak observations. Each extra day elapsed incurs document leaks that permanently degrade the organization's value score. Consequently, lingering in the investigation beyond the optimal stopping point bleeds value with negligible or negative returns on informational gain.",
+   "value": 23.73,
+   "share_of_net_gap": 0.2614,
+   "episodes": 154
+  },
+  {
+   "category": "wrong_accusation_evidence_backed",
+   "name": "Unlucky Accusation on Sound Evidence",
+   "kind": "luck",
+   "explanation": "The agent accuses the suspect who is strongly favored by the accumulated clues and holds the highest posterior probability according to Bayesian analysis. However, due to inherent stochasticity, coincidental access patterns, or canary fingerprint corruption, the true mole is an improbable alternative. This results in a penalized incorrect accusation despite following a rationally sound investigation path.",
+   "value": 18.91,
+   "share_of_net_gap": 0.2083,
+   "episodes": 12
+  },
+  {
+   "category": "infra_error_no_accusation",
+   "name": "Harness Infrastructure Error Prematurely Terminating Episode",
+   "kind": "infrastructure",
+   "explanation": "The evaluation environment or harness encounters an unhandled infrastructure error early in the investigation, aborting the run before any accusation can be submitted. This crash forces an outcome of end=error with an automatic score of zero, losing all potential reward on seeds where reference solvers routinely succeed.",
+   "value": 7.82,
+   "share_of_net_gap": 0.0861,
+   "episodes": 8
+  },
+  {
+   "category": "wrong_accusation_decoy",
+   "name": "Accusing the Decoy",
+   "kind": "outcome",
+   "explanation": "The agent hastily accuses an employee based on superficial red-herring evidence, such as after-hours access logs or incidental message mentions, without verifying their guilt through canary trap leaks. Because the accused suspect is merely a salient decoy rather than the true mole, the episode terminates prematurely with a severe penalty of -1.000.",
+   "value": 7.69,
+   "share_of_net_gap": 0.0847,
+   "episodes": 4
+  },
+  {
+   "category": "excess_canary_spend",
+   "name": "Excessive Canary Spending",
+   "kind": "canary",
+   "explanation": "Agents deploy canary traps too frequently and uninformatively, such as planting canaries on the very first day before observing leaks, planting multiple traps on the same day, or distributing variants to poor suspect distributions. Because planting a canary directly subtracts value from the enterprise score, this excessive deployment drains budget without yielding proportional Bayesian information compared to the optimal solver. Consequently, the agents incur substantial score regret from avoidable canary expenditures.",
+   "value": 3.87,
+   "share_of_net_gap": 0.0426,
+   "episodes": 98
+  },
+  {
+   "category": "restriction_cost",
+   "name": "Premature Access Restriction",
+   "kind": "restriction",
+   "explanation": "Agents invoke restrict_access against suspected employees while posterior probability remains relatively low or before gathering definitive proof. Restricting an employee imposes a direct restriction penalty and cuts off future document distribution, needlessly lowering final value when passive surveillance or canary traps would pinpoint the mole without penalties.",
+   "value": 1.1,
+   "share_of_net_gap": 0.0121,
+   "episodes": 27
+  },
+  {
+   "category": "solver_wrong_on_seed",
+   "name": "The solver itself was wrong on this seed",
+   "kind": "luck",
+   "explanation": "",
+   "value": -1.485,
+   "share_of_net_gap": -0.0164,
+   "episodes": 1
+  },
+  {
+   "category": "solver_no_accusation",
+   "name": "The solver did not accuse on this seed",
+   "kind": "luck",
+   "explanation": "",
+   "value": -3.205,
+   "share_of_net_gap": -0.0353,
+   "episodes": 6
+  },
+  {
+   "category": "leak_timing_variance",
+   "name": "Leak timing variance (luck)",
+   "kind": "luck",
+   "explanation": "",
+   "value": -4.36,
+   "share_of_net_gap": -0.048,
+   "episodes": 222
+  },
+  {
+   "category": "fewer_canaries_credit",
+   "name": "Fewer canaries than the solver (credit)",
+   "kind": "credit",
+   "explanation": "",
+   "value": -10.47,
+   "share_of_net_gap": -0.1153,
+   "episodes": 174
+  },
+  {
+   "category": "early_commit_credit",
+   "name": "Committed earlier than the solver (credit)",
+   "kind": "credit",
+   "explanation": "",
+   "value": -15.81,
+   "share_of_net_gap": -0.1741,
+   "episodes": 94
+  }
+ ]
+}

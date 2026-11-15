@@ -1,0 +1,3349 @@
+{
+ "source": [
+  "results/gemini/ladder_episodes.jsonl.gz (evidence, level choices, tokens)",
+  "data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl (solver)",
+  "results/gemini/ladder.json prices_usd_per_1m (cost)"
+ ],
+ "model_served_as": "gemini-3.5-flash is served as gemini-3.6-flash; say 3.6-flash on screen",
+ "cost_formula": "((tokens_in - tokens_cached)*in + tokens_cached*cached + (tokens_out + tokens_thinking)*out)/1e6 at prices_usd_per_1m",
+ "prices_usd_per_1m_in_out_cached": [
+  0.75,
+  3.75,
+  0.075
+ ],
+ "note": "variant_consistent_pool is derived: employees who got the leaked variant on every leaked canary shown; leak fingerprint is 95% accurate on hard so it can miss the mole",
+ "rounds": [
+  {
+   "round": 1,
+   "tier": "hard",
+   "seed": 0,
+   "tiers_version": "v1.4",
+   "company_size": 40,
+   "evidence_source_level": "high",
+   "evidence_day": 9,
+   "employees": [
+    {
+     "clearance": 2,
+     "dept": "Engineering",
+     "id": "e00",
+     "name": "Janne Nieminen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e01",
+     "name": "Laura Jarvinen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 1,
+     "dept": "Sales",
+     "id": "e02",
+     "name": "Kalle Kinnunen",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e03",
+     "name": "Kalle Salo",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e04",
+     "name": "Janne Heikkinen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 1,
+     "dept": "Sales",
+     "id": "e05",
+     "name": "Teemu Koskinen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e06",
+     "name": "Eero Koskinen",
+     "role": "controller"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e07",
+     "name": "Mikko Niemi",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e08",
+     "name": "Lauri Nieminen",
+     "role": "research lead"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e09",
+     "name": "Laura Jokinen",
+     "role": "research lead"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e10",
+     "name": "Antti Karjalainen",
+     "role": "analyst"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e11",
+     "name": "Joonas Heikkinen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 3,
+     "dept": "Research",
+     "id": "e12",
+     "name": "Maria Hamalainen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e13",
+     "name": "Laura Koskinen",
+     "role": "research lead"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e14",
+     "name": "Tuomas Heikkinen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e15",
+     "name": "Janne Korhonen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e16",
+     "name": "Pihla Virtanen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e17",
+     "name": "Ville Salminen",
+     "role": "tech lead"
+    },
+    {
+     "clearance": 2,
+     "dept": "Engineering",
+     "id": "e18",
+     "name": "Teemu Virtanen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e19",
+     "name": "Mikko Laine",
+     "role": "counsel"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e20",
+     "name": "Aino Rantanen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e21",
+     "name": "Sanna Lehtonen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e22",
+     "name": "Antti Heikkinen",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e23",
+     "name": "Markus Salo",
+     "role": "accountant"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e24",
+     "name": "Pihla Tuominen",
+     "role": "research lead"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e25",
+     "name": "Maria Korhonen",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 2,
+     "dept": "Engineering",
+     "id": "e26",
+     "name": "Aleksi Heinonen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e27",
+     "name": "Petri Jokinen",
+     "role": "controller"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e28",
+     "name": "Petri Laitinen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e29",
+     "name": "Noora Karjalainen",
+     "role": "analyst"
+    },
+    {
+     "clearance": 3,
+     "dept": "Engineering",
+     "id": "e30",
+     "name": "Kaisa Hamalainen",
+     "role": "tech lead"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e31",
+     "name": "Joonas Tuominen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e32",
+     "name": "Eero Lehtonen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e33",
+     "name": "Aleksi Makinen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e34",
+     "name": "Iida Heikkinen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e35",
+     "name": "Janne Jarvinen",
+     "role": "research lead"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e36",
+     "name": "Iida Kinnunen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e37",
+     "name": "Tuomas Rantanen",
+     "role": "counsel"
+    },
+    {
+     "clearance": 1,
+     "dept": "Sales",
+     "id": "e38",
+     "name": "Sanna Karjalainen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e39",
+     "name": "Sofia Karjalainen",
+     "role": "controller"
+    }
+   ],
+   "canaries": [
+    {
+     "canary_id": "c1",
+     "day": 1,
+     "title": "Q1 Financial Forecast",
+     "groups": {
+      "v1": [
+       "e00",
+       "e11",
+       "e17",
+       "e18"
+      ],
+      "v2": [
+       "e26",
+       "e30",
+       "e32"
+      ],
+      "v3": [
+       "e01",
+       "e06",
+       "e10",
+       "e23",
+       "e27",
+       "e29",
+       "e39"
+      ]
+     }
+    },
+    {
+     "canary_id": "c1-2",
+     "day": 1,
+     "title": "Strategic Roadmap 2025",
+     "groups": {
+      "v1": [
+       "e02",
+       "e05",
+       "e22",
+       "e25",
+       "e31",
+       "e38"
+      ],
+      "v2": [
+       "e04",
+       "e08",
+       "e09",
+       "e12",
+       "e13"
+      ],
+      "v3": [
+       "e16",
+       "e24",
+       "e34",
+       "e35",
+       "e36"
+      ]
+     }
+    },
+    {
+     "canary_id": "c3",
+     "day": 3,
+     "title": "Q3 Sales Pipeline & Commission Split",
+     "groups": {
+      "v1": [
+       "e02",
+       "e05"
+      ],
+      "v2": [
+       "e22",
+       "e25"
+      ],
+      "v3": [
+       "e31",
+       "e38"
+      ]
+     }
+    },
+    {
+     "canary_id": "c3-2",
+     "day": 3,
+     "title": "Lab Results: Project Revontuli",
+     "groups": {
+      "v1": [
+       "e04",
+       "e08",
+       "e09",
+       "e12"
+      ],
+      "v2": [
+       "e13",
+       "e16",
+       "e24"
+      ],
+      "v3": [
+       "e34",
+       "e35",
+       "e36"
+      ]
+     }
+    },
+    {
+     "canary_id": "c5",
+     "day": 5,
+     "title": "Sales Bonus Matrix Q3",
+     "groups": {
+      "v1": [
+       "e31"
+      ],
+      "v2": [
+       "e38"
+      ],
+      "v3": [
+       "e02",
+       "e05",
+       "e22",
+       "e25"
+      ]
+     }
+    },
+    {
+     "canary_id": "c5-2",
+     "day": 5,
+     "title": "Key Account Retention Q3",
+     "groups": {
+      "v1": [
+       "e38"
+      ],
+      "v2": [
+       "e31"
+      ],
+      "v3": [
+       "e02",
+       "e05",
+       "e22",
+       "e25"
+      ]
+     }
+    }
+   ],
+   "leak_feed": [
+    {
+     "doc_id": "c1-2",
+     "surfaced_day": 3,
+     "title": "Strategic Roadmap 2025",
+     "variant": "v1"
+    },
+    {
+     "doc_id": "c3",
+     "surfaced_day": 5,
+     "title": "Q3 Sales Pipeline & Commission Split",
+     "variant": "v3"
+    },
+    {
+     "doc_id": "d4-3",
+     "surfaced_day": 6,
+     "title": "Research headcount plan"
+    },
+    {
+     "doc_id": "c5-2",
+     "surfaced_day": 8,
+     "title": "Key Account Retention Q3",
+     "variant": "v1"
+    }
+   ],
+   "interviews": [],
+   "messages": [],
+   "after_hours_counts_seen": {
+    "e14": 4,
+    "e25": 3,
+    "e29": 2,
+    "e11": 2,
+    "e26": 2,
+    "e04": 1,
+    "e18": 1,
+    "e20": 1,
+    "e33": 1,
+    "e34": 1,
+    "e38": 1,
+    "e10": 1,
+    "e27": 1,
+    "e28": 1,
+    "e03": 1,
+    "e12": 1,
+    "e02": 1,
+    "e13": 1,
+    "e22": 1,
+    "e23": 1
+   },
+   "variant_consistent_pool": [
+    "e38"
+   ],
+   "leaked_variants_counted": 3,
+   "mole": "e38",
+   "mole_name": "Sanna Karjalainen",
+   "mole_basis": "reference solver accused it and was correct on this seed",
+   "levels": [
+    {
+     "level": "minimal",
+     "accused": "e38",
+     "accused_name": "Sanna Karjalainen",
+     "correct": true,
+     "score": 0.22,
+     "accuse_day": 14,
+     "calls": 89,
+     "tokens_in": 2218780,
+     "tokens_cached": 1954917,
+     "tokens_out": 6075,
+     "tokens_thinking": 0,
+     "cost_usd": 0.3673,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/minimal/hard/0"
+    },
+    {
+     "level": "low",
+     "accused": "e02",
+     "accused_name": "Kalle Kinnunen",
+     "correct": false,
+     "score": -1.0,
+     "accuse_day": 21,
+     "calls": 65,
+     "tokens_in": 1862634,
+     "tokens_cached": 1575011,
+     "tokens_out": 1438,
+     "tokens_thinking": 10417,
+     "cost_usd": 0.3783,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/low/hard/0"
+    },
+    {
+     "level": "medium",
+     "accused": "e38",
+     "accused_name": "Sanna Karjalainen",
+     "correct": true,
+     "score": 0.39,
+     "accuse_day": 18,
+     "calls": 75,
+     "tokens_in": 3068253,
+     "tokens_cached": 2812970,
+     "tokens_out": 1661,
+     "tokens_thinking": 22976,
+     "cost_usd": 0.4948,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/hard/0"
+    },
+    {
+     "level": "high",
+     "accused": "e38",
+     "accused_name": "Sanna Karjalainen",
+     "correct": true,
+     "score": 0.64,
+     "accuse_day": 9,
+     "calls": 40,
+     "tokens_in": 1084304,
+     "tokens_cached": 915597,
+     "tokens_out": 1224,
+     "tokens_thinking": 18464,
+     "cost_usd": 0.269,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/hard/0"
+    }
+   ],
+   "solver": {
+    "accused": "e38",
+    "correct": true,
+    "score": 0.64,
+    "accuse_day": 9
+   },
+   "wait_score": 0.0
+  },
+  {
+   "round": 2,
+   "tier": "hard",
+   "seed": 1,
+   "tiers_version": "v1.4",
+   "company_size": 40,
+   "evidence_source_level": "high",
+   "evidence_day": 10,
+   "employees": [
+    {
+     "clearance": 2,
+     "dept": "Engineering",
+     "id": "e00",
+     "name": "Kaisa Turunen",
+     "role": "tech lead"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e01",
+     "name": "Venla Nieminen",
+     "role": "analyst"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e02",
+     "name": "Teemu Saarinen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e03",
+     "name": "Riikka Nieminen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e04",
+     "name": "Riikka Kinnunen",
+     "role": "research lead"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e05",
+     "name": "Kaisa Lehtonen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e06",
+     "name": "Antti Salo",
+     "role": "analyst"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e07",
+     "name": "Joonas Nieminen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e08",
+     "name": "Eero Salo",
+     "role": "research lead"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e09",
+     "name": "Sofia Jokinen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e10",
+     "name": "Mikko Turunen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e11",
+     "name": "Mikko Niemi",
+     "role": "research lead"
+    },
+    {
+     "clearance": 3,
+     "dept": "Research",
+     "id": "e12",
+     "name": "Elina Kinnunen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e13",
+     "name": "Noora Nieminen",
+     "role": "engineer"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e14",
+     "name": "Ville Salonen",
+     "role": "counsel"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e15",
+     "name": "Lauri Jokinen",
+     "role": "tech lead"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e16",
+     "name": "Petri Karjalainen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e17",
+     "name": "Teemu Jokinen",
+     "role": "counsel"
+    },
+    {
+     "clearance": 3,
+     "dept": "Research",
+     "id": "e18",
+     "name": "Kaisa Heinonen",
+     "role": "research lead"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e19",
+     "name": "Aleksi Lehtonen",
+     "role": "controller"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e20",
+     "name": "Teemu Heinonen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e21",
+     "name": "Jussi Salo",
+     "role": "research lead"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e22",
+     "name": "Lauri Rantanen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e23",
+     "name": "Ville Heikkinen",
+     "role": "counsel"
+    },
+    {
+     "clearance": 3,
+     "dept": "Research",
+     "id": "e24",
+     "name": "Markus Salminen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 2,
+     "dept": "Engineering",
+     "id": "e25",
+     "name": "Pihla Heinonen",
+     "role": "tech lead"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e26",
+     "name": "Eero Turunen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e27",
+     "name": "Maria Heikkinen",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e28",
+     "name": "Markus Lehtinen",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e29",
+     "name": "Mikko Tuominen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e30",
+     "name": "Eero Korhonen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e31",
+     "name": "Ville Lehtonen",
+     "role": "controller"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e32",
+     "name": "Nea Nieminen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e33",
+     "name": "Emma Korhonen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e34",
+     "name": "Noora Rantanen",
+     "role": "analyst"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e35",
+     "name": "Aino Tuominen",
+     "role": "account exec"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e36",
+     "name": "Ville Lehtinen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e37",
+     "name": "Venla Laine",
+     "role": "accountant"
+    },
+    {
+     "clearance": 3,
+     "dept": "Engineering",
+     "id": "e38",
+     "name": "Petri Nieminen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e39",
+     "name": "Jussi Heikkinen",
+     "role": "compliance officer"
+    }
+   ],
+   "canaries": [
+    {
+     "canary_id": "c5",
+     "day": 5,
+     "title": "Engineering Q3 Roadmap Draft",
+     "groups": {
+      "eng_v1": [
+       "e00",
+       "e13"
+      ],
+      "eng_v2": [
+       "e15",
+       "e25"
+      ],
+      "eng_v3": [
+       "e30",
+       "e38"
+      ]
+     }
+    },
+    {
+     "canary_id": "c5-2",
+     "day": 5,
+     "title": "Legal Compliance Memo Q3",
+     "groups": {
+      "leg_v1": [
+       "e10",
+       "e17"
+      ],
+      "leg_v2": [
+       "e33",
+       "e39"
+      ],
+      "leg_v3": [
+       "e03",
+       "e05"
+      ]
+     }
+    },
+    {
+     "canary_id": "c6",
+     "day": 6,
+     "title": "Engineering Tech Architecture Q3",
+     "groups": {
+      "eng2_v1": [
+       "e00",
+       "e25"
+      ],
+      "eng2_v2": [
+       "e13",
+       "e30"
+      ],
+      "eng2_v3": [
+       "e15",
+       "e38"
+      ]
+     }
+    },
+    {
+     "canary_id": "c6-2",
+     "day": 6,
+     "title": "Legal Compliance Guidelines Q3",
+     "groups": {
+      "leg2_v1": [
+       "e10",
+       "e39"
+      ],
+      "leg2_v2": [
+       "e03",
+       "e17"
+      ],
+      "leg2_v3": [
+       "e05",
+       "e33"
+      ]
+     }
+    },
+    {
+     "canary_id": "c7",
+     "day": 7,
+     "title": "Legal Compliance Review Part 2",
+     "groups": {
+      "leg3_v1": [
+       "e09",
+       "e14"
+      ],
+      "leg3_v2": [
+       "e23",
+       "e26"
+      ],
+      "leg3_v3": [
+       "e32"
+      ]
+     }
+    }
+   ],
+   "leak_feed": [
+    {
+     "doc_id": "d1-3",
+     "surfaced_day": 5,
+     "title": "Acquisition target memo: Falcon"
+    },
+    {
+     "doc_id": "d4-1",
+     "surfaced_day": 7,
+     "title": "Legal reorg proposal"
+    },
+    {
+     "doc_id": "d5-1",
+     "surfaced_day": 7,
+     "title": "Project Falcon roadmap"
+    },
+    {
+     "doc_id": "c5-2",
+     "surfaced_day": 9,
+     "title": "Legal Compliance Memo Q3",
+     "variant": "leg_v2"
+    },
+    {
+     "doc_id": "d5-2",
+     "surfaced_day": 10,
+     "title": "Q4 Sales budget forecast"
+    },
+    {
+     "doc_id": "c6-2",
+     "surfaced_day": 10,
+     "title": "Legal Compliance Guidelines Q3",
+     "variant": "leg2_v3"
+    }
+   ],
+   "interviews": [],
+   "messages": [
+    {
+     "channel": "email",
+     "day": 1,
+     "id": "m1-0",
+     "sender": "e01",
+     "snippet": "Hi, Quick question on Project Tundra roadmap: are the numbers in section 2 final? Thanks! Venla",
+     "subject": "Project Tundra roadmap - questions"
+    },
+    {
+     "channel": "email",
+     "day": 1,
+     "id": "m1-1",
+     "sender": "e16",
+     "snippet": "Hi, Quick question on Patent filing notes: Ember: are the numbers in section 2 final? Thanks Petri",
+     "subject": "Patent filing notes: Ember - questions"
+    },
+    {
+     "channel": "email",
+     "day": 1,
+     "id": "m1-2",
+     "sender": "e26",
+     "snippet": "Hi, Sharing Acquisition target memo: Falcon with the group as discussed. Please keep it internal. Thanks Eero",
+     "subject": "Fwd: Acquisition target memo: Falcon"
+    },
+    {
+     "channel": "#research",
+     "day": 1,
+     "id": "m1-3",
+     "sender": "e11",
+     "snippet": "Management keeps moving the goalposts and then wonders why people burn out.",
+     "subject": ""
+    },
+    {
+     "channel": "#research",
+     "day": 1,
+     "id": "m1-4",
+     "sender": "e21",
+     "snippet": "Had coffee with a headhunter on LinkedIn yesterday, mostly gossip about the market.",
+     "subject": ""
+    },
+    {
+     "channel": "#legal",
+     "day": 1,
+     "id": "m1-5",
+     "sender": "e14",
+     "snippet": "Standup moved to 11:00 today, same link.",
+     "subject": ""
+    }
+   ],
+   "after_hours_counts_seen": {
+    "e11": 10,
+    "e15": 4,
+    "e19": 4,
+    "e29": 4,
+    "e17": 3,
+    "e33": 2,
+    "e00": 2,
+    "e39": 2,
+    "e14": 2,
+    "e25": 2,
+    "e16": 2,
+    "e10": 1,
+    "e20": 1,
+    "e18": 1,
+    "e06": 1,
+    "e36": 1,
+    "e37": 1,
+    "e07": 1,
+    "e12": 1,
+    "e35": 1,
+    "e22": 1,
+    "e05": 1,
+    "e27": 1,
+    "e28": 1,
+    "e38": 1,
+    "e23": 1,
+    "e30": 1
+   },
+   "variant_consistent_pool": [
+    "e33"
+   ],
+   "leaked_variants_counted": 2,
+   "mole": "e33",
+   "mole_name": "Emma Korhonen",
+   "mole_basis": "reference solver accused it and was correct on this seed",
+   "levels": [
+    {
+     "level": "minimal",
+     "accused": "e27",
+     "accused_name": "Maria Heikkinen",
+     "correct": false,
+     "score": -1.0,
+     "accuse_day": 14,
+     "calls": 69,
+     "tokens_in": 703436,
+     "tokens_cached": 487060,
+     "tokens_out": 4663,
+     "tokens_thinking": 0,
+     "cost_usd": 0.2163,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/minimal/hard/1"
+    },
+    {
+     "level": "low",
+     "accused": "e33",
+     "accused_name": "Emma Korhonen",
+     "correct": true,
+     "score": 0.41,
+     "accuse_day": 13,
+     "calls": 67,
+     "tokens_in": 1862883,
+     "tokens_cached": 1545781,
+     "tokens_out": 3624,
+     "tokens_thinking": 9089,
+     "cost_usd": 0.4014,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/low/hard/1"
+    },
+    {
+     "level": "medium",
+     "accused": "e33",
+     "accused_name": "Emma Korhonen",
+     "correct": true,
+     "score": 0.68,
+     "accuse_day": 11,
+     "calls": 75,
+     "tokens_in": 2973282,
+     "tokens_cached": 2683143,
+     "tokens_out": 2008,
+     "tokens_thinking": 26168,
+     "cost_usd": 0.5245,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/hard/1"
+    },
+    {
+     "level": "high",
+     "accused": "e33",
+     "accused_name": "Emma Korhonen",
+     "correct": true,
+     "score": 0.65,
+     "accuse_day": 10,
+     "calls": 49,
+     "tokens_in": 1691493,
+     "tokens_cached": 1503564,
+     "tokens_out": 1241,
+     "tokens_thinking": 27008,
+     "cost_usd": 0.3596,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/hard/1"
+    }
+   ],
+   "solver": {
+    "accused": "e33",
+    "correct": true,
+    "score": 0.69,
+    "accuse_day": 7
+   },
+   "wait_score": 0.0
+  },
+  {
+   "round": 3,
+   "tier": "hard",
+   "seed": 3,
+   "tiers_version": "v1.4",
+   "company_size": 40,
+   "evidence_source_level": "high",
+   "evidence_day": 7,
+   "employees": [
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e00",
+     "name": "Markus Salo",
+     "role": "engineer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e01",
+     "name": "Maria Rantanen",
+     "role": "analyst"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e02",
+     "name": "Laura Jarvinen",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e03",
+     "name": "Emma Niemi",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e04",
+     "name": "Elina Turunen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e05",
+     "name": "Sanna Hamalainen",
+     "role": "analyst"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e06",
+     "name": "Aleksi Laine",
+     "role": "analyst"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e07",
+     "name": "Sofia Korhonen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e08",
+     "name": "Hanna Jokinen",
+     "role": "controller"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e09",
+     "name": "Teemu Laine",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e10",
+     "name": "Teemu Turunen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e11",
+     "name": "Elina Salo",
+     "role": "scientist"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e12",
+     "name": "Jussi Salo",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 3,
+     "dept": "Research",
+     "id": "e13",
+     "name": "Elina Heinonen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e14",
+     "name": "Petri Niemi",
+     "role": "counsel"
+    },
+    {
+     "clearance": 3,
+     "dept": "Engineering",
+     "id": "e15",
+     "name": "Ville Saarinen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e16",
+     "name": "Maria Kinnunen",
+     "role": "tech lead"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e17",
+     "name": "Petri Tuominen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e18",
+     "name": "Jussi Jarvinen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e19",
+     "name": "Kalle Jarvinen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e20",
+     "name": "Jussi Makinen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e21",
+     "name": "Riikka Salo",
+     "role": "controller"
+    },
+    {
+     "clearance": 3,
+     "dept": "Research",
+     "id": "e22",
+     "name": "Janne Rantanen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e23",
+     "name": "Emma Jarvinen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 3,
+     "dept": "Research",
+     "id": "e24",
+     "name": "Antti Lehtinen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e25",
+     "name": "Teemu Laitinen",
+     "role": "account exec"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e26",
+     "name": "Venla Makinen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 3,
+     "dept": "Engineering",
+     "id": "e27",
+     "name": "Laura Virtanen",
+     "role": "engineer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e28",
+     "name": "Petri Makinen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e29",
+     "name": "Jussi Lehtinen",
+     "role": "controller"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e30",
+     "name": "Noora Korhonen",
+     "role": "account exec"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e31",
+     "name": "Maria Laine",
+     "role": "account exec"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e32",
+     "name": "Aino Koskinen",
+     "role": "controller"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e33",
+     "name": "Janne Turunen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 2,
+     "dept": "Engineering",
+     "id": "e34",
+     "name": "Janne Lehtinen",
+     "role": "engineer"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e35",
+     "name": "Tuomas Laine",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e36",
+     "name": "Ville Salo",
+     "role": "controller"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e37",
+     "name": "Laura Korhonen",
+     "role": "counsel"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e38",
+     "name": "Sanna Nieminen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 1,
+     "dept": "Sales",
+     "id": "e39",
+     "name": "Mikko Jarvinen",
+     "role": "sales ops"
+    }
+   ],
+   "canaries": [
+    {
+     "canary_id": "c1",
+     "day": 1,
+     "title": "Strategic Roadmap 2025 - Confidential",
+     "groups": {
+      "v1_alpha": [
+       "e00",
+       "e01",
+       "e02",
+       "e03",
+       "e04",
+       "e05",
+       "e06"
+      ],
+      "v1_beta": [
+       "e07",
+       "e08",
+       "e09",
+       "e10",
+       "e11",
+       "e12",
+       "e13"
+      ],
+      "v1_gamma": [
+       "e14",
+       "e15",
+       "e16",
+       "e17",
+       "e18",
+       "e19"
+      ]
+     }
+    },
+    {
+     "canary_id": "c1-2",
+     "day": 1,
+     "title": "Quarterly Financial Forecast - Internal",
+     "groups": {
+      "v2_alpha": [
+       "e20",
+       "e21",
+       "e22",
+       "e23",
+       "e24",
+       "e25",
+       "e26"
+      ],
+      "v2_beta": [
+       "e27",
+       "e28",
+       "e29",
+       "e30",
+       "e31",
+       "e32"
+      ],
+      "v2_gamma": [
+       "e33",
+       "e34",
+       "e35",
+       "e36",
+       "e37",
+       "e38",
+       "e39"
+      ]
+     }
+    },
+    {
+     "canary_id": "c2",
+     "day": 2,
+     "title": "Project Helios Architecture",
+     "groups": {
+      "v3_alpha": [
+       "e00",
+       "e03",
+       "e06",
+       "e09",
+       "e12",
+       "e15",
+       "e18"
+      ],
+      "v3_beta": [
+       "e01",
+       "e04",
+       "e07",
+       "e10",
+       "e13",
+       "e16",
+       "e19"
+      ],
+      "v3_gamma": [
+       "e02",
+       "e05",
+       "e08",
+       "e11",
+       "e14",
+       "e17"
+      ]
+     }
+    },
+    {
+     "canary_id": "c2-2",
+     "day": 2,
+     "title": "Supply Chain Strategy 2025",
+     "groups": {
+      "v4_alpha": [
+       "e20",
+       "e23",
+       "e26",
+       "e29",
+       "e32",
+       "e35",
+       "e38"
+      ],
+      "v4_beta": [
+       "e21",
+       "e24",
+       "e27",
+       "e30",
+       "e33",
+       "e36",
+       "e39"
+      ],
+      "v4_gamma": [
+       "e22",
+       "e25",
+       "e28",
+       "e31",
+       "e34",
+       "e37"
+      ]
+     }
+    },
+    {
+     "canary_id": "c3",
+     "day": 3,
+     "title": "Executive Compensation Review",
+     "groups": {
+      "v5_alpha": [
+       "e00",
+       "e01",
+       "e02",
+       "e08",
+       "e12",
+       "e14",
+       "e17"
+      ],
+      "v5_beta": [
+       "e03",
+       "e04",
+       "e05",
+       "e09",
+       "e11",
+       "e15",
+       "e18"
+      ],
+      "v5_gamma": [
+       "e06",
+       "e07",
+       "e10",
+       "e13",
+       "e16",
+       "e19"
+      ]
+     }
+    },
+    {
+     "canary_id": "c3-2",
+     "day": 3,
+     "title": "Cloud Infrastructure Migration Plan",
+     "groups": {
+      "v6_alpha": [
+       "e20",
+       "e21",
+       "e22",
+       "e29",
+       "e33",
+       "e34",
+       "e38"
+      ],
+      "v6_beta": [
+       "e23",
+       "e24",
+       "e25",
+       "e26",
+       "e30",
+       "e32",
+       "e35"
+      ],
+      "v6_gamma": [
+       "e27",
+       "e28",
+       "e31",
+       "e36",
+       "e37",
+       "e39"
+      ]
+     }
+    },
+    {
+     "canary_id": "c5",
+     "day": 5,
+     "title": "Strategy Brief: Executive Alignment",
+     "groups": {
+      "var_20": [
+       "e20"
+      ],
+      "var_29": [
+       "e29"
+      ],
+      "var_other": [
+       "e22",
+       "e24",
+       "e26",
+       "e28",
+       "e32",
+       "e36"
+      ]
+     }
+    }
+   ],
+   "leak_feed": [
+    {
+     "doc_id": "d1-2",
+     "surfaced_day": 3,
+     "title": "Acquisition target memo: Kivi"
+    },
+    {
+     "doc_id": "c2-2",
+     "surfaced_day": 4,
+     "title": "Supply Chain Strategy 2025",
+     "variant": "v4_alpha"
+    },
+    {
+     "doc_id": "c3-2",
+     "surfaced_day": 5,
+     "title": "Cloud Infrastructure Migration Plan",
+     "variant": "v6_alpha"
+    },
+    {
+     "doc_id": "d3-2",
+     "surfaced_day": 7,
+     "title": "Patent filing notes: Saimaa"
+    },
+    {
+     "doc_id": "c5",
+     "surfaced_day": 7,
+     "title": "Strategy Brief: Executive Alignment",
+     "variant": "var_29"
+    }
+   ],
+   "interviews": [],
+   "messages": [
+    {
+     "channel": "email",
+     "day": 1,
+     "id": "m1-0",
+     "sender": "e38",
+     "snippet": "Hi, Quick question on Q2 pricing strategy: are the numbers in section 2 final? Thanks Sanna",
+     "subject": "Q2 pricing strategy - questions"
+    },
+    {
+     "channel": "email",
+     "day": 1,
+     "id": "m1-1",
+     "sender": "e05",
+     "snippet": "Hi, Sharing Acquisition target memo: Kivi with the group as discussed. Please keep it internal. Thanks! Sanna",
+     "subject": "Fwd: Acquisition target memo: Kivi"
+    },
+    {
+     "channel": "email",
+     "day": 1,
+     "id": "m1-2",
+     "sender": "e21",
+     "snippet": "Hi, Read through Finance headcount plan. A couple of comments inline, mostly wording. Let's discuss Monday. Thanks Riikk",
+     "subject": "Re: Finance headcount plan"
+    },
+    {
+     "channel": "#sales",
+     "day": 1,
+     "id": "m1-3",
+     "sender": "e12",
+     "snippet": "Honestly this place doesn't deserve me. I've been updating my CV.",
+     "subject": ""
+    },
+    {
+     "channel": "#finance",
+     "day": 1,
+     "id": "m1-4",
+     "sender": "e32",
+     "snippet": "Anyone up for lunch at the Thai place?",
+     "subject": ""
+    },
+    {
+     "channel": "#engineering",
+     "day": 1,
+     "id": "m1-5",
+     "sender": "e00",
+     "snippet": "Heads up: I'm out next week, Janne is covering.",
+     "subject": ""
+    },
+    {
+     "channel": "#sales",
+     "day": 1,
+     "id": "m1-6",
+     "sender": "e33",
+     "snippet": "Can someone review my draft for the onboarding docs before end of day?",
+     "subject": ""
+    },
+    {
+     "channel": "#finance",
+     "day": 1,
+     "id": "m1-7",
+     "sender": "e05",
+     "snippet": "Can someone review my draft for the customer survey before Thursday?",
+     "subject": ""
+    }
+   ],
+   "after_hours_counts_seen": {
+    "e12": 3,
+    "e04": 2,
+    "e39": 2,
+    "e22": 2,
+    "e05": 1,
+    "e35": 1,
+    "e01": 1,
+    "e19": 1,
+    "e30": 1,
+    "e02": 1,
+    "e11": 1,
+    "e14": 1,
+    "e25": 1,
+    "e16": 1,
+    "e34": 1,
+    "e38": 1
+   },
+   "variant_consistent_pool": [
+    "e29"
+   ],
+   "leaked_variants_counted": 3,
+   "mole": "e29",
+   "mole_name": "Jussi Lehtinen",
+   "mole_basis": "reference solver accused it and was correct on this seed",
+   "levels": [
+    {
+     "level": "minimal",
+     "accused": "e08",
+     "accused_name": "Hanna Jokinen",
+     "correct": false,
+     "score": -1.0,
+     "accuse_day": 10,
+     "calls": 62,
+     "tokens_in": 1137120,
+     "tokens_cached": 950024,
+     "tokens_out": 2916,
+     "tokens_thinking": 0,
+     "cost_usd": 0.2225,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/minimal/hard/3"
+    },
+    {
+     "level": "low",
+     "accused": "e29",
+     "accused_name": "Jussi Lehtinen",
+     "correct": true,
+     "score": 0.67,
+     "accuse_day": 8,
+     "calls": 37,
+     "tokens_in": 643504,
+     "tokens_cached": 468861,
+     "tokens_out": 1504,
+     "tokens_thinking": 6924,
+     "cost_usd": 0.1978,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/low/hard/3"
+    },
+    {
+     "level": "medium",
+     "accused": "e29",
+     "accused_name": "Jussi Lehtinen",
+     "correct": true,
+     "score": 0.48,
+     "accuse_day": 13,
+     "calls": 64,
+     "tokens_in": 2375804,
+     "tokens_cached": 2120080,
+     "tokens_out": 2083,
+     "tokens_thinking": 19462,
+     "cost_usd": 0.4316,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/hard/3"
+    },
+    {
+     "level": "high",
+     "accused": "e29",
+     "accused_name": "Jussi Lehtinen",
+     "correct": true,
+     "score": 0.68,
+     "accuse_day": 7,
+     "calls": 35,
+     "tokens_in": 882669,
+     "tokens_cached": 746748,
+     "tokens_out": 2085,
+     "tokens_thinking": 18373,
+     "cost_usd": 0.2347,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/hard/3"
+    }
+   ],
+   "solver": {
+    "accused": "e29",
+    "correct": true,
+    "score": 0.28,
+    "accuse_day": 18
+   },
+   "wait_score": 0.0
+  },
+  {
+   "round": 4,
+   "tier": "hard",
+   "seed": 5,
+   "tiers_version": "v1.4",
+   "company_size": 40,
+   "evidence_source_level": "high",
+   "evidence_day": 7,
+   "employees": [
+    {
+     "clearance": 3,
+     "dept": "Engineering",
+     "id": "e00",
+     "name": "Tuomas Heinonen",
+     "role": "tech lead"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e01",
+     "name": "Antti Hamalainen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 1,
+     "dept": "Sales",
+     "id": "e02",
+     "name": "Emma Tuominen",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e03",
+     "name": "Tuomas Lehtinen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e04",
+     "name": "Riikka Koskinen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e05",
+     "name": "Aleksi Tuominen",
+     "role": "engineer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e06",
+     "name": "Sofia Jarvinen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e07",
+     "name": "Ville Salo",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e08",
+     "name": "Olli Turunen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e09",
+     "name": "Eero Lehtonen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e10",
+     "name": "Kalle Salo",
+     "role": "analyst"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e11",
+     "name": "Hanna Kinnunen",
+     "role": "engineer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e12",
+     "name": "Tuomas Salminen",
+     "role": "controller"
+    },
+    {
+     "clearance": 3,
+     "dept": "Engineering",
+     "id": "e13",
+     "name": "Emma Nieminen",
+     "role": "tech lead"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e14",
+     "name": "Petri Lehtonen",
+     "role": "controller"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e15",
+     "name": "Lauri Turunen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 3,
+     "dept": "Engineering",
+     "id": "e16",
+     "name": "Kalle Heikkinen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e17",
+     "name": "Kaisa Laitinen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e18",
+     "name": "Kaisa Tuominen",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e19",
+     "name": "Pihla Nieminen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e20",
+     "name": "Teemu Lehtinen",
+     "role": "counsel"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e21",
+     "name": "Venla Turunen",
+     "role": "engineer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Sales",
+     "id": "e22",
+     "name": "Tuomas Rantanen",
+     "role": "account exec"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e23",
+     "name": "Petri Karjalainen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e24",
+     "name": "Antti Salonen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e25",
+     "name": "Maria Heikkinen",
+     "role": "analyst"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e26",
+     "name": "Emma Salminen",
+     "role": "controller"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e27",
+     "name": "Aleksi Salo",
+     "role": "controller"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e28",
+     "name": "Antti Koskinen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e29",
+     "name": "Janne Laitinen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 3,
+     "dept": "Engineering",
+     "id": "e30",
+     "name": "Riikka Salo",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Sales",
+     "id": "e31",
+     "name": "Markus Laitinen",
+     "role": "account exec"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e32",
+     "name": "Noora Rantanen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e33",
+     "name": "Teemu Saarinen",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e34",
+     "name": "Hanna Hamalainen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e35",
+     "name": "Riikka Laitinen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 3,
+     "dept": "Research",
+     "id": "e36",
+     "name": "Tuomas Turunen",
+     "role": "research lead"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e37",
+     "name": "Pihla Jarvinen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e38",
+     "name": "Iida Tuominen",
+     "role": "controller"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e39",
+     "name": "Kalle Jarvinen",
+     "role": "lab analyst"
+    }
+   ],
+   "canaries": [
+    {
+     "canary_id": "c1",
+     "day": 1,
+     "title": "Internal Audit Strategy Q1",
+     "groups": {
+      "v1": [
+       "e00",
+       "e01",
+       "e02",
+       "e03",
+       "e04",
+       "e05",
+       "e06"
+      ],
+      "v2": [
+       "e07",
+       "e08",
+       "e09",
+       "e10",
+       "e11",
+       "e12",
+       "e13"
+      ],
+      "v3": [
+       "e14",
+       "e15",
+       "e16",
+       "e17",
+       "e18",
+       "e19"
+      ]
+     }
+    },
+    {
+     "canary_id": "c1-2",
+     "day": 1,
+     "title": "Executive Briefing Q1",
+     "groups": {
+      "v1": [
+       "e20",
+       "e21",
+       "e22",
+       "e23",
+       "e24",
+       "e25",
+       "e26"
+      ],
+      "v2": [
+       "e27",
+       "e28",
+       "e29",
+       "e30",
+       "e31",
+       "e32",
+       "e33"
+      ],
+      "v3": [
+       "e34",
+       "e35",
+       "e36",
+       "e37",
+       "e38",
+       "e39"
+      ]
+     }
+    },
+    {
+     "canary_id": "c2",
+     "day": 2,
+     "title": "Q2 Budget Projections",
+     "groups": {
+      "w1": [
+       "e00",
+       "e03",
+       "e06",
+       "e09",
+       "e12",
+       "e15",
+       "e18"
+      ],
+      "w2": [
+       "e21",
+       "e24",
+       "e27",
+       "e30",
+       "e33",
+       "e36",
+       "e39"
+      ],
+      "w3": [
+       "e01",
+       "e04",
+       "e07",
+       "e10",
+       "e13",
+       "e16"
+      ]
+     }
+    },
+    {
+     "canary_id": "c2-2",
+     "day": 2,
+     "title": "Q2 Operational Targets",
+     "groups": {
+      "z1": [
+       "e02",
+       "e05",
+       "e08",
+       "e11",
+       "e14",
+       "e17",
+       "e19"
+      ],
+      "z2": [
+       "e20",
+       "e23",
+       "e26",
+       "e29",
+       "e32",
+       "e35",
+       "e38"
+      ],
+      "z3": [
+       "e22",
+       "e25",
+       "e28",
+       "e31",
+       "e34",
+       "e37"
+      ]
+     }
+    },
+    {
+     "canary_id": "c3",
+     "day": 3,
+     "title": "Internal Financial Review Q3",
+     "groups": {
+      "u1": [
+       "e01",
+       "e08",
+       "e14",
+       "e25",
+       "e29",
+       "e35"
+      ],
+      "u2": [
+       "e06",
+       "e09",
+       "e17",
+       "e26",
+       "e32",
+       "e36",
+       "e38"
+      ],
+      "u3": [
+       "e10",
+       "e12",
+       "e27",
+       "e34",
+       "e37",
+       "e39"
+      ]
+     }
+    },
+    {
+     "canary_id": "c3-2",
+     "day": 3,
+     "title": "Internal Lab Operations Q3",
+     "groups": {
+      "v1": [
+       "e01",
+       "e09",
+       "e25",
+       "e27",
+       "e36",
+       "e37"
+      ],
+      "v2": [
+       "e06",
+       "e10",
+       "e14",
+       "e29",
+       "e34",
+       "e38"
+      ],
+      "v3": [
+       "e08",
+       "e12",
+       "e17",
+       "e26",
+       "e32",
+       "e35",
+       "e39"
+      ]
+     }
+    },
+    {
+     "canary_id": "c4",
+     "day": 4,
+     "title": "Q3 Product Strategy Review",
+     "groups": {
+      "x1": [
+       "e01",
+       "e10",
+       "e17",
+       "e26",
+       "e34",
+       "e35"
+      ],
+      "x2": [
+       "e06",
+       "e12",
+       "e25",
+       "e27",
+       "e29",
+       "e38"
+      ],
+      "x3": [
+       "e08",
+       "e09",
+       "e14",
+       "e32",
+       "e36",
+       "e37",
+       "e39"
+      ]
+     }
+    },
+    {
+     "canary_id": "c4-2",
+     "day": 4,
+     "title": "Q3 Technology Roadmap",
+     "groups": {
+      "y1": [
+       "e01",
+       "e06",
+       "e08",
+       "e12",
+       "e34",
+       "e36"
+      ],
+      "y2": [
+       "e09",
+       "e10",
+       "e14",
+       "e17",
+       "e25",
+       "e38"
+      ],
+      "y3": [
+       "e26",
+       "e27",
+       "e29",
+       "e32",
+       "e35",
+       "e37",
+       "e39"
+      ]
+     }
+    },
+    {
+     "canary_id": "c5",
+     "day": 5,
+     "title": "Q3 Executive Strategy",
+     "groups": {
+      "p1": [
+       "e01",
+       "e12",
+       "e14",
+       "e17",
+       "e27",
+       "e36"
+      ],
+      "p2": [
+       "e06",
+       "e08",
+       "e10",
+       "e25",
+       "e34",
+       "e37",
+       "e38"
+      ],
+      "p3": [
+       "e09",
+       "e26",
+       "e29",
+       "e32",
+       "e35",
+       "e39"
+      ]
+     }
+    },
+    {
+     "canary_id": "c5-2",
+     "day": 5,
+     "title": "Q3 Operational Review",
+     "groups": {
+      "q1": [
+       "e01",
+       "e08",
+       "e26",
+       "e29",
+       "e37",
+       "e38"
+      ],
+      "q2": [
+       "e06",
+       "e14",
+       "e17",
+       "e27",
+       "e32",
+       "e39"
+      ],
+      "q3": [
+       "e09",
+       "e10",
+       "e12",
+       "e25",
+       "e34",
+       "e35",
+       "e36"
+      ]
+     }
+    },
+    {
+     "canary_id": "c6",
+     "day": 6,
+     "title": "Finance Strategy Roadmap Q4",
+     "groups": {
+      "m1": [
+       "e01",
+       "e27"
+      ],
+      "m2": [
+       "e09"
+      ],
+      "m3": [
+       "e25"
+      ]
+     }
+    },
+    {
+     "canary_id": "c6-2",
+     "day": 6,
+     "title": "Finance Audit Findings Q4",
+     "groups": {
+      "n1": [
+       "e01",
+       "e09"
+      ],
+      "n2": [
+       "e25"
+      ],
+      "n3": [
+       "e27"
+      ]
+     }
+    }
+   ],
+   "leak_feed": [
+    {
+     "doc_id": "d1-2",
+     "surfaced_day": 3,
+     "title": "Finance reorg proposal"
+    },
+    {
+     "doc_id": "d3-3",
+     "surfaced_day": 6,
+     "title": "Board deck draft Q3"
+    },
+    {
+     "doc_id": "c3-2",
+     "surfaced_day": 6,
+     "title": "Internal Lab Operations Q3",
+     "variant": "v1"
+    },
+    {
+     "doc_id": "c3",
+     "surfaced_day": 7,
+     "title": "Internal Financial Review Q3",
+     "variant": "u3"
+    }
+   ],
+   "interviews": [],
+   "messages": [
+    {
+     "channel": "email",
+     "day": 1,
+     "id": "m1-0",
+     "sender": "e35",
+     "snippet": "Hi, Read through Sales headcount plan. A couple of comments inline, mostly wording. Let's discuss next week. Thanks Riik",
+     "subject": "Re: Sales headcount plan"
+    },
+    {
+     "channel": "email",
+     "day": 1,
+     "id": "m1-1",
+     "sender": "e38",
+     "snippet": "Hi, Sharing Finance reorg proposal with the group as discussed. Please keep it internal. Thanks Iida",
+     "subject": "Fwd: Finance reorg proposal"
+    },
+    {
+     "channel": "email",
+     "day": 1,
+     "id": "m1-2",
+     "sender": "e04",
+     "snippet": "Hi, Read through Research vendor contracts Q1. A couple of comments inline, mostly wording. Let's discuss Monday. Thanks",
+     "subject": "Re: Research vendor contracts Q1"
+    },
+    {
+     "channel": "#research",
+     "day": 1,
+     "id": "m1-3",
+     "sender": "e04",
+     "snippet": "Management keeps moving the goalposts and then wonders why people burn out.",
+     "subject": ""
+    },
+    {
+     "channel": "#research",
+     "day": 1,
+     "id": "m1-4",
+     "sender": "e04",
+     "snippet": "Honestly this place doesn't deserve me. I've been updating my CV.",
+     "subject": ""
+    },
+    {
+     "channel": "#finance",
+     "day": 1,
+     "id": "m1-5",
+     "sender": "e09",
+     "snippet": "Can someone review my draft for the infra migration before end of day?",
+     "subject": ""
+    },
+    {
+     "channel": "#research",
+     "day": 1,
+     "id": "m1-6",
+     "sender": "e35",
+     "snippet": "Does anyone have the slides from last week's the Q3 budget review?",
+     "subject": ""
+    },
+    {
+     "channel": "#engineering",
+     "day": 1,
+     "id": "m1-7",
+     "sender": "e00",
+     "snippet": "Can someone review my draft for the roadmap before Thursday?",
+     "subject": ""
+    }
+   ],
+   "after_hours_counts_seen": {
+    "e04": 4,
+    "e23": 3,
+    "e12": 2,
+    "e13": 2,
+    "e27": 2,
+    "e38": 1,
+    "e16": 1,
+    "e19": 1,
+    "e02": 1,
+    "e03": 1,
+    "e06": 1,
+    "e15": 1,
+    "e21": 1,
+    "e05": 1,
+    "e35": 1,
+    "e17": 1,
+    "e20": 1,
+    "e24": 1
+   },
+   "variant_consistent_pool": [
+    "e27",
+    "e37"
+   ],
+   "leaked_variants_counted": 2,
+   "mole": "e27",
+   "mole_name": "Aleksi Salo",
+   "mole_basis": "reference solver accused it and was correct on this seed",
+   "levels": [
+    {
+     "level": "minimal",
+     "accused": "e34",
+     "accused_name": "Hanna Hamalainen",
+     "correct": false,
+     "score": -1.0,
+     "accuse_day": 15,
+     "calls": 96,
+     "tokens_in": 2062646,
+     "tokens_cached": 1803178,
+     "tokens_out": 5378,
+     "tokens_thinking": 0,
+     "cost_usd": 0.35,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/minimal/hard/5"
+    },
+    {
+     "level": "low",
+     "accused": "e27",
+     "accused_name": "Aleksi Salo",
+     "correct": true,
+     "score": 0.51,
+     "accuse_day": 10,
+     "calls": 48,
+     "tokens_in": 1099648,
+     "tokens_cached": 882140,
+     "tokens_out": 2154,
+     "tokens_thinking": 8778,
+     "cost_usd": 0.2703,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/low/hard/5"
+    },
+    {
+     "level": "medium",
+     "accused": "e27",
+     "accused_name": "Aleksi Salo",
+     "correct": true,
+     "score": 0.68,
+     "accuse_day": 7,
+     "calls": 44,
+     "tokens_in": 1164282,
+     "tokens_cached": 988450,
+     "tokens_out": 3831,
+     "tokens_thinking": 16524,
+     "cost_usd": 0.2823,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/hard/5"
+    },
+    {
+     "level": "high",
+     "accused": "e27",
+     "accused_name": "Aleksi Salo",
+     "correct": true,
+     "score": 0.68,
+     "accuse_day": 7,
+     "calls": 47,
+     "tokens_in": 1464388,
+     "tokens_cached": 1277802,
+     "tokens_out": 2857,
+     "tokens_thinking": 21916,
+     "cost_usd": 0.3287,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/hard/5"
+    }
+   ],
+   "solver": {
+    "accused": "e27",
+    "correct": true,
+    "score": 0.52,
+    "accuse_day": 9
+   },
+   "wait_score": 0.0
+  },
+  {
+   "round": 5,
+   "tier": "hard",
+   "seed": 8,
+   "tiers_version": "v1.4",
+   "company_size": 40,
+   "evidence_source_level": "high",
+   "evidence_day": 9,
+   "employees": [
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e00",
+     "name": "Iida Saarinen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Finance",
+     "id": "e01",
+     "name": "Eero Salminen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e02",
+     "name": "Lauri Virtanen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e03",
+     "name": "Kalle Laine",
+     "role": "counsel"
+    },
+    {
+     "clearance": 3,
+     "dept": "Research",
+     "id": "e04",
+     "name": "Riikka Heikkinen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e05",
+     "name": "Olli Rantanen",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 2,
+     "dept": "Engineering",
+     "id": "e06",
+     "name": "Lauri Koskinen",
+     "role": "tech lead"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e07",
+     "name": "Aino Karjalainen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 3,
+     "dept": "Engineering",
+     "id": "e08",
+     "name": "Sanna Turunen",
+     "role": "senior engineer"
+    },
+    {
+     "clearance": 3,
+     "dept": "Legal",
+     "id": "e09",
+     "name": "Petri Karjalainen",
+     "role": "counsel"
+    },
+    {
+     "clearance": 3,
+     "dept": "Engineering",
+     "id": "e10",
+     "name": "Emma Salonen",
+     "role": "engineer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e11",
+     "name": "Teemu Tuominen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e12",
+     "name": "Mikko Salo",
+     "role": "counsel"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e13",
+     "name": "Aino Hamalainen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e14",
+     "name": "Teemu Hamalainen",
+     "role": "sales manager"
+    },
+    {
+     "clearance": 3,
+     "dept": "Research",
+     "id": "e15",
+     "name": "Venla Turunen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e16",
+     "name": "Elina Niemi",
+     "role": "controller"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e17",
+     "name": "Teemu Laine",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e18",
+     "name": "Laura Nieminen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e19",
+     "name": "Kaisa Salminen",
+     "role": "tech lead"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e20",
+     "name": "Riikka Lehtinen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 2,
+     "dept": "Sales",
+     "id": "e21",
+     "name": "Aleksi Heinonen",
+     "role": "account exec"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e22",
+     "name": "Laura Lehtinen",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e23",
+     "name": "Aleksi Karjalainen",
+     "role": "controller"
+    },
+    {
+     "clearance": 2,
+     "dept": "Finance",
+     "id": "e24",
+     "name": "Riikka Karjalainen",
+     "role": "analyst"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e25",
+     "name": "Petri Koskinen",
+     "role": "analyst"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e26",
+     "name": "Petri Turunen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e27",
+     "name": "Noora Jokinen",
+     "role": "scientist"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e28",
+     "name": "Ville Laine",
+     "role": "sales ops"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e29",
+     "name": "Tuomas Heikkinen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Research",
+     "id": "e30",
+     "name": "Sofia Heinonen",
+     "role": "research lead"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e31",
+     "name": "Eero Salonen",
+     "role": "counsel"
+    },
+    {
+     "clearance": 2,
+     "dept": "Research",
+     "id": "e32",
+     "name": "Joonas Lehtonen",
+     "role": "lab analyst"
+    },
+    {
+     "clearance": 2,
+     "dept": "Legal",
+     "id": "e33",
+     "name": "Jussi Rantanen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e34",
+     "name": "Teemu Korhonen",
+     "role": "paralegal"
+    },
+    {
+     "clearance": 3,
+     "dept": "Finance",
+     "id": "e35",
+     "name": "Eero Kinnunen",
+     "role": "accountant"
+    },
+    {
+     "clearance": 3,
+     "dept": "Sales",
+     "id": "e36",
+     "name": "Joonas Laine",
+     "role": "account exec"
+    },
+    {
+     "clearance": 2,
+     "dept": "Engineering",
+     "id": "e37",
+     "name": "Sofia Salo",
+     "role": "tech lead"
+    },
+    {
+     "clearance": 1,
+     "dept": "Legal",
+     "id": "e38",
+     "name": "Venla Lehtonen",
+     "role": "compliance officer"
+    },
+    {
+     "clearance": 1,
+     "dept": "Engineering",
+     "id": "e39",
+     "name": "Olli Makinen",
+     "role": "engineer"
+    }
+   ],
+   "canaries": [
+    {
+     "canary_id": "c1",
+     "day": 1,
+     "title": "Internal Operations Review - Part A",
+     "groups": {
+      "v1": [
+       "e00",
+       "e01",
+       "e02",
+       "e03"
+      ],
+      "v2": [
+       "e04",
+       "e05",
+       "e06",
+       "e07"
+      ],
+      "v3": [
+       "e08",
+       "e09",
+       "e10",
+       "e11"
+      ]
+     }
+    },
+    {
+     "canary_id": "c1-2",
+     "day": 1,
+     "title": "Internal Operations Review - Part B",
+     "groups": {
+      "v1": [
+       "e12",
+       "e13",
+       "e14",
+       "e15"
+      ],
+      "v2": [
+       "e16",
+       "e17",
+       "e18",
+       "e19"
+      ],
+      "v3": [
+       "e20",
+       "e21",
+       "e22",
+       "e23"
+      ]
+     }
+    },
+    {
+     "canary_id": "c2",
+     "day": 2,
+     "title": "Internal Operations Review - Part C",
+     "groups": {
+      "v1": [
+       "e24",
+       "e25",
+       "e26",
+       "e27"
+      ],
+      "v2": [
+       "e28",
+       "e29",
+       "e30",
+       "e31"
+      ],
+      "v3": [
+       "e32",
+       "e33",
+       "e34",
+       "e35"
+      ]
+     }
+    },
+    {
+     "canary_id": "c2-2",
+     "day": 2,
+     "title": "Internal Operations Review - Part D",
+     "groups": {
+      "v1": [
+       "e36",
+       "e37",
+       "e38",
+       "e39"
+      ],
+      "v2": [
+       "e08",
+       "e09",
+       "e10",
+       "e11"
+      ],
+      "v3": [
+       "e12",
+       "e13",
+       "e14",
+       "e15"
+      ]
+     }
+    },
+    {
+     "canary_id": "c3",
+     "day": 3,
+     "title": "Project Tuoni Architecture",
+     "groups": {
+      "v1": [
+       "e00",
+       "e06",
+       "e08"
+      ],
+      "v2": [
+       "e16",
+       "e23",
+       "e24"
+      ],
+      "v3": [
+       "e35",
+       "e37"
+      ]
+     }
+    },
+    {
+     "canary_id": "c3-2",
+     "day": 3,
+     "title": "Project Sampo Architecture",
+     "groups": {
+      "v1": [
+       "e01",
+       "e07",
+       "e10"
+      ],
+      "v2": [
+       "e19",
+       "e25",
+       "e39"
+      ],
+      "v3": [
+       "e00",
+       "e06",
+       "e08"
+      ]
+     }
+    },
+    {
+     "canary_id": "c5",
+     "day": 5,
+     "title": "Project Aalto Deep Dive",
+     "groups": {
+      "v1": [
+       "e00"
+      ],
+      "v2": [
+       "e06"
+      ],
+      "v3": [
+       "e08"
+      ]
+     }
+    },
+    {
+     "canary_id": "c5-2",
+     "day": 5,
+     "title": "Project Otaniemi Deep Dive",
+     "groups": {
+      "v1": [
+       "e01",
+       "e07",
+       "e10"
+      ],
+      "v2": [
+       "e19",
+       "e25",
+       "e39"
+      ]
+     }
+    }
+   ],
+   "leak_feed": [
+    {
+     "doc_id": "d1-4",
+     "surfaced_day": 3,
+     "title": "Finance vendor contracts Q1"
+    },
+    {
+     "doc_id": "c3-2",
+     "surfaced_day": 5,
+     "title": "Project Sampo Architecture",
+     "variant": "v3"
+    },
+    {
+     "doc_id": "c3",
+     "surfaced_day": 6,
+     "title": "Project Tuoni Architecture",
+     "variant": "v1"
+    }
+   ],
+   "interviews": [
+    {
+     "day": 9,
+     "employee": "e06",
+     "topic": "recent_documents",
+     "result": {
+      "answer": "Mainly Engineering vendor contracts Q2. I discussed it with two people in Engineering, nobody outside the team.",
+      "employee": "e06",
+      "topic": "recent_documents"
+     }
+    },
+    {
+     "day": 9,
+     "employee": "e06",
+     "topic": "contacts_outside",
+     "result": {
+      "answer": "Mostly vendors for Engineering, all through official channels. I can forward the threads.",
+      "employee": "e06",
+      "topic": "contacts_outside"
+     }
+    }
+   ],
+   "messages": [
+    {
+     "channel": "email",
+     "day": 1,
+     "id": "m1-0",
+     "sender": "e20",
+     "snippet": "Hi, Read through Patent filing notes: Saimaa. A couple of comments inline, mostly wording. Let's discuss tomorrow. Thank",
+     "subject": "Re: Patent filing notes: Saimaa"
+    },
+    {
+     "channel": "#research",
+     "day": 1,
+     "id": "m1-8",
+     "sender": "e15",
+     "snippet": "Heads up: I'm out Thursday, Riikka is covering.",
+     "subject": ""
+    },
+    {
+     "channel": "#research",
+     "day": 1,
+     "id": "m1-3",
+     "sender": "e04",
+     "snippet": "Honestly this place doesn't deserve me. I've been updating my CV.",
+     "subject": ""
+    },
+    {
+     "channel": "#research",
+     "day": 2,
+     "id": "m2-4",
+     "sender": "e04",
+     "snippet": "Skipped for promotion again. I'm done pretending this is fine.",
+     "subject": ""
+    },
+    {
+     "channel": "#research",
+     "day": 3,
+     "id": "m3-3",
+     "sender": "e04",
+     "snippet": "Honestly this place doesn't deserve me. I've been updating my CV.",
+     "subject": ""
+    }
+   ],
+   "after_hours_counts_seen": {
+    "e04": 5,
+    "e06": 4,
+    "e20": 3,
+    "e26": 3,
+    "e30": 3,
+    "e22": 2,
+    "e27": 2,
+    "e37": 2,
+    "e02": 1,
+    "e05": 1,
+    "e15": 1,
+    "e35": 1,
+    "e03": 1,
+    "e09": 1,
+    "e12": 1,
+    "e13": 1,
+    "e14": 1,
+    "e16": 1,
+    "e17": 1,
+    "e38": 1,
+    "e19": 1,
+    "e24": 1,
+    "e29": 1,
+    "e08": 1,
+    "e10": 1,
+    "e01": 1,
+    "e11": 1
+   },
+   "variant_consistent_pool": [
+    "e00",
+    "e06",
+    "e08"
+   ],
+   "leaked_variants_counted": 2,
+   "mole": "e06",
+   "mole_name": "Lauri Koskinen",
+   "mole_basis": "reference solver accused it and was correct on this seed",
+   "levels": [
+    {
+     "level": "minimal",
+     "accused": "e07",
+     "accused_name": "Aino Karjalainen",
+     "correct": false,
+     "score": -1.0,
+     "accuse_day": 19,
+     "calls": 95,
+     "tokens_in": 1749493,
+     "tokens_cached": 1516043,
+     "tokens_out": 5675,
+     "tokens_thinking": 0,
+     "cost_usd": 0.3101,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/minimal/hard/8"
+    },
+    {
+     "level": "low",
+     "accused": "e00",
+     "accused_name": "Iida Saarinen",
+     "correct": false,
+     "score": -1.0,
+     "accuse_day": 13,
+     "calls": 59,
+     "tokens_in": 1620681,
+     "tokens_cached": 1388354,
+     "tokens_out": 1970,
+     "tokens_thinking": 12796,
+     "cost_usd": 0.3337,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/low/hard/8"
+    },
+    {
+     "level": "medium",
+     "accused": "e06",
+     "accused_name": "Lauri Koskinen",
+     "correct": true,
+     "score": 0.49,
+     "accuse_day": 9,
+     "calls": 46,
+     "tokens_in": 1177514,
+     "tokens_cached": 1021223,
+     "tokens_out": 2828,
+     "tokens_thinking": 16759,
+     "cost_usd": 0.2673,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/medium/hard/8"
+    },
+    {
+     "level": "high",
+     "accused": "e06",
+     "accused_name": "Lauri Koskinen",
+     "correct": true,
+     "score": 0.67,
+     "accuse_day": 9,
+     "calls": 39,
+     "tokens_in": 1430905,
+     "tokens_cached": 1273959,
+     "tokens_out": 1647,
+     "tokens_thinking": 26700,
+     "cost_usd": 0.3196,
+     "run_id": "ladder:ladder-v14:gemini-3.5-flash/high/hard/8"
+    }
+   ],
+   "solver": {
+    "accused": "e06",
+    "correct": true,
+    "score": 0.26,
+    "accuse_day": 21
+   },
+   "wait_score": 0.0
+  }
+ ]
+}

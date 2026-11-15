@@ -1,0 +1,42 @@
+{
+ "source": "docs/CONTRACT.md and canary/rules.py (v1.4)",
+ "score": {
+  "correct_accusation": "true company value V at accusation time",
+  "wrong_accusation": -1,
+  "no_accusation": 0
+ },
+ "accuse_once": true,
+ "hard": {
+  "employees": 40,
+  "days": 21,
+  "tool_call_cap": 420,
+  "actions_per_day": 8,
+  "max_variants": 3,
+  "canaries_per_day": 2,
+  "fingerprint_accuracy": 0.95,
+  "leak_delay_days": "surfaces some days after the leak"
+ },
+ "tools": [
+  "status",
+  "list_employees",
+  "list_documents",
+  "read_access_logs",
+  "search_messages",
+  "read_message",
+  "interview",
+  "plant_canary",
+  "check_leak_feed",
+  "restrict_access",
+  "unrestrict_access",
+  "advance_day",
+  "accuse"
+ ],
+ "levels": [
+  "minimal",
+  "low",
+  "medium",
+  "high"
+ ],
+ "model": "gemini-3.5-flash",
+ "model_served_as": "gemini-3.6-flash"
+}

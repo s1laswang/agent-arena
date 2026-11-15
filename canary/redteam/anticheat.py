@@ -551,7 +551,7 @@ def replay_committed(root: Path = ROOT) -> list[dict]:
                         continue
                     r = env.call(st["tool"], st["args"])
                     got_payload = {"ok": r.ok, "data": r.data, "error": r.error}
-                    rec = st.get("result")
+                    rec = _norm_result(st.get("result"))   # unwrap the MCP error wrapper first (OpenCode imports)
                     if (not r.ok and isinstance(r.data, dict) and set(r.data) == {"detail"}
                             and not (isinstance(rec, dict) and isinstance(rec.get("data"), dict) and "detail" in rec["data"])):
                         # episodes recorded before error details existed (15 Nov): compare without the new detail field

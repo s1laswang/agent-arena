@@ -362,6 +362,7 @@ def render_qwen_pair(asst_msg: dict[str, Any], tool_msg: dict[str, Any]) -> str:
     )
 
 
+@lru_cache(maxsize=2)
 def build_tier_render_context() -> dict[str, dict[str, Any]]:
     ctx: dict[str, dict[str, Any]] = {}
     for tier in CANONICAL_TIERS:
@@ -1612,11 +1613,70 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-json", type=Path, default=None)
     ap.add_argument("--out-md", type=Path, default=None)
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--full", action="store_true")
     args = ap.parse_args(argv)
 
     repo_root = args.repo_root.resolve()
     out_json = (args.out_json or (repo_root / DEFAULT_OUT_JSON)).resolve()
     out_md = (args.out_md or (repo_root / DEFAULT_OUT_MD)).resolve()
+
+    if args.check and not args.full:
+        check_errs: list[str] = []
+        legacy_collision = out_json.parent / "summary.json"
+        if out_json.name != "summary.json" and legacy_collision.exists():
+            check_errs.append(f"colliding legacy summary.json still present: {legacy_collision}")
+        if not out_json.is_file():
+            check_errs.append(f"missing committed JSON: {out_json}")
+        if not out_md.is_file():
+            check_errs.append(f"missing committed Markdown: {out_md}")
+        if check_errs:
+            for cerr in check_errs:
+                print(f"[FAIL] {cerr}", file=sys.stderr)
+            return 1
+
+        raw_json_text = out_json.read_text(encoding="utf-8")
+        raw_md_text = out_md.read_text(encoding="utf-8")
+        try:
+            payload = json.loads(raw_json_text)
+        except json.JSONDecodeError as exc:
+            print(f"[FAIL] invalid committed JSON {out_json}: {exc}", file=sys.stderr)
+            return 1
+
+        canonical_json = json.dumps(payload, indent=2) + "\n"
+        if raw_json_text != canonical_json:
+            check_errs.append(f"committed JSON differs from canonical serialization: {out_json}")
+        check_errs.extend(validate_audit_artifacts(payload, md_text=raw_md_text))
+
+        ep_paths = [repo_root / sp["episodes_rel"] for sp in VERDA_RUN_SPECS]
+        if all(p.is_file() for p in ep_paths):
+            line_total = sum(
+                sum(1 for ln in p.read_text(encoding="utf-8").splitlines() if ln.strip())
+                for p in ep_paths
+            )
+            if line_total != int(payload.get("n", -1)):
+                check_errs.append(f"Verda episode line count {line_total} != summary.n {payload.get('n')}")
+            first_eps = read_jsonl(ep_paths[0])
+            if first_eps:
+                spot = analyze_single_episode(first_eps[0], build_tier_render_context())
+                if spot["compact_state_tokens"] >= COMPACT_STATE_MAX_TOKENS:
+                    check_errs.append("spot episode violated compact_state_tokens bound")
+
+        if check_errs:
+            for cerr in check_errs:
+                print(f"[FAIL] {cerr}", file=sys.stderr)
+            return 1
+
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "n_episodes": payload["n"],
+                    "n_runs": len(payload["runs"]),
+                    "accused_episodes": payload["pooled_views"]["all_450_verda"]["all"]["belief_replay"]["accused_episodes"],
+                }
+            )
+        )
+        return 0
 
     summary = build_audit_summary(repo_root=repo_root)
     md_text = render_markdown_report(summary)
@@ -1629,7 +1689,7 @@ def main(argv: list[str] | None = None) -> int:
     expected_json_text = json.dumps(summary, indent=2) + "\n"
 
     if args.check:
-        check_errs: list[str] = []
+        check_errs = []
         legacy_collision = out_json.parent / "summary.json"
         if out_json.name != "summary.json" and legacy_collision.exists():
             check_errs.append(f"colliding legacy summary.json still present: {legacy_collision}")

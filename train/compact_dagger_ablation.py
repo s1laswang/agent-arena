@@ -1859,7 +1859,10 @@ def fit_policy_from_records(
     l2_emp: float = 1.5,
     l2_act: float = 1.0,
     l2_split: float = 1.0,
+    max_iter: int | None = None,
 ) -> CompactLinearWeights:
+    emp_iters = 80 if max_iter is None else max(1, int(max_iter))
+    head_iters = 90 if max_iter is None else max(1, int(max_iter))
     acc_blocks: list[np.ndarray] = []
     acc_dists: list[np.ndarray] = []
     acc_weights: list[float] = []
@@ -1885,6 +1888,7 @@ def fit_policy_from_records(
         acc_dists,
         np.asarray(acc_weights, dtype=np.float64) if acc_weights else np.zeros(0),
         l2_reg=l2_emp,
+        max_iter=emp_iters,
     )
     if pri_blocks:
         w_emp_pri = _fit_grouped_employee_head(
@@ -1892,6 +1896,7 @@ def fit_policy_from_records(
             pri_dists,
             np.asarray(pri_weights, dtype=np.float64),
             l2_reg=l2_emp,
+            max_iter=emp_iters,
         )
     else:
         w_emp_pri = w_emp_acc.copy()
@@ -1920,7 +1925,7 @@ def fit_policy_from_records(
             w_split_list.append(r.weight)
 
     w_act_m, b_act_v = _fit_multinomial_head(
-        x_act, y_act, w_act_s, N_ACT, l2_reg=l2_act
+        x_act, y_act, w_act_s, N_ACT, l2_reg=l2_act, max_iter=head_iters
     )
     if x_split_list:
         w_split_m, b_split_v = _fit_multinomial_head(
@@ -1929,6 +1934,7 @@ def fit_policy_from_records(
             np.asarray(w_split_list, dtype=np.float64),
             N_SPLIT,
             l2_reg=l2_split,
+            max_iter=head_iters,
         )
     else:
         w_split_m = np.zeros((N_SPLIT, D_SPLIT), dtype=np.float64)
@@ -2618,6 +2624,7 @@ def run_ablation_pipeline(
     table_out: str | Path = DEFAULT_TABLE_PATH,
     ckpt_out: str | Path = DEFAULT_CKPT_PATH,
     repo_root: Path | None = None,
+    lbfgs_iters: int | None = None,
 ) -> dict[str, Any]:
     t0 = time.perf_counter()
     root = repo_root if repo_root is not None else Path(__file__).resolve().parents[1]
@@ -2639,20 +2646,22 @@ def run_ablation_pipeline(
     w_stage0 = CompactLinearWeights.zeros("stage0_untrained")
 
     sft_records, bc_records, offline_stats = collect_offline_sft_and_bc_datasets(offline_seeds)
-    w_stage1 = fit_policy_from_records(sft_records, "stage1_survivorship_sft")
-    w_stage2 = fit_policy_from_records(bc_records, "stage2_calibrated_bc")
+    w_stage1 = fit_policy_from_records(sft_records, "stage1_survivorship_sft", max_iter=lbfgs_iters)
+    w_stage2 = fit_policy_from_records(bc_records, "stage2_calibrated_bc", max_iter=lbfgs_iters)
 
     teacher_base_records, teacher_base_stats = _collect_teacher_offline_records(offline_seeds)
     r1_records, r1_stats = collect_dagger_round(w_stage2, r1_seeds, step_weight=1.5)
     w_stage3a = fit_policy_from_records(
         teacher_base_records + r1_records,
         "stage3a_onpolicy_dagger_r1",
+        max_iter=lbfgs_iters,
     )
 
     r2_records, r2_stats = collect_dagger_round(w_stage3a, r2_seeds, step_weight=1.75)
     w_stage3 = fit_policy_from_records(
         teacher_base_records + r1_records + r2_records,
         "stage3_onpolicy_dagger_r2",
+        max_iter=lbfgs_iters,
     )
 
     stage_weights: dict[str, CompactLinearWeights] = {
@@ -2813,6 +2822,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     ap.add_argument("--val-count", type=int, default=60)
     ap.add_argument("--heldout-count", type=int, default=60)
     ap.add_argument("--dev-count", type=int, default=30)
+    ap.add_argument("--lbfgs-iters", type=int, default=None)
     ap.add_argument("--summary-out", type=str, default=DEFAULT_SUMMARY_PATH)
     ap.add_argument("--table-out", type=str, default=DEFAULT_TABLE_PATH)
     ap.add_argument("--ckpt-out", type=str, default=DEFAULT_CKPT_PATH)
@@ -2831,6 +2841,7 @@ def main(argv: list[str] | None = None) -> int:
         summary_out=args.summary_out,
         table_out=args.table_out,
         ckpt_out=args.ckpt_out,
+        lbfgs_iters=args.lbfgs_iters,
     )
     bef = summary["before"]["mean_score"]
     aft = summary["after"]["mean_score"]

@@ -585,7 +585,19 @@ def _is_inference_policy_class(cls_node: ast.ClassDef) -> bool:
     return False
 
 
+_POLICY_AST_CACHE: dict[tuple[str, int, int], tuple[list[str], list[str]]] = {}
+
+
 def _audit_policy_module_ast(rel_label: str, path: Path) -> tuple[list[str], list[str]]:
+    try:
+        st = path.stat()
+        cache_key = (f"{rel_label}:{path.resolve()}", st.st_mtime_ns, st.st_size)
+    except OSError as exc:
+        return [f"{rel_label}: failed to stat AST ({exc})"], []
+    cached = _POLICY_AST_CACHE.get(cache_key)
+    if cached is not None:
+        return list(cached[0]), list(cached[1])
+
     errors: list[str] = []
     checked_classes: list[str] = []
     try:
@@ -739,6 +751,7 @@ def _audit_policy_module_ast(rel_label: str, path: Path) -> tuple[list[str], lis
                         )
                         errors.extend(arg_leaks)
 
+    _POLICY_AST_CACHE[cache_key] = (list(errors), list(checked_classes))
     return errors, checked_classes
 
 

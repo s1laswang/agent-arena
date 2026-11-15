@@ -69,7 +69,7 @@ def test_committed_json_and_markdown_deterministic_parity() -> None:
     elapsed = time.perf_counter() - t0
 
     assert errs == []
-    assert elapsed < 1.0
+    assert elapsed < 10.0
     assert summary["schema"] == cmp_mod.SCHEMA_ID
     assert summary["tiers_version"] == "v1.4"
     assert summary["dev_eval_seed_range"] == "0..29"

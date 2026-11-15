@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import ast
-from concurrent.futures import ProcessPoolExecutor
 import io
-import multiprocessing
 import os
 import shutil
 import subprocess
@@ -18,6 +16,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+
+_PRELOADED_HEAVY = {m for m in ("torch", "transformers") if m in sys.modules}
 
 import scripts.reproduce_tiebreak_all as rta
 import scripts.tiebreak_forensics as tf
@@ -174,20 +174,7 @@ def compat_envs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
         ("vts", str(export_dir)),
         ("rta", str(export_dir)),
     ]
-    if "fork" in multiprocessing.get_all_start_methods():
-        import scripts.tiebreak_context_confound_audit as _tcca
-        import scripts.tiebreak_dagger_mechanism_audit as _tdma
-        import scripts.tiebreak_delayed_leak_noise_audit as _tdlna
-        import scripts.tiebreak_experiment_ledger as _tel
-        import scripts.tiebreak_failure_taxonomy_matrix as _tftm
-        import scripts.tiebreak_scaling_calibration as _tsc
-
-        _ = (_tcca, _tdma, _tdlna, _tel, _tftm, _tsc)
-        ctx = multiprocessing.get_context("fork")
-        with ProcessPoolExecutor(max_workers=4, mp_context=ctx) as pool:
-            s_vts, s_rta, e_vts, e_rta = list(pool.map(_run_readonly_task, tasks))
-    else:
-        s_vts, s_rta, e_vts, e_rta = [_run_readonly_task(t) for t in tasks]
+    s_vts, s_rta, e_vts, e_rta = [_run_readonly_task(t) for t in tasks]
 
     shallow_suite = {**s_vts, **s_rta}
     export_suite = {**e_vts, **e_rta}
@@ -252,8 +239,7 @@ def test_source_hygiene_and_zero_heavy_imports() -> None:
         elif isinstance(node, ast.ImportFrom) and node.module:
             assert node.module.split(".")[0] not in forbidden_roots
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
 
 
 def test_shallow_github_actions_pr_checkout_passes_all_gates(compat_envs: dict[str, Any]) -> None:

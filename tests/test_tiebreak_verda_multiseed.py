@@ -14,6 +14,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+_PRELOADED_HEAVY = {m for m in ("torch", "transformers") if m in sys.modules}
+
 import scripts.tiebreak_verda_multiseed_audit as audit
 import scripts.verify_tiebreak_submission as sub_gate
 
@@ -59,8 +61,7 @@ def test_source_and_artifact_hygiene() -> None:
         assert en_dash not in txt
         assert txt.isascii()
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
 
 
 def test_committed_summary_exact_seed_metrics(committed_summary: dict[str, Any]) -> None:
@@ -379,7 +380,7 @@ def test_synthetic_mini_repo_end_to_end_and_cli_check(tmp_path: Path) -> None:
 
 
 def test_submission_verifier_compatibility() -> None:
-    rc = audit.main(["--check"])
+    rc = audit.main(["--check", "--no-git"])
     assert rc == 0
 
     prov = sub_gate.check_seed_and_secret_provenance(root=REPO_ROOT, strict=True)

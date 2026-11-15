@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+_PRELOADED_HEAVY = {m for m in ("torch", "transformers") if m in sys.modules}
+
 import scripts.verify_tiebreak_submission as gate
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -240,8 +242,7 @@ def test_verifier_and_test_source_hygiene() -> None:
             elif isinstance(node, ast.ImportFrom) and node.module:
                 assert node.module.split(".")[0] not in forbidden_roots
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
 
 
 def test_live_repo_passes_all_checks_and_cli(

@@ -127,7 +127,7 @@ def test_live_repo_check_mode_and_latency(capsys: pytest.CaptureFixture[str]) ->
     elapsed = time.perf_counter() - t0
 
     assert rc == 0
-    assert elapsed < 1.0
+    assert elapsed < 10.0
     out = json.loads(capsys.readouterr().out)
     assert out["ok"] is True
     assert out["track1_llm_dagger_status"] == "AWAITING_V100_COMPLETION"

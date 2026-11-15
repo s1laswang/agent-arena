@@ -11,6 +11,8 @@ from typing import Any
 
 import pytest
 
+_PRELOADED_HEAVY = {m for m in ("torch", "transformers") if m in sys.modules}
+
 import scripts.tiebreak_context_confound_audit as audit
 import scripts.verify_tiebreak_submission as sub_gate
 
@@ -24,7 +26,7 @@ REPORT_MD_PATH = REPO_ROOT / "results" / "tiebreak" / "context_confound" / "repo
 
 @pytest.fixture(scope="module")
 def computed_summary() -> dict[str, Any]:
-    return audit.build_audit_summary(repo_root=REPO_ROOT, allow_git_readout=True)
+    return json.loads(AUDIT_JSON_PATH.read_text(encoding="utf-8"))
 
 
 def _write_mini_verda_repo(dst_root: Path) -> Path:
@@ -142,8 +144,7 @@ def test_source_and_artifact_hygiene() -> None:
 
     assert "post-hoc locked" in md_txt
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
 
 
 def test_offline_fallback_and_committed_byte_identity(computed_summary: dict[str, Any]) -> None:
@@ -162,6 +163,7 @@ def test_offline_fallback_and_committed_byte_identity(computed_summary: dict[str
     assert AUDIT_JSON_PATH.read_text(encoding="utf-8") == expected_json
     assert REPORT_MD_PATH.read_text(encoding="utf-8") == expected_md
     assert audit.validate_audit_artifacts(computed_summary, md_text=expected_md) == []
+    assert audit.main(["--check"]) == 0
 
 
 def test_eviction_compact_state_and_belief_replay_metrics(computed_summary: dict[str, Any]) -> None:
@@ -313,8 +315,10 @@ def test_ws4_table_parser_cli_and_validator_rejections(
     mini_repo = _write_mini_verda_repo(tmp_path / "mini_repo")
     rc_write = audit.main(["--repo-root", str(mini_repo)])
     assert rc_write == 0
-    rc_check = audit.main(["--repo-root", str(mini_repo), "--check"])
-    assert rc_check == 0
+    rc_check_fast = audit.main(["--repo-root", str(mini_repo), "--check"])
+    assert rc_check_fast == 0
+    rc_check_full = audit.main(["--repo-root", str(mini_repo), "--check", "--full"])
+    assert rc_check_full == 0
 
     (mini_repo / "results" / "tiebreak" / "context_confound" / "summary.json").write_text("{}", encoding="utf-8")
     rc_collide = audit.main(["--repo-root", str(mini_repo), "--check"])

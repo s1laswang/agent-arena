@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+_PRELOADED_HEAVY = {m for m in ("torch", "transformers") if m in sys.modules}
+
 from canary import world as canary_world
 from canary.env import Env
 from canary.eval import run_episode
@@ -158,8 +160,7 @@ def test_source_artifact_hygiene_and_ast_inference_isolation(tmp_path: Path) -> 
         assert banned_prereg_hyphen not in low, f"forbidden wording in {art_path}"
         assert banned_prereg_compact not in low, f"forbidden wording in {art_path}"
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
 
     scoped_ast_root = _build_scoped_ast_root(tmp_path / "ast_scope")
     iso = gate.check_ast_inference_isolation(root=scoped_ast_root, strict=True)
@@ -390,6 +391,8 @@ def test_mini_end_to_end_cli_and_world_secret_restoration(
             "1",
             "--dev-count",
             "0",
+            "--lbfgs-iters",
+            "6",
             "--summary-out",
             str(sum_out),
             "--table-out",

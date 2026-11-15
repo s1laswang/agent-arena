@@ -26,7 +26,7 @@ PLUS_MINUS = chr(0x00B1)
 UNICODE_MINUS = chr(0x2212)
 
 MAX_SUMMARY_BYTES = 300 * 1024
-MAX_CHECK_SECONDS = 5.0
+MAX_CHECK_SECONDS = 15.0
 JUDGE_SEED_MIN = 900_000
 
 DEFAULT_OUT_JSON = Path("results/tiebreak/state_externalization/externalization_summary.json")

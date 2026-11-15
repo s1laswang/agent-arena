@@ -2,18 +2,18 @@
 
 Canary is a Bayesian insider-threat RL benchmark where a security-lead agent investigates a simulated company bleeding value to a mole. Across the merged Canary repository, `gemini-4-carbon` is integrated into six distinct, load-bearing roles: synthesizing leak-free company worlds (`world_text`), playing and evolving catchable adversaries (`adaptive_mole`), acting as the frontier security investigator (`investigators`), diagnosing multi-episode failure modes in long context (`failure_analyst`), red-teaming the reward and MCP server (`exploit_hunter`), and reading pixel-only evidence scans and forensic rasters (`multimodal_evidence`).
 
-Every metric in this document is extracted deterministically from the 84 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
+Every metric in this document is extracted deterministically from the 86 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
 
 ## Provenance & Aggregate Ledger Summary
 
 - Provenance status: **VERIFIED** (`python -m canary.gemini.provenance --root . --strict`)
 - Target model: `gemini-4-carbon`
 - Verified roles: **6 / 6** (`world_text`, `adaptive_mole`, `investigators`, `failure_analyst`, `exploit_hunter`, `multimodal_evidence`)
-- Verified `gemini-4-carbon` run folders: **84** (6 canonical headline runs + 78 supporting runs; scanned 84 folders)
-- Total verified episodes and evaluated samples: **805**
-- Total Gemini API calls: **6,523**
-- Total tokens (input / output / thinking / cached): **182,744,553 / 2,129,139 / 1,261,433 / 166,433,051** (**91.1%** cache hit rate)
-- Total estimated API cost (USD): **$79.4118**
+- Verified `gemini-4-carbon` run folders: **86** (6 canonical headline runs + 80 supporting runs; scanned 86 folders)
+- Total verified episodes and evaluated samples: **859**
+- Total Gemini API calls: **6,528**
+- Total tokens (input / output / thinking / cached): **182,941,077 / 2,147,003 / 1,318,073 / 166,433,051** (**91.0%** cache hit rate)
+- Total estimated API cost (USD): **$80.5499**
 - Secret leaks detected: **0**
 
 | Role | Stage | Verified Runs | Episodes / Samples | API Calls | Tokens In | Tokens Out | Thinking Tokens | Cached Tokens | Cost (USD) |
@@ -21,10 +21,10 @@ Every metric in this document is extracted deterministically from the 84 committ
 | `world_text` | Company Construction | 13 | 133 | 1,038 | 27,780,671 | 519,569 | 530,761 | 25,362,601 | $14.2643 |
 | `adaptive_mole` | Adversarial Evolution | 28 | 324 | 1,763 | 28,044,684 | 123,907 | 443,644 | 25,213,697 | $13.8589 |
 | `investigators` | Bayesian Investigation | 25 | 38 | 3,333 | 122,547,175 | 1,388,566 | 157,797 | 114,113,778 | $43.7418 |
-| `failure_analyst` | Trajectory Forensics | 3 | 222 | 5 | 918,030 | 26,204 | 39,025 | 0 | $2.3395 |
+| `failure_analyst` | Trajectory Forensics | 5 | 276 | 10 | 1,114,554 | 44,068 | 95,665 | 0 | $3.4776 |
 | `exploit_hunter` | Reward & Protocol Red-Team | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
 | `multimodal_evidence` | Pixel & Chart Inspection | 13 | 77 | 169 | 360,071 | 34,062 | 90,206 | 0 | $1.9628 |
-| **Total** | **All 6 Roles** | **84** | **805** | **6,523** | **182,744,553** | **2,129,139** | **1,261,433** | **166,433,051** | **$79.4118** |
+| **Total** | **All 6 Roles** | **86** | **859** | **6,528** | **182,941,077** | **2,147,003** | **1,318,073** | **166,433,051** | **$80.5499** |
 
 ## Canonical Headline Runs (One Labelled Real Run per Role)
 
@@ -134,12 +134,14 @@ Every metric in this document is extracted deterministically from the 84 committ
 ### Role 04: `failure_analyst` - Long-Context Failure Analyst
 
 - **Gemini API capabilities:** 1M-token long-context window ingesting multi-day frontier agent trajectories and deterministic Bayesian solver regret tags in a single unfragmented prompt, structured JSON failure clustering, calibration auditing, and programmatic verbatim quote verification.
-- **Why it is essential:** Across 3 verified `gemini-4-carbon` runs (5 calls, 918,030 input tokens, 39,025 thinking tokens), `gemini-4-carbon` clusters multi-episode failure modes and audits posterior calibration with **100% code-verified verbatim transcript quotes** while every regret number comes strictly from `canary.solver.regret`.
+- **Why it is essential:** Across 5 verified `gemini-4-carbon` runs (10 calls, 1,114,554 input tokens, 95,665 thinking tokens), `gemini-4-carbon` clusters multi-episode failure modes and audits posterior calibration with **100% code-verified verbatim transcript quotes** while every regret number comes strictly from `canary.solver.regret`.
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Verified Result |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | `failure_atlas_carbon` | `results/gemini_roles/failure_analyst/atlas-carbon` | `gemini-4-carbon` | `26ab62d` | 101 | 2 | 596,862 | 3,191 | 13,356 | 0 | $1.3592 | 101 eps, 6 modes, 100% verified quotes, 93% solver agreement |
 | `carbon-longctx-corpus` | `results/gemini_roles/failure_analyst/carbon-longctx-corpus` | `gemini-4-carbon` | `71a425530574aecd282e53a13f022be25fe4f292` | 101 | 2 | 237,763 | 16,390 | 14,887 | 0 | $0.6394 | 101 eps packed, 6 clusters, 100% verified quotes |
+| `atlas_claim_audit_carbon` | `results/gemini_roles/failure_analyst/claim-audit-carbon` | `gemini-4-carbon` | `a366f947ed7ff9ea549df0488268377b9b002868` | 30 | 4 | 36,421 | 7,259 | 25,631 | 0 | $0.4017 | 30/30 atlas claims audited (automated LLM, not human): 22 agree, 6 disagree, 2 unsure (78.6% scored agreement, 9 over-claims flagged, 100% verified quotes) |
+| `biased_chatter_decision_forensics` | `results/gemini_roles/failure_analyst/chatter-bias-forensics-carbon` | `gemini-4-carbon` | `a366f947ed7ff9ea549df0488268377b9b002868` | 24 | 1 | 160,103 | 10,605 | 31,009 | 0 | $0.7363 | 24 paired episodes (12 pairs), quotes 100.0% verified, carbon acc 100% (biased +0.662 vs template +0.642), rumor distraction 100% vs 50% |
 | `bayesian_calibration_analyst` | `results/gemini_roles/failure_analyst/calibration-ev-carbon` | `gemini-4-carbon` | `fdf16a71b0395c788b33957e6a91a2589224f8df` | 20 | 1 | 83,405 | 6,623 | 10,782 | 0 | $0.3409 | 101 calibrated eps, ECE 0.081, 100% verified quotes |
 
 ### Role 05: `exploit_hunter` - Whitebox & MCP Exploit Hunter
@@ -223,7 +225,7 @@ Across all **30** committed `v1.4` frontier episodes (`easy` seeds `0..3` (`n=4`
 
 ## Keyless Offline Verification Commands
 
-Judges can verify all 84 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
+Judges can verify all 86 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
 
 ```bash
 GEMINI_API_KEY="" GOOGLE_GENERATIVE_AI_API_KEY="" PYTHONPATH=. python scripts/sync_six_roles_docs.py --root . --check

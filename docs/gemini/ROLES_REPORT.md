@@ -7,13 +7,13 @@ Every number below is extracted programmatically from committed run files with z
 
 - Provenance status: **VERIFIED**
 - Target model: `gemini-4-carbon`
-- Repository HEAD at build: `b2678506`
+- Repository HEAD at build: `7e2fd288`
 - Verified roles: **6 / 6** (missing: none)
-- Verified `gemini-4-carbon` run folders: **84** (6 canonical headline + 78 supporting; scanned 84 folders)
-- Total verified episodes / samples: **805**
-- Total Gemini API calls: **6,523**
-- Total tokens (in / out / thinking / cached): **182,744,553 / 2,129,139 / 1,261,433 / 166,433,051**
-- Total estimated API cost (USD): **$79.4118**
+- Verified `gemini-4-carbon` run folders: **86** (6 canonical headline + 80 supporting; scanned 86 folders)
+- Total verified episodes / samples: **859**
+- Total Gemini API calls: **6,528**
+- Total tokens (in / out / thinking / cached): **182,941,077 / 2,147,003 / 1,318,073 / 166,433,051**
+- Total estimated API cost (USD): **$80.5499**
 - Secret leaks detected: **0**
 
 ## 1. Canonical Headline Runs (One Labelled Real Run per Role)
@@ -125,13 +125,15 @@ Every number below is extracted programmatically from committed run files with z
 ### 04. `failure_analyst` - Long-Context Failure Analyst (VERIFIED)
 
 - Stage: Trajectory Forensics
-- Verified `gemini-4-carbon` runs: **3** (count: 222, calls: 5, in: 918,030, out: 26,204, thinking: 39,025, cached: 0, cost: $2.3395)
+- Verified `gemini-4-carbon` runs: **5** (count: 276, calls: 10, in: 1,114,554, out: 44,068, thinking: 95,665, cached: 0, cost: $3.4776)
 - Canonical headline run: `results/gemini_roles/failure_analyst/atlas-carbon` (`failure_atlas_carbon`, commit `26ab62d`, count=101, calls=2, cost=$1.3592) - 101 eps, 6 modes, 100% verified quotes, 93% solver agreement
-- Supporting verified runs: **2**
+- Supporting verified runs: **4**
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Headline Metric |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | `carbon-longctx-corpus` | `results/gemini_roles/failure_analyst/carbon-longctx-corpus` | `gemini-4-carbon` | `71a425530574aecd282e53a13f022be25fe4f292` | 101 | 2 | 237,763 | 16,390 | 14,887 | 0 | $0.6394 | 101 eps packed, 6 clusters, 100% verified quotes |
+| `atlas_claim_audit_carbon` | `results/gemini_roles/failure_analyst/claim-audit-carbon` | `gemini-4-carbon` | `a366f947ed7ff9ea549df0488268377b9b002868` | 30 | 4 | 36,421 | 7,259 | 25,631 | 0 | $0.4017 | 30/30 atlas claims audited (automated LLM, not human): 22 agree, 6 disagree, 2 unsure (78.6% scored agreement, 9 over-claims flagged, 100% verified quotes) |
+| `biased_chatter_decision_forensics` | `results/gemini_roles/failure_analyst/chatter-bias-forensics-carbon` | `gemini-4-carbon` | `a366f947ed7ff9ea549df0488268377b9b002868` | 24 | 1 | 160,103 | 10,605 | 31,009 | 0 | $0.7363 | 24 paired episodes (12 pairs), quotes 100.0% verified, carbon acc 100% (biased +0.662 vs template +0.642), rumor distraction 100% vs 50% |
 | `bayesian_calibration_analyst` | `results/gemini_roles/failure_analyst/calibration-ev-carbon` | `gemini-4-carbon` | `fdf16a71b0395c788b33957e6a91a2589224f8df` | 20 | 1 | 83,405 | 6,623 | 10,782 | 0 | $0.3409 | 101 calibrated eps, ECE 0.081, 100% verified quotes |
 
 ### 05. `exploit_hunter` - Whitebox & MCP Exploit Hunter (VERIFIED)
@@ -242,10 +244,10 @@ In-game leaked-memo pixel watermark ablation: text `variant` fields are redacted
 | `world_text` | 13 | 133 | 1,038 | 27,780,671 | 519,569 | 530,761 | 25,362,601 | $14.2643 |
 | `adaptive_mole` | 28 | 324 | 1,763 | 28,044,684 | 123,907 | 443,644 | 25,213,697 | $13.8589 |
 | `investigators` | 25 | 38 | 3,333 | 122,547,175 | 1,388,566 | 157,797 | 114,113,778 | $43.7418 |
-| `failure_analyst` | 3 | 222 | 5 | 918,030 | 26,204 | 39,025 | 0 | $2.3395 |
+| `failure_analyst` | 5 | 276 | 10 | 1,114,554 | 44,068 | 95,665 | 0 | $3.4776 |
 | `exploit_hunter` | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
 | `multimodal_evidence` | 13 | 77 | 169 | 360,071 | 34,062 | 90,206 | 0 | $1.9628 |
-| **total** | **84** | **805** | **6,523** | **182,744,553** | **2,129,139** | **1,261,433** | **166,433,051** | **$79.4118** |
+| **total** | **86** | **859** | **6,528** | **182,941,077** | **2,147,003** | **1,318,073** | **166,433,051** | **$80.5499** |
 
 ## 6. Keyless Offline Verification
 

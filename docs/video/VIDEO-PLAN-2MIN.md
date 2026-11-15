@@ -3,7 +3,7 @@
 > ⚠️ **WORK IN PROGRESS — owner: Ivar.** The VO script is Ivar's working draft. **All `Picture:` / `On screen:` descriptions are NOT final and have NOT been reviewed by Ivar** — treat them as placeholders. Please don't edit this file directly; send suggestions to Ivar.
 
 Deadline: Sun 15 Nov 10:00 Helsinki. Hard limit 2:00, target 1:55. Burn in subtitles.
-Structure: WHY → HOW → WHAT. Version: v2 (02:35, Ivar's Notion edits)
+Structure: WHY → HOW → WHAT. Version: v3 (03:05): flamingo skit cut, SailPoint dropped
 
 ---
 
@@ -15,7 +15,7 @@ Structure: WHY → HOW → WHAT. Version: v2 (02:35, Ivar's Notion edits)
 That feels uncomfortable. It's the same feeling as getting into a self-driving car, even as they become the safer option. Right now it is probably not superior to a human, but humans are also not setting a high bar."
 
 ## HOW (0:30–1:25)
-**Picture (DRAFT, not reviewed):** flamingo skit (12 s). Ivar sends 4 versions of a secret, "flamingo" leaks, everyone turns to Momin: "...they offered me pizza."
+**Picture (DRAFT, not reviewed):** canary trap close-up from the game (12 s). Four near-identical versions of a document go out (A/B/C/D, one word highlighted in each), then version B shows up in the leak feed.
 
 **VO:**
 "At Junction we focused on one version of this problem: finding a mole. Insiders cost companies 17 million dollars a year on average, and over half of those incidents are accidents, not spies."
@@ -50,13 +50,12 @@ That feels uncomfortable. It's the same feeling as getting into a self-driving c
 - Gemini wrongly accused 5 of 60 people on hard cases (results/gap_vs_solver_v1.4_8fd4dec.md). Don't say "frontier AI is 65%".
 - 35 AI hackers, 1,225 tool calls, 0 exploits; positive control 4/4 (results/gemini/swarm.md). 3 real exploits closed (#23, #24, #42 in docs/EXPLOITS.md).
 - $17.4M a year, 55% negligence: https://www.globenewswire.com/news-release/2025/02/25/3032261/0/en/ponemon-cybersecurity-report-insider-risk-management-enabling-early-breach-detection-and-mitigation.html
-- 80% of companies say their agents took unintended actions: https://www.sailpoint.com/press-releases/sailpoint-ai-agent-adoption-report
+- Ponemon is the only outside source. Don't add others unless needed.
 
 ## Shot list / owners (TODO)
 | # | Asset | Owner | Status |
 |---|---|---|---|
 | 1 | Office B-roll (WHY) | | |
-| 2 | Flamingo skit | all | |
 | 3 | Game screen recording | | |
 | 4 | "There is no doubt" typed card + Laura ID + ACCUSED | | |
 | 5 | Animated belief chart | | |

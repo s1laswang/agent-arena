@@ -1,0 +1,81 @@
+{
+  "run_id": "v3-4k-s0-ctx8k-off0",
+  "agent": "hf-lora:v3-4k-s0-lora",
+  "seconds": 1948.7,
+  "by_tier": {
+    "easy": {
+      "n": 10,
+      "mean_score": -0.522,
+      "ci95": 0.5001,
+      "accuracy": 0.2,
+      "mean_final_day": 7.0,
+      "end_reasons": {
+        "horizon": 1,
+        "accused": 9
+      },
+      "eval_cap_rate": 0.0,
+      "invalid_call_rate": 0.0187,
+      "regret_tags": {
+        "budget_waste": 10,
+        "premature_accusation": 10,
+        "uninformative_canary": 3,
+        "no_accusation": 1
+      }
+    },
+    "hard": {
+      "n": 10,
+      "mean_score": -0.8,
+      "ci95": 0.2613,
+      "accuracy": 0.0,
+      "mean_final_day": 8.6,
+      "end_reasons": {
+        "accused": 8,
+        "eval_cap": 2
+      },
+      "eval_cap_rate": 0.2,
+      "invalid_call_rate": 0.0025,
+      "regret_tags": {
+        "no_accusation": 2
+      }
+    },
+    "medium": {
+      "n": 10,
+      "mean_score": -0.8,
+      "ci95": 0.2613,
+      "accuracy": 0.0,
+      "mean_final_day": 7.9,
+      "end_reasons": {
+        "eval_cap": 2,
+        "accused": 8
+      },
+      "eval_cap_rate": 0.2,
+      "invalid_call_rate": 0.0015,
+      "regret_tags": {
+        "budget_waste": 10,
+        "premature_accusation": 10,
+        "uninformative_canary": 5,
+        "no_accusation": 2
+      }
+    },
+    "all": {
+      "n": 30,
+      "mean_score": -0.7073,
+      "ci95": 0.2056,
+      "accuracy": 0.0667,
+      "mean_final_day": 7.83,
+      "end_reasons": {
+        "horizon": 1,
+        "eval_cap": 4,
+        "accused": 25
+      },
+      "eval_cap_rate": 0.1333,
+      "invalid_call_rate": 0.0065,
+      "regret_tags": {
+        "budget_waste": 20,
+        "premature_accusation": 20,
+        "uninformative_canary": 8,
+        "no_accusation": 5
+      }
+    }
+  }
+}

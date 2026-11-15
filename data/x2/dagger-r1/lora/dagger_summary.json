@@ -1,0 +1,28 @@
+{
+ "examples": 4000,
+ "tokens": 25709119,
+ "steps": 250,
+ "seconds": 3331,
+ "args": {
+  "cmd": "sft",
+  "model": "/root/models/Qwen2.5-1.5B-Instruct",
+  "adapter": "/root/x2/v3-4k-s0-lora",
+  "rollouts": "/root/x2/r1/rollouts.jsonl",
+  "labels": "/root/x2/r1/labels.jsonl",
+  "out": "/root/x2/dagger-r1",
+  "max_ctx": 8192,
+  "max_new": 96,
+  "keep_agree": 0.1,
+  "key_weight": 3.0,
+  "max_examples": 4000,
+  "epochs": 1.0,
+  "grad_accum": 16,
+  "lr": 0.0001,
+  "hours": 1.0,
+  "seed": 0,
+  "tokenizer": null,
+  "build_only": false,
+  "workers": 20,
+  "max_repeat": 2
+ }
+}

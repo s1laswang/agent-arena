@@ -11,7 +11,7 @@
       "passed": true,
       "mode": "git_diff:origin/justSilas...HEAD",
       "protected_rules_count": 15,
-      "changed_files_count": 42,
+      "changed_files_count": 48,
       "protected_hits": [],
       "violations": []
     },
@@ -25,6 +25,7 @@
         "train/qwen_diverse_mole.py",
         "train/batched_mole_eval.py",
         "train/export_mole_dpo.py",
+        "train/eval_mole.py",
         "train/eval_grpo_mole.py",
         "scripts/audit_verda_and_ws3_moles.py",
         "scripts/build_qwen_mole_report.py",
@@ -33,18 +34,17 @@
         "tests/test_rl_mole_v2.py",
         "tests/test_distill_dsl.py",
         "tests/test_qwen_diverse_mole.py",
+        "tests/test_qwen25_dpo_grpo_v2.py",
         "tests/test_batched_mole_eval.py",
+        "tests/test_export_mole_dpo.py",
         "tests/test_eval_mole.py",
         "tests/test_eval_grpo_mole.py",
         "tests/test_verda_mole_audit.py",
         "tests/test_qwen_mole_report.py",
         "tests/test_eval_mole_vs_frontier_proxy.py",
-        "tests/test_verify_moletrain_submission.py",
-        "train/eval_mole.py"
+        "tests/test_verify_moletrain_submission.py"
       ],
-      "auto_discovered_py_files": [
-        "train/eval_mole.py"
-      ],
+      "auto_discovered_py_files": [],
       "silas_preexisting_exempt": [
         "train/grpo_mole.py",
         "canary/forge/rl_mole.py"
@@ -61,6 +61,22 @@
         {
           "path": "results/moletrain/canary-qwen-mole-v1/sft_curve.jsonl",
           "bytes": 269
+        },
+        {
+          "path": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/dpo_curve.jsonl",
+          "bytes": 949
+        },
+        {
+          "path": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/eval_summary.json",
+          "bytes": 24525
+        },
+        {
+          "path": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/grpo_curve.jsonl",
+          "bytes": 19903
+        },
+        {
+          "path": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/sft_curve.jsonl",
+          "bytes": 821
         },
         {
           "path": "results/moletrain/canary-qwen3-0p6b-mole-v1/eval_summary.json",
@@ -96,11 +112,11 @@
         },
         {
           "path": "results/moletrain/mole_dpo_stats.json",
-          "bytes": 3035
+          "bytes": 16767
         },
         {
           "path": "results/moletrain/qwen_mole_summary.json",
-          "bytes": 42299
+          "bytes": 43523
         },
         {
           "path": "results/moletrain/rl_mole_v2_heldout.json",
@@ -221,7 +237,7 @@
           "heldout_seed_base": 400000
         }
       },
-      "artifact_seed_range_checks": 5,
+      "artifact_seed_range_checks": 6,
       "violations": []
     },
     "gate_4_catchability_and_provenance": {
@@ -234,6 +250,11 @@
           "path": "results/moletrain/canary-qwen-mole-v1/eval_summary.json",
           "bytes": 12675,
           "sha256_16": "5c2ac34879400b86"
+        },
+        {
+          "path": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/eval_summary.json",
+          "bytes": 24525,
+          "sha256_16": "8c2b508347c6c182"
         },
         {
           "path": "results/moletrain/canary-qwen3-0p6b-mole-v1/eval_summary.json",
@@ -257,13 +278,13 @@
         },
         {
           "path": "results/moletrain/mole_dpo_stats.json",
-          "bytes": 3035,
-          "sha256_16": "702e52c33ae34a2e"
+          "bytes": 16767,
+          "sha256_16": "3fb883f6ed117393"
         },
         {
           "path": "results/moletrain/qwen_mole_summary.json",
-          "bytes": 42299,
-          "sha256_16": "0d4f22be76afe8d3"
+          "bytes": 43523,
+          "sha256_16": "3d98e650adf31240"
         },
         {
           "path": "results/moletrain/rl_mole_v2_heldout.json",
@@ -281,7 +302,7 @@
           "sha256_16": "f2eb19d4613c362d"
         }
       ],
-      "bootstrap_cis_checked": 1239,
+      "bootstrap_cis_checked": 1443,
       "verified_catchable_models": [
         {
           "location": "results/moletrain/canary-qwen-mole-v1/eval_summary.json.heldout_800k_summary",
@@ -305,6 +326,41 @@
         },
         {
           "location": "results/moletrain/canary-qwen-mole-v1/eval_summary.json.paired_200k_vs_rl_mole.qwen_mole",
+          "solver_acc": 1.0,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/eval_summary.json.heldout_800k_summary",
+          "solver_acc": 0.9667,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/eval_summary.json.heldout_200k_summary",
+          "solver_acc": 1.0,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/eval_summary.json.paired_800k_vs_default.qwen_mole",
+          "solver_acc": 0.9667,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/eval_summary.json.paired_200k_vs_default.qwen_mole",
+          "solver_acc": 1.0,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/eval_summary.json.paired_200k_vs_rl_mole.qwen_mole",
+          "solver_acc": 1.0,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/eval_summary.json.paired_800k_vs_rl_mole_v2.qwen_mole",
+          "solver_acc": 0.9667,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/eval_summary.json.paired_200k_vs_rl_mole_v2.qwen_mole",
           "solver_acc": 1.0,
           "catchable_85": true
         },

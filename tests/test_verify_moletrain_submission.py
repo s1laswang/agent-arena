@@ -119,7 +119,9 @@ def test_real_repo_passes_all_four_gates_and_reproducible_output(tmp_path):
 
     g2 = payload["gates"]["gate_2_hygiene"]
     assert "train/eval_mole.py" in g2["checked_py_files"]
-    assert "train/eval_mole.py" in g2["auto_discovered_py_files"]
+    assert "tests/test_export_mole_dpo.py" in g2["checked_py_files"]
+    assert "tests/test_qwen25_dpo_grpo_v2.py" in g2["checked_py_files"]
+    assert g2["auto_discovered_py_files"] == []
     assert g2["forbidden_weight_files_found"] == []
     assert "docs/reports/moletrain_submission_brief.md" in g2["checked_report_markdowns"]
     assert "docs/reports/qwen_mole_training.md" in g2["checked_report_markdowns"]
@@ -127,6 +129,15 @@ def test_real_repo_passes_all_four_gates_and_reproducible_output(tmp_path):
     assert "results/moletrain/canary-qwen3-1p7b-mole-v1/eval_summary.json" in artifact_paths
     assert "results/moletrain/canary-qwen3-1p7b-mole-v1/grpo_curve.jsonl" in artifact_paths
     assert "results/moletrain/canary-qwen3-0p6b-mole-v1/sft_curve.jsonl" in artifact_paths
+
+    out_shallow = tmp_path / "gate_shallow.json"
+    rc_shallow = V.main(
+        ["--root", str(ROOT), "--base-ref", "origin/nonexistent", "--out", str(out_shallow), "--check"]
+    )
+    assert rc_shallow == 0
+    shallow_payload = json.loads(out_shallow.read_text(encoding="utf-8"))
+    assert shallow_payload["all_passed"] is True
+    assert "train/eval_mole.py" in shallow_payload["gates"]["gate_2_hygiene"]["checked_py_files"]
 
     g4 = payload["gates"]["gate_4_catchability_and_provenance"]
     assert g4["bootstrap_cis_checked"] >= 1100

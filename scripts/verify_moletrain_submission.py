@@ -46,6 +46,7 @@ MOLETRAIN_PY_FILES: tuple[str, ...] = (
     "train/qwen_diverse_mole.py",
     "train/batched_mole_eval.py",
     "train/export_mole_dpo.py",
+    "train/eval_mole.py",
     "train/eval_grpo_mole.py",
     "scripts/audit_verda_and_ws3_moles.py",
     "scripts/build_qwen_mole_report.py",
@@ -54,7 +55,9 @@ MOLETRAIN_PY_FILES: tuple[str, ...] = (
     "tests/test_rl_mole_v2.py",
     "tests/test_distill_dsl.py",
     "tests/test_qwen_diverse_mole.py",
+    "tests/test_qwen25_dpo_grpo_v2.py",
     "tests/test_batched_mole_eval.py",
+    "tests/test_export_mole_dpo.py",
     "tests/test_eval_mole.py",
     "tests/test_eval_grpo_mole.py",
     "tests/test_verda_mole_audit.py",
@@ -65,7 +68,6 @@ MOLETRAIN_PY_FILES: tuple[str, ...] = (
 
 PREEXISTING_SILAS_FILES: tuple[str, ...] = (
     "train/grpo_mole.py",
-    "train/eval_mole.py",
     "canary/forge/rl_mole.py",
 )
 

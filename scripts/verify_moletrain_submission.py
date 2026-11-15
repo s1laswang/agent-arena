@@ -27,12 +27,24 @@ REPLAY_EASY_SEEDS = (200_000, 200_001)
 
 MOLETRAIN_PY_FILES: tuple[str, ...] = (
     "canary/forge/rl_mole_v2.py",
+    "canary/mole/distill_dsl.py",
     "train/qwen_diverse_mole.py",
+    "train/batched_mole_eval.py",
+    "train/export_mole_dpo.py",
     "train/eval_grpo_mole.py",
-    "tests/test_rl_mole_v2.py",
-    "tests/test_qwen_diverse_mole.py",
-    "tests/test_eval_grpo_mole.py",
+    "scripts/audit_verda_and_ws3_moles.py",
+    "scripts/build_qwen_mole_report.py",
+    "scripts/eval_mole_vs_frontier_proxy.py",
     "scripts/verify_moletrain_submission.py",
+    "tests/test_rl_mole_v2.py",
+    "tests/test_distill_dsl.py",
+    "tests/test_qwen_diverse_mole.py",
+    "tests/test_batched_mole_eval.py",
+    "tests/test_eval_mole.py",
+    "tests/test_eval_grpo_mole.py",
+    "tests/test_verda_mole_audit.py",
+    "tests/test_qwen_mole_report.py",
+    "tests/test_eval_mole_vs_frontier_proxy.py",
     "tests/test_verify_moletrain_submission.py",
 )
 

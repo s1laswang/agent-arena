@@ -378,10 +378,23 @@ def build_index(res: Path) -> list[dict]:
     L = _load(res / "ladder.json")
     if L:
         carb = [r for r in L.get("rows", []) if r["model"] == "gemini-4-carbon" and r["tier"] == "hard" and r.get("ratio") is not None]
-        best = max(carb, key=lambda r: r["n"]) if carb else None
+        # lead with the carbon cell (n >= 8) whose paired CI is narrowest, then the cheap flash cell, both with n, CI and cost
+        big = [r for r in carb if r["n"] >= 8 and r.get("ratio_lo") is not None and r.get("ratio_hi") is not None]
+        best = (min(big, key=lambda r: r["ratio_hi"] - r["ratio_lo"]) if big else
+                max(carb, key=lambda r: r["n"]) if carb else None)
         models = sorted({r["model"] for r in L.get("rows", [])})
+
+        def _cost(r):
+            return f", ${r['cost_per_ep']:.2f}/episode" if r.get("cost_per_ep") else ""
         head = (f"gemini-4-carbon ({best['level']}) reaches {_pct(best['ratio'])} of the solver on hard "
-                f"[95% CI {_pct(best.get('ratio_lo'))}, {_pct(best.get('ratio_hi'))}], n={best['n']}") if best else ""
+                f"[95% CI {_pct(best.get('ratio_lo'))}, {_pct(best.get('ratio_hi'))}], n={best['n']}{_cost(best)}") if best else ""
+        fl = next((r for r in L.get("rows", []) if r["model"] == "gemini-3.5-flash" and r["tier"] == "hard"
+                   and r.get("level") == "high" and r["n"] >= 8 and r.get("ratio_lo") is not None), None)
+        if head and fl:
+            served = [m for m in fl.get("model_versions") or [] if m and m != fl["model"]]
+            name = f"{served[0]} (requested {fl['model']})" if len(served) == 1 else fl["model"]
+            head += (f"; {name} (high) {_pct(fl['ratio'])} [{_pct(fl['ratio_lo'])}, {_pct(fl['ratio_hi'])}], "
+                     f"n={fl['n']}{_cost(fl)}: not distinguishable from the solver, CIs wide")
         rows.append({"role": "Frontier subject (the agent under test)", "key": "frontier",
                      "run": "results/gemini/ladder.json (+ ladder.md, ladder_episodes.jsonl.gz, ladder_ledger.jsonl.gz)",
                      "model": ", ".join(models), "thinking": "minimal / low / medium / high (+ carbon model default, imported)",

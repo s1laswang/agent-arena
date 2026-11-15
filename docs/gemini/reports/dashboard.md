@@ -1,5 +1,21 @@
 # G5 Dashboard + demo assets: report
 
+## Sun 02:50: final builds move to branch gemini-dashboard-final (cut from gemini-pr2, no PR #9)
+- **Why:** per COMMON.md I merged origin/gemini-track into gemini-dashboard (23:08, 00:00), so that branch contains PR #9 (1bcf1ee7),
+  which pr2 must not. Nothing was force-pushed or reverted. gemini-dashboard-final is cut from origin/gemini-pr2 55a8e077; pr2
+  already had all my and the video session's files byte-identical. ceo lite's 05:50 freeze merges gemini-dashboard-final only.
+- **Interim final build** on pr2's results (n=20 ladder, 417 episodes):
+  - Usage ledger re-exported: **29,374 calls, 862M input, 86.5% cached, 11.5M thinking, $261.01**. The new committed
+    `ladder_gemma_ledger.jsonl.gz` adds 267 hosted-Gemma rows at $0; the rest of the growth is n=20 ladder calls.
+  - The ladder panel needed no wording change: no "matches" text anywhere, and every hard cell has n ≥ 10.
+- ROLES Frontier row: leads with the carbon hard cell (n ≥ 8) that has the narrowest CI, i.e. carbon-high **106% [94, 126], n=10,
+  $1.93/episode**, then 3.6-flash (requested 3.5-flash) high 71% [11, 158], n=20, $0.43/episode, "not distinguishable, CIs wide".
+  This matches SUBMISSION.
+- VIDEO.md VO[02-frontier] (3-min long cut) speaks those same two cells with n, CI and cost (`narrate.cell_values`, n ≥ 8 only).
+  VIDEO-2MIN.md is untouched (ceo lite's ask).
+- Leaderboard: still the gap.md fallback (now f9fb7a4, numbers unchanged); justSilas has no leaderboard_v14_hard.json yet.
+- **For the CEO:** SUBMISSION still says "24,855 calls" and "85.3%" cached. The final numbers come at 05:15.
+
 ## Sun 00:45: 00:30 rebuild pushed; VIDEO.md final shot list; leaderboard panel
 - **00:30 rebuild** (b43a859b): gemini-track had nothing new. Usage ledger re-exported: **24,855 calls, 678M input, 85.3% cached,
   9.39M thinking, $226.34 list**. The committed-only build and `auto` match. All 7 screenshots and ROLES re-shot; 106 lab tests pass.

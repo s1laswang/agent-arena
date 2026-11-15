@@ -657,6 +657,7 @@ GATE_COST_ESTIMATE_MS: dict[str, int] = {
     "tiebreak_delayed_leak_noise_audit": 115,
     "tiebreak_experiment_ledger": 110,
     "tiebreak_context_confound_audit": 95,
+    "tiebreak_restriction_containment_audit": 90,
     "tiebreak_selective_risk_coverage_audit": 80,
     "tiebreak_statistical_power_audit": 60,
     "tiebreak_failure_taxonomy_matrix": 45,

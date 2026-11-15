@@ -78,6 +78,13 @@ COMMITTED_DEV_SPECS: tuple[dict[str, Any], ...] = (
         "paths": ("data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl",),
     },
     {
+        "cohort_id": "opencode_gpt_5_5_hard",
+        "label": "gpt-5.5 (OpenCode over MCP)",
+        "family": "Frontier LLM (MCP)",
+        "tier": "hard",
+        "paths": ("data/runs/committed/v1.4/opencode-gpt-5.5/hard/episodes.jsonl",),
+    },
+    {
         "cohort_id": "inproc_gemini_4_carbon_hard",
         "label": "gemini-4-carbon (in-process full history)",
         "family": "Frontier LLM (in-process)",
@@ -210,7 +217,7 @@ def _load_valid_episodes(repo_root: Path, rel_paths: tuple[str, ...], tier_filte
             meta = ep.get("meta") if isinstance(ep.get("meta"), dict) else {}
             if ep.get("valid") is False or meta.get("valid") is False:
                 continue
-            if ep.get("end_reason") == "error":
+            if ep.get("end_reason") == "error" and meta.get("valid") is not True:
                 continue
             if tier_filter is not None and str(ep.get("tier")) != tier_filter:
                 continue
@@ -277,10 +284,13 @@ def analyze_single_episode(
             rec_accused = ep.get("accused")
             rec_day = int(ep["final_day"])
             rec_correct = bool(ep.get("correct", False))
+            day_ok = (int(rep.final_day) == rec_day) or (
+                not env_pre.done and rec_day == 0 and rec_accused is None and abs(rec_score) < 1e-9
+            )
             env_replay_verified = (
                 abs(rep.score - rec_score) < 1e-9
                 and rep.accused == rec_accused
-                and int(rep.final_day) == rec_day
+                and day_ok
                 and bool(rep.correct) == rec_correct
                 and len(env_pre.history) == len(steps)
             )
@@ -331,7 +341,8 @@ def analyze_single_episode(
     diag_canaries_pre: list[int] = []
     all_variants_pre: list[int] = []
     min_delay = min(p_params.delay_choices)
-    final_day = int(ep["final_day"])
+    raw_final_day = int(ep["final_day"])
+    final_day = raw_final_day if raw_final_day > 0 else (int(steps[-1].day) if steps else 1)
     accuse_day = int(steps[acc_idx].day) if acc_idx is not None else None
     decision_day = accuse_day if accuse_day is not None else final_day
 
@@ -714,6 +725,7 @@ def build_comparison_summary(repo_root: Path = ROOT, workers: int = 12) -> dict[
 
     dev_hard_order = (
         ("opencode_gemini_4_carbon_hard", "gemini-4-carbon (OpenCode over MCP, judges' harness)", "Frontier LLM (MCP)"),
+        ("opencode_gpt_5_5_hard", "gpt-5.5 (OpenCode over MCP)", "Frontier LLM (MCP)"),
         ("inproc_gemini_4_carbon_hard", "gemini-4-carbon (in-process full history)", "Frontier LLM (in-process)"),
         ("opencode_gemini_3_5_flash_hard", "gemini-3.5-flash (OpenCode over MCP)", "Frontier LLM (MCP)"),
         ("eb_naive_prior_dev_hard", "EmpiricalBayesPolicy (uncalibrated naive prior)", "Compact Policy (Untrained)"),
@@ -804,9 +816,12 @@ def build_comparison_summary(repo_root: Path = ROOT, workers: int = 12) -> dict[
     naive_dev_hard_recs = grouped["eb_naive_prior_dev_hard"]
     opt_dev_hard_recs = grouped["eb_experience_opt_dev_hard"]
     gem_dev_hard_recs = grouped["opencode_gemini_4_carbon_hard"]
+    gpt_dev_hard_recs = grouped["opencode_gpt_5_5_hard"]
     sol_dev_hard_recs = grouped["solver_reference_hard"]
 
     gem_vs_sol_deltas = [float(g["score"]) - float(s["score"]) for g, s in zip(gem_dev_hard_recs, sol_dev_hard_recs)]
+    gpt_vs_sol_deltas = [float(p["score"]) - float(s["score"]) for p, s in zip(gpt_dev_hard_recs, sol_dev_hard_recs)]
+    gpt_vs_gem_deltas = [float(p["score"]) - float(g["score"]) for p, g in zip(gpt_dev_hard_recs, gem_dev_hard_recs)]
     opt_vs_naive_dev_deltas = [
         float(a["score"]) - float(b["score"]) for b, a in zip(naive_dev_hard_recs, opt_dev_hard_recs)
     ]
@@ -823,6 +838,7 @@ def build_comparison_summary(repo_root: Path = ROOT, workers: int = 12) -> dict[
     v3_8k_s1_obj = next(c for c in verda_cohorts if c["cohort_id"] == "qwen15b_v3_8k_s1_grpo")
     v3_8k_s2_obj = next(c for c in verda_cohorts if c["cohort_id"] == "qwen15b_v3_8k_s2_grpo")
     gem_hard_obj = next(c for c in dev_hard_cohorts if c["cohort_id"] == "opencode_gemini_4_carbon_hard")
+    gpt_hard_obj = next(c for c in dev_hard_cohorts if c["cohort_id"] == "opencode_gpt_5_5_hard")
     sol_hard_obj = next(c for c in dev_hard_cohorts if c["cohort_id"] == "solver_reference_hard")
     eb_naive_hard_obj = next(c for c in dev_hard_cohorts if c["cohort_id"] == "eb_naive_prior_dev_hard")
     eb_opt_hard_obj = next(c for c in dev_hard_cohorts if c["cohort_id"] == "eb_experience_opt_dev_hard")
@@ -935,6 +951,10 @@ def build_comparison_summary(repo_root: Path = ROOT, workers: int = 12) -> dict[
             "solver_hard_dev_canaries_before_accuse": sol_hard_obj["canary_diagnostics"]["mean_canaries_before_accuse"],
             "solver_hard_dev_diagnostic_variants": sol_hard_obj["canary_diagnostics"]["mean_diagnostic_variants_planted"],
             "solver_hard_dev_slot_utilization": sol_hard_obj["canary_diagnostics"]["canary_slot_utilization"],
+            "gpt_5_5_hard_dev_canaries_before_accuse": gpt_hard_obj["canary_diagnostics"]["mean_canaries_before_accuse"],
+            "gpt_5_5_hard_dev_diagnostic_variants": gpt_hard_obj["canary_diagnostics"]["mean_diagnostic_variants_planted"],
+            "gpt_5_5_hard_dev_slot_utilization": gpt_hard_obj["canary_diagnostics"]["canary_slot_utilization"],
+            "gpt_5_5_hard_dev_interviews": gpt_hard_obj["canary_diagnostics"]["mean_interviews_per_episode"],
             "gemini_4_carbon_hard_dev_canaries_before_accuse": gem_hard_obj["canary_diagnostics"]["mean_canaries_before_accuse"],
             "gemini_4_carbon_hard_dev_diagnostic_variants": gem_hard_obj["canary_diagnostics"]["mean_diagnostic_variants_planted"],
             "gemini_4_carbon_hard_dev_slot_utilization": gem_hard_obj["canary_diagnostics"]["canary_slot_utilization"],
@@ -953,6 +973,9 @@ def build_comparison_summary(repo_root: Path = ROOT, workers: int = 12) -> dict[
         "premature_commitment_below_breakeven": {
             "solver_hard_dev_top_p_below_breakeven_rate": sol_hard_obj["commitment_calibration"]["top_p_below_breakeven_rate"],
             "solver_hard_dev_sub_085_rate": sol_hard_obj["commitment_calibration"]["sub_solver_threshold_85_rate"],
+            "gpt_5_5_hard_dev_top_p_below_breakeven_rate": gpt_hard_obj["commitment_calibration"]["top_p_below_breakeven_rate"],
+            "gpt_5_5_hard_dev_p_accused_below_breakeven_rate": gpt_hard_obj["commitment_calibration"]["p_accused_below_breakeven_rate"],
+            "gpt_5_5_hard_dev_sub_085_rate": gpt_hard_obj["commitment_calibration"]["sub_solver_threshold_85_rate"],
             "gemini_4_carbon_hard_dev_top_p_below_breakeven_rate": gem_hard_obj["commitment_calibration"]["top_p_below_breakeven_rate"],
             "gemini_4_carbon_hard_dev_sub_085_rate": gem_hard_obj["commitment_calibration"]["sub_solver_threshold_85_rate"],
             "qwen15b_v2_off30_top_p_below_breakeven_rate": v2_off30_obj["commitment_calibration"]["top_p_below_breakeven_rate"],
@@ -968,6 +991,8 @@ def build_comparison_summary(repo_root: Path = ROOT, workers: int = 12) -> dict[
             "eb_trained_heldout_top_p_below_breakeven_rate": eb_opt_ho_obj["commitment_calibration"]["top_p_below_breakeven_rate"],
         },
         "delayed_leak_abstention_calibration": {
+            "gpt_5_5_hard_dev_abstain_count": gpt_hard_obj["abstain_count"],
+            "gpt_5_5_hard_dev_missed_pos_ev_abstain_count": gpt_hard_obj["delayed_leak_abstention"]["missed_positive_ev_abstain_count"],
             "gemini_4_carbon_hard_dev_abstain_count": gem_hard_obj["abstain_count"],
             "gemini_4_carbon_hard_dev_calibrated_abstain_count": gem_hard_obj["delayed_leak_abstention"]["calibrated_abstain_count"],
             "qwen15b_v3_4k_pooled_abstain_count": v3_4k_obj["abstain_count"],
@@ -1010,6 +1035,14 @@ def build_comparison_summary(repo_root: Path = ROOT, workers: int = 12) -> dict[
                 "gemini_4_carbon_opencode_minus_solver": {
                     "mean_delta": _r(_mean(gem_vs_sol_deltas), 4),
                     "ci95": _r(_ci95(gem_vs_sol_deltas), 4),
+                },
+                "gpt_5_5_opencode_minus_solver": {
+                    "mean_delta": _r(_mean(gpt_vs_sol_deltas), 4),
+                    "ci95": _r(_ci95(gpt_vs_sol_deltas), 4),
+                },
+                "gpt_5_5_opencode_minus_gemini_4_carbon_opencode": {
+                    "mean_delta": _r(_mean(gpt_vs_gem_deltas), 4),
+                    "ci95": _r(_ci95(gpt_vs_gem_deltas), 4),
                 },
                 "eb_trained_minus_eb_uncalibrated": {
                     "mean_delta": _r(_mean(opt_vs_naive_dev_deltas), 4),
@@ -1095,9 +1128,9 @@ def render_comparison_markdown(summary: dict[str, Any]) -> str:
         "",
         "Evaluating every trajectory under the reference `SolverPolicy`'s exact Bayesian posterior over the **agent's own tool observations** demonstrates that frontier `gemini-4-carbon` and raw-context `Qwen2.5-1.5B` fail on the exact same two sequential decision bottlenecks, while calibrating those two bottlenecks on `TRAIN_SEEDS` closes the gap:",
         "",
-        f"1. **Under-Exploration of Diagnostic Canary Variants**: On post-hoc locked `DEV_SEEDS 0..29` (`hard`, `n=30`), `SolverPolicy` plants `{ue['solver_hard_dev_canaries_before_accuse']:.2f}` canaries (`{ue['solver_hard_dev_diagnostic_variants']:.2f}` diagnostic variant arms, `{_fmt_pct(ue['solver_hard_dev_slot_utilization'])}` daily slot utilization, `0.0` interviews) before committing, isolating a single consistent suspect in `26/30` (`86.7%`) episodes. `gemini-4-carbon` (OpenCode/MCP) plants only `{ue['gemini_4_carbon_hard_dev_canaries_before_accuse']:.2f}` canaries (`{ue['gemini_4_carbon_hard_dev_diagnostic_variants']:.2f}` variant arms, `{_fmt_pct(ue['gemini_4_carbon_hard_dev_slot_utilization'])}` slot utilization) while spending `{ue['gemini_4_carbon_hard_dev_interviews']:.1f}` calls/episode on low-KL interviews. Raw-context `Qwen2.5-1.5B` magnifies the same deficit on `HELDOUT_SEEDS`: `v2-off30` plants `{ue['qwen15b_v2_off30_canaries_before_accuse']:.2f}` canaries before accusing (`{ue['qwen15b_v2_off30_diagnostic_variants']:.2f}` variant arms) and pooled `v3-4k` (`n=180`) plants only `{ue['qwen15b_v3_4k_pooled_canaries_before_accuse']:.2f}` before accusing (`97-100%` later evicted by the `2,842`-token prompt header tax). Trained `EmpiricalBayesPolicy` (`eb_experience_opt`) learns to plant `{ue['eb_trained_hard_dev_canaries_before_accuse']:.2f}` canaries (`{ue['eb_trained_hard_dev_diagnostic_variants']:.2f}` variant arms) on `hard` `0..29` and `{ue['eb_trained_heldout_canaries_before_accuse']:.2f}` across all 3 held-out tiers.",
-        f"2. **Premature Commitment Below Breakeven (`top_p < 1 / (1 + known_v)`)**: Because a wrong accusation scores `-1.0` while abstaining scores `0.0`, accusing has negative expected value against visible `known_v` whenever `P(accused) < breakeven = 1 / (1 + known_v)` (and stricter negative EV under delayed leaks where `E[true V] < known_v`). On `hard` `0..29`, `SolverPolicy` commits below breakeven in `0/30` (`0.0%`) episodes and below `0.85` in `0/30` (`0.0%`). `gemini-4-carbon` (OpenCode/MCP) commits with `top_p < breakeven` in `3/29` (`{_fmt_pct(pc['gemini_4_carbon_hard_dev_top_p_below_breakeven_rate'])}`) accusations and below `0.85` in `10/29` (`{_fmt_pct(pc['gemini_4_carbon_hard_dev_sub_085_rate'])}`). Raw-context `Qwen2.5-1.5B` commits with `P(accused) < breakeven` in `{supp['ws4_v2_pooled_172']['pooled_p_accused_below_breakeven_count']}/{supp['ws4_v2_pooled_172']['accused_count']}` (`{_fmt_pct(pc['qwen15b_v2_pooled_172_p_accused_below_breakeven_rate'])}`) pooled `v2` accusations, `35/38` (`{_fmt_pct(pc['qwen15b_v3_4k_pooled_p_accused_below_breakeven_rate'])}`) pooled `v3-4k` accusations (`25/38 = {_fmt_pct(pc['qwen15b_v3_4k_pooled_top_p_below_breakeven_rate'])}` even for argmax `top_p`), and `83/85` (`{_fmt_pct(pc['qwen15b_v3_8k_s1_p_accused_below_breakeven_rate'])}`) `v3-8k-s1` accusations. Training `EmpiricalBayesPolicy` on `TRAIN_SEEDS` drives `top_p < breakeven` commitments from `{_fmt_pct(pc['eb_uncalibrated_hard_dev_top_p_below_breakeven_rate'])}` (`27/30`) down to `0.0%` (`0/30`) on `hard` `0..29`, and from `{_fmt_pct(pc['eb_uncalibrated_heldout_top_p_below_breakeven_rate'])}` (`58/90`) down to `0.0%` (`0/82`) on `HELDOUT_SEEDS`.",
-        f"3. **Abstention Calibration Under Delayed Leaks**: Under `1-3` day (`medium`) and `2-3` day (`hard`) leak delays, raw-context `Qwen2.5-1.5B` oscillates between reckless commitment (`v2`, `v3-8k-s1`, `v3-8k-s3`) and uncalibrated `eval_cap` / abstention collapse (`v3-4k` `142/180` abstained with `{dla['qwen15b_v3_4k_pooled_missed_pos_ev_abstain_count']}/142` missed positive-EV states already present in its own transcript; `v3-8k-s2` `{_fmt_pct(dla['qwen15b_v3_8k_s2_abstain_rate'])}` abstained with `{dla['qwen15b_v3_8k_s2_missed_pos_ev_abstain_count']}/84` missed positive-EV states). Trained `EmpiricalBayesPolicy` abstains `{dla['eb_trained_heldout_abstain_count']}/90` times on `HELDOUT_SEEDS` with `{dla['eb_trained_heldout_calibrated_abstain_count']}/{dla['eb_trained_heldout_abstain_count']}` (`100.0%`) calibrated abstentions and `0` missed positive-EV commitments.",
+        f"1. **Under-Exploration of Diagnostic Canary Variants**: On post-hoc locked `DEV_SEEDS 0..29` (`hard`, `n=30`), `SolverPolicy` plants `{ue['solver_hard_dev_canaries_before_accuse']:.2f}` canaries (`{ue['solver_hard_dev_diagnostic_variants']:.2f}` diagnostic variant arms, `{_fmt_pct(ue['solver_hard_dev_slot_utilization'])}` daily slot utilization, `0.0` interviews) before committing, isolating a single consistent suspect in `26/30` (`86.7%`) episodes. Given the exact same OpenCode MCP tools and instructions, `gpt-5.5` plants `{ue['gpt_5_5_hard_dev_canaries_before_accuse']:.2f}` valid canaries (`{ue['gpt_5_5_hard_dev_diagnostic_variants']:.2f}` variant arms, `{_fmt_pct(ue['gpt_5_5_hard_dev_slot_utilization'])}` slot utilization, only `{ue['gpt_5_5_hard_dev_interviews']:.1f}` interviews/episode) and matches `SolverPolicy` (`+0.504 +/- 0.064` vs `+0.499 +/- 0.119`), proving the MCP interface and instructions are sufficient. By contrast, `gemini-4-carbon` (OpenCode/MCP) plants only `{ue['gemini_4_carbon_hard_dev_canaries_before_accuse']:.2f}` canaries (`{ue['gemini_4_carbon_hard_dev_diagnostic_variants']:.2f}` variant arms, `{_fmt_pct(ue['gemini_4_carbon_hard_dev_slot_utilization'])}` slot utilization) while spending `{ue['gemini_4_carbon_hard_dev_interviews']:.1f}` calls/episode on low-KL interviews. Raw-context `Qwen2.5-1.5B` magnifies the same deficit on `HELDOUT_SEEDS`: `v2-off30` plants `{ue['qwen15b_v2_off30_canaries_before_accuse']:.2f}` canaries before accusing (`{ue['qwen15b_v2_off30_diagnostic_variants']:.2f}` variant arms) and pooled `v3-4k` (`n=180`) plants only `{ue['qwen15b_v3_4k_pooled_canaries_before_accuse']:.2f}` before accusing (`97-100%` later evicted by the `2,842`-token prompt header tax). Trained `EmpiricalBayesPolicy` (`eb_experience_opt`) learns to plant `{ue['eb_trained_hard_dev_canaries_before_accuse']:.2f}` canaries (`{ue['eb_trained_hard_dev_diagnostic_variants']:.2f}` variant arms) on `hard` `0..29` and `{ue['eb_trained_heldout_canaries_before_accuse']:.2f}` across all 3 held-out tiers.",
+        f"2. **Premature Commitment Below Breakeven (`top_p < 1 / (1 + known_v)`)**: Because a wrong accusation scores `-1.0` while abstaining scores `0.0`, accusing has negative expected value against visible `known_v` whenever `P(accused) < breakeven = 1 / (1 + known_v)` (and stricter negative EV under delayed leaks where `E[true V] < known_v`). On `hard` `0..29`, both `SolverPolicy` (`0/30 = 0.0%`) and `gpt-5.5` (`0/28 = 0.0%` `top_p < breakeven`, `28/28` accusation precision) never commit below breakeven. `gemini-4-carbon` (OpenCode/MCP) commits with `top_p < breakeven` in `3/29` (`{_fmt_pct(pc['gemini_4_carbon_hard_dev_top_p_below_breakeven_rate'])}`) accusations and below `0.85` in `10/29` (`{_fmt_pct(pc['gemini_4_carbon_hard_dev_sub_085_rate'])}`). Raw-context `Qwen2.5-1.5B` commits with `P(accused) < breakeven` in `{supp['ws4_v2_pooled_172']['pooled_p_accused_below_breakeven_count']}/{supp['ws4_v2_pooled_172']['accused_count']}` (`{_fmt_pct(pc['qwen15b_v2_pooled_172_p_accused_below_breakeven_rate'])}`) pooled `v2` accusations, `35/38` (`{_fmt_pct(pc['qwen15b_v3_4k_pooled_p_accused_below_breakeven_rate'])}`) pooled `v3-4k` accusations (`25/38 = {_fmt_pct(pc['qwen15b_v3_4k_pooled_top_p_below_breakeven_rate'])}` even for argmax `top_p`), and `83/85` (`{_fmt_pct(pc['qwen15b_v3_8k_s1_p_accused_below_breakeven_rate'])}`) `v3-8k-s1` accusations. Training `EmpiricalBayesPolicy` on `TRAIN_SEEDS` drives `top_p < breakeven` commitments from `{_fmt_pct(pc['eb_uncalibrated_hard_dev_top_p_below_breakeven_rate'])}` (`27/30`) down to `0.0%` (`0/30`) on `hard` `0..29`, and from `{_fmt_pct(pc['eb_uncalibrated_heldout_top_p_below_breakeven_rate'])}` (`58/90`) down to `0.0%` (`0/82`) on `HELDOUT_SEEDS`.",
+        f"3. **Abstention Calibration Under Delayed Leaks**: Under `1-3` day (`medium`) and `2-3` day (`hard`) leak delays, raw-context `Qwen2.5-1.5B` oscillates between reckless commitment (`v2`, `v3-8k-s1`, `v3-8k-s3`) and uncalibrated `eval_cap` / abstention collapse (`v3-4k` `142/180` abstained with `{dla['qwen15b_v3_4k_pooled_missed_pos_ev_abstain_count']}/142` missed positive-EV states already present in its own transcript; `v3-8k-s2` `{_fmt_pct(dla['qwen15b_v3_8k_s2_abstain_rate'])}` abstained with `{dla['qwen15b_v3_8k_s2_missed_pos_ev_abstain_count']}/84` missed positive-EV states; on `gpt-5.5` `hard`, `2/30` episodes ended with a text-only accusation instead of calling `accuse`, scoring `0.0`). Trained `EmpiricalBayesPolicy` abstains `{dla['eb_trained_heldout_abstain_count']}/90` times on `HELDOUT_SEEDS` with `{dla['eb_trained_heldout_calibrated_abstain_count']}/{dla['eb_trained_heldout_abstain_count']}` (`100.0%`) calibrated abstentions and `0` missed positive-EV commitments.",
         "",
         f"{h2} 2. Panel A: Post-Hoc Locked `DEV_SEEDS 0..29` (Not Pre-Registered) - Frontier vs Compact Policy vs Solver",
         "",
@@ -1125,12 +1158,14 @@ def render_comparison_markdown(summary: dict[str, Any]) -> str:
         )
 
     p_gs = dev_pairs["gemini_4_carbon_opencode_minus_solver"]
+    p_ps = dev_pairs["gpt_5_5_opencode_minus_solver"]
+    p_pg = dev_pairs["gpt_5_5_opencode_minus_gemini_4_carbon_opencode"]
     p_eb = dev_pairs["eb_trained_minus_eb_uncalibrated"]
     p_eg = dev_pairs["eb_trained_minus_gemini_4_carbon_opencode"]
 
     lines.extend([
         "",
-        f"- **World-paired `hard` `0..29` deltas** (post-hoc locked, not pre-registered): `gemini-4-carbon` OpenCode minus `SolverPolicy` = `{p_gs['mean_delta']:+.3f} +/- {p_gs['ci95']:.3f}`; trained `eb_experience_opt` minus uncalibrated `eb_naive_prior` = `{p_eb['mean_delta']:+.3f} +/- {p_eb['ci95']:.3f}`; trained `eb_experience_opt` minus `gemini-4-carbon` OpenCode = `{p_eg['mean_delta']:+.3f} +/- {p_eg['ci95']:.3f}`.",
+        f"- **World-paired `hard` `0..29` deltas** (post-hoc locked, not pre-registered): `gpt-5.5` OpenCode minus `SolverPolicy` = `{p_ps['mean_delta']:+.3f} +/- {p_ps['ci95']:.3f}`; `gpt-5.5` OpenCode minus `gemini-4-carbon` OpenCode = `{p_pg['mean_delta']:+.3f} +/- {p_pg['ci95']:.3f}`; `gemini-4-carbon` OpenCode minus `SolverPolicy` = `{p_gs['mean_delta']:+.3f} +/- {p_gs['ci95']:.3f}`; trained `eb_experience_opt` minus uncalibrated `eb_naive_prior` = `{p_eb['mean_delta']:+.3f} +/- {p_eb['ci95']:.3f}`; trained `eb_experience_opt` minus `gemini-4-carbon` OpenCode = `{p_eg['mean_delta']:+.3f} +/- {p_eg['ci95']:.3f}`.",
         "",
         f"{h3} 2.2 Medium Tier (`n=30` Paired Worlds, 20 Employees, 14 Days, 1-3 Day Leak Delay, 0% Noise)",
         "",

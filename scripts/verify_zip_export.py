@@ -637,11 +637,15 @@ def main(argv: list[str] | None = None) -> int:
         description="Verify Canary works from a gitless GitHub ZIP / git-archive export."
     )
     ap.add_argument("--root", type=Path, default=ROOT, help="Repository root to export and audit")
+    ap.add_argument("--tmp-root", type=Path, default=None, help="Parent directory for temporary export workspace")
     ap.add_argument("--json", action="store_true", help="Emit JSON report")
     args = ap.parse_args(argv)
 
     t0 = time.monotonic()
-    results = verify_zip_export(root=args.root.resolve())
+    results = verify_zip_export(
+        root=args.root.resolve(),
+        tmp_base=args.tmp_root.resolve() if args.tmp_root is not None else None,
+    )
     elapsed = time.monotonic() - t0
     passed = not any(r.status == "FAIL" for r in results)
 

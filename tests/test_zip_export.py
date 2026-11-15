@@ -132,9 +132,9 @@ def _make_synthetic_good_runner():
     return _runner
 
 
-def test_real_repo_zip_export_passes(capsys):
-    before = {p.name for p in OPENCODE_TMP.glob("canary-zip-export-*")} if OPENCODE_TMP.exists() else set()
-    rc = verify_zip_export.main(["--root", str(ROOT), "--json"])
+def test_real_repo_zip_export_passes(opencode_tmp: Path, capsys):
+    before = {p.name for p in opencode_tmp.glob("canary-zip-export-*")}
+    rc = verify_zip_export.main(["--root", str(ROOT), "--tmp-root", str(opencode_tmp), "--json"])
     out = capsys.readouterr().out
     payload = json.loads(out)
 
@@ -146,7 +146,7 @@ def test_real_repo_zip_export_passes(capsys):
     for item in payload["results"]:
         assert item["status"] == "PASS", item
 
-    after = {p.name for p in OPENCODE_TMP.glob("canary-zip-export-*")}
+    after = {p.name for p in opencode_tmp.glob("canary-zip-export-*")}
     assert after - before == set()
 
 

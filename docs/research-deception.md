@@ -1,7 +1,7 @@
 # Deception Research Grounding for Canary: Empirical Literature, Quantitative Audit, and Concrete Proposals
 
 **Squad:** `research` (`canary-research-lead` and `canary-research-w1..w9`)  
-**Baseline:** `origin/justSilas@f9fb7a4a` (rules `v1.4`, frozen hash `a8f99c2537c91d72`)  
+**Baseline:** `origin/justSilas@e1d5948f` (rules `v1.4`, frozen hash `a8f99c2537c91d72`)  
 **Deep-Dive Monographs:** [01. Deception Detection](research/01_deception_detection.md) | [04. Social Engineering & Cheap Talk](research/04_social_engineering_cheap_talk.md) | [07. Human-Bias Social Layer & Gate B Post-Mortem](research/07_v15_bias_layer_proposals.md)  
 **Primary Benchmark Evidence:** [Gap Report](reports/gap.md) | [Failure Analysis v1.4](reports/failure_analysis_v1.4.md) | [Reference Optimality](reports/reference_optimality.md) | [Difficulty Design](DIFFICULTY.md) | [Exploit & Fairness Audit](EXPLOITS.md)
 
@@ -352,6 +352,6 @@ Verified baseline benchmark on `v1.4` hard (`seeds 2000-2059`, $n = 60$, compute
 All empirical claims, channel capacities, base-rate PPVs, and frozen `v1.4` tier hashes in this document and its companion monographs reproduce deterministically on CPU using the shared repository environment:
 
 ```bash
-/tmp/fleet-silas/shared/agent-arena-venv/bin/pytest -q tests/test_env_frozen.py tests/test_tiers_v14.py tests/test_mole_dsl.py
-/tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/audit_submission.py
+/tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_research_deception.py --require-flagship --strict
+/tmp/fleet-silas/shared/agent-arena-venv/bin/pytest -q tests/test_research_deception.py tests/test_env_frozen.py tests/test_tiers_v14.py tests/test_mole_dsl.py
 ```

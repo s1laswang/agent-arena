@@ -1,0 +1,81 @@
+{
+ "opencode:google/gemini-4-hydrogen": {
+  "episodes": 30,
+  "tiers": {
+   "hard": 30
+  },
+  "regret_total": 3.3297,
+  "tags": {
+   "premature_accusation": {
+    "count": 1,
+    "episodes_with": 1,
+    "regret_sum": 0.54,
+    "worst": {
+     "run_id": "hard",
+     "seed": 19,
+     "t": 147,
+     "day": 21,
+     "tool": "accuse",
+     "args": {
+      "employee": "e09"
+     },
+     "regret": 0.54,
+     "p_best": 0.3217,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.32 < 0.6)"
+    },
+    "rate": 0.033
+   },
+   "uninformative_canary": {
+    "count": 4,
+    "episodes_with": 3,
+    "regret_sum": 0.0679,
+    "worst": {
+     "run_id": "hard",
+     "seed": 28,
+     "t": 58,
+     "day": 6,
+     "tool": "plant_canary",
+     "args": {
+      "assignment": {
+       "e20": "v3",
+       "e10": "v2",
+       "e25": "v1",
+       "e27": "v1",
+       "e26": "v1",
+       "e07": "v2",
+       "e29": "v2",
+       "e19": "v3"
+      },
+      "doc_title": "Lab equipment budget"
+     },
+     "regret": 0.0423,
+     "p_best": 0.3459,
+     "why": "canary variants split the suspects poorly (low information)"
+    },
+    "rate": 0.1
+   },
+   "budget_waste": {
+    "count": 28,
+    "episodes_with": 25,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 1,
+     "t": 3,
+     "day": 1,
+     "tool": "search_messages",
+     "args": {
+      "day_to": 1,
+      "query": " ",
+      "day_from": 1
+     },
+     "regret": 0.0,
+     "p_best": 0.025,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 0.833
+   }
+  },
+  "score_mean": 0.5747
+ }
+}

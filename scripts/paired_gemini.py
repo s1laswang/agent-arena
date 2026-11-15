@@ -50,7 +50,11 @@ def groups(version: str, model: str) -> list[tuple[str, str, str]]:
          (ALT_LABEL, f"{version}/opencode-{model}", f"opencode:google/{model}"),
          (f"in-process {model} (full history, thought-signature replay)", f"{version}/inproc-{model}", f"gemini:{model}")]
     if version == "v1.4":
-        g += [("OpenCode + gemini-3.5-flash over MCP (second Gemini family; the API reports modelVersion "
+        g += [("OpenCode + gemini-4-argon over MCP (second Gemini 4 family; the API reports modelVersion "
+               "gemini-4-argon for this id)", "v1.4/opencode-gemini-4-argon", "opencode:google/gemini-4-argon"),
+              ("OpenCode + gemini-4-hydrogen over MCP (third Gemini 4 family; the API reports modelVersion "
+               "gemini-4-hydrogen for this id)", "v1.4/opencode-gemini-4-hydrogen", "opencode:google/gemini-4-hydrogen"),
+              ("OpenCode + gemini-3.5-flash over MCP (second Gemini family; the API reports modelVersion "
                "gemini-3.6-flash for this id)", "v1.4/opencode-gemini-3.5-flash", "opencode:google/gemini-3.5-flash")]
     if version == "v1.3":
         g += [("Codex gpt-5.5 over MCP (earlier official run)", "v1.3/codex-gpt-5.5-full", "codex:gpt-5.5"),

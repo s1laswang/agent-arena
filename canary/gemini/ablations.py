@@ -116,21 +116,60 @@ def sig_ablation(ledger: list[dict]) -> dict:
 
 
 # --------------------------------------------------------------------------- 2. explicit cache
+def _row_cost(r: dict) -> tuple[float, float, bool]:
+    """(paid, if-uncached, priced) for one ledger row. canary.llm.pricing first; models it lacks fall back to the same
+    EXTRA_PRICES table the dashboard and ladder_report use (3.5-flash, 3.1-flash-lite); unpriced models count $0 and
+    are reported as such."""
+    from canary.gemini.dashboard import EXTRA_PRICES, _price
+    from canary.llm.pricing import PRICES
+    tin, cached = r.get("in") or 0, r.get("cached") or 0
+    tout = (r.get("out") or 0) + (r.get("thinking") or 0)
+    mult = 0.5 if r.get("kind") == "batch" else 1.0
+    ex = _price(r["model"], EXTRA_PRICES)
+    if ex and not _price(r["model"], PRICES):
+        paid = ((tin - cached) * ex[0] + cached * ex[2] + tout * ex[1]) / 1e6
+        cf = (tin * ex[0] + tout * ex[1]) / 1e6
+        return paid * mult, cf * mult, True
+    c = cost(r["model"], tin, tout, cached)
+    return c.get("cost_usd_est", c["cost_usd"]) * mult, c["cost_usd"] * mult, not c.get("cost_unknown", False)
+
+
 def _cost_pair(rows: list[dict]) -> dict:
     paid = cf = 0.0
-    cached = tin = 0
+    cached = tin = unpriced = 0
     for r in rows:
-        tout = (r.get("out") or 0) + (r.get("thinking") or 0)
-        c = cost(r["model"], r.get("in") or 0, tout, r.get("cached") or 0)
-        mult = 0.5 if r.get("kind") == "batch" else 1.0
-        paid += c.get("cost_usd_est", c["cost_usd"]) * mult
-        cf += c["cost_usd"] * mult
+        p, c, ok = _row_cost(r)
+        paid += p
+        cf += c
+        unpriced += (not ok)
         cached += r.get("cached") or 0
         tin += r.get("in") or 0
     return {"calls": len(rows), "input_tokens": tin, "cached_tokens": cached,
             "cached_share": round(cached / tin, 4) if tin else None,
             "usd_paid": round(paid, 2), "usd_if_uncached": round(cf, 2), "usd_saved": round(cf - paid, 2),
-            "pct_saved": round(100 * (cf - paid) / cf, 1) if cf else None}
+            "pct_saved": round(100 * (cf - paid) / cf, 1) if cf else None, "unpriced_calls": unpriced}
+
+
+def _unpriced(rows: list[dict]) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for r in rows:
+        if not _row_cost(r)[2]:
+            out[r["model"]] = out.get(r["model"], 0) + 1
+    return out
+
+
+def _unpriced_note(c: dict) -> str:
+    u = c.get("unpriced_by_model") or {}
+    if not u:
+        return ""
+    return (f"{sum(u.values()):,} calls of models with no list price in either price table count $0 on both sides "
+            f"({', '.join(f'{m} {n}' for m, n in u.items())})")
+
+
+def _union_ledger_rows() -> list[dict]:
+    """§2 input: every committed ledger (dashboard.committed_ledgers), de-duplicated by the dashboard's loader."""
+    from canary.gemini.dashboard import committed_ledgers, load_ledger
+    return load_ledger(committed_ledgers(RES))
 
 
 def cache_ablation(ledger: list[dict]) -> dict:
@@ -140,11 +179,16 @@ def cache_ablation(ledger: list[dict]) -> dict:
     by_feat: dict[str, list[dict]] = {}
     for r in ledger:
         by_feat.setdefault(r.get("feature") or "?", []).append(r)
-    return {"method": ("Per ledger row: paid = canary.llm.pricing.cost(...)['cost_usd_est'] (cached tokens at "
-                       "CACHED_PRICES; models without an entry use 10% of input); counterfactual = 'cost_usd' (all "
-                       "input at the full price). Batch rows at 50%. Explicit-cache storage (per token-hour) is not "
-                       "in the ledger and is not included. Gallery = the atlas-feature runs whose run_id the "
-                       "gallery_cache records."),
+    return {"method": ("Input: the de-duplicated union of every committed ledger under results/gemini "
+                       "(canary.gemini.dashboard.committed_ledgers + load_ledger, the dashboard's own dedupe). "
+                       "Per ledger row: paid = canary.llm.pricing.cost(...)['cost_usd_est'] (cached tokens at "
+                       "CACHED_PRICES; models without a cached price use 10% of input); counterfactual = 'cost_usd' "
+                       "(all input at the full price). Models canary.llm.pricing lacks (gemini-3.5-flash, "
+                       "gemini-3.1-flash-lite) are priced from the dashboard's EXTRA_PRICES (the ladder_report "
+                       "list prices, incl. their cached-input price). Batch rows at 50%. Explicit-cache storage (per "
+                       "token-hour) is not in the ledger and is not included. Gallery = the atlas-feature runs whose "
+                       "run_id the gallery_cache records."),
+            "unpriced_by_model": dict(sorted(_unpriced(ledger).items())),
             "atlas": _cost_pair(atlas_only), "gallery": _cost_pair(gallery),
             "atlas_plus_gallery": _cost_pair(atlas),
             "programme": _cost_pair(ledger),
@@ -236,7 +280,10 @@ def render_md(a: dict) -> str:
          f"saved). Whole programme (all {pg['calls']:,} ledgered calls, mostly implicit caching on ladder episodes): "
          f"{_pct(pg['cached_share'])} of {pg['input_tokens']:,} input tokens cached; ${pg['usd_paid']:.2f} paid vs "
          f"${pg['usd_if_uncached']:.2f}, saving ${pg['usd_saved']:.2f} ({pg['pct_saved']}%). These are exact "
-         "accounting deltas over every ledgered call, not samples, so no CI applies.", "",
+         "accounting deltas over every ledgered call, not samples, so no CI applies."
+         + (f" {_unpriced_note(c)}." if _unpriced_note(c) else "")
+         + (f" (Section 2 regenerated {a['explicit_cache_regenerated_at']}.)" if a.get("explicit_cache_regenerated_at")
+            else ""), "",
          "| scope | calls | input tok | cached | paid $ | uncached $ | saved $ | saved % |", "|---|---|---|---|---|---|---|---|"]
     for k in ("atlas", "gallery", "atlas_plus_gallery", "programme"):
         x = c[k]
@@ -283,6 +330,10 @@ def section4(a: dict) -> list[str]:
     ag = a["explicit_cache"]["atlas_plus_gallery"]
     pg = a["explicit_cache"]["programme"]
     hard = {(r["model"], r["level"]): r for r in a["thinking_sweep"] if r["tier"] == "hard"}
+    g = a["explicit_cache"].get("gallery") or {}
+    gallery_note = (f"the {g['calls']} gallery calls used no cache" if g.get("calls") and not g.get("cached_tokens")
+                    else f"the {g.get('calls', 0)} gallery calls had {_pct(g.get('cached_share'))} cached")
+
     def cell(m, lv):
         r = hard[(m, lv)]
         return (f"{r['pct_of_solver']}% [{r['ci95'][0]}, {r['ci95'][1]}] at {lv} (n={r['n']}, "
@@ -297,9 +348,10 @@ def section4(a: dict) -> list[str]:
          f"{_ci(on['accuracy_ci95'])})."),
         (f"**Explicit context caching** cut the corpus-scale Atlas reads from ${ag['usd_if_uncached']:.2f} to "
          f"${ag['usd_paid']:.2f} ({ag['pct_saved']}% saved over all {ag['calls']} ledgered atlas/gallery calls; "
-         f"{_pct(ag['cached_share'])} of {ag['input_tokens'] / 1e6:.1f}M input tokens cached; the 9 gallery calls "
-         f"used no cache), and caching overall saved {pg['pct_saved']}% (${pg['usd_saved']:.2f} of "
-         f"${pg['usd_if_uncached']:.2f}) across all {pg['calls']:,} ledgered calls in the programme."),
+         f"{_pct(ag['cached_share'])} of {ag['input_tokens'] / 1e6:.1f}M input tokens cached; {gallery_note}), "
+         f"and caching overall saved {pg['pct_saved']}% (${pg['usd_saved']:.2f} of "
+         f"${pg['usd_if_uncached']:.2f}) across all {pg['calls']:,} ledgered calls in the programme"
+         f"{' (list prices; ' + str(sum((a['explicit_cache'].get('unpriced_by_model') or {}).values())) + ' calls of unpriced models such as embeddings and hosted Gemma count $0)' if a['explicit_cache'].get('unpriced_by_model') else ''}."),
         (f"**`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, "
          f"{_model('gemini-3.5-flash')} goes from {cell('gemini-3.5-flash', 'minimal')} to "
          f"{cell('gemini-3.5-flash', 'medium')} of the solver on the same seeds, while {argon_clause(hard, cell)}; "
@@ -329,9 +381,27 @@ def regenerate_sweep(ladder_json: Path | None = None, ablations_json: Path | Non
     return a
 
 
+def regenerate_cache(ablations_json: Path | None = None) -> dict:
+    """Recompute ONLY §2 (cache cost delta) and its §4 sentence over the committed-ledger union; §1 and §3 are
+    carried over verbatim from the committed ablations.json."""
+    a = json.loads((ablations_json or RES / "ablations.json").read_text())
+    a["explicit_cache"] = cache_ablation(_union_ledger_rows())
+    a["explicit_cache_regenerated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    s4 = section4(a)
+    keep = a.get("section4") or s4
+    a["section4"] = [keep[0], s4[1]] + keep[2:]
+    return a
+
+
 def main(argv=None) -> int:
     import sys
     argv = sys.argv[1:] if argv is None else argv
+    if "--cache-only" in argv:
+        a = regenerate_cache()
+        (RES / "ablations.json").write_text(json.dumps(a, indent=1))
+        (RES / "ablations.md").write_text(render_md(a))
+        print(a["section4"][1])
+        return 0
     if "--sweep-only" in argv:
         a = regenerate_sweep()
         (RES / "ablations.json").write_text(json.dumps(a, indent=1))

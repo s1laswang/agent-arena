@@ -103,7 +103,14 @@
   }
  },
  "explicit_cache": {
-  "method": "Per ledger row: paid = canary.llm.pricing.cost(...)['cost_usd_est'] (cached tokens at CACHED_PRICES; models without an entry use 10% of input); counterfactual = 'cost_usd' (all input at the full price). Batch rows at 50%. Explicit-cache storage (per token-hour) is not in the ledger and is not included. Gallery = the atlas-feature runs whose run_id the gallery_cache records.",
+  "method": "Input: the de-duplicated union of every committed ledger under results/gemini (canary.gemini.dashboard.committed_ledgers + load_ledger, the dashboard's own dedupe). Per ledger row: paid = canary.llm.pricing.cost(...)['cost_usd_est'] (cached tokens at CACHED_PRICES; models without a cached price use 10% of input); counterfactual = 'cost_usd' (all input at the full price). Models canary.llm.pricing lacks (gemini-3.5-flash, gemini-3.1-flash-lite) are priced from the dashboard's EXTRA_PRICES (the ladder_report list prices, incl. their cached-input price). Batch rows at 50%. Explicit-cache storage (per token-hour) is not in the ledger and is not included. Gallery = the atlas-feature runs whose run_id the gallery_cache records.",
+  "unpriced_by_model": {
+   "gemini-3.8-live": 17,
+   "gemini-embedding-2": 305,
+   "gemma-4-26b-a4b-it": 73,
+   "gemma-4-31b-it": 306,
+   "unknown": 1
+  },
   "atlas": {
    "calls": 455,
    "input_tokens": 64359208,
@@ -112,7 +119,8 @@
    "usd_paid": 21.6,
    "usd_if_uncached": 58.45,
    "usd_saved": 36.84,
-   "pct_saved": 63.0
+   "pct_saved": 63.0,
+   "unpriced_calls": 302
   },
   "gallery": {
    "calls": 9,
@@ -122,7 +130,8 @@
    "usd_paid": 0.12,
    "usd_if_uncached": 0.12,
    "usd_saved": 0.0,
-   "pct_saved": 0.0
+   "pct_saved": 0.0,
+   "unpriced_calls": 0
   },
   "atlas_plus_gallery": {
    "calls": 464,
@@ -132,17 +141,19 @@
    "usd_paid": 21.72,
    "usd_if_uncached": 58.56,
    "usd_saved": 36.84,
-   "pct_saved": 62.9
+   "pct_saved": 62.9,
+   "unpriced_calls": 302
   },
   "programme": {
-   "calls": 29150,
-   "input_tokens": 860488544,
-   "cached_tokens": 744897721,
-   "cached_share": 0.8657,
-   "usd_paid": 214.89,
-   "usd_if_uncached": 893.08,
-   "usd_saved": 678.19,
-   "pct_saved": 75.9
+   "calls": 44545,
+   "input_tokens": 1318343393,
+   "cached_tokens": 1160725047,
+   "cached_share": 0.8804,
+   "usd_paid": 400.01,
+   "usd_if_uncached": 1768.51,
+   "usd_saved": 1368.5,
+   "pct_saved": 77.4,
+   "unpriced_calls": 702
   },
   "by_feature": {
    "atlas": {
@@ -153,7 +164,8 @@
     "usd_paid": 21.72,
     "usd_if_uncached": 58.56,
     "usd_saved": 36.84,
-    "pct_saved": 62.9
+    "pct_saved": 62.9,
+    "unpriced_calls": 302
    },
    "commentator": {
     "calls": 17,
@@ -163,7 +175,8 @@
     "usd_paid": 0.0,
     "usd_if_uncached": 0.0,
     "usd_saved": 0.0,
-    "pct_saved": null
+    "pct_saved": null,
+    "unpriced_calls": 17
    },
    "gateway-bench": {
     "calls": 2617,
@@ -173,7 +186,8 @@
     "usd_paid": 0.56,
     "usd_if_uncached": 0.56,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "gateway-smoke": {
     "calls": 1,
@@ -183,17 +197,19 @@
     "usd_paid": 0.0,
     "usd_if_uncached": 0.0,
     "usd_saved": 0.0,
-    "pct_saved": null
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "ladder": {
-    "calls": 23564,
-    "input_tokens": 756729942,
-    "cached_tokens": 678203501,
-    "cached_share": 0.8962,
-    "usd_paid": 136.67,
-    "usd_if_uncached": 766.5,
-    "usd_saved": 629.83,
-    "pct_saved": 82.2
+    "calls": 38959,
+    "input_tokens": 1214584791,
+    "cached_tokens": 1094030827,
+    "cached_share": 0.9007,
+    "usd_paid": 321.79,
+    "usd_if_uncached": 1641.92,
+    "usd_saved": 1320.14,
+    "pct_saved": 80.4,
+    "unpriced_calls": 377
    },
    "ladder-gemma-probe": {
     "calls": 2,
@@ -203,7 +219,8 @@
     "usd_paid": 0.0,
     "usd_if_uncached": 0.0,
     "usd_saved": 0.0,
-    "pct_saved": null
+    "pct_saved": null,
+    "unpriced_calls": 2
    },
    "mole": {
     "calls": 64,
@@ -213,7 +230,8 @@
     "usd_paid": 0.31,
     "usd_if_uncached": 0.31,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "narrate": {
     "calls": 50,
@@ -223,7 +241,8 @@
     "usd_paid": 0.05,
     "usd_if_uncached": 0.05,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "showcase": {
     "calls": 15,
@@ -233,7 +252,8 @@
     "usd_paid": 0.0,
     "usd_if_uncached": 0.0,
     "usd_saved": 0.0,
-    "pct_saved": null
+    "pct_saved": 0.0,
+    "unpriced_calls": 3
    },
    "swarm": {
     "calls": 2342,
@@ -243,7 +263,8 @@
     "usd_paid": 55.32,
     "usd_if_uncached": 66.83,
     "usd_saved": 11.51,
-    "pct_saved": 17.2
+    "pct_saved": 17.2,
+    "unpriced_calls": 0
    },
    "video_qa": {
     "calls": 1,
@@ -253,7 +274,8 @@
     "usd_paid": 0.02,
     "usd_if_uncached": 0.02,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "worldtext": {
     "calls": 6,
@@ -263,7 +285,8 @@
     "usd_paid": 0.16,
     "usd_if_uncached": 0.16,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "worldtext-probe": {
     "calls": 6,
@@ -273,7 +296,8 @@
     "usd_paid": 0.09,
     "usd_if_uncached": 0.09,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "x": {
     "calls": 1,
@@ -283,7 +307,8 @@
     "usd_paid": 0.0,
     "usd_if_uncached": 0.0,
     "usd_saved": 0.0,
-    "pct_saved": null
+    "pct_saved": null,
+    "unpriced_calls": 1
    }
   }
  },
@@ -963,10 +988,11 @@
  ],
  "section4": [
   "**Thought signatures are load-bearing:** with signature replay stripped, the API rejected the first function-call replay on 10/10 hard-tier episodes of gemini-3.8-flash (400 INVALID_ARGUMENT, \"Function call is missing a thought_signature\"; Wilson 95% CI [72.2, 100.0]), so 0 episodes were playable, versus 10/10 played with replay on (0/628 API errors, accuracy 70.0%, CI [39.7, 89.2]).",
-  "**Explicit context caching** cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 75.9% ($678.19 of $893.08) across all 29,150 ledgered calls in the programme.",
+  "**Explicit context caching** cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 77.4% ($1368.50 of $1768.51) across all 44,545 ledgered calls in the programme (list prices; 702 calls of unpriced models such as embeddings and hosted Gemma count $0).",
   "**`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, gemini-3.6-flash (requested as 3.5-flash) goes from -32% [-124, 34] at minimal (n=10, 0 thinking tok, $0.25/ep) to 87% [50, 147] at medium (n=40, 20,275 thinking tok, $0.42/ep) of the solver on the same seeds, while gemini-4-argon rises across low \u2192 medium \u2192 high (57% \u2192 64% \u2192 73%; 57% [-6, 127] at low (n=21, 10 thinking tok, $0.23/ep) vs 73% [14, 117] at high (n=15, 41,967 thinking tok, $1.47/ep), CIs overlap); across all model x level x tier cells, 18 of 42 cells exclude parity, all below the solver (95% CIs)."
  ],
  "thinking_sweep_regenerated_at": "2026-11-15T04:47:20+0200",
  "ladder_git_sha": "76097d7843032cc4068e53a9d78e934f4ab38171",
- "thinking_sweep_parity": "18 of 42 cells exclude parity, all below the solver"
+ "thinking_sweep_parity": "18 of 42 cells exclude parity, all below the solver",
+ "explicit_cache_regenerated_at": "2026-11-15T04:55:12+0200"
 }

@@ -45,6 +45,31 @@ def test_committed_sweep_recomputes_from_committed_ladder_json():
     assert ablations.parity_sentence(fresh) in a["section4"][2]
 
 
+def test_cost_falls_back_to_extra_prices_for_flash_models():
+    r = {"model": "gemini-3.5-flash", "in": 1_000_000, "cached": 400_000, "out": 100_000, "thinking": 0}
+    paid, cf, ok = ablations._row_cost(r)
+    assert ok and abs(paid - (0.6 * 0.75 + 0.4 * 0.075 + 0.1 * 3.75)) < 1e-9 and abs(cf - (0.75 + 0.375)) < 1e-9
+    lite = {"model": "gemini-3.1-flash-lite", "in": 1_000_000, "cached": 0, "out": 0, "thinking": 0}
+    assert ablations._row_cost(lite) == (0.25, 0.25, True)
+    assert ablations._row_cost({"model": "gemini-embedding-2", "in": 10, "out": 0})[2] is False
+
+
+def test_committed_cache_section_recomputes_from_committed_ledgers():
+    a = json.loads((RES / "ablations.json").read_text())
+    assert a["explicit_cache"] == json.loads(json.dumps(ablations.cache_ablation(ablations._union_ledger_rows())))
+    md = (RES / "ablations.md").read_text()
+    pg = a["explicit_cache"]["programme"]
+    assert f"{pg['calls']:,} ledgered calls" in md and f"${pg['usd_if_uncached']:.2f}" in md
+    assert a["explicit_cache"]["programme"]["unpriced_calls"] == sum(a["explicit_cache"]["unpriced_by_model"].values())
+
+
+def test_cache_only_leaves_signatures_and_sweep_untouched():
+    before = json.loads((RES / "ablations.json").read_text())
+    a = ablations.regenerate_cache(RES / "ablations.json")
+    assert a["thought_signatures"] == before["thought_signatures"] and a["thinking_sweep"] == before["thinking_sweep"]
+    assert a["section4"][0] == before["section4"][0] and a["section4"][2] == before["section4"][2]
+
+
 def test_sweep_only_leaves_signature_and_cache_sections_untouched(tmp_path):
     before = json.loads((RES / "ablations.json").read_text())
     a = ablations.regenerate_sweep(RES / "ladder.json", RES / "ablations.json")

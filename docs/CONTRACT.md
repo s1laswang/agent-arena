@@ -1,5 +1,7 @@
 # CONTRACT v0: Canary (catch the mole)
 
+> **Current rules are v1.4** (`canary/rules.py`, `TIERS_VERSION = "v1.4"`). Sections 1–6 are the original v0 contract; where a later section amended a rule, the line says so inline. Summary of today's rules: wrong accusation −1 (§9), `status` shows known V (§13), hard fingerprints 95% accurate (§10, §12), 40 judge seeds per tier (900000–900039).
+
 This is what lets five departments build in parallel. Code-level truth is in `canary/rules.py` and `canary/types.py`, and the `Env` signatures are in `canary/env.py`.
 - **Changing a signature or a mechanic:** the ENV head decides. Bump the version here and add a line to `docs/reports/CEO.md`.
 - **Tuning numbers in `rules.py`:** allowed. Note it in your report.
@@ -12,7 +14,7 @@ A fictional company (tiers: easy 12 / medium 20 / hard 40 employees; hard was 30
 - watch the **leak feed**, where leaked docs surface after a delay carrying their variant tag;
 - restrict an employee's access (costs value per day).
 
-It must **accuse exactly one employee, exactly once.** Score = V at the moment of accusation if correct, otherwise 0. The episode lasts at most `n_days` days (easy/medium 14, hard 21 since v1.4). Doing nothing scores 0.
+It must **accuse exactly one employee, exactly once.** Score = true V at the moment of accusation if correct, **−1 if wrong** (v0 said 0; amended in §9). The episode lasts at most `n_days` days (easy/medium 14, hard 21 since v1.4). Doing nothing scores 0.
 
 ## 2. Mechanics (the env and the solver MUST implement the identical model)
 - **World(tier, seed):** generated deterministically.
@@ -23,7 +25,7 @@ It must **accuse exactly one employee, exactly once.** Score = V at the moment o
 - **Day loop.** `advance_day` closes day d:
   1. **Leak.** If the mole has ≥1 *leakable* doc (received in the last 3 days, not yet leaked), then with probability `p_leak` it leaks one. The choice is uniform over leakable docs. Exception, when `careful_mole` is set: a canary doc's weight is multiplied by (1 − share of staff who received *any* variant of it).
   2. **Delay.** The leak surfaces in the feed on day d + δ, with δ ~ Uniform(`delay_choices`).
-  3. **Value.** V −= `leak_damage` at leak time. `status` shows the true V.
+  3. **Value.** V −= `leak_damage` at leak time. `status` shows the **known** V: surfaced leaks plus the agent's own costs (v0 showed the true V; amended in §13). The score uses the true V.
   4. **Restriction cost.** Each restricted employee costs `restrict_cost_per_day`. A restricted employee receives no new docs and cannot be given canaries; it can still leak docs it already holds.
   5. **Access logs.** Each employee accesses sensitive docs it holds at Poisson rate `log_rate_benign`; the mole at `log_rate_mole`.
      - A fraction of accesses are flagged `after_hours`. The mole's after-hours rate is higher.
@@ -36,14 +38,14 @@ It must **accuse exactly one employee, exactly once.** Score = V at the moment o
   - costs `canary_cost`;
   - with `access_constraints`, recipients must have clearance.
 
-  A canary is a new doc delivered today. Recipients are exactly the keys of `assignment`. When a canary leaks, the feed shows its variant label.
+  A canary is a new doc delivered today. Recipients are exactly the keys of `assignment`. When a canary leaks, the feed shows its variant label (with probability `fingerprint_accuracy`, else another planted variant; hard: 0.95; §10, §12).
 - **Interviews.** `interview(employee, topic)` returns text rendered from a signal: `evasive` with probability `p_evasive_innocent × (interview_lr if mole else 1)`, otherwise `cooperative`.
 - **Caps.**
   - Investigative tools (`types.INVESTIGATIVE_TOOLS`) are limited to `actions_per_day` per day. After that they return `ok=False, error="daily action limit; call advance_day"`.
   - `status`, `list_*`, `advance_day` and `accuse` don't use daily slots.
   - Every call counts toward `tool_call_cap` (easy/medium 300, hard 420 since v1.4). Reaching it ends the episode with score 0.
 - **End of episode.**
-  - `accuse` ends it: score = V if correct, else 0.
+  - `accuse` ends it: score = true V if correct, else −1 (v0 said 0; §9).
   - Passing day `n_days` without an accusation ends it with score 0.
   - After the end, every call returns `ok=False` and changes nothing.
 
@@ -89,7 +91,7 @@ Validation is strict: one employee id per call (no lists, no `*`, no names in pl
 - mean day of accusation;
 - solver-normalised score (agent / solver on the same seed);
 - pass^k over repeated runs;
-- baselines: do-nothing, stop-early (random accusation on day 1), random, restrict-all.
+- baselines: do-nothing, stop_early (stops on day 1 without accusing: exactly 0), guess_day1 (random accusation on day 1; v0 called this stop-early), random, restrict-all.
 
 ---
 
@@ -192,10 +194,10 @@ Validation is strict: one employee id per call (no lists, no `*`, no names in pl
   - `grok_tactics` plants one tiny pair canary per allowed canary.
   - Both behave exactly as before on the v1.3 tiers.
 - **Calibration** (Mac, ≤6 processes, no LLM calls; `scripts/calib_v14.py`). The grid covered leak_damage {0.04, 0.05, 0.06, 0.065, 0.08} × n_employees {30, 35, 40, 45} on dev seeds 4000–4599. The cell was picked on dev seeds only and **confirmed on fresh seeds 5000–5799** (n = 800 per tier; `results/fresh_table_v1.4.md`).
-  - Solver mean: easy **.779**, medium **.633**, hard **.556 ± .024**. Hard accuracy **94.9%**, no-accusation 1.2%, mean accusation day 8.8.
+  - Solver mean: easy **.779**, medium **.634**, hard **.556 ± .024**. Hard accuracy **94.9%**, no-accusation 1.2%, mean accusation day 8.8.
   - Paired solver − grok_tactics on hard: **+.195 ± .033** (grok .362, 84.2% correct, 12.0% no accusation).
   - Paired solver − heuristic on hard: **+.534 ± .046**.
-  - stop_early on hard: −.945. do_nothing: 0. logs_only accuracy on hard: 1.4% (chance is 1/39 = 2.6%).
+  - guess_day1 (then named stop_early) on hard: −.945. do_nothing: 0. logs_only accuracy on hard: 1.4% (chance is 1/39 = 2.6%).
 - **Honest read:**
   - The objectives are met (hard accuracy ≥ 85%, monotone easy > medium > hard, stop_early < 0, do_nothing = 0, logs_only ≈ chance) **except the grok_tactics gap, which is just under the 0.2 target** (CI .162–.228).
   - On the same seeds with the same code, v1.3 hard gives solver .575 and grok_tactics .342 (gap .233 ± .040; 35% of grok episodes had no accusation).

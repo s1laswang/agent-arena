@@ -10,16 +10,21 @@ Six cold Gemini judges (OpenCode, gemini-4-argon / gemini-4-hydrogen; carbon not
 | 2 | hydrogen | 19 | 25 | 23 | 12 | 79 |
 | 3 (also ran make test) | argon | 22 | 26 | 24 | 12 | 84 |
 | 4 | hydrogen | 17 | 25 | 23 | 12 | 77 |
+| 6 (cloned 03:52, after the n=60 extension merge) | hydrogen | 21 | 25 | 23 | 11 | 80 |
 
 Run times on a loaded Mac: clone about 16 s, `make setup` 1–4 s, `make reproduce` 45–83 s, `make accept` 35–40 s. The first result appeared 87–111 s after the clone started. Every run exited 0, and accept reported PASS=20 FAIL=0 SKIP=1 each time. Judge 1's Harbor oracle and do_nothing jobs succeeded on the first try, with isolation at 11 checks and 0 findings.
 
-## Ranked friction (count = judges out of 4 who flagged it)
+## Addendum 04:20: judge 6
+
+Judge 6 cloned at 03:52, after PR #60 had merged the two extension seeds (34, 37) into `data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/`. It was one minute too early for the `HEADLINE` line. Its new finding, and the most important one: `make reproduce` printed the replayed OpenCode hard row as **+0.349 ± 0.190 (n=32)**, while the README promised +0.322 ± 0.199. The headline itself is unchanged, because the paired n=30 table is bit-identical. Fixed in the README (the pooled row is explained, and the `HEADLINE` line recomputes n=30). Its other items repeat #2, #3, #5, #9, #12 and #14 below.
+
+## Ranked friction (count = judges out of 4 who flagged it; judge 6 adds the pooled-row item)
 
 | # | friction | count | status |
 |---|---|---:|---|
 | 1 | README:35 quoted the committed hard solver row as +0.625 ± 0.088, but the file says +0.553 ± 0.093 | 4 | fixed on justSilas (audit M1) |
-| 2 | docs/CONTRACT.md §1–4 still state v0 rules: a wrong accusation scores 0, `status` shows true V, 30 judge seeds, stop_early means a day-1 guess. configs/README.md:13 also says 30 seeds | 4 | audit M7/M10, **open** |
-| 3 | EXPLOITS and results/anticheat cite 37/37 Harbor trials and 13 jobs, but `make reproduce` prints 80/80 and 18 jobs | 4 | audit M3, **open** (regenerate the artifact) |
+| 2 | docs/CONTRACT.md §1–4 still state v0 rules: a wrong accusation scores 0, `status` shows true V, 30 judge seeds, stop_early means a day-1 guess. configs/README.md:13 also says 30 seeds | 4 | fixed (M7 on justSilas; M10 here: inline amendments + a v1.4 banner) |
+| 3 | EXPLOITS and results/anticheat cite 37/37 Harbor trials and 13 jobs, but `make reproduce` prints 80/80 and 18 jobs | 4 | fixed on justSilas (bd535a45) |
 | 4 | "Gap not established" in harbor/README:210, PLAN.md:15 and HISTORY.md:24 contradicts the headline | 4 | fixed on justSilas (16a7e8d2) |
 | 5 | README:101 says "13 scripted cheats", but the battery runs 14 attacks + 1 swarm | 4 | fixed here (audit M2) |
 | 6 | No `make` target prints the headline 65% [24%, 98%]; it lives only in a committed table | 3 (implied by all 4) | fixed here: `make reproduce` recomputes it (bit-identical, 3 s) and fails on any drift |
@@ -31,9 +36,10 @@ Run times on a loaded Mac: clone about 16 s, `make setup` 1–4 s, `make reprodu
 | 12 | The Harbor sidecar compose file passes the host `GEMINI_API_KEY` even for the template provider | 3 | proposal to the CEO |
 | 13 | README:25 discloses only empty-reply retries; meta.json lists 25 excluded hard attempts of 3 kinds | 2 | open |
 | 14 | The accept MCP smoke check counts HTTP 400 as PASS with no note | 2 | open (scripts/) |
-| 15 | The Harbor `opencode.json` allows `bash`/`python3`, but the headline OpenCode run denied them, so the two harnesses differ | 1 | **proposal to the CEO (material to the gap claim)** |
-| 16 | `access_constraints` on hard is a no-op: clearance never binds | 2 | proposal to the CEO |
-| 17 | EXPLOITS #25 vs #27 cross-reference (harbor/README:68, configs/README:19) | 1 | audit M6, open |
+| 15 | The Harbor `opencode.json` allows `bash`/`python3`, but the headline OpenCode run denied them, so the two harnesses differ | 1 | disclosed in the README on justSilas (0dc7d140) |
+| 16 | `access_constraints` on hard is a no-op: clearance never binds | 2 | disclosed in DIFFICULTY W4 on justSilas (0dc7d140) |
+| 0 | README promised the replayed OpenCode hard row as +0.322 ± 0.199, but `make reproduce` prints +0.349 ± 0.190 (n=32, pooling the extension seeds) | judge 6 | fixed (README explains it; the HEADLINE line recomputes n=30) |
+| 17 | EXPLOITS #25 vs #27 cross-reference (harbor/README:68, configs/README:19) | 1 | fixed on justSilas (M6) |
 
 ## Why craft got 12, not 15 (consensus)
 

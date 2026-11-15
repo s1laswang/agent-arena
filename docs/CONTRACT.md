@@ -72,7 +72,7 @@ Validation is strict: one employee id per call (no lists, no `*`, no names in pl
 - The truth (the mole id, the seed→world mapping for judge seeds) never enters the agent's container or filesystem.
 - Seeds:
   - dev: 0–9,999
-  - judge: 900,000–900,029 per tier (frozen; text committed in `data/worlds/judge/`)
+  - judge: 900,000–900,039 per tier (40 seeds) (frozen; text committed in `data/worlds/judge/`)
   - train: 100,000–199,999
   - held-out: 800,000–800,199
 

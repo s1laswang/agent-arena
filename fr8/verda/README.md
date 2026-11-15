@@ -16,6 +16,7 @@ Each instance runs an on-instance reaper that deletes it at its deadline; ask FR
 | f4378173-9608-4361-bc6c-8f2b9e482819 | 1A100.22V (80 GB) on-demand | FIN-03 | 2.1589 | 15 Nov 01:08 | reaper 07:30 | FR8: v3-8k s3 (4th replicate; no other job ready: HF_TOKEN missing, 8k adapters not yet trained) | running |
 | 18acfa5d-b5f9-4e64-a652-0de05a9f4c15 | 1A100.22V (80 GB) on-demand | FIN-01 | 2.1589 | 15 Nov 02:17 | reaper 07:30 | FR8: backup base eval, held-out seeds 6-35/tier, 150 min (FR8 44584 unreachable: FR8 SSH down) | running |
 | 714d8144-c036-4814-999d-a38ed192a48f | 1A100.22V (80 GB) spot | FIN-01 | 1.0794 | 15 Nov 02:39 | reaper 07:30 | FR8: v3-4k s1 (replicate of the 4k row; 2 h train + 60 min eval → ~05:50) | running |
+| e9ea8b2e-ed28-4325-b2c7-0345f6af3bd1 | 1A100.40S.22V (40 GB) on-demand | FIN-02 | 1.5373 | 15 Nov 03:02 | reaper 08:00 | X2 DAgger box 2 (pre-staged: v3 stack, base 1.5B, v3-4k s0 adapter in /root/x2); waits for x2's spec | prepping |
 
 Balance: €200.00 at start → €191.71 at 00:20 (account shows €200 of credit; Silas mentions €400 total, so a teammate's credit is in another account).
 Capacity: Verda A100/A6000/L40S on-demand and spot have been near zero all night; FR8 polls and launches queued workloads as capacity appears.
@@ -46,3 +47,5 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 02:45: Meta PaliGemma 2 3B LoRA DONE on shared A100 f4378173: train 23:35:34Z → 00:12:18Z incl. eval (1,766 s training, 2 epochs), peak ~15.5 GB (capped at 0.58 of the card); an earlier batch-8 attempt OOM-exited (~69 GB) without affecting v3-8k s3. Results copied off by Meta; nothing of theirs is running. No extra cost.
 
 02:58: X1 (causal hint test) hosted on 18acfa5d in /root/x1 (no CPU instances free in any region; the box has 22 vCPU, base eval uses ~1): node 22 + opencode 1.19.5 + uv, repo justSilas @a54f4223, only GEMINI_API_KEY in root-only /root/x1/.env. X2: v3-8k s3 (f4378173) yields to X2 when x2 sends a ready spec (CEO YES); box 2 = new capacity or 68bbe201 after ~04:15. v3-4k s0 adapter for X2: data/fr8/verda/v3-4k-s0-lora/ (weights gitignored) and on 68bbe201:/root/v3s0-lora.
+
+03:02: X2 box 2 = A100-40G e9ea8b2e (FIN-02). Burn €18.37/h → projected ≈ €120 by 07:30.

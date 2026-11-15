@@ -1552,7 +1552,7 @@ def _run_shell_sandbox(
     expected_rel_order: list[str] = []
     has_disk_cases = (DEMO_DIR / "cases.js").is_file() or (DEMO_DIR / "fallback_cases.js").is_file()
     for rel_src in script_srcs:
-        if force_synthetic and rel_src in {"cases.js", "fallback_cases.js"}:
+        if force_synthetic and rel_src in {"cases.js", "fallback_cases.js", "personas.js", "annotations.js"}:
             continue
         candidate = DEMO_DIR / rel_src
         if candidate.is_file():

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import os
 import re
 import subprocess
 import sys
@@ -22,12 +23,15 @@ CHECK_ANCHORS = "Markdown Anchor Fragment Check"
 CHECK_IMAGES = "HTML <img> & Markdown Image Asset Audit"
 CHECK_TRACKED_TARGETS = "Tracked vs Gitignored Link Target Audit"
 CHECK_STALE_PR41 = "Post-PR41 Stale Number Guard"
+CHECK_PORTABILITY_AND_ENCODING = "Shell Portability, CRLF & Conflict-Marker Audit"
+CHECK_MAKEFILE_DIFFUTILS = "Makefile diffutils Portability Audit"
 
 CHECK_NAMES: tuple[str, ...] = (
     CHECK_ANCHORS,
     CHECK_IMAGES,
     CHECK_TRACKED_TARGETS,
     CHECK_STALE_PR41,
+    CHECK_PORTABILITY_AND_ENCODING,
 )
 
 ACTIVE_JUDGE_DOCS: tuple[str, ...] = (
@@ -35,8 +39,30 @@ ACTIVE_JUDGE_DOCS: tuple[str, ...] = (
     "JUDGE_QUICKSTART.md",
     "docs/JUDGE-WALKTHROUGH.md",
     "docs/PEER-REVIEW-QA.md",
+    "docs/REPRODUCIBILITY.md",
+    "docs/DEMO.md",
+    "docs/NUMBER-PROVENANCE-INDEX.md",
+    "docs/EXPLOITS.md",
+    "docs/SUBMISSION.md",
     "docs/gemini/SUBMISSION.md",
     "pitch/GEMINI.md",
+)
+
+TEXT_AUDIT_EXTENSIONS: frozenset[str] = frozenset(
+    {".md", ".py", ".sh", ".toml", ".yml", ".yaml"}
+)
+
+SKIP_WALK_DIRS: frozenset[str] = frozenset(
+    {
+        ".git",
+        "__pycache__",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".mypy_cache",
+        ".venv",
+        "venv",
+        "node_modules",
+    }
 )
 
 EXTERNAL_SCHEMES: tuple[str, ...] = (
@@ -100,7 +126,41 @@ STALE_PR41_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             re.IGNORECASE,
         ),
     ),
+    (
+        "<PLACEHOLDER",
+        re.compile(r"(?:<|\u27e8)\s*PLACEHOLDER\b"),
+    ),
+    (
+        "Three retired builds publish their signing key",
+        re.compile(r"Three\s+retired\s+builds\s+publish\s+their\s+signing\s+key", re.IGNORECASE),
+    ),
+    (
+        "all 31 committed Harbor trials",
+        re.compile(r"\ball\s+[*_`]*31[*_`]*\s+committed\s+Harbor\s+trials\b", re.IGNORECASE),
+    ),
 )
+
+EXPLOITS_FULL_HISTORY_HEADING_RX = re.compile(
+    r"^\s{0,3}\x23{1,6}\s+Full\s+history\b",
+    re.IGNORECASE | re.MULTILINE,
+)
+EXPLOITS_ROW_49_RX = re.compile(r"^\s*\|\s*49\s*\|")
+
+CONFLICT_FAST_TOKENS: tuple[str, ...] = ("<" * 7, "=" * 7, ">" * 7)
+CONFLICT_MARKER_RX = re.compile(r"^(?:<{7} |={7}[ \t]*$|>{7} )")
+SHEBANG_RX = re.compile(r"^\x23!\s*/\S+")
+HEREDOC_START_RX = re.compile(
+    r"(?<!<)<<(-?)(?!<)\s*(?:['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]|\\?([A-Za-z_][A-Za-z0-9_]*))"
+)
+SHELL_PKILL_RX = re.compile(r"\bpkill\b")
+SHELL_DIFFUTILS_RX = re.compile(
+    r"(?:^|[;|&({`]|\$\("
+    r"|(?:^|[\s;|&({`])(?:if|then|else|elif|do|while|until|time|exec|env|nohup)\b"
+    r"|(?:^|[\s;|&({`])!)"
+    r"\s*(cmp|diff)(?=\s|[;|&)}`]|$)"
+)
+SHELL_IF_WORD_RX = re.compile(r"(?:^|[\s;|&({`])if(?=\s|$)")
+SHELL_FI_WORD_RX = re.compile(r"(?:^|[\s;|&({`])fi(?=\s|[;|&)}`]|$)")
 
 
 @dataclass
@@ -131,7 +191,15 @@ class _ScanContext:
 
 def _has_dot_git(root: Path) -> bool:
     dot_git = root / ".git"
-    return dot_git.exists()
+    return dot_git.exists() or dot_git.is_symlink()
+
+
+def _git_env(root: Path) -> dict[str, str]:
+    env = dict(os.environ)
+    ceiling = str(root.resolve().parent)
+    existing = env.get("GIT_CEILING_DIRECTORIES", "")
+    env["GIT_CEILING_DIRECTORIES"] = f"{ceiling}{os.pathsep}{existing}" if existing else ceiling
+    return env
 
 
 def _git_ls_files(root: Path) -> list[str] | None:
@@ -141,6 +209,7 @@ def _git_ls_files(root: Path) -> list[str] | None:
         proc = subprocess.run(
             ["git", "ls-files", "-z"],
             cwd=root,
+            env=_git_env(root),
             capture_output=True,
             timeout=15,
         )
@@ -152,39 +221,52 @@ def _git_ls_files(root: Path) -> list[str] | None:
     return [entry for entry in raw.split("\0") if entry]
 
 
-def _git_is_ignored(root: Path, rel_path: str) -> bool:
+def _git_is_ignored(root: Path, rel_path: str) -> tuple[bool, bool]:
     if not _has_dot_git(root):
-        return False
+        return False, False
     try:
         proc = subprocess.run(
             ["git", "check-ignore", "-q", rel_path],
             cwd=root,
+            env=_git_env(root),
             capture_output=True,
             timeout=15,
         )
     except (OSError, subprocess.SubprocessError):
-        return False
-    return proc.returncode == 0
+        return False, False
+    if proc.returncode not in (0, 1):
+        return False, False
+    return True, proc.returncode == 0
 
 
-def _git_ignored_batch(root: Path, rel_paths: list[str]) -> set[str]:
-    if not rel_paths or not _has_dot_git(root):
+def _git_ignored_batch(root: Path, rel_paths: list[str]) -> set[str] | None:
+    if not _has_dot_git(root):
+        return None
+    if not rel_paths:
         return set()
     unique_paths = sorted(set(rel_paths))
     try:
         proc = subprocess.run(
             ["git", "check-ignore", "--stdin"],
             cwd=root,
+            env=_git_env(root),
             input="\n".join(unique_paths) + "\n",
             capture_output=True,
             text=True,
             timeout=15,
         )
     except (OSError, subprocess.SubprocessError):
-        return set()
-    if proc.returncode not in (0, 1):
-        return {p for p in unique_paths if _git_is_ignored(root, p)}
-    return {ln for ln in proc.stdout.splitlines() if ln}
+        return None
+    if proc.returncode in (0, 1):
+        return {ln for ln in proc.stdout.splitlines() if ln}
+    ignored: set[str] = set()
+    for p in unique_paths:
+        ok, is_ig = _git_is_ignored(root, p)
+        if not ok:
+            return None
+        if is_ig:
+            ignored.add(p)
+    return ignored
 
 
 def _parse_gitignore_fallback_rules(root: Path) -> list[tuple[bool, bool, bool, str]]:
@@ -331,7 +413,10 @@ def _strip_fences_and_comments(md_text: str) -> str:
 
 def _strip_code_preserving_lines(md_text: str) -> str:
     without_fences = _strip_fences_and_comments(md_text)
-    return "\n".join(INLINE_CODE_RX.sub("", line) for line in without_fences.split("\n"))
+    return "\n".join(
+        (INLINE_CODE_RX.sub("", line) if "`" in line else line)
+        for line in without_fences.split("\n")
+    )
 
 
 def slugify_github_heading(raw_heading: str) -> str:
@@ -633,8 +718,8 @@ def check_image_assets(root: Path = ROOT, *, _ctx: _ScanContext | None = None) -
 
     warnings: list[str] = []
     if existing_candidates:
-        if _has_dot_git(ctx.root):
-            ignored_set = _git_ignored_batch(ctx.root, [rel for _, rel in existing_candidates])
+        ignored_set = _git_ignored_batch(ctx.root, [rel for _, rel in existing_candidates])
+        if ignored_set is not None:
             for ref, rel_target in existing_candidates:
                 if rel_target in ignored_set:
                     warnings.append(
@@ -669,7 +754,13 @@ def check_image_assets(root: Path = ROOT, *, _ctx: _ScanContext | None = None) -
     )
 
 
-def check_tracked_link_targets(root: Path = ROOT, *, _ctx: _ScanContext | None = None) -> CheckResult:
+def check_tracked_link_targets(
+    root: Path = ROOT,
+    *,
+    _ctx: _ScanContext | None = None,
+    _tracked_list: list[str] | None = None,
+    _tracked_loaded: bool = False,
+) -> CheckResult:
     name = CHECK_TRACKED_TARGETS
     ctx = _ctx if _ctx is not None else _scan_markdown_refs(root)
     if not ctx.md_files:
@@ -700,7 +791,7 @@ def check_tracked_link_targets(root: Path = ROOT, *, _ctx: _ScanContext | None =
         local_items.append((ref, resolved, rel_target, had_trailing_slash))
 
     total_targets = len(local_items)
-    tracked_list = _git_ls_files(ctx.root)
+    tracked_list = _tracked_list if _tracked_loaded else _git_ls_files(ctx.root)
 
     if tracked_list is not None:
         tracked_files = set(tracked_list)
@@ -727,6 +818,13 @@ def check_tracked_link_targets(root: Path = ROOT, *, _ctx: _ScanContext | None =
 
         all_probes = [p for _, _, _, probes in untracked_candidates for p in probes]
         ignored_probes = _git_ignored_batch(ctx.root, all_probes)
+        if ignored_probes is None:
+            fallback_rules = _parse_gitignore_fallback_rules(ctx.root)
+            ignored_probes = {
+                p
+                for p in all_probes
+                if _fallback_is_ignored(fallback_rules, p.rstrip("/"), is_dir=p.endswith("/"))
+            }
 
         for ref, resolved, rel_target, probes in untracked_candidates:
             if any(p in ignored_probes for p in probes):
@@ -798,6 +896,27 @@ def check_tracked_link_targets(root: Path = ROOT, *, _ctx: _ScanContext | None =
     )
 
 
+def _is_exempt_exploits_stale_match(
+    rel: str,
+    token_label: str,
+    cleaned_text: str,
+    match_start: int,
+    line_text: str,
+    history_start: int | None,
+) -> bool:
+    if rel != "docs/EXPLOITS.md" or token_label == "<PLACEHOLDER":
+        return False
+    if history_start is not None and match_start >= history_start:
+        return True
+    if EXPLOITS_ROW_49_RX.match(line_text):
+        return True
+    if token_label in {"35 whitebox", "1,789 tool calls"}:
+        low = line_text.lower()
+        if "wave 1 detail:" in low and "75 whitebox" in low and "4,325 tool calls" in low:
+            return True
+    return False
+
+
 def check_stale_pr41_numbers(root: Path = ROOT) -> CheckResult:
     name = CHECK_STALE_PR41
     root_resolved = root.resolve()
@@ -815,9 +934,22 @@ def check_stale_pr41_numbers(root: Path = ROOT) -> CheckResult:
             failures.append(f"{rel}: unreadable judge-facing doc ({type(exc).__name__})")
             continue
 
+        cleaned = _strip_fences_and_comments(text)
+        lines = cleaned.split("\n")
+        history_start: int | None = None
+        if rel == "docs/EXPLOITS.md":
+            hm = EXPLOITS_FULL_HISTORY_HEADING_RX.search(cleaned)
+            if hm is not None:
+                history_start = hm.start()
+
         for token_label, rx in STALE_PR41_PATTERNS:
-            for m in rx.finditer(text):
-                lineno = 1 + text.count("\n", 0, m.start())
+            for m in rx.finditer(cleaned):
+                lineno = 1 + cleaned.count("\n", 0, m.start())
+                line_text = lines[lineno - 1] if 1 <= lineno <= len(lines) else ""
+                if _is_exempt_exploits_stale_match(
+                    rel, token_label, cleaned, m.start(), line_text, history_start
+                ):
+                    continue
                 matched = " ".join(m.group(0).split())
                 failures.append(
                     f"{rel}:{lineno}: superseded pre-PR41 token '{token_label}' (matched '{matched}')"
@@ -839,14 +971,484 @@ def check_stale_pr41_numbers(root: Path = ROOT) -> CheckResult:
     )
 
 
+def _collect_text_audit_files(
+    root: Path,
+    tracked_list: list[str] | None,
+) -> list[tuple[str, Path]]:
+    by_rel: dict[str, Path] = {}
+    if tracked_list is not None:
+        for rel in sorted(set(tracked_list)):
+            if Path(rel).suffix.lower() not in TEXT_AUDIT_EXTENSIONS:
+                continue
+            p = root / rel
+            if p.is_file():
+                by_rel[rel] = p
+        return list(by_rel.items())
+
+    fallback_rules = _parse_gitignore_fallback_rules(root)
+    visited_dirs: set[tuple[int, int]] = set()
+    for dirpath_str, dirnames, filenames in os.walk(root, topdown=True, followlinks=True):
+        dirpath = Path(dirpath_str)
+        try:
+            st = dirpath.stat()
+            dir_key = (st.st_dev, st.st_ino)
+        except OSError:
+            dirnames[:] = []
+            continue
+        if dir_key in visited_dirs:
+            dirnames[:] = []
+            continue
+        visited_dirs.add(dir_key)
+
+        rel_dir_path = dirpath.relative_to(root)
+        rel_dir = "" if rel_dir_path == Path(".") else rel_dir_path.as_posix()
+
+        kept_dirs: list[str] = []
+        for d in sorted(dirnames):
+            if d in SKIP_WALK_DIRS:
+                continue
+            d_rel = f"{rel_dir}/{d}" if rel_dir else d
+            if _fallback_is_ignored(fallback_rules, d_rel, is_dir=True):
+                continue
+            kept_dirs.append(d)
+        dirnames[:] = kept_dirs
+
+        for fname in sorted(filenames):
+            if Path(fname).suffix.lower() not in TEXT_AUDIT_EXTENSIONS:
+                continue
+            f_rel = f"{rel_dir}/{fname}" if rel_dir else fname
+            if _fallback_is_ignored(fallback_rules, f_rel, is_dir=False):
+                continue
+            full_p = dirpath / fname
+            if full_p.is_file():
+                by_rel[f_rel] = full_p
+
+    return sorted(by_rel.items(), key=lambda item: item[0])
+
+
+def _collect_scripts_sh(
+    root: Path,
+    tracked_list: list[str] | None,
+) -> list[tuple[str, Path]]:
+    scripts_dir = root / "scripts"
+    if not scripts_dir.is_dir():
+        return []
+    candidates: list[tuple[str, Path]] = []
+    for p in sorted(scripts_dir.glob("*.sh")):
+        if p.is_file():
+            candidates.append((f"scripts/{p.name}", p))
+    if not candidates:
+        return []
+    rels = [rel for rel, _ in candidates]
+    if tracked_list is not None:
+        tracked_set = set(tracked_list)
+        untracked = [rel for rel in rels if rel not in tracked_set]
+        ignored = _git_ignored_batch(root, untracked) if untracked else set()
+        if ignored is None:
+            rules = _parse_gitignore_fallback_rules(root)
+            ignored = {rel for rel in untracked if _fallback_is_ignored(rules, rel, is_dir=False)}
+        return [(rel, p) for rel, p in candidates if rel not in ignored]
+    rules = _parse_gitignore_fallback_rules(root)
+    return [(rel, p) for rel, p in candidates if not _fallback_is_ignored(rules, rel, is_dir=False)]
+
+
+def _sanitize_shell_line(line: str) -> str:
+    out: list[str] = []
+    i = 0
+    n = len(line)
+    in_single = False
+    in_double = False
+    cmd_sub_depth = 0
+    while i < n:
+        ch = line[i]
+        if in_single:
+            if ch == "'":
+                in_single = False
+                out.append("'")
+            else:
+                out.append(" ")
+            i += 1
+            continue
+        if in_double and cmd_sub_depth == 0:
+            if ch == "\\" and i + 1 < n:
+                out.append("  ")
+                i += 2
+                continue
+            if ch == '"':
+                in_double = False
+                out.append('"')
+                i += 1
+                continue
+            if ch == "$" and i + 1 < n and line[i + 1] == "(":
+                cmd_sub_depth = 1
+                out.append("$(")
+                i += 2
+                continue
+            if ch == "`":
+                out.append("`")
+                i += 1
+                while i < n and line[i] != "`":
+                    if line[i] == "\\" and i + 1 < n:
+                        out.append(line[i : i + 2])
+                        i += 2
+                    else:
+                        out.append(line[i])
+                        i += 1
+                if i < n:
+                    out.append("`")
+                    i += 1
+                continue
+            out.append(" ")
+            i += 1
+            continue
+        if ch == "\\" and i + 1 < n:
+            if i + 1 == n - 1:
+                out.append("\\")
+                i += 1
+                continue
+            out.append("  ")
+            i += 2
+            continue
+        if ch == "'":
+            in_single = True
+            out.append("'")
+            i += 1
+            continue
+        if ch == '"' and cmd_sub_depth == 0:
+            in_double = True
+            out.append('"')
+            i += 1
+            continue
+        if ch == "$" and i + 1 < n and line[i + 1] == "(":
+            if cmd_sub_depth > 0:
+                cmd_sub_depth += 1
+            out.append("$(")
+            i += 2
+            continue
+        if ch == "(" and cmd_sub_depth > 0:
+            cmd_sub_depth += 1
+            out.append("(")
+            i += 1
+            continue
+        if ch == ")" and cmd_sub_depth > 0:
+            cmd_sub_depth -= 1
+            out.append(")")
+            i += 1
+            continue
+        if ch == HASH_CHAR and (i == 0 or line[i - 1] in " \t;|&("):
+            break
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _extract_shell_statements(sh_text: str) -> list[tuple[str, list[tuple[int, str]]]]:
+    raw_lines = sh_text.splitlines()
+    statements: list[tuple[str, list[tuple[int, str]]]] = []
+    current_segs: list[tuple[int, str]] = []
+    heredoc_delim: str | None = None
+    heredoc_strip_tabs = False
+    pending_heredoc: tuple[str, bool] | None = None
+
+    for lineno, raw_line in enumerate(raw_lines, 1):
+        if lineno == 1 and raw_line.startswith(HASH_CHAR + "!"):
+            continue
+        if heredoc_delim is not None:
+            candidate = raw_line.lstrip("\t") if heredoc_strip_tabs else raw_line
+            if candidate.strip() == heredoc_delim and (
+                heredoc_strip_tabs or raw_line.rstrip() == heredoc_delim
+            ):
+                heredoc_delim = None
+                heredoc_strip_tabs = False
+            continue
+
+        sanitized = _sanitize_shell_line(raw_line)
+        if "<<" in sanitized:
+            for hm in HEREDOC_START_RX.finditer(raw_line):
+                if hm.start() < len(sanitized) and sanitized[hm.start() : hm.start() + 2] == "<<":
+                    delim = hm.group(2) or hm.group(3) or ""
+                    if delim:
+                        pending_heredoc = (delim, hm.group(1) == "-")
+                        break
+
+        stripped_r = sanitized.rstrip()
+        continued = stripped_r.endswith("\\")
+        seg_body = stripped_r[:-1] if continued else sanitized
+        if seg_body.strip():
+            current_segs.append((lineno, seg_body))
+
+        if not continued:
+            if current_segs:
+                joined = " ".join(seg for _, seg in current_segs)
+                statements.append((joined, current_segs))
+                current_segs = []
+            if pending_heredoc is not None:
+                heredoc_delim, heredoc_strip_tabs = pending_heredoc
+                pending_heredoc = None
+
+    if current_segs:
+        joined = " ".join(seg for _, seg in current_segs)
+        statements.append((joined, current_segs))
+
+    return statements
+
+
+def _compute_if_guard_contexts(
+    statements: list[tuple[str, list[tuple[int, str]]]],
+) -> list[str]:
+    n = len(statements)
+    spans: list[tuple[int, int]] = []
+    stack: list[int] = []
+    for idx, (joined, _) in enumerate(statements):
+        opens = len(SHELL_IF_WORD_RX.findall(joined))
+        closes = len(SHELL_FI_WORD_RX.findall(joined))
+        for _ in range(opens):
+            stack.append(idx)
+        for _ in range(closes):
+            if stack:
+                start_idx = stack.pop()
+                if start_idx < idx:
+                    spans.append((start_idx, idx))
+
+    contexts: list[str] = []
+    for idx, (joined, _) in enumerate(statements):
+        enclosing = [s for s in spans if s[0] <= idx <= s[1]]
+        if enclosing:
+            outer_start = min(s[0] for s in enclosing)
+            outer_end = max(s[1] for s in enclosing)
+            contexts.append(" ; ".join(statements[k][0] for k in range(outer_start, outer_end + 1)))
+        else:
+            contexts.append(joined)
+    return contexts
+
+
+def _is_diffutils_tool_guarded(tool: str, guard_text: str) -> bool:
+    if re.search(rf"\b(?:command\s+-v|type|hash)\s+{tool}\b", guard_text) is not None:
+        return True
+    fallback_rx = re.compile(
+        rf"\b{tool}\b[^;&|\n]*\|\|\s*(?:[\{{(]\s*)?(?:\$\([A-Za-z0-9_]+\)\s+)?python3?\b"
+    )
+    return fallback_rx.search(guard_text) is not None
+
+
+def _audit_conflict_markers(rel: str, text: str, *, is_markdown: bool) -> list[str]:
+    if not any(tok in text for tok in CONFLICT_FAST_TOKENS):
+        return []
+    hits: list[str] = []
+    in_fence = False
+    fence_char = ""
+    fence_len = 0
+    for lineno, line in enumerate(text.splitlines(), 1):
+        if is_markdown:
+            fm = FENCE_OPEN_RX.match(line)
+            if not in_fence:
+                if fm is not None:
+                    marker = fm.group(1)
+                    in_fence = True
+                    fence_char = marker[0]
+                    fence_len = len(marker)
+                    continue
+            else:
+                if fm is not None:
+                    marker = fm.group(1)
+                    if marker[0] == fence_char and len(marker) >= fence_len:
+                        in_fence = False
+                        fence_char = ""
+                        fence_len = 0
+                continue
+        if CONFLICT_MARKER_RX.match(line):
+            hits.append(f"{rel}:{lineno}: git merge-conflict marker '{line[:16].strip()}'")
+    return hits
+
+
+def _audit_shell_script_portability(rel: str, sh_text: str) -> list[str]:
+    issues: list[str] = []
+    clean_text = sh_text.lstrip("\ufeff")
+    lines = clean_text.splitlines()
+    if not lines or SHEBANG_RX.match(lines[0]) is None:
+        issues.append(f"{rel}:1: missing or invalid shebang in shell script")
+
+    statements = _extract_shell_statements(clean_text)
+    guard_contexts = _compute_if_guard_contexts(statements)
+    for idx, (_, segs) in enumerate(statements):
+        guard_text = guard_contexts[idx]
+        for seg_lineno, seg_text in segs:
+            if SHELL_PKILL_RX.search(seg_text) is not None:
+                issues.append(f"{rel}:{seg_lineno}: forbidden 'pkill' invocation in shell script")
+            for dm in SHELL_DIFFUTILS_RX.finditer(seg_text):
+                tool = dm.group(1)
+                if not _is_diffutils_tool_guarded(tool, guard_text):
+                    issues.append(
+                        f"{rel}:{seg_lineno}: bare '{tool}' without 'command -v {tool}' or Python fallback"
+                    )
+    return issues
+
+
+def check_makefile_diffutils_portability(root: Path = ROOT) -> CheckResult:
+    name = CHECK_MAKEFILE_DIFFUTILS
+    makefile_path = root.resolve() / "Makefile"
+    if not makefile_path.is_file():
+        return CheckResult(name, "FAIL", "Makefile not found", ["Makefile: missing file"])
+    try:
+        raw_text = makefile_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return CheckResult(
+            name,
+            "FAIL",
+            f"unreadable Makefile ({type(exc).__name__})",
+            [f"Makefile: unreadable ({type(exc).__name__})"],
+        )
+
+    recipes: list[tuple[str, list[tuple[int, str]]]] = []
+    cur_segs: list[tuple[int, str]] = []
+    in_recipe = False
+
+    for lineno, raw_line in enumerate(raw_text.splitlines(), 1):
+        if not in_recipe:
+            if not raw_line.startswith("\t"):
+                continue
+            body = raw_line[1:].lstrip()
+            while body and body[0] in "@-+":
+                body = body[1:].lstrip()
+            in_recipe = True
+        else:
+            body = raw_line.lstrip("\t")
+
+        normalized = body.replace("$$", "$")
+        sanitized = _sanitize_shell_line(normalized)
+        stripped_r = sanitized.rstrip()
+        continued = stripped_r.endswith("\\")
+        seg_body = stripped_r[:-1] if continued else sanitized
+        if seg_body.strip():
+            cur_segs.append((lineno, seg_body))
+
+        if not continued:
+            if cur_segs:
+                recipes.append((" ".join(seg for _, seg in cur_segs), cur_segs))
+                cur_segs = []
+            in_recipe = False
+
+    if cur_segs:
+        recipes.append((" ".join(seg for _, seg in cur_segs), cur_segs))
+
+    failures: list[str] = []
+    for recipe_text, segs in recipes:
+        for seg_lineno, seg_text in segs:
+            for dm in SHELL_DIFFUTILS_RX.finditer(seg_text):
+                tool = dm.group(1)
+                if not _is_diffutils_tool_guarded(tool, recipe_text):
+                    failures.append(
+                        f"Makefile:{seg_lineno}: bare '{tool}' without 'command -v {tool}' or Python fallback"
+                    )
+
+    if failures:
+        return CheckResult(
+            name,
+            "FAIL",
+            f"{len(failures)} bare diffutils invocation(s) in Makefile without 'command -v' or Python fallback",
+            failures,
+        )
+    return CheckResult(
+        name,
+        "PASS",
+        f"scanned {len(recipes)} Makefile recipe(s); all cmp/diff calls guarded or absent",
+    )
+
+
+def check_portability_and_encoding(
+    root: Path = ROOT,
+    *,
+    _tracked_list: list[str] | None = None,
+    _tracked_loaded: bool = False,
+) -> CheckResult:
+    name = CHECK_PORTABILITY_AND_ENCODING
+    resolved = root.resolve()
+    tracked_list = _tracked_list if _tracked_loaded else _git_ls_files(resolved)
+
+    audit_files = _collect_text_audit_files(resolved, tracked_list)
+    scripts_sh = _collect_scripts_sh(resolved, tracked_list)
+    seen_rels = {rel for rel, _ in audit_files}
+    for rel, p in scripts_sh:
+        if rel not in seen_rels:
+            audit_files.append((rel, p))
+            seen_rels.add(rel)
+
+    if not audit_files:
+        return CheckResult(name, "FAIL", "no text or shell files found to scan")
+
+    failures: list[str] = []
+    decoded_scripts: dict[str, str] = {}
+    sh_count = 0
+
+    for rel, path in audit_files:
+        suffix = path.suffix.lower()
+        if suffix == ".sh":
+            sh_count += 1
+        try:
+            raw = path.read_bytes()
+        except OSError as exc:
+            failures.append(f"{rel}: unreadable file ({type(exc).__name__})")
+            continue
+
+        if b"\x00" in raw:
+            failures.append(f"{rel}: contains NUL byte(s)")
+            continue
+
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            failures.append(f"{rel}: invalid UTF-8 encoding ({exc.reason} at byte {exc.start})")
+            continue
+
+        if raw.startswith(b"\xef\xbb\xbf") or "\ufeff" in text:
+            bom_ln = 1 + text.count("\n", 0, text.find("\ufeff"))
+            failures.append(f"{rel}:{bom_ln}: contains UTF-8 BOM (U+FEFF)")
+
+        if suffix == ".sh" and b"\r\n" in raw:
+            first_idx = raw.index(b"\r\n")
+            crlf_ln = 1 + raw.count(b"\n", 0, first_idx)
+            failures.append(f"{rel}:{crlf_ln}: CRLF (\\r\\n) line ending in shell script")
+
+        failures.extend(_audit_conflict_markers(rel, text, is_markdown=(suffix == ".md")))
+
+        if rel.startswith("scripts/") and suffix == ".sh" and "/" not in rel[len("scripts/") :]:
+            decoded_scripts[rel] = text
+
+    for rel, path in scripts_sh:
+        sh_text = decoded_scripts.get(rel)
+        if sh_text is None:
+            continue
+        failures.extend(_audit_shell_script_portability(rel, sh_text))
+
+    if failures:
+        return CheckResult(
+            name,
+            "FAIL",
+            f"{len(failures)} portability/encoding violation(s) across {len(audit_files)} file(s)",
+            failures,
+        )
+    return CheckResult(
+        name,
+        "PASS",
+        f"scanned {len(audit_files)} text file(s) ({sh_count} .sh, {len(scripts_sh)} scripts/*.sh); "
+        "UTF-8 clean, 0 BOM/NUL/CRLF/conflict markers, portable shell",
+    )
+
+
 def audit_doc_hygiene(root: Path = ROOT) -> list[CheckResult]:
     resolved = root.resolve()
     ctx = _scan_markdown_refs(resolved)
+    tracked_list = _git_ls_files(resolved)
     return [
         check_markdown_anchors(resolved, _ctx=ctx),
         check_image_assets(resolved, _ctx=ctx),
-        check_tracked_link_targets(resolved, _ctx=ctx),
+        check_tracked_link_targets(
+            resolved, _ctx=ctx, _tracked_list=tracked_list, _tracked_loaded=True
+        ),
         check_stale_pr41_numbers(resolved),
+        check_portability_and_encoding(
+            resolved, _tracked_list=tracked_list, _tracked_loaded=True
+        ),
     ]
 
 
@@ -869,7 +1471,10 @@ def format_report(results: list[CheckResult], elapsed_s: float) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="Keyless markdown anchor, image asset, git-tracking, and post-PR41 hygiene audit."
+        description=(
+            "Keyless markdown anchor, image asset, git-tracking, post-PR41 stale-number, "
+            "and shell portability/encoding hygiene audit."
+        )
     )
     ap.add_argument("--root", type=Path, default=ROOT, help="Repository root to check")
     ap.add_argument("--json", action="store_true", help="Emit JSON report")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 import json
 import re
 from pathlib import Path
@@ -134,12 +135,16 @@ def load_committed_episodes(
     root: str | Path = DEFAULT_COMMITTED_ROOT,
     include_invalid: bool = False,
     dedupe: bool = True,
+    seeds: Iterable[int] | None = None,
 ) -> list[dict[str, Any]]:
     input_parts = Path(root).parts
     if "superseded" in input_parts:
         return []
     root_path = _resolve_root(root)
     if not root_path.exists():
+        return []
+    seed_filter = frozenset(int(s) for s in seeds) if seeds is not None else None
+    if seed_filter is not None and not seed_filter:
         return []
 
     collected: list[tuple[tuple[bool, bool, str, int], dict[str, Any]]] = []
@@ -161,6 +166,8 @@ def load_committed_episodes(
 
             tier = str(ep["tier"])
             seed = int(ep["seed"])
+            if seed_filter is not None and seed not in seed_filter:
+                continue
             agent = str(ep["agent"])
             tiers_version = infer_tiers_version(jsonl_path, run_meta, ep_meta)
             merged_meta = {

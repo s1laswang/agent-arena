@@ -1,23 +1,24 @@
 # Fooled Moments & Showcase Replay Audit (Rules v1.4)
 
-**Scope.** Keyless replay audit of all committed rules v1.4 episodes in `data/runs/committed/v1.4/` (410 valid episodes total; 150 real LLM episodes across 5 `(tier, agent)` lanes paired seed-for-seed with the reference `solver`, plus 260 scripted baseline episodes). Every number below is computed deterministically from the agent's own recorded tool observations by the `replay` package (`replay/loader.py`, `replay/belief_trace.py`, `replay/fooled.py`, `replay/analytics.py`) with zero API keys. Companion reports: [gap.md](gap.md) and [failure_analysis_v1.4.md](failure_analysis_v1.4.md).
+**Scope.** Keyless replay audit of all committed rules v1.4 episodes in `data/runs/committed/v1.4/`, which holds `442` valid episodes on `justSilas`: `410` on the post-hoc locked primary dev seeds `0-29` (`150` real LLM episodes across 5 `(tier, agent)` lanes paired seed-for-seed with the reference `solver`, plus `260` scripted baseline episodes) and `32` G1 extension episodes on seeds `30-59` (`2` `opencode-gemini-4-carbon-ext` episodes on seeds `34, 37`, both `kind="none"` justified hits, and `30` `solver-hard-seeds30to59` episodes). Every number below is computed deterministically from the agent's own recorded tool observations by the `replay` package (`replay/loader.py`, `replay/belief_trace.py`, `replay/fooled.py`, `replay/analytics.py`) with zero API keys. Companion reports: [gap.md](gap.md) and [failure_analysis_v1.4.md](failure_analysis_v1.4.md).
 
-**Reproduce (no keys, <10 seconds):**
+**Reproduce (no keys, <15 seconds):**
 ```bash
 uv run pytest tests/test_replay_*.py
-uv run python -c "from replay.loader import load_committed_episodes, pair_with_solver; from replay.fooled import rank_showcase_pairs; print(len(rank_showcase_pairs(pair_with_solver(load_committed_episodes('data/runs/committed/v1.4')), limit=15)))"
+uv run python -c "from replay.loader import load_committed_episodes, pair_with_solver; from replay.fooled import rank_showcase_pairs; pairs = pair_with_solver(load_committed_episodes('data/runs/committed/v1.4', seeds=range(30))); print(sum(p['provenance']['kind'] == 'real' for p in pairs), len(rank_showcase_pairs(pairs, limit=15)))"
 ```
+Passing `seeds=range(30)` isolates the `410` episodes on the post-hoc locked primary seeds `0-29` (`150` real LLM pairs, `15` top showcase pairs); omitting `seeds` audits all `442` committed v1.4 episodes (`352` total pairs, `152` pooled real LLM pairs, with the identical top `15` showcase ranking).
 
-## 1. Headline Findings Across 150 Paired Real v1.4 Episodes
+## 1. Headline Findings Across the 150 Post-Hoc Locked Primary Real v1.4 Pairs (Seeds 0-29)
 
-- **Primary `gap.md` v1.4 headline (`n=30` paired seeds 0 to 29 on `hard`):** In the judges' harness (`opencode:google/gemini-4-carbon` over MCP), the frontier agent scores **65% [24%, 98%]** raw (`0.322` vs solver `0.499`) and **72% [52%, 91%]** luck-adjusted (`0.360` vs `0.499`).
-- **22 fooled episodes (`fooled=True`) and 2 disclosed bad-luck flips (`bad_luck=True, fooled=False`)** across all 150 paired real v1.4 episodes (`126` episodes have `kind="none"`, comprising `120` justified accusations and `6` rational abstentions).
+- **Primary `gap.md` v1.4 headline (`n=30` post-hoc locked primary seeds `0-29` on `hard`):** In the judges' harness (`opencode:google/gemini-4-carbon` over MCP), the frontier agent scores **65% [24%, 98%]** raw (`0.322` vs solver `0.499`) and **72% [52%, 91%]** luck-adjusted (`0.360` vs `0.499`). Pooling the `2` completed G1 extension episodes (`seeds 34, 37` in `opencode-gemini-4-carbon-ext`, scores `+0.79` and `+0.70` at `P=0.9795` and `P=0.9807`, both `kind="none"` justified hits) gives `n=32` at **68% [32%, 100%]** raw (`0.349` vs solver `0.514`) and **75% [56%, 93%]** luck-adjusted (`0.381` vs `0.509`; [gap.md](gap.md)).
+- **22 fooled episodes (`fooled=True`) and 2 disclosed bad-luck flips (`bad_luck=True, fooled=False`)** across the `150` post-hoc locked primary real v1.4 episodes (`126` episodes have `kind="none"`, comprising `120` justified accusations and `6` rational abstentions; across all `152` pooled real v1.4 episodes, `fooled=22` and `bad_luck=2` are unchanged, with `128` `kind="none"` episodes = `122` justified accusations and `6` rational abstentions).
 - **Separating being fooled from disclosed noise.** When `opencode:google/gemini-4-carbon` accuses an innocent on `hard` seeds 1 and 26 at solver posteriors `P=0.9878` (`EV=+0.3534`) and `P=0.9504` (`EV=+0.5872`), `detect_fooled_moment` classifies both as `fingerprint_bad_luck` (`fooled=False, bad_luck=True`), isolating the 5% canary fingerprint flip from genuine calibration failures.
-- **Why luck-adjusted scoring changes model rankings.** On `hard` (`n=30`, seeds 0 to 29), `opencode:google/gemini-3.5-flash` achieves a higher raw score than `opencode:google/gemini-4-carbon` (`0.373` vs `0.322`, or **75% [36%, 123%]** vs **65% [24%, 98%]** of solver `0.499`). Under the Bayesian belief tracer, `gemini-3.5-flash` collapses to **22% [-23%, 63%]** luck-adjusted (`0.110`) while `gemini-4-carbon` rises to **72% [52%, 91%]** luck-adjusted (`0.360`). `gemini-3.5-flash` is fooled on **10/30** seeds (`7` negative-EV `subthreshold_gamble` hits, `2` `premature_wrong`, `1` `decoy_chase`), whereas `gemini-4-carbon` over MCP is fooled on **4/30** seeds (`2` `subthreshold_gamble`, `1` `premature_wrong`, `1` `wrong_accusation`).
+- **Why luck-adjusted scoring changes model rankings.** On `hard` (`n=30`, post-hoc locked primary seeds `0-29`), `opencode:google/gemini-3.5-flash` achieves a higher raw score than `opencode:google/gemini-4-carbon` (`0.373` vs `0.322`, or **75% [36%, 123%]** vs **65% [24%, 98%]** of solver `0.499`). Under the Bayesian belief tracer, `gemini-3.5-flash` collapses to **22% [-23%, 63%]** luck-adjusted (`0.110`) while `gemini-4-carbon` rises to **72% [52%, 91%]** luck-adjusted (`0.360`). `gemini-3.5-flash` is fooled on **10/30** seeds (`7` negative-EV `subthreshold_gamble` hits, `2` `premature_wrong`, `1` `decoy_chase`), whereas `gemini-4-carbon` over MCP is fooled on **4/30** seeds (`2` `subthreshold_gamble`, `1` `premature_wrong`, `1` `wrong_accusation`).
 
 ## 2. Paired Gap, Calibration, and Fooled Breakdown by Lane (v1.4)
 
-Paired ratios and 95% bootstrap CIs match `docs/reports/gap.md` and `python scripts/paired_gemini.py --version v1.4 --seeds 0-29`; fooled and bad-luck classifications come from `replay.fooled.analyze_pair_fooled`:
+Primary `n=30` paired ratios and 95% bootstrap CIs on the post-hoc locked seeds `0-29` match `docs/reports/gap.md` and `python scripts/paired_gemini.py --version v1.4 --seeds 0-29` (`load_committed_episodes('data/runs/committed/v1.4', seeds=range(30))`); fooled and bad-luck classifications come from `replay.fooled.analyze_pair_fooled`:
 
 | Tier | Agent | Paired `n` | Raw Mean | Solver Mean | Frontier / Solver [95% CI] | Luck-Adj Mean | Luck-Adj / Solver [95% CI] | Mean `P(accused)` | Premature Rate | `fooled` | `bad_luck` | Breakdown (`kind`) |
 |---|---|---:|---:|---:|---|---:|---|---:|---:|---:|---:|---|
@@ -29,14 +30,16 @@ Paired ratios and 95% bootstrap CIs match `docs/reports/gap.md` and `python scri
 | `medium` | `opencode:google/gemini-4-carbon` | 30 | 0.713 | 0.645 | 111% [99%, 127%] | 0.652 | 101% [85%, 119%] | 0.9615 | 6.67% | 2 | 0 | `none`: 28, `subthreshold_gamble`: 2 |
 | `medium` | `gemini:gemini-4-carbon` | 30 | 0.530 | 0.645 | 82% [56%, 108%] | 0.479 | 74% [52%, 99%] | 0.9286 | 10.00% | 3 | 0 | `none`: 27, `subthreshold_gamble`: 2, `premature_wrong`: 1 |
 
-Step-level failure tag attribution (`aggregate_failure_tags`) confirms the structural gap on `hard`:
+Pooled G1 extension note (`seeds 30-59`, [gap.md](gap.md)): omitting `seeds=range(30)` pools the `2` completed `opencode-gemini-4-carbon-ext` episodes (`seeds 34, 37`, both `kind="none"` justified hits) into `opencode:google/gemini-4-carbon` on `hard` (`n=32`, raw `0.349` vs solver `0.514` = **68% [32%, 100%]**, luck-adjusted `0.381` vs `0.509` = **75% [56%, 93%]**, mean `P(accused)` `0.8882`, premature rate `9.38%`, `fooled=4`, `bad_luck=2`, `none: 26`) alongside `solver-hard-seeds30to59` (`n=60` pooled `hard` `solver`, raw mean `0.498`, luck-adjusted mean `0.521`).
+
+Step-level failure tag attribution (`aggregate_failure_tags` on the post-hoc locked primary seeds `0-29`) confirms the structural gap on `hard`:
 - `opencode:google/gemini-3.5-flash`: total regret `13.4251` (`0.4475` per episode), led by `uninformative_canary` (`51` steps across `12/30` episodes, regret `1.4824`) and `premature_accusation` (`10` steps across `10/30` episodes, regret `8.5591`).
-- `opencode:google/gemini-4-carbon`: total regret `5.1424` (`0.1714` per episode), with `budget_waste` in `27/30` episodes (`30` steps), `premature_accusation` in `2/30` episodes (regret `0.8044`), and `no_accusation` in `1/30` episode (seed 11 rational abstention at `P_top=0.2191 < P_breakeven=0.8130`).
+- `opencode:google/gemini-4-carbon`: total regret `5.1424` (`0.1714` per episode; `5.2249` total / `0.1633` per episode across all `n=32` pooled episodes), with `budget_waste` in `27/30` episodes (`30` steps), `premature_accusation` in `2/30` episodes (regret `0.8044`), and `no_accusation` in `1/30` episode (seed 11 rational abstention at `P_top=0.2191 < P_breakeven=0.8130`).
 - `gemini:gemini-4-carbon` (in-process): total regret `3.8276` (`0.1276` per episode), with `premature_accusation` in `1/30` episode (regret `0.5889`) and `no_accusation` in `1/30` episode (seed 26 rational abstention at `P_top=0.3793 < P_breakeven=0.6849`).
 
 ## 3. Top Ranked Showcase Pairs (`rank_showcase_pairs`)
 
-Ranked deterministically by `replay.fooled.rank_showcase_pairs` across all 150 paired real v1.4 runs (prioritizing core fooled modes where the reference solver wins on the identical seed):
+Ranked deterministically by `replay.fooled.rank_showcase_pairs` across the `150` post-hoc locked primary real v1.4 pairs (identical top `15` ranking across all `152` pooled real pairs, prioritizing core fooled modes where the reference solver wins on the identical seed):
 
 | Rank | Pair ID | Kind | Stop (`day`, `t`) | Accused | `P(acc)` | `P_be` | `EV` | Agent Score | Solver (`day`, `acc`, Score) | Score Delta |
 |---:|---|---|---|---|---:|---:|---:|---:|---|---:|

@@ -48,6 +48,7 @@ RUN_SHARD_ROOT_PREFIXES: tuple[str, ...] = (
     "data/runs/committed/",
     "results/replication/",
     "results/selected_fleet_replication/",
+    "results/frontier_replication/",
 )
 DASH_EXEMPT_FILENAMES = frozenset({"accuse.md", "trial.log", "exception.txt"})
 HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
@@ -523,11 +524,18 @@ def verify_branch(
     py_files = [p for p in added_or_modified if p.endswith(".py") and p in blob_cache]
     for p in py_files:
         raw = blob_cache[p]
+        added_line_nos: set[int] | None = None
+        if status_by_path.get(p) == "M" and diff_from and inspect_tree:
+            added_lines = _added_diff_lines(repo_path, diff_from, inspect_tree, p)
+            if added_lines is not None:
+                added_line_nos = {ln for ln, _ in added_lines}
         try:
             for tok in tokenize.tokenize(io.BytesIO(raw).readline):
                 if tok.type == tokenize.COMMENT:
                     line_no, col_no = tok.start
                     if line_no == 1 and col_no == 0 and tok.string.startswith(SHEBANG_PREFIX):
+                        continue
+                    if added_line_nos is not None and line_no not in added_line_nos:
                         continue
                     snippet = tok.string.strip()[:80]
                     comment_errors.append(f"{p}:{line_no}: unexpected comment {snippet}")
@@ -664,9 +672,10 @@ def verify_branch(
         if p.startswith(RUN_SHARD_ROOT_PREFIXES) and p.endswith("/episodes.jsonl") and p in blob_cache
     ]
     parsed_episodes_by_file: dict[str, list[dict[str, Any]]] = {}
-    seen_tuples: dict[tuple[Any, Any, Any], str] = {}
+    seen_tuples: dict[tuple[str, Any, Any, Any], str] = {}
 
     for p in committed_ep_files:
+        root_prefix = next((rp for rp in RUN_SHARD_ROOT_PREFIXES if p.startswith(rp)), "")
         text = blob_cache[p].decode("utf-8", errors="replace")
         file_eps: list[dict[str, Any]] = []
         for idx, line in enumerate(text.splitlines(), start=1):
@@ -689,10 +698,11 @@ def verify_branch(
                 ep_errors.append(f"{p}:{idx} (seed={seed}): end_reason == error")
             if meta.get("valid") is False:
                 ep_errors.append(f"{p}:{idx} (seed={seed}): meta.valid is False")
-            tup = (ep.get("agent"), ep.get("tier"), seed)
+            ep_key = (ep.get("agent"), ep.get("tier"), seed)
+            tup = (root_prefix, *ep_key)
             loc = f"{p}:{idx}"
             if tup in seen_tuples:
-                ep_errors.append(f"duplicate (agent, tier, seed)={tup} at {loc} and {seen_tuples[tup]}")
+                ep_errors.append(f"duplicate (agent, tier, seed)={ep_key} at {loc} and {seen_tuples[tup]}")
             else:
                 seen_tuples[tup] = loc
         parsed_episodes_by_file[p] = file_eps
@@ -823,6 +833,7 @@ def verify_branch(
                 p.startswith("data/runs/committed/v1.4/")
                 or p.startswith("results/replication/v1.4/")
                 or p.startswith("results/selected_fleet_replication/v1.4/")
+                or p.startswith("results/frontier_replication/v1.4/")
                 or tiers_ver == "v1.4"
             )
             if not is_v14:

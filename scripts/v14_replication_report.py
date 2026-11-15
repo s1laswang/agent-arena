@@ -150,12 +150,23 @@ def _replay_and_audit_episode(ep: dict[str, Any], shard_rel: str) -> dict[str, A
                 interviews += 1
             got_payload = {"ok": res.ok, "data": res.data, "error": res.error}
             rec_result = st.get("result")
+            want = _norm_result(rec_result)
+            if (
+                not res.ok
+                and isinstance(res.data, dict)
+                and set(res.data) == {"detail"}
+                and not (
+                    isinstance(want, dict)
+                    and isinstance(want.get("data"), dict)
+                    and "detail" in want["data"]
+                )
+            ):
+                got_payload = {"ok": res.ok, "data": {}, "error": res.error}
             trunc_bytes = _client_truncated_bytes(rec_result)
             if trunc_bytes is not None:
                 truncated_checked += 1
                 step_ok = len(json.dumps(got_payload).encode("utf-8")) == trunc_bytes
             else:
-                want = _norm_result(rec_result)
                 step_ok = want is None or _canon(got_payload) == _canon(want)
             if not step_ok:
                 step_mismatches += 1
@@ -275,11 +286,24 @@ def _summarize_row(
     }
 
 
+def _shard_cohort_and_seeds(shard_rel: str, root_mode: str) -> tuple[str, frozenset[int]]:
+    if root_mode == "replication":
+        return "replication", EXTENSION_SEEDS
+    if shard_rel == "opencode-gemini-4-carbon-ext" or shard_rel.startswith("opencode-gemini-4-carbon-ext/"):
+        return "g1_ext", EXTENSION_SEEDS
+    if root_mode == "single":
+        return "single", POOLED_SEEDS
+    if shard_rel.startswith("reference/") and shard_rel.endswith("-seeds30to59"):
+        return "primary_ref_ext", EXTENSION_SEEDS
+    return "primary", PRIMARY_SEEDS
+
+
 def _scan_root_episodes(
     root_dir: Path,
-    allowed_seeds: frozenset[int],
-    seen_tuples: dict[tuple[str, str, int], str],
-    all_records: list[dict[str, Any]],
+    root_mode: str,
+    seen_by_cohort: dict[str, dict[tuple[str, str, int], tuple[str, dict[str, Any]]]],
+    cohort_records: list[dict[str, Any]],
+    verified_records: list[dict[str, Any]],
     ext_shard_manifests: list[dict[str, Any]],
 ) -> int:
     ep_files = sorted(
@@ -292,6 +316,7 @@ def _scan_root_episodes(
     for ep_file in ep_files:
         shard_dir = ep_file.parent
         shard_rel = shard_dir.relative_to(root_dir).as_posix()
+        cohort, allowed_seeds = _shard_cohort_and_seeds(shard_rel, root_mode)
         meta_file = shard_dir / "meta.json"
         meta_obj: dict[str, Any] = {}
         if meta_file.is_file():
@@ -313,12 +338,47 @@ def _scan_root_episodes(
                     f"{shard_rel}/episodes.jsonl:{lineno}: seed {rec['seed']} outside allowed cohort for {root_dir}"
                 )
             tup = (rec["agent"], rec["tier"], rec["seed"])
-            loc = f"{shard_rel}/episodes.jsonl:{lineno}"
-            if tup in seen_tuples:
-                raise ValueError(f"duplicate (agent, tier, seed)={tup} at {loc} and {seen_tuples[tup]}")
-            seen_tuples[tup] = loc
+            loc = f"{root_mode}:{shard_rel}/episodes.jsonl:{lineno}"
             shard_eps.append(rec)
-            all_records.append(rec)
+            verified_records.append(rec)
+
+            if cohort == "g1_ext":
+                bucket = seen_by_cohort.setdefault("g1_ext", {})
+                if tup in bucket:
+                    raise ValueError(f"duplicate (agent, tier, seed)={tup} at {loc} and {bucket[tup][0]}")
+                bucket[tup] = (loc, rec)
+                continue
+
+            if root_mode == "primary":
+                bucket = seen_by_cohort.setdefault("primary", {})
+                if tup in bucket:
+                    raise ValueError(f"duplicate (agent, tier, seed)={tup} at {loc} and {bucket[tup][0]}")
+                bucket[tup] = (loc, rec)
+                cohort_records.append(rec)
+            elif root_mode == "replication":
+                repl_bucket = seen_by_cohort.setdefault("replication", {})
+                if tup in repl_bucket:
+                    raise ValueError(f"duplicate (agent, tier, seed)={tup} at {loc} and {repl_bucket[tup][0]}")
+                repl_bucket[tup] = (loc, rec)
+                prim_bucket = seen_by_cohort.get("primary", {})
+                if tup in prim_bucket:
+                    prev_loc, prev_rec = prim_bucket[tup]
+                    mirrored_ref_ok = (
+                        shard_rel.startswith("reference/")
+                        and shard_rel.endswith("-seeds30to59")
+                        and abs(prev_rec["score"] - rec["score"]) < 1e-9
+                        and prev_rec["accused"] == rec["accused"]
+                    )
+                    if not mirrored_ref_ok:
+                        raise ValueError(f"duplicate (agent, tier, seed)={tup} at {loc} and {prev_loc}")
+                else:
+                    cohort_records.append(rec)
+            else:
+                single_bucket = seen_by_cohort.setdefault("single", {})
+                if tup in single_bucket:
+                    raise ValueError(f"duplicate (agent, tier, seed)={tup} at {loc} and {single_bucket[tup][0]}")
+                single_bucket[tup] = (loc, rec)
+                cohort_records.append(rec)
 
         ep_seed_set = {r["seed"] for r in shard_eps}
         if "seeds" in meta_obj:
@@ -335,7 +395,11 @@ def _scan_root_episodes(
                 if not stem.isdigit() or int(stem) not in ep_seed_set:
                     raise ValueError(f"{shard_rel}/transcripts/{tf.name}: orphan transcript not in episode seeds")
 
-        if shard_rel.startswith("opencode-gemini-4-carbon/") and any(r["seed"] in EXTENSION_SEEDS for r in shard_eps):
+        if (
+            root_mode != "primary"
+            and shard_rel.startswith("opencode-gemini-4-carbon/")
+            and any(r["seed"] in EXTENSION_SEEDS for r in shard_eps)
+        ):
             usage = meta_obj.get("usage") if isinstance(meta_obj.get("usage"), dict) else {}
             planned = meta_obj.get("planned_seeds")
             planned_list = list(planned) if isinstance(planned, list) else sorted(ep_seed_set)
@@ -364,30 +428,34 @@ def analyze_v14_root(
         raise FileNotFoundError(f"replication v1.4 directory not found: {replication_root}")
 
     all_records: list[dict[str, Any]] = []
-    seen_tuples: dict[tuple[str, str, int], str] = {}
+    verified_records: list[dict[str, Any]] = []
+    seen_by_cohort: dict[str, dict[tuple[str, str, int], tuple[str, dict[str, Any]]]] = {}
     ext_shard_manifests: list[dict[str, Any]] = []
 
     if replication_root is None or replication_root.resolve() == primary_root.resolve():
         ep_files_count = _scan_root_episodes(
             primary_root,
-            POOLED_SEEDS,
-            seen_tuples,
+            "single",
+            seen_by_cohort,
             all_records,
+            verified_records,
             ext_shard_manifests,
         )
     else:
         ep_files_primary = _scan_root_episodes(
             primary_root,
-            PRIMARY_SEEDS,
-            seen_tuples,
+            "primary",
+            seen_by_cohort,
             all_records,
+            verified_records,
             ext_shard_manifests,
         )
         ep_files_repl = _scan_root_episodes(
             replication_root,
-            EXTENSION_SEEDS,
-            seen_tuples,
+            "replication",
+            seen_by_cohort,
             all_records,
+            verified_records,
             ext_shard_manifests,
         )
         ep_files_count = ep_files_primary + ep_files_repl
@@ -578,9 +646,9 @@ def analyze_v14_root(
             "replication_root": replication_label,
             "repro_command": repro_command,
             "ep_files_count": ep_files_count,
-            "episodes_verified": len(all_records),
-            "client_only_steps_skipped": sum(r["steps_client_only"] for r in all_records),
-            "truncated_steps_checked": sum(r["steps_truncated_checked"] for r in all_records),
+            "episodes_verified": len(verified_records),
+            "client_only_steps_skipped": sum(r["steps_client_only"] for r in verified_records),
+            "truncated_steps_checked": sum(r["steps_truncated_checked"] for r in verified_records),
         },
         "primary_rows": primary_rows,
         "extension_rows": extension_rows,
@@ -643,18 +711,19 @@ def render_markdown(data: dict[str, Any]) -> str:
     lines: list[str] = [
         f"{H1} v1.4 Selected Fleet Replication (Non-Primary, Incomplete 30-59 Cohort)",
         "",
-        f"{H2} Pre-Registered Framing and Headline Summary",
+        f"{H2} Post-Hoc Primary Lock, Pre-Registered Extension Rule, and Headline Summary",
         "",
-        "Per the pre-registered seed and extension rules in [gap.md](gap.md) (commits `671ed96` and `f9fb7a4a`), "
-        "Canary reports the primary `0-29` `hard` headline and this incomplete `30-59` fleet replication slice strictly separately:",
+        "Per the post-hoc primary seed lock (`671ed96`, committed 28 s after `8fd4dec` to prevent reruns or cherry-picking, not a pre-registration) "
+        "and the pre-registered `30-59` extension rule (`f9fb7a4a`, committed before runs and stopped early at partial `n=2` `seeds 34, 37` in `opencode-gemini-4-carbon-ext`) in [gap.md](gap.md), "
+        "Canary reports the post-hoc locked `0-29` `hard` primary headline and this incomplete `30-59` fleet replication slice strictly separately:",
         "",
-        f"1. **Pre-registered primary headline (`{prim_dir}`, dev seeds `0-29`, `n={prim_hard['n']}`):** "
+        f"1. **Post-hoc locked primary headline (`{prim_dir}`, dev seeds `0-29`, `n={prim_hard['n']}`, locked in `671ed96` 28 s after `8fd4dec`):** "
         f"OpenCode + `gemini-4-carbon` over MCP (the judges' harness) scores **`{_fmt_num(prim_hard['mean'], 3, signed=True)} +/- {_fmt_num(prim_hard['ci'], 3)}`** "
         f"against the paired reference solver's **`{_fmt_num(prim_sol['mean'], 3, signed=True)} +/- {_fmt_num(prim_sol['ci'], 3)}`** on the exact same 30 seeds, "
         f"giving **`{_fmt_ratio(prim_hard['ratio'], prim_hard['ratio_lo'], prim_hard['ratio_hi'])}` raw** (`{_fmt_num(prim_hard['diff'], 3, signed=True)} +/- {_fmt_num(prim_hard['diff_ci'], 3)}` paired diff) "
         f"and **`{_fmt_ratio(prim_hard['luck_ratio'], prim_hard['luck_lo'], prim_hard['luck_hi'])}` luck-adjusted** "
         f"(`{_fmt_num(prim_hard['luck_adjusted'], 3, signed=True)}` vs `{_fmt_num(prim_hard['solver_luck_adjusted'], 3, signed=True)}`; 10,000-resample paired bootstrap 95% CIs). "
-        "Both primary 95% CIs exclude `100%` parity, and this primary row is never replaced. Detailed trajectory accounting is in [failure_analysis_v1.4.md](failure_analysis_v1.4.md) and "
+        "Both primary 95% CIs exclude `100%` parity, and this post-hoc locked primary row is never replaced. Detailed trajectory accounting is in [failure_analysis_v1.4.md](failure_analysis_v1.4.md) and "
         "[paired_table_gemini.md](../../data/runs/committed/v1.4/paired_table_gemini.md).",
     ]
 
@@ -662,7 +731,7 @@ def render_markdown(data: dict[str, Any]) -> str:
         pending_n = max(0, ext_sol_full["n"] - ext_oc["n"])
         lines.extend([
             f"2. **Selected Fleet Replication (Non-Primary, Incomplete 30-59 Cohort; `{repl_dir}`, `n={ext_oc['n']}` of `{ext_sol_full['n']}` planned seeds):** "
-            f"`{ext_oc['n']}` `hard` episodes (`seeds {ext_seeds_txt}`; `{pending_n}/{ext_sol_full['n']}` seeds incomplete at fleet cutoff, distinct from the full `n=30` `opencode-gemini-4-carbon-ext` G1 extension in [gap.md](gap.md)) "
+            f"`{ext_oc['n']}` `hard` episodes (`seeds {ext_seeds_txt}`; `{pending_n}/{ext_sol_full['n']}` seeds incomplete at fleet cutoff, distinct from the pre-registered `opencode-gemini-4-carbon-ext` G1 extension in [gap.md](gap.md), which stopped early at partial `n=2` on `seeds 34, 37` to preserve shared quota) "
             f"completed cleanly across the sequential 3-to-4-seed fleet shards under raised OpenCode runner timeouts and passed deterministic step-by-step replay verification, "
             f"paired against `solver-hard-seeds30to59` (`n={ext_sol_full['n']}`, full seeds `30-59` mean "
             f"`{_fmt_num(ext_sol_full['mean'], 3, signed=True)} +/- {_fmt_num(ext_sol_full['ci'], 3)}`, luck-adjusted `{_fmt_num(ext_sol_full['luck_adjusted'], 3, signed=True)}`). "
@@ -670,7 +739,7 @@ def render_markdown(data: dict[str, Any]) -> str:
             f"On the `{ext_oc['n']}` paired fleet seeds, OpenCode `gemini-4-carbon` scores `{_fmt_num(ext_oc['mean'], 3, signed=True)} +/- {_fmt_num(ext_oc['ci'], 3)}` vs "
             f"same-seed solver `{_fmt_num(ext_oc['solver_same_seeds'], 3, signed=True)}` (`{_fmt_ratio(ext_oc['ratio'], ext_oc['ratio_lo'], ext_oc['ratio_hi'])}` raw; "
             f"`{_fmt_ratio(ext_oc['luck_ratio'], ext_oc['luck_lo'], ext_oc['luck_hi'])}` luck-adjusted).",
-            f"3. **Exploratory pooled reference (`0-29` primary + `{ext_oc['n']}` selected fleet seeds, `n={pooled_oc['n']}` paired `hard` seeds; non-primary, never substituted for the `0-29` primary headline):** "
+            f"3. **Exploratory pooled reference (`0-29` post-hoc locked primary + `{ext_oc['n']}` selected fleet seeds, `n={pooled_oc['n']}` paired `hard` seeds; non-primary, never substituted for the `0-29` primary headline, and distinct from the `n=32` `0-29 + 34, 37` G1 pool in [gap.md](gap.md)):** "
             f"Across all `{pooled_oc['n']}` replay-verified `hard` seeds combined, OpenCode `gemini-4-carbon` scores "
             f"`{_fmt_num(pooled_oc['mean'], 3, signed=True)} +/- {_fmt_num(pooled_oc['ci'], 3)}` vs paired solver `{_fmt_num(pooled_oc['solver_same_seeds'], 3, signed=True)}` "
             f"(`{_fmt_ratio(pooled_oc['ratio'], pooled_oc['ratio_lo'], pooled_oc['ratio_hi'])}` raw, paired diff `{_fmt_num(pooled_oc['diff'], 3, signed=True)} +/- {_fmt_num(pooled_oc['diff_ci'], 3)}`) "
@@ -690,7 +759,7 @@ def render_markdown(data: dict[str, Any]) -> str:
         "`frontier / solver [95% CI]` and `luck-adj. / solver [95% CI]` use 10,000 paired bootstrap resamples (`rng_seed=0`) over shared seeds; "
         "`luck-adj. score` evaluates each accusation at `P(accused) * V - (1 - P(accused))` under `canary.analysis.accuse.audit_episode` (`0` on abstention).",
         "",
-        f"{H3} 1A. Primary Pre-Registered Cohort (`{prim_dir}`, Seeds `0-29`)",
+        f"{H3} 1A. Post-Hoc Locked Primary Cohort (`{prim_dir}`, Seeds `0-29`)",
         "",
         *_render_paired_table(data["primary_rows"]),
         "",
@@ -698,7 +767,7 @@ def render_markdown(data: dict[str, Any]) -> str:
         "",
         *_render_paired_table(data["extension_rows"]),
         "",
-        f"{H3} 1C. Exploratory Pooled Hard Cohort (`0-29` Primary + Selected Fleet `30-59`, Non-Primary)",
+        f"{H3} 1C. Exploratory Pooled Hard Cohort (`0-29` Locked Primary + Selected Fleet `30-59`, Non-Primary)",
         "",
         *_render_paired_table(data["pooled_rows"]),
         "",
@@ -713,7 +782,7 @@ def render_markdown(data: dict[str, Any]) -> str:
             f"- **Non-primary incomplete-cohort caveat (`{ext_oc['n']}/{ext_sol_full['n']}` completed, `{pending_count}` pending):** "
             "Each fleet worker ran a 3-to-4-seed sequential shard (`hard-s30-33`, `hard-s34-37`, `hard-s42-44`, `hard-s45-47`, `hard-s48-51`, `hard-s57-59`), "
             "so completed episodes represent shard-head / shorter-cumulative-wall-clock realizations rather than a complete `30`-seed sample. "
-            "Accordingly, Section 1B and Section 1C are diagnostic replication tables and do not supersede the complete `n=30` (`0-29`) primary headline.",
+            "Accordingly, Section 1B and Section 1C are diagnostic replication tables and do not supersede the complete `n=30` (`0-29`) post-hoc locked primary headline.",
         ]
         if sol_wrong_paired:
             sw = ", ".join(
@@ -733,7 +802,7 @@ def render_markdown(data: dict[str, Any]) -> str:
                 for x in low_p_frontier
             )
             notes.append(
-                f"- **Sub-0.85 commitment still appears out of sample:** Even among correct accusations, {lp}, mirroring the primary `0-29` finding "
+                f"- **Sub-0.85 commitment still appears out of sample:** Even among correct accusations, {lp}, mirroring the locked primary `0-29` finding "
                 "that OpenCode `gemini-4-carbon` sometimes commits before canary leaks isolate a single suspect."
             )
         wall_vals = [x["frontier"]["wall_s"] for x in per_seed if x["frontier"]["wall_s"] is not None]
@@ -816,12 +885,12 @@ def render_markdown(data: dict[str, Any]) -> str:
         f"| Episodes replay-verified in fresh `canary.env.Env` (`v1.4`) | `{prov['episodes_verified']} / {prov['episodes_verified']}` | PASS |",
         "| Score, accusation, or step-level replay mismatches | `0` | PASS |",
         "| Episodes with `rc == timeout`, `end_reason == error`, or `valid == False` | `0` | PASS |",
-        "| Duplicate `(agent, tier, seed)` tuples across `0-59` | `0` | PASS |",
+        "| Duplicate `(agent, tier, seed)` tuples within cohort (`0-29` primary, `30-59` G1 ext, `30-59` fleet repl) | `0` | PASS |",
         f"| OpenCode client-only steps skipped / truncated outputs byte-verified | `{prov['client_only_steps_skipped']} / {prov['truncated_steps_checked']}` | PASS |",
         "",
         "**In-repo shard locations and keyless reproduction commands:**",
         "",
-        f"- Primary (`0-29`) shards: `{prim_dir}`",
+        f"- Post-hoc locked primary (`0-29`) shards (plus committed `opencode-gemini-4-carbon-ext` partial `n=2` G1 extension and `reference/solver-hard-seeds30to59`): `{prim_dir}`",
         f"- Selected fleet replication (incomplete `30-59` cohort) shards: `{repl_dir}`",
         "- Generator script: `scripts/v14_replication_report.py`",
         "",

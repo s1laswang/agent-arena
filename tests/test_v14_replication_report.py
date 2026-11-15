@@ -5,10 +5,15 @@ from dataclasses import asdict
 import io
 import json
 from pathlib import Path
+import sys
 import tokenize
 from typing import Any
 
 import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from canary.env import Env
 from scripts.v14_replication_report import (
@@ -19,7 +24,6 @@ from scripts.v14_replication_report import (
     mean_ci,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
 EM_DASH = chr(0x2014)
 EN_DASH = chr(0x2013)
 
@@ -214,6 +218,48 @@ def test_fail_closed_on_hygiene_or_replay_violations(tmp_path: Path, mutation: s
         analyze_v14_root(primary_root=primary_root, replication_root=repl_root)
 
 
+def test_post_pr60_committed_ext_and_pre_detail_error_replay(tmp_path: Path) -> None:
+    primary_root, repl_root = _build_split_fixture(tmp_path)
+    oc_agent = "opencode:google/gemini-4-carbon"
+
+    env_err = Env("hard", 30)
+    env_err.call("status", {})
+    env_err.call("search_messages", {"query": " "})
+    env_err.call("accuse", {"employee": env_err._world.mole})
+    legacy_ep = asdict(env_err.result(oc_agent))
+    legacy_ep["steps"][1]["result"] = {
+        "ok": False,
+        "error": json.dumps({"ok": False, "data": {}, "error": "invalid arguments"}),
+    }
+    legacy_ep["meta"] = {"rc": 0, "valid": True, "V_final": float(env_err.V), "wall_s": 950.0}
+
+    g1_ext_eps = [
+        legacy_ep,
+        _make_ep("hard", 32, oc_agent, accuse_emp=Env("hard", 32)._world.mole, plant=True),
+    ]
+    _write_shard(primary_root, "opencode-gemini-4-carbon-ext/hard", g1_ext_eps)
+
+    mirrored_sol = [
+        json.loads(ln)
+        for ln in (repl_root / "reference" / "solver-hard-seeds30to59" / "episodes.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if ln.strip()
+    ]
+    _write_shard(primary_root, "reference/solver-hard-seeds30to59", mirrored_sol)
+
+    data = analyze_v14_root(primary_root=primary_root, replication_root=repl_root)
+    assert data["provenance"]["ep_files_count"] == 6
+    assert data["provenance"]["episodes_verified"] == 14
+    assert [x["seed"] for x in data["per_seed_extension"]] == [30, 31]
+
+    diverged_sol = list(mirrored_sol)
+    diverged_sol[0] = _make_ep("hard", 30, "solver", accuse_emp="e00", plant=False)
+    _write_shard(primary_root, "reference/solver-hard-seeds30to59", diverged_sol)
+    with pytest.raises(ValueError):
+        analyze_v14_root(primary_root=primary_root, replication_root=repl_root)
+
+
 def test_committed_report_and_script_hygiene() -> None:
     forbidden_scratch = "/" + "local" + "scratch"
     forbidden_tmp = "/" + "tmp" + "/" + "opencode"
@@ -235,6 +281,7 @@ def test_committed_report_and_script_hygiene() -> None:
     if not report_path.is_file():
         pytest.skip("committed replication report not staged on this branch")
     text = report_path.read_text(encoding="utf-8")
+    lower = text.lower()
     assert EM_DASH not in text
     assert EN_DASH not in text
     assert forbidden_scratch not in text
@@ -242,6 +289,14 @@ def test_committed_report_and_script_hygiene() -> None:
     assert "data/runs/committed/v1.4" in text
     assert "results/selected_fleet_replication/v1.4" in text
     assert "Selected Fleet Replication (Non-Primary, Incomplete 30-59 Cohort)" in text
+    assert "pre-registered primary" not in lower
+    assert "primary pre-registered" not in lower
+    assert "full `n=30` `opencode-gemini-4-carbon-ext`" not in text
+    assert "post-hoc lock" in lower or "post-hoc primary seed lock" in lower
+    assert "671ed96" in text and "8fd4dec" in text and "28 s" in text
+    assert "f9fb7a4a" in text
+    assert "opencode-gemini-4-carbon-ext" in text and "seeds 34, 37" in text
+    assert "Tracked `v1.4` `episodes.jsonl` shards audited | `36` | PASS" in text
     assert "+0.322 +/- 0.199" in text
     assert "65% [24%, 98%]" in text
     assert "72% [52%, 91%]" in text

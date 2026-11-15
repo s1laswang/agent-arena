@@ -38,6 +38,8 @@ Nothing on this page changes a rule or the instruction text. **CEO decision (bef
 
 ---
 
+- **W4. `access_constraints` on hard is a no-op.** The rule restricts canaries to employees cleared for the document, but `canary_level = 1` and every employee's clearance is 1–3, so it never binds. It is stated in the parameter block and changes no outcome; it is a leftover knob, disclosed here rather than silently removed (rules are frozen at v1.4).
+
 ## Part 1. The agent's main mistakes (v1.4 hard, the judges' harness)
 
 OpenCode + gemini-4-carbon over MCP, 30 dev seeds, paired with the reference solver: **65% of the solver (72% luck-adjusted)**.
@@ -57,6 +59,8 @@ The other 1.11 V of the raw gap is bad luck. Two of the four wrong accusations w
 - The in-process harness shows the same exploration profile, so this is not an MCP artifact.
 
 **Companion:** the Gemini Failure Atlas ([`results/gemini/atlas.md`](../results/gemini/atlas.md)) covers every cohort, tagged by share of solver regret. Its top mode, premature accusation on a sub-threshold posterior, is the same as mistake #1 here.
+
+**Below-break-even spotlight:** [`docs/reports/failure_gallery_breakeven.md`](reports/failure_gallery_breakeven.md) takes the "3 had negative EV near the horizon" in mistake #1 apart, seed by seed. Break-even is P* = 1/(1+V), so it rises as V drains. On seed 5 Gemini accused at a solver posterior of 51.0% when true V was 0.16 (P* = 86.2%). On seed 23 it accused at 45.2% when V was 0.23 (P* = 81.3%). Both landed on the mole, so the raw scoreboard shows +0.16 and +0.23 and hides two negative-EV gambles. The third, seed 18 (62.7% vs P* = 68.5%), hit an innocent. The solver made 0 below-break-even accusations on the same 30 seeds. Keyless check: `python -m canary.gemini.gallery_breakeven --check`.
 
 ---
 

@@ -1,0 +1,82 @@
+{
+  "run_id": "v3-s1-44572",
+  "agent": "hf-lora:lora",
+  "seconds": 10340.2,
+  "by_tier": {
+    "easy": {
+      "n": 28,
+      "mean_score": -0.5757,
+      "ci95": 0.2078,
+      "accuracy": 0.0357,
+      "mean_final_day": 3.54,
+      "end_reasons": {
+        "accused": 18,
+        "eval_cap": 10
+      },
+      "eval_cap_rate": 0.3571,
+      "invalid_call_rate": 0.1437,
+      "regret_tags": {
+        "budget_waste": 28,
+        "premature_accusation": 27,
+        "uninformative_canary": 11,
+        "no_accusation": 10
+      }
+    },
+    "hard": {
+      "n": 27,
+      "mean_score": -0.037,
+      "ci95": 0.0726,
+      "accuracy": 0.0,
+      "mean_final_day": 8.85,
+      "end_reasons": {
+        "eval_cap": 26,
+        "accused": 1
+      },
+      "eval_cap_rate": 0.963,
+      "invalid_call_rate": 0.0013,
+      "regret_tags": {
+        "no_accusation": 26,
+        "budget_waste": 7,
+        "uninformative_canary": 6,
+        "premature_accusation": 2
+      }
+    },
+    "medium": {
+      "n": 27,
+      "mean_score": 0.0,
+      "ci95": 0.0,
+      "accuracy": 0.0,
+      "mean_final_day": 4.3,
+      "end_reasons": {
+        "eval_cap": 27
+      },
+      "eval_cap_rate": 1.0,
+      "invalid_call_rate": 0.0,
+      "regret_tags": {
+        "budget_waste": 27,
+        "no_accusation": 27,
+        "uninformative_canary": 23,
+        "premature_accusation": 3
+      }
+    },
+    "all": {
+      "n": 82,
+      "mean_score": -0.2088,
+      "ci95": 0.0938,
+      "accuracy": 0.0122,
+      "mean_final_day": 5.54,
+      "end_reasons": {
+        "accused": 19,
+        "eval_cap": 63
+      },
+      "eval_cap_rate": 0.7683,
+      "invalid_call_rate": 0.0312,
+      "regret_tags": {
+        "no_accusation": 63,
+        "budget_waste": 62,
+        "uninformative_canary": 40,
+        "premature_accusation": 32
+      }
+    }
+  }
+}

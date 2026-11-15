@@ -198,12 +198,36 @@ Found by the WS4 readout session: without CANARY_WORLD_SECRET/SALT, each `eval_h
 1. **Verdict: format and timing learned, identity not learned.** The bar was a v3 held-out mean > 0 with a 95% CI excluding 0. No v3 run meets it: v3-4k s0 −0.147 ± 0.063 (n=180), v3-8k s2 −0.050 ± 0.049 (n=90), v3-8k s1 −0.777 ± 0.118 (n=90), and v3-4k s1 (FR8 V100, 192 steps, partial) −0.240 ± 0.171 (n=25).
 2. **Reward training on environment experience fixed v2's reckless accusations.** v3-4k vs v2 is +0.310 ± 0.107 (two-sample); the accusation rate fell 0.55 → 0.21 and valid tool calls rose 0.92 → 1.00. The policy converged toward the safe one. The base scores exactly 0 only because it can't play: valid tool calls 0.03, and it never reaches an accusation.
 3. **It did not learn WHOM to accuse at 4k context.** On training decision states, v3-4k s0's forced-accusation accuracy rose 0.19 → 0.89. That came from 1,218 draws, about 0.6 of the 2,000-state pool, so it isn't memorization. Held-out, its accusations are right only 6/38 = 0.16 (v2: 8/94 = 0.09). The states are the solver's last 6 steps, where the evidence is already gathered and in view. The model learned to read the culprit off evidence, not to gather it. That's the same skill gemini-4-carbon lacks: it plants 8.5 canaries before accusing vs the solver's 14.1 (failure_analysis_v1.4.md on justSilas). Identifying the mole from evidence is learnable; gathering the evidence is the hard decision this environment measures.
-4. **8k context tests visibility, not evidence gathering, and doesn't close the gap.** At matched steps, 8k gives a head start on whom (steps 0–99: 0.35 vs 0.19) but doesn't learn faster (steps 271–370: 0.41 vs 0.37; 8k s2 reaches only 0.46 after 693 steps). In held-out play the two 8k seeds split to the extremes: s1 accuses 94% of the time at precision 0.09, while s2 abstains 93%.
+4. **8k context doesn't close the gap, and the 8k rows are confounded by inference length.** The SAME 4k-trained v3 weights accuse 0.78 at 8k vs 0.21 at 4k (−0.716 vs −0.147; Δ −0.568 ± 0.123), so held-out visibility remains untested. On training states, 8k gives a head start on whom (steps 0–99: 0.35 vs 0.19) but doesn't learn faster (steps 271–370: 0.41 vs 0.37; 8k s2 reaches only 0.46 after 693 steps). In held-out play the two 8k seeds split to the extremes: s1 accuses 94% of the time at precision 0.09, while s2 abstains 93%.
 5. **Why, and next.** First, 4k windows with a 2,842-token header leave about 1.2k tokens of history, so early canary evidence scrolls out. Second, training imitates the solver's actions without its belief state. Third, v2 started near-deterministic: 8 of 10 GRPO groups had zero reward variance before guided exploration. The fix that targets the gap is on-policy labels at the model's own states (X2 DAgger; addendum ~07:30).
 
 **Table:** `fr8/analysis/out/ws4_table_v3.md` (every row has its GPU · steps · context, held-out seed indices and n; Δs are two-sample). **Whom table:** `fr8/analysis/out/ws4_whom_v3.md`. Pooled over all v3 runs, held-out precision is 15/135 = 0.11.
 - Held-out vs DEV seeds: held-out seeds are secret-keyed, so every eval process drew its own worlds and only two-sample comparisons are valid. DEV seeds 0–9999 use the public key, so the v1.4 Gemini-vs-solver gap (DEV seeds 0–29, replay-verified) stays truly paired.
 - v3-4k s1 (FR8 44572 → eval 44573) is a FLAT replicate: the steps 0–99 watch shows gain vs solver −0.51 → −0.53, with training whom-accuracy 0.22 → 0.27 over 192 V100 steps (vs s0's 609 on an H100). Its eval is still running; the row has n=25 at 04:25.
 - Base n=36: 44410-era n=16 plus 44584 (n=20, seeds 6–12, all 0). v1 keeps its published pooling (eval-lora + eval-lora-par, first per seed; 5 repeats dropped).
+- **Inference-length confound (verified 05:10; row `v3-4k-s0@8k`):** X2 evaluated the SAME 609-step 4k adapter (sha256[:12] 3d0cd43b8037, matching data/fr8/verda/v3-4k-s0-lora) at --max-ctx 8192 on held-out seed indices 0–29 (3 processes, one shared secret, A100 68bbe201). Result: −0.716 ± 0.105 (n=90), vs −0.147 ± 0.063 at 4k, Δ −0.568 ± 0.123 two-sample. The change is entirely in medium/hard: accusations 0.00/0.03 at 4k → 0.80/0.90 at 8k, with 0 correct. Easy is unchanged (0.60 → 0.63). X2's independent vLLM rollouts on TRAIN seeds agree (accused .76 at 8k vs .30 at 4k). So longer inference context alone turns the cautious 4k policy reckless (the adapters descend from v2's 4k SFT), and 8k s1's over-accusing can't be attributed to 8k training.
+- **8k training adds nothing at 8k inference (05:20, truly paired):** v3-8k s3 (A100-80, 344 steps, 8k) ran on the same shared secret as X2's v3-4k-s0@8k, verified with 60/60 identical step-0 rosters. Paired on identical worlds (n=90): 8k-trained minus 4k-trained, both at 8k inference = **−0.073 ± 0.173**. 8k s3 alone: −0.788 ± 0.117, accused .96, correct .09. Over three 8k seeds: the two ~350-step A100 seeds over-accuse (−0.777, −0.788) and the 693-step H100 seed abstains (−0.050). That's suggestive only (n=3 seeds, with step count and GPU confounded).
 - Not yet in: v3-8k s0 and s3 (Verda, ~06:00–06:40) and X2 DAgger (~07:30).
 - Reproduce: `FR8_S1_DIR=data/fr8/ws4/v3-s1-44572 S1_STEPS=192 K8S1_GPU="A100-80 spot" K8S1_STEPS=371 K8S2_GPU="H100 spot" K8S2_STEPS=693 bash fr8/analysis/ws4_v3_readout.sh` (inputs are local, gitignored `data/fr8/**/*.jsonl`).
+
+## 08:55 FINAL: WS4 tiebreaker (held-out; each model plays full episodes alone; Δ two-sample unless marked)
+Table: `fr8/analysis/out/ws4_table_final.md`; shared-secret paired: `fr8/analysis/out/ws4_table_8k_shared_secret_paired.md`.
+
+| model | GPU · GRPO steps | n | score ± 95% CI | accused | correct |
+|---|---|---|---|---|---|
+| base (never accuses) | – | 36 | 0.000 ± 0.000 | 0 | 0 |
+| v1 (J4 SFT) | V100 | 12 | −0.250 ± 0.256 | .25 | 0 |
+| v2 (SFT, oversample endings) | V100 | 172 | −0.457 ± 0.086 | .55 | .05 |
+| v3-4k s0 | H100 · 609 | 180 | −0.147 ± 0.063 | .21 | .03 |
+| v3-4k s1 (FR8) | V100 · ~191 | 82 | −0.209 ± 0.094 | .23 | .01 |
+| v3-8k s0 (shared secret) | H100 · 637 | 90 | −0.060 ± 0.054 | .08 | .01 |
+| v3-8k s1 | A100 · 371 | 90 | −0.777 ± 0.118 | .94 | .09 |
+| v3-8k s2 | H100 spot · 693 | 90 | −0.050 ± 0.049 | .07 | .01 |
+| v3-8k s3 (shared secret) | A100 · 344 | 90 | −0.788 ± 0.117 | .96 | .09 |
+
+- **No variant beats base** (best: v3-8k s2 −0.050 ± 0.049, s0 −0.060 ± 0.054; CIs just exclude 0).
+- **GRPO beats SFT**: v3-4k s0 vs v2 +0.310 ± 0.107; v3-8k s0/s2 vs v2 ≈ +0.40 ± 0.10.
+- **8k splits by training length**: both ~650-step H100 seeds abstain (−0.05/−0.06); both ~350-step A100 seeds over-accuse (−0.78). Paired on the same worlds: 8k s0 − 8k s3 = **+0.728 ± 0.134**. n = 2 per group; step count and GPU are confounded.
+- **Inference context drives accusing** (X2, shared secret): v3-4k s0 at 8k ctx = −0.716 ± 0.105 (accuses .78) vs −0.147 at 4k.
+- Training used solver rollouts for credit assignment (decision-point GRPO, 3/8 forced-accuse exploration); evaluation never does.
+- Verda: €104.46 spent; J1-lite and the backup base eval were lost at reaper time (not pulled). Details in fr8/verda/README.md.

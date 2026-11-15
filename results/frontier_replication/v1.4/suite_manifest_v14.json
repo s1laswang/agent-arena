@@ -24,7 +24,8 @@
   {"cohort_n_summary":"277 active episodes across 11 cohorts (6 OpenCode, 2 in-proc, 3 solver) in 777 pool","deliverable_id":"frontier_trajectory_audit","json_rel":"results/frontier_replication/v1.4/trajectory_audit.json","max_json_bytes":50000,"report_rel":"docs/reports/frontier_trajectory_audit_v14.md","script_rel":"scripts/frontier_trajectory_audit.py","test_rel":"tests/test_frontier_trajectory_audit.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_trajectory_audit.py --check"},
   {"cohort_n_summary":"97+ OpenCode transcripts (5+ active cohorts, 10 forensic case dossiers) in 777 pool","deliverable_id":"frontier_transcript_forensics","json_rel":"results/frontier_replication/v1.4/transcript_forensics.json","max_json_bytes":45000,"report_rel":"docs/reports/frontier_transcript_forensics_v14.md","script_rel":"scripts/frontier_transcript_forensics.py","test_rel":"tests/test_frontier_transcript_forensics.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_transcript_forensics.py --check"},
   {"cohort_n_summary":"246 episodes across 9 v1.4 cohorts (Bayes break-even abstention and EV decomposition)","deliverable_id":"frontier_stopping_counterfactual","json_rel":"results/frontier_replication/v1.4/stopping_counterfactual_v14.json","max_json_bytes":35000,"report_rel":"docs/reports/frontier_stopping_counterfactual_v14.md","script_rel":"scripts/frontier_stopping_counterfactual_v14.py","test_rel":"tests/test_frontier_stopping_counterfactual_v14.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_stopping_counterfactual_v14.py --check"},
-  {"cohort_n_summary":"90 paired hard episodes (30 gpt-5.5 + 30 carbon + 30 solver, 7 divergence seeds)","deliverable_id":"frontier_gpt55_vs_carbon_forensics","json_rel":"results/frontier_replication/v1.4/gpt55_vs_carbon_forensics.json","max_json_bytes":38000,"report_rel":"docs/reports/frontier_gpt55_vs_carbon_forensics_v14.md","script_rel":"scripts/frontier_gpt55_vs_carbon_forensics.py","test_rel":"tests/test_frontier_gpt55_vs_carbon_forensics.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_gpt55_vs_carbon_forensics.py --check"}
+  {"cohort_n_summary":"90 paired hard episodes (30 gpt-5.5 + 30 carbon + 30 solver, 7 divergence seeds)","deliverable_id":"frontier_gpt55_vs_carbon_forensics","json_rel":"results/frontier_replication/v1.4/gpt55_vs_carbon_forensics.json","max_json_bytes":38000,"report_rel":"docs/reports/frontier_gpt55_vs_carbon_forensics_v14.md","script_rel":"scripts/frontier_gpt55_vs_carbon_forensics.py","test_rel":"tests/test_frontier_gpt55_vs_carbon_forensics.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_gpt55_vs_carbon_forensics.py --check"},
+  {"cohort_n_summary":"8 paired 0-29 cohorts + Harbor n=10 WOR DP (3.48x VRF, N_eff=104.4 on carbon hard)","deliverable_id":"frontier_power_and_variance","json_rel":"results/frontier_replication/v1.4/power_and_variance_v14.json","max_json_bytes":38000,"report_rel":"docs/reports/frontier_power_and_variance_v14.md","script_rel":"scripts/frontier_power_and_variance_v14.py","test_rel":"tests/test_frontier_power_and_variance_v14.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_power_and_variance_v14.py --check"}
  ],
  "harbor_rehearsal": {
   "do_nothing_ratio_pct": 0,
@@ -50,8 +51,8 @@
  "hygiene_and_caps": {
   "all_json_within_byte_caps": true,
   "suite_manifest_max_bytes": 25000,
-  "total_frontier_deliverables": 10,
-  "upstream_json_count": 9,
+  "total_frontier_deliverables": 11,
+  "upstream_json_count": 10,
   "zero_em_en_dashes_verified": true,
   "zero_secrets_verified": true
  },

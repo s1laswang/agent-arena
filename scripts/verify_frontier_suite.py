@@ -162,6 +162,16 @@ UPSTREAM_JSON_SPECS: tuple[dict[str, Any], ...] = (
         "cohort_n_summary": "90 paired hard episodes (30 gpt-5.5 + 30 carbon + 30 solver, 7 divergence seeds)",
         "verify_cmd": "PYTHONPATH=. python scripts/frontier_gpt55_vs_carbon_forensics.py --check",
     },
+    {
+        "deliverable_id": "frontier_power_and_variance",
+        "json_rel": "results/frontier_replication/v1.4/power_and_variance_v14.json",
+        "max_bytes": 38_000,
+        "script_rel": "scripts/frontier_power_and_variance_v14.py",
+        "report_rel": "docs/reports/frontier_power_and_variance_v14.md",
+        "test_rel": "tests/test_frontier_power_and_variance_v14.py",
+        "cohort_n_summary": "8 paired 0-29 cohorts + Harbor n=10 WOR DP (3.48x VRF, N_eff=104.4 on carbon hard)",
+        "verify_cmd": "PYTHONPATH=. python scripts/frontier_power_and_variance_v14.py --check",
+    },
 )
 
 MASTER_SUITE_SPEC: dict[str, Any] = {
@@ -476,6 +486,7 @@ def compute_suite_manifest(root: Path = ROOT) -> dict[str, Any]:
     fsc = loaded_jsons["frontier_transcript_forensics"]
     stp = loaded_jsons["frontier_stopping_counterfactual"]
     gcf = loaded_jsons["frontier_gpt55_vs_carbon_forensics"]
+    pwr = loaded_jsons["frontier_power_and_variance"]
 
     corpus_checks = (
         ("replication_summary.committed", rep["replay_verification"]["committed_v14"]["total"], EXPECTED_COMMITTED_EPISODES),
@@ -525,6 +536,13 @@ def compute_suite_manifest(root: Path = ROOT) -> dict[str, Any]:
             gcf["provenance_and_locks"]["upstream_justsilas_sync"]["harbor_rehearsal"]["final_ratios_pct"],
             EXPECTED_HARBOR_RATIOS_PCT,
         ),
+        ("power.committed_verified", pwr["provenance"]["committed_v14_episodes"], EXPECTED_COMMITTED_EPISODES),
+        ("power.replication_verified", pwr["provenance"]["replication_v14_episodes"], EXPECTED_REPLICATION_EPISODES),
+        ("power.combined_verified", pwr["provenance"]["combined_v14_episodes"], EXPECTED_COMBINED_EPISODES),
+        ("power.mismatches", pwr["provenance"]["replay_mismatches"], 0),
+        ("power.harbor_ratios", pwr["provenance"]["harbor_rehearsal_ratios_pct"], EXPECTED_HARBOR_RATIOS_PCT),
+        ("power.gpt55_non_accuse", pwr["provenance"]["gpt_5_5_clean_rc0_non_accuse_seeds"], EXPECTED_GPT55_NON_ACCUSE_SEEDS),
+        ("power.union6_seeds", pwr["provenance"]["carbon_hard_30_59_dedup_union_seeds"], EXPECTED_UNION_SEEDS),
     )
     for lbl, got, exp in corpus_checks:
         _assert_eq(got, exp, lbl)

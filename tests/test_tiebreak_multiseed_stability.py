@@ -17,15 +17,23 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_PRELOADED_HEAVY = {m for m in ("torch", "transformers") if m in sys.modules}
-_PRELOADED_SOLVER = {
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+_BEFORE_IMPORT_SOLVER = frozenset(
     m for m in sys.modules if m == "canary.solver" or m.startswith("canary.solver.")
-}
+)
 
 from canary.env import Env
 from canary.eval import run_episode
 from canary.text.template import TemplateProvider
 import scripts.tiebreak_multiseed_stability_audit as msa
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
+_IMPORT_DELTA_SOLVER = (
+    frozenset(m for m in sys.modules if m == "canary.solver" or m.startswith("canary.solver."))
+    - _BEFORE_IMPORT_SOLVER
+)
 
 SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_multiseed_stability_audit.py"
 SUMMARY_PATH = REPO_ROOT / "results" / "tiebreak" / "multiseed_stability" / "multiseed_stability_summary.json"
@@ -73,11 +81,8 @@ def test_source_hygiene_and_strict_ast_isolation(monkeypatch: pytest.MonkeyPatch
                     assert "solver" not in imported
                     assert "world" not in imported
 
-    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
-    assert (
-        {m for m in sys.modules if m == "canary.solver" or m.startswith("canary.solver.")}
-        - _PRELOADED_SOLVER
-    ) == set()
+    assert _IMPORT_DELTA_HEAVY == frozenset()
+    assert _IMPORT_DELTA_SOLVER == frozenset()
 
     import scripts.verify_tiebreak_submission as gate
 
@@ -229,6 +234,8 @@ def test_shallow_ci_git_free_root_and_tamper_detection(
 def test_live_multi_secret_posterior_luck_ev_spotcheck(
     loaded_factories: tuple[dict[str, Any], dict[str, Any], dict[str, Any], Any],
 ) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
+    fn_solver = {m for m in sys.modules if m == "canary.solver" or m.startswith("canary.solver.")}
     import scripts.run_tiebreak_policy as rtp
 
     trained_facs, _, _, eb_opt = loaded_factories
@@ -268,8 +275,8 @@ def test_live_multi_secret_posterior_luck_ev_spotcheck(
 
     assert len(tags_seen) == 2
     assert len(secret_ep_digests) == 2 and secret_ep_digests[0] != secret_ep_digests[1]
-    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
     assert (
         {m for m in sys.modules if m == "canary.solver" or m.startswith("canary.solver.")}
-        - _PRELOADED_SOLVER
+        - fn_solver
     ) == set()

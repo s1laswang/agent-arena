@@ -128,6 +128,8 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_prior_sensitivity_audit.py",
         "tiebreak_leak_timing_survival_audit.py",
         "tiebreak_interview_vs_canary_ev_audit.py",
+        "tiebreak_careful_mole_adaptation_audit.py",
+        "tiebreak_value_decay_pacing_audit.py",
     )
     assert rta.OPTIONAL_FILENAMES == expected_optional_files
 
@@ -220,6 +222,8 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_prior_sensitivity_audit.py",
         "tiebreak_leak_timing_survival_audit.py",
         "tiebreak_interview_vs_canary_ev_audit.py",
+        "tiebreak_careful_mole_adaptation_audit.py",
+        "tiebreak_value_decay_pacing_audit.py",
     ]
     assert payload_ok["gates_passed"] == 3
     assert payload_ok["gates_total"] == 3

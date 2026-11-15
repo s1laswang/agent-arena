@@ -10,9 +10,13 @@ from pathlib import Path
 
 import pytest
 
+import scripts.tiebreak_forensics as tf
 from scripts.tiebreak_forensics import (
+    MAX_JSON_BYTES,
     SCHEMA_VERSION,
     analyze_ws4_v2_root_causes,
+    build_forensics_report,
+    build_verda_v3_complete_matrix,
     main,
     render_markdown,
     validate_report,
@@ -57,6 +61,7 @@ def test_source_and_artifact_hygiene() -> None:
         assert em_dash not in text, f"em dash found in {artifact}"
         assert en_dash not in text, f"en dash found in {artifact}"
         assert text.isascii(), f"non-ASCII character found in {artifact}"
+    assert COMMITTED_JSON.stat().st_size <= MAX_JSON_BYTES
 
 
 def test_verify_committed_json_and_md_offline(tmp_path: Path) -> None:
@@ -412,4 +417,113 @@ def test_validate_report_catches_dashes_and_accounting_drift() -> None:
     header_drift["j4_runs"]["ws4_v2_44410"]["train"]["header_tokens"] = 2800
     errs_hdr = validate_report(header_drift)
     assert any("header_tokens" in e for e in errs_hdr)
+
+    verda_drift = copy.deepcopy(report)
+    verda_drift["verda_v3_complete_matrix"]["v3_8k_replicates"]["v3_8k_s3"]["truly_paired_8k_vs_4k_at_8k"]["mean_delta"] = 0.25
+    errs_verda = validate_report(verda_drift)
+    assert any("v3_8k_s3" in e for e in errs_verda)
+
+
+def test_verda_v3_complete_matrix_and_fresh_clone_safety(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    report = json.loads(COMMITTED_JSON.read_text(encoding="utf-8"))
+    for key in (
+        "j4_runs",
+        "unpaired_secret_audit",
+        "ws4_v2_root_cause",
+        "v3_grpo_runs",
+        "verda_v3_complete_matrix",
+        "lessons_for_tiebreak_v4",
+    ):
+        assert key in report
+
+    vm = report["verda_v3_complete_matrix"]
+    assert vm["fresh_clone_safe"] is True
+    assert "post-hoc locked" in vm["panel_fix_a_disclosure"]
+
+    pbase = vm["pooled_base"]
+    assert pbase["n"] == 36
+    assert pbase["mean_score"] == 0.0
+    assert pbase["valid_call_rate"] == pytest.approx(0.03, abs=1e-3)
+    assert pbase["components"]["eval_44411"]["n"] == 16
+    assert pbase["components"]["eval_44584"]["n"] == 20
+
+    pv2 = vm["pooled_v2"]
+    assert pv2["n"] == 172
+    assert pv2["mean_score"] == pytest.approx(-0.457, abs=1e-3)
+    assert pv2["ci95"] == pytest.approx(0.086, abs=1e-3)
+    assert pv2["components"]["eval_44412"]["n"] == 82
+    assert pv2["components"]["eval_44412"]["mean_score"] == pytest.approx(-0.395, abs=1e-3)
+    assert pv2["components"]["eval_44412"]["ci95"] == pytest.approx(0.128, abs=1e-3)
+    assert pv2["components"]["v2_off30"]["n"] == 90
+    assert pv2["components"]["v2_off30"]["mean_score"] == pytest.approx(-0.514, abs=1e-3)
+    assert pv2["components"]["v2_off30"]["ci95"] == pytest.approx(0.115, abs=1e-3)
+
+    v3_fam = vm["v3_4k_family"]
+    ps0 = v3_fam["pooled_v3_4k_s0"]
+    assert ps0["n"] == 180
+    assert ps0["mean_score"] == pytest.approx(-0.147, abs=1e-3)
+    assert ps0["ci95"] == pytest.approx(0.063, abs=1e-3)
+    assert ps0["valid_call_rate"] == pytest.approx(1.0, abs=1e-3)
+    assert ps0["accused_count"] == 38
+    assert ps0["accused_rate"] == pytest.approx(0.21, abs=1e-2)
+    assert ps0["correct_count"] == 6
+    assert ps0["precision_when_accused"] == pytest.approx(0.16, abs=1e-2)
+    assert ps0["two_sample_delta_vs_v2"]["mean_delta"] == pytest.approx(0.310, abs=1e-3)
+    assert ps0["two_sample_delta_vs_v2"]["ci95"] == pytest.approx(0.107, abs=1e-3)
+
+    s1_part = v3_fam["v3_4k_s1_partial"]
+    assert s1_part["grpo_steps"] == 192
+    assert s1_part["n"] == 25
+    assert s1_part["mean_score"] == pytest.approx(-0.240, abs=1e-3)
+    assert s1_part["ci95"] == pytest.approx(0.171, abs=1e-3)
+
+    spot_714d = v3_fam["v3_4k_s1_spot_714d"]
+    assert spot_714d["verda_instance"] == "714d8144"
+    assert spot_714d["spot_preempted"] is True
+    assert spot_714d["n"] == 0
+
+    c8k = vm["v3_4k_s0_at_8k_confound"]
+    assert c8k["shared_world_secret"] == "1ca0c2a64d"
+    assert c8k["n"] == 90
+    assert c8k["mean_score"] == pytest.approx(-0.716, abs=1e-3)
+    assert c8k["ci95"] == pytest.approx(0.105, abs=1e-3)
+    assert c8k["two_sample_delta_vs_4k"]["mean_delta"] == pytest.approx(-0.568, abs=1e-3)
+    assert c8k["two_sample_delta_vs_4k"]["ci95"] == pytest.approx(0.123, abs=1e-3)
+
+    r8k = vm["v3_8k_replicates"]
+    assert r8k["v3_8k_s1"]["n"] == 90
+    assert r8k["v3_8k_s1"]["mean_score"] == pytest.approx(-0.777, abs=1e-3)
+    assert r8k["v3_8k_s1"]["ci95"] == pytest.approx(0.118, abs=1e-3)
+    assert r8k["v3_8k_s2"]["n"] == 90
+    assert r8k["v3_8k_s2"]["mean_score"] == pytest.approx(-0.050, abs=1e-3)
+    assert r8k["v3_8k_s2"]["ci95"] == pytest.approx(0.049, abs=1e-3)
+    assert r8k["v3_8k_s3"]["shared_world_secret"] == "1ca0c2a64d"
+    assert r8k["v3_8k_s3"]["n"] == 90
+    assert r8k["v3_8k_s3"]["mean_score"] == pytest.approx(-0.788, abs=1e-3)
+    assert r8k["v3_8k_s3"]["ci95"] == pytest.approx(0.117, abs=1e-3)
+    paired_8k = r8k["v3_8k_s3"]["truly_paired_8k_vs_4k_at_8k"]
+    assert paired_8k["mean_delta"] == pytest.approx(-0.073, abs=1e-3)
+    assert paired_8k["ci95"] == pytest.approx(0.173, abs=1e-3)
+
+    bare_root = tmp_path / "bare_clone"
+    bare_root.mkdir(parents=True)
+    bare_vm = build_verda_v3_complete_matrix(repo_root=bare_root)
+    assert bare_vm["verda_dir_present"] is False
+    assert bare_vm["in_tree_verda_files_present"] == 0
+    assert bare_vm["pooled_base"] == vm["pooled_base"]
+    assert bare_vm["pooled_v2"] == vm["pooled_v2"]
+    assert bare_vm["v3_4k_family"] == vm["v3_4k_family"]
+    assert bare_vm["v3_4k_s0_at_8k_confound"] == vm["v3_4k_s0_at_8k_confound"]
+    assert bare_vm["v3_8k_replicates"] == vm["v3_8k_replicates"]
+
+    fallback_json = bare_root / "results" / "tiebreak" / "forensics_prior_runs.json"
+    fallback_json.parent.mkdir(parents=True)
+    fallback_json.write_text(COMMITTED_JSON.read_text(encoding="utf-8"), encoding="utf-8")
+    missing_j4 = tmp_path / "no_j4"
+    missing_v3 = tmp_path / "no_v3"
+    monkeypatch.setattr(tf, "DEFAULT_J4_DIR", missing_j4)
+    monkeypatch.setattr(tf, "DEFAULT_V3_DIR", missing_v3)
+    rebuilt = build_forensics_report(j4_dir=missing_j4, v3_dir=missing_v3, repo_root=bare_root)
+    assert validate_report(rebuilt, md_text=render_markdown(rebuilt)) == []
+
 

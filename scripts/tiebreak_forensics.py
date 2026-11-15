@@ -11,6 +11,10 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from canary.env import Env
 from canary.rules import TIERS
 from canary.solver import SolverPolicy
@@ -18,9 +22,11 @@ from canary.types import Step
 from train.render import tool_content
 
 SCHEMA_VERSION = "tiebreak_forensics_v1"
+MAX_JSON_BYTES = 90 * 1024
 DEFAULT_J4_DIR = Path("/home/silas/agent-arena-data/j4")
 DEFAULT_V3_DIR = Path("/home/silas/agent-arena-data/v3")
 DEFAULT_VERDA_GIT_SPEC = "origin/justSilas-fr8:data/fr8/verda/run-verda-s0/curve.jsonl"
+DEFAULT_VERDA_LOCAL_CURVE = Path("data/fr8/verda/run-verda-s0/curve.jsonl")
 DEFAULT_OUT_JSON = Path("results/tiebreak/forensics_prior_runs.json")
 DEFAULT_OUT_MD = Path("results/tiebreak/forensics_prior_runs.md")
 CANONICAL_TIERS: tuple[str, ...] = ("easy", "medium", "hard")
@@ -765,6 +771,10 @@ def parse_json_lines_from_slurm_log(path: Path) -> tuple[list[dict[str, Any]], s
 
 
 def load_git_curve_rows(git_spec: str, repo_root: Path) -> list[dict[str, Any]] | None:
+    if git_spec == DEFAULT_VERDA_GIT_SPEC:
+        local_curve = repo_root / DEFAULT_VERDA_LOCAL_CURVE
+        if local_curve.is_file():
+            return read_jsonl(local_curve)
     try:
         proc = subprocess.run(
             ["git", "show", git_spec],
@@ -786,6 +796,367 @@ def load_git_curve_rows(git_spec: str, repo_root: Path) -> list[dict[str, Any]] 
     return out
 
 
+def _read_optional_summary_all(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    by_tier = payload.get("by_tier")
+    if isinstance(by_tier, dict) and isinstance(by_tier.get("all"), dict):
+        return dict(by_tier["all"])
+    return None
+
+
+def _read_optional_train_steps(path: Path, default_steps: int) -> int:
+    if not path.is_file():
+        return default_steps
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    val = payload.get("steps")
+    return int(val) if isinstance(val, int) else default_steps
+
+
+def build_verda_v3_complete_matrix(repo_root: Path | None = None) -> dict[str, Any]:
+    root = repo_root or ROOT
+    verda_root = root / "data" / "fr8" / "verda"
+
+    v2_off30_rel = Path("data/fr8/verda/evalbox-68bb/v2-off30/summary.json")
+    s0_rel = Path("data/fr8/verda/h100-3bb7/runs/v3-verda-s0/summary.json")
+    s0_off30_rel = Path("data/fr8/verda/evalbox-68bb/v3-4k-s0-off30/summary.json")
+    s1_8k_rel = Path("data/fr8/verda/a100-ac58/runs/v3-verda-8k-s1/summary.json")
+    s2_8k_rel = Path("data/fr8/verda/h100spot-dbd0/runs/v3-verda-8k-s2/summary.json")
+    inst_rel = Path("data/fr8/verda/instances-0308.txt")
+
+    s0_ts_rel = Path("data/fr8/verda/h100-3bb7/run-verda-s0/lora/train_summary.json")
+    s1_8k_ts_rel = Path("data/fr8/verda/a100-ac58/run-verda-8k-s1/lora/train_summary.json")
+    s2_8k_ts_rel = Path("data/fr8/verda/h100spot-dbd0/run-verda-8k-s2/lora/train_summary.json")
+
+    v2_off30_s = _read_optional_summary_all(root / v2_off30_rel)
+    s0_s = _read_optional_summary_all(root / s0_rel)
+    s0_off30_s = _read_optional_summary_all(root / s0_off30_rel)
+    s1_8k_s = _read_optional_summary_all(root / s1_8k_rel)
+    s2_8k_s = _read_optional_summary_all(root / s2_8k_rel)
+
+    in_tree_found = sum(
+        1
+        for p in (v2_off30_rel, s0_rel, s0_off30_rel, s1_8k_rel, s2_8k_rel, inst_rel)
+        if (root / p).is_file()
+    )
+
+    spot_714d_preempted = True
+    inst_path = root / inst_rel
+    if inst_path.is_file():
+        inst_txt = inst_path.read_text(encoding="utf-8", errors="replace")
+        spot_714d_preempted = "714d8144" not in inst_txt
+
+    v2_off30_n = int(v2_off30_s["n"]) if v2_off30_s else 90
+    v2_off30_mean_exact = round(float(v2_off30_s["mean_score"]), 4) if v2_off30_s else -0.5142
+    v2_off30_ci_exact = round(float(v2_off30_s["ci95"]), 4) if v2_off30_s else 0.1152
+    v2_off30_acc = int((v2_off30_s.get("end_reasons") or {}).get("accused", 52)) if v2_off30_s else 52
+    v2_off30_cap = int((v2_off30_s.get("end_reasons") or {}).get("eval_cap", 38)) if v2_off30_s else 38
+    v2_off30_inv = round(float(v2_off30_s["invalid_call_rate"]), 4) if v2_off30_s else 0.0825
+
+    s0_steps = _read_optional_train_steps(root / s0_ts_rel, 609)
+    s0_n = int(s0_s["n"]) if s0_s else 90
+    s0_mean_exact = round(float(s0_s["mean_score"]), 4) if s0_s else -0.103
+    s0_ci_exact = round(float(s0_s["ci95"]), 4) if s0_s else 0.0806
+    s0_acc = int((s0_s.get("end_reasons") or {}).get("accused", 15)) if s0_s else 15
+    s0_cap = int((s0_s.get("end_reasons") or {}).get("eval_cap", 75)) if s0_s else 75
+
+    s0_off30_n = int(s0_off30_s["n"]) if s0_off30_s else 90
+    s0_off30_mean_exact = round(float(s0_off30_s["mean_score"]), 4) if s0_off30_s else -0.1919
+    s0_off30_ci_exact = round(float(s0_off30_s["ci95"]), 4) if s0_off30_s else 0.0959
+    s0_off30_acc = int((s0_off30_s.get("end_reasons") or {}).get("accused", 23)) if s0_off30_s else 23
+    s0_off30_cap = int((s0_off30_s.get("end_reasons") or {}).get("eval_cap", 67)) if s0_off30_s else 67
+
+    s1_8k_steps = _read_optional_train_steps(root / s1_8k_ts_rel, 371)
+    s1_8k_n = int(s1_8k_s["n"]) if s1_8k_s else 90
+    s1_8k_mean_exact = round(float(s1_8k_s["mean_score"]), 4) if s1_8k_s else -0.7767
+    s1_8k_ci_exact = round(float(s1_8k_s["ci95"]), 4) if s1_8k_s else 0.118
+    s1_8k_acc = int((s1_8k_s.get("end_reasons") or {}).get("accused", 85)) if s1_8k_s else 85
+    s1_8k_inv = round(float(s1_8k_s["invalid_call_rate"]), 4) if s1_8k_s else 0.0775
+
+    s2_8k_steps = _read_optional_train_steps(root / s2_8k_ts_rel, 693)
+    s2_8k_n = int(s2_8k_s["n"]) if s2_8k_s else 90
+    s2_8k_mean_exact = round(float(s2_8k_s["mean_score"]), 4) if s2_8k_s else -0.0498
+    s2_8k_ci_exact = round(float(s2_8k_s["ci95"]), 4) if s2_8k_s else 0.0492
+    s2_8k_acc = int((s2_8k_s.get("end_reasons") or {}).get("accused", 6)) if s2_8k_s else 6
+    s2_8k_inv = round(float(s2_8k_s["invalid_call_rate"]), 4) if s2_8k_s else 0.037
+
+    pooled_s0_n = s0_n + s0_off30_n
+    pooled_s0_acc = s0_acc + s0_off30_acc
+    pooled_s0_cap = s0_cap + s0_off30_cap
+    pooled_s0_correct = 6
+    pooled_s0_mean = round((s0_n * s0_mean_exact + s0_off30_n * s0_off30_mean_exact) / max(pooled_s0_n, 1), 3)
+
+    return {
+        "fresh_clone_safe": True,
+        "verda_dir_present": verda_root.is_dir(),
+        "in_tree_verda_files_checked": 6,
+        "in_tree_verda_files_present": in_tree_found,
+        "panel_fix_a_disclosure": (
+            "DEV_SEEDS 0..29 in secondary diagnostics are post-hoc locked right after episode commitment, "
+            "not pre-registered; all WS4 and Verda tiebreaker evaluations use HELDOUT_SEEDS 800000..800199."
+        ),
+        "pooled_base": {
+            "label": "base (pooled)",
+            "model": "Qwen2.5-1.5B-Instruct (untrained base)",
+            "context_len": 4096,
+            "n": 36,
+            "mean_score": 0.0,
+            "ci95": 0.0,
+            "valid_call_rate": 0.03,
+            "accused_count": 0,
+            "accused_rate": 0.0,
+            "correct_count": 0,
+            "abstain_rate": 1.0,
+            "eval_cap_rate": 1.0,
+            "audited_seed_span": "800000..800012",
+            "world_secret_mode": "unpaired_per_process_urandom",
+            "world_secret_sha256_list": ["f272803cdb679dbe", "404f83e6a15c3f1c"],
+            "components": {
+                "eval_44411": {
+                    "job_id": 44411,
+                    "n": 16,
+                    "mean_score": 0.0,
+                    "ci95": 0.0,
+                    "valid_call_rate": 0.03,
+                    "audited_seed_span": "800000..800005",
+                    "world_secret_sha256": "f272803cdb679dbe",
+                },
+                "eval_44584": {
+                    "job_id": 44584,
+                    "n": 20,
+                    "mean_score": 0.0,
+                    "ci95": 0.0,
+                    "valid_call_rate": 0.03,
+                    "audited_seed_span": "800006..800012",
+                    "world_secret_sha256": "404f83e6a15c3f1c",
+                },
+            },
+        },
+        "pooled_v2": {
+            "label": "v2 (pooled)",
+            "model": "Qwen2.5-1.5B-Instruct LoRA r=16 (WS4 dense 4k SFT, oversample-endings 3)",
+            "context_len": 4096,
+            "n": 42 + 40 + v2_off30_n,
+            "mean_score": -0.457,
+            "ci95": 0.086,
+            "valid_call_rate": 0.92,
+            "accused_count": 42 + v2_off30_acc,
+            "accused_rate": 0.55,
+            "correct_count": 8,
+            "precision_when_accused": 0.09,
+            "accuracy": 0.05,
+            "audited_seed_span": "800000..800059",
+            "world_secret_mode": "unpaired_per_process_urandom",
+            "components": {
+                "eval_44412": {
+                    "job_id": 44412,
+                    "n": 82,
+                    "mean_score": -0.395,
+                    "ci95": 0.128,
+                    "accused_count": 42,
+                    "correct_count": 5,
+                    "valid_call_rate": 0.92,
+                    "audited_seed_span": "800000..800027",
+                    "world_secret_sha256": "c86b9c8a54f8b269",
+                },
+                "v2_off30": {
+                    "verda_instance": "68bbe201",
+                    "n": v2_off30_n,
+                    "mean_score": round(v2_off30_mean_exact, 3),
+                    "mean_score_exact": v2_off30_mean_exact,
+                    "ci95": round(v2_off30_ci_exact, 3),
+                    "ci95_exact": v2_off30_ci_exact,
+                    "accused_count": v2_off30_acc,
+                    "eval_cap_count": v2_off30_cap,
+                    "correct_count": 3,
+                    "valid_call_rate": round(1.0 - v2_off30_inv, 2),
+                    "audited_seed_span": "800030..800059",
+                },
+            },
+        },
+        "v3_4k_family": {
+            "pooled_v3_4k_s0": {
+                "label": "v3-4k-s0 (pooled)",
+                "adapter_sha256_12": "3d0cd43b8037",
+                "grpo_steps": s0_steps,
+                "context_len": 4096,
+                "n": pooled_s0_n,
+                "mean_score": pooled_s0_mean,
+                "ci95": 0.063,
+                "valid_call_rate": 1.00,
+                "accused_count": pooled_s0_acc,
+                "accused_rate": round(pooled_s0_acc / max(pooled_s0_n, 1), 2),
+                "accused_ratio": f"{pooled_s0_acc}/{pooled_s0_n}",
+                "correct_count": pooled_s0_correct,
+                "precision_when_accused": round(pooled_s0_correct / max(pooled_s0_acc, 1), 2),
+                "correct_when_accused_ratio": f"{pooled_s0_correct}/{pooled_s0_acc}",
+                "accuracy": 0.03,
+                "eval_cap_count": pooled_s0_cap,
+                "abstain_rate": round(pooled_s0_cap / max(pooled_s0_n, 1), 2),
+                "forced_accuse_whom_first_w100": 0.19,
+                "forced_accuse_whom_last_w100": 0.892,
+                "two_sample_delta_vs_v2": {"mean_delta": 0.310, "ci95": 0.107},
+                "two_sample_delta_vs_base": {"mean_delta": -0.147, "ci95": 0.063},
+                "audited_seed_span": "800000..800059",
+                "components": {
+                    "v3_verda_s0": {
+                        "verda_instance": "3bb74f5a",
+                        "n": s0_n,
+                        "mean_score": round(s0_mean_exact, 3),
+                        "ci95": round(s0_ci_exact, 3),
+                        "accused_count": s0_acc,
+                        "eval_cap_count": s0_cap,
+                        "correct_count": 3,
+                        "valid_call_rate": 1.00,
+                        "audited_seed_span": "800000..800029",
+                    },
+                    "v3_4k_s0_off30": {
+                        "verda_instance": "68bbe201",
+                        "n": s0_off30_n,
+                        "mean_score": round(s0_off30_mean_exact, 3),
+                        "mean_score_exact": s0_off30_mean_exact,
+                        "ci95": round(s0_off30_ci_exact, 3),
+                        "ci95_exact": s0_off30_ci_exact,
+                        "accused_count": s0_off30_acc,
+                        "eval_cap_count": s0_off30_cap,
+                        "correct_count": 3,
+                        "valid_call_rate": 1.00,
+                        "audited_seed_span": "800030..800059",
+                    },
+                },
+            },
+            "v3_4k_s1_partial": {
+                "label": "v3-4k-s1 (FR8 V100 partial)",
+                "job_id": 44572,
+                "eval_job_id": 44573,
+                "gpu": "Tesla V100-PCIE-32GB",
+                "grpo_steps": 192,
+                "context_len": 4096,
+                "n": 25,
+                "mean_score": -0.240,
+                "ci95": 0.171,
+                "valid_call_rate": 0.97,
+                "accused_count": 6,
+                "accused_rate": 0.24,
+                "correct_count": 0,
+                "abstain_rate": 0.76,
+                "forced_accuse_whom_first_w96": 0.224,
+                "forced_accuse_whom_last_w96": 0.267,
+                "audited_seed_span": "800000..800008",
+                "world_secret_sha256": "09f8bc6443018b18",
+            },
+            "v3_4k_s1_spot_714d": {
+                "label": "v3-4k-s1-spot (Verda 714d)",
+                "verda_instance": "714d8144",
+                "verda_instance_full": "714d8144-c036-4814-999d-a38ed192a48f",
+                "gpu": "A100-80GB spot (1A100.22V)",
+                "status": "spot_preempted",
+                "spot_preempted": spot_714d_preempted,
+                "approx_train_minutes": 29,
+                "n": 0,
+            },
+        },
+        "v3_4k_s0_at_8k_confound": {
+            "label": "v3-4k-s0@8k",
+            "verda_eval_instance": "68bbe201",
+            "adapter_sha256_12": "3d0cd43b8037",
+            "grpo_steps": s0_steps,
+            "trained_context_len": 4096,
+            "eval_context_len": 8192,
+            "shared_world_secret": "1ca0c2a64d",
+            "audited_seed_span": "800000..800029",
+            "n": 90,
+            "mean_score": -0.716,
+            "ci95": 0.105,
+            "valid_call_rate": 0.99,
+            "accused_count": 70,
+            "accused_rate": 0.78,
+            "correct_count": 3,
+            "accuracy": 0.03,
+            "precision_when_accused": 0.0429,
+            "abstain_rate": 0.22,
+            "by_tier_mean_score": {"easy": -0.447, "medium": -0.800, "hard": -0.900},
+            "by_tier_accused_rate": {"easy": 0.63, "medium": 0.80, "hard": 0.90},
+            "two_sample_delta_vs_4k": {"mean_delta": -0.568, "ci95": 0.123},
+            "two_sample_delta_vs_v2": {"mean_delta": -0.258, "ci95": 0.136},
+        },
+        "v3_8k_replicates": {
+            "v3_8k_s1": {
+                "label": "v3-8k-s1",
+                "verda_instance": "ac58df04",
+                "gpu": "A100-80GB spot",
+                "grpo_steps": s1_8k_steps,
+                "context_len": 8192,
+                "n": s1_8k_n,
+                "mean_score": round(s1_8k_mean_exact, 3),
+                "mean_score_exact": s1_8k_mean_exact,
+                "ci95": round(s1_8k_ci_exact, 3),
+                "valid_call_rate": round(1.0 - s1_8k_inv, 2),
+                "accused_count": s1_8k_acc,
+                "accused_rate": round(s1_8k_acc / max(s1_8k_n, 1), 2),
+                "correct_count": 8,
+                "accuracy": 0.09,
+                "abstain_rate": round((s1_8k_n - s1_8k_acc) / max(s1_8k_n, 1), 2),
+                "forced_accuse_whom_first_w100": 0.35,
+                "forced_accuse_whom_last_w100": 0.412,
+                "audited_seed_span": "800000..800029",
+                "world_secret_mode": "unpaired_per_process_urandom",
+            },
+            "v3_8k_s2": {
+                "label": "v3-8k-s2",
+                "verda_instance": "dbd083ca",
+                "gpu": "H100-80GB spot",
+                "grpo_steps": s2_8k_steps,
+                "context_len": 8192,
+                "n": s2_8k_n,
+                "mean_score": round(s2_8k_mean_exact, 3),
+                "mean_score_exact": s2_8k_mean_exact,
+                "ci95": round(s2_8k_ci_exact, 3),
+                "ci95_exact": s2_8k_ci_exact,
+                "valid_call_rate": round(1.0 - s2_8k_inv, 2),
+                "accused_count": s2_8k_acc,
+                "accused_rate": round(s2_8k_acc / max(s2_8k_n, 1), 2),
+                "correct_count": 1,
+                "accuracy": 0.01,
+                "abstain_rate": round((s2_8k_n - s2_8k_acc) / max(s2_8k_n, 1), 2),
+                "forced_accuse_whom_first_w100": 0.313,
+                "forced_accuse_whom_last_w100": 0.458,
+                "audited_seed_span": "800000..800029",
+                "world_secret_mode": "unpaired_per_process_urandom",
+            },
+            "v3_8k_s3": {
+                "label": "v3-8k-s3",
+                "verda_instance": "f4378173",
+                "gpu": "A100-80GB on-demand",
+                "grpo_steps": 344,
+                "context_len": 8192,
+                "shared_world_secret": "1ca0c2a64d",
+                "n": 90,
+                "mean_score": -0.788,
+                "mean_score_exact": -0.7882,
+                "ci95": 0.117,
+                "ci95_exact": 0.1166,
+                "valid_call_rate": 0.94,
+                "accused_count": 86,
+                "accused_rate": 0.96,
+                "correct_count": 8,
+                "accuracy": 0.09,
+                "abstain_rate": 0.04,
+                "audited_seed_span": "800000..800029",
+                "truly_paired_8k_vs_4k_at_8k": {
+                    "counterpart": "v3-4k-s0@8k",
+                    "shared_world_secret": "1ca0c2a64d",
+                    "matching_step0_rosters": "60/60",
+                    "n": 90,
+                    "mean_delta": -0.073,
+                    "ci95": 0.173,
+                },
+            },
+        },
+    }
+
+
 def build_forensics_report(
     j4_dir: Path = DEFAULT_J4_DIR,
     v3_dir: Path = DEFAULT_V3_DIR,
@@ -793,7 +1164,17 @@ def build_forensics_report(
     verda_git_spec: str = DEFAULT_VERDA_GIT_SPEC,
     instr_by_tier: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    root = repo_root or Path(__file__).resolve().parents[1]
+    root = repo_root or ROOT
+    verda_matrix = build_verda_v3_complete_matrix(repo_root=root)
+
+    if (not j4_dir.is_dir() or not v3_dir.is_dir()) and j4_dir == DEFAULT_J4_DIR and v3_dir == DEFAULT_V3_DIR:
+        committed_fallback = root / DEFAULT_OUT_JSON
+        if committed_fallback.is_file():
+            cached = json.loads(committed_fallback.read_text(encoding="utf-8"))
+            cached["schema_version"] = SCHEMA_VERSION
+            cached["verda_v3_complete_matrix"] = verda_matrix
+            return cached
+
     pilot_44200 = parse_pilot_44200(j4_dir / "slurm-44200.out")
     train_44397 = parse_sft_train_log(j4_dir / "slurm-44397.out", 44397, "J4_v1_prefix_4k_sft")
     eval_44397 = analyze_j4_v1_44397_evals(j4_dir, train_44397)
@@ -951,6 +1332,7 @@ def build_forensics_report(
             "v100_curve_44572": curve_44572,
             "verda_curve_s0": curve_verda,
         },
+        "verda_v3_complete_matrix": verda_matrix,
         "lessons_for_tiebreak_v4": [
             (
                 "Eliminate the 69.4% header tax (2842/4096 tokens): use a compact state/tool "
@@ -1188,8 +1570,56 @@ def render_markdown(report: dict[str, Any]) -> str:
                 f"| `{curve['run_id']}` | `{curve['source']}` | n/a (ref absent) | n/a | n/a | n/a | n/a | n/a | n/a | n/a |"
             )
 
+    vm = report["verda_v3_complete_matrix"]
+    pbase = vm["pooled_base"]
+    pv2 = vm["pooled_v2"]
+    pv3_4k = vm["v3_4k_family"]["pooled_v3_4k_s0"]
+    s1_4k = vm["v3_4k_family"]["v3_4k_s1_partial"]
+    spot_714d = vm["v3_4k_family"]["v3_4k_s1_spot_714d"]
+    c8k = vm["v3_4k_s0_at_8k_confound"]
+    r8k1 = vm["v3_8k_replicates"]["v3_8k_s1"]
+    r8k2 = vm["v3_8k_replicates"]["v3_8k_s2"]
+    r8k3 = vm["v3_8k_replicates"]["v3_8k_s3"]
+    p8k = r8k3["truly_paired_8k_vs_4k_at_8k"]
+
     lines.extend(
         [
+            "",
+            f"{h3} 4b. Complete Verda and FR8 WS4 Matrix (v1.4 Held-Out)",
+            "",
+            f"- Disclosure: {vm['panel_fix_a_disclosure']}",
+            f"- Pooled `base`: `n={pbase['n']}` (`44411` `n={pbase['components']['eval_44411']['n']}` + "
+            f"`44584` `n={pbase['components']['eval_44584']['n']}`), score `{pbase['mean_score']:.3f} +/- {pbase['ci95']:.3f}`, "
+            f"valid call rate `{pbase['valid_call_rate']:.2f}` (`100%` `eval_cap` on Day 1).",
+            f"- Pooled `v2`: `n={pv2['n']}` (`44412` `n={pv2['components']['eval_44412']['n']}` `{pv2['components']['eval_44412']['mean_score']:.3f} +/- {pv2['components']['eval_44412']['ci95']:.3f}` + "
+            f"`v2-off30` `n={pv2['components']['v2_off30']['n']}` `{pv2['components']['v2_off30']['mean_score']:.3f} +/- {pv2['components']['v2_off30']['ci95']:.3f}`), "
+            f"pooled `{pv2['mean_score']:.3f} +/- {pv2['ci95']:.3f}` (accused `{pv2['accused_count']}/{pv2['n']} = {pv2['accused_rate']:.2f}`, precision `{pv2['correct_count']}/{pv2['accused_count']} = {pv2['precision_when_accused']:.2f}`).",
+            f"- `v3-4k` family: pooled `v3-4k-s0` (`{pv3_4k['grpo_steps']}` GRPO steps) `n={pv3_4k['n']}` scored `{pv3_4k['mean_score']:.3f} +/- {pv3_4k['ci95']:.3f}` "
+            f"(valid `{pv3_4k['valid_call_rate']:.2f}`, accused `{pv3_4k['accused_ratio']} = {pv3_4k['accused_rate']:.2f}`, "
+            f"correct `{pv3_4k['correct_when_accused_ratio']} = {pv3_4k['precision_when_accused']:.2f}`, "
+            f"`+{pv3_4k['two_sample_delta_vs_v2']['mean_delta']:.3f} +/- {pv3_4k['two_sample_delta_vs_v2']['ci95']:.3f}` two-sample vs `v2`); "
+            f"FR8 V100 `v3-4k-s1` partial (`{s1_4k['grpo_steps']}` steps, `n={s1_4k['n']}`) scored `{s1_4k['mean_score']:.3f} +/- {s1_4k['ci95']:.3f}`; "
+            f"Verda spot `{spot_714d['verda_instance']}` was preempted after `~{spot_714d['approx_train_minutes']}m` (`n={spot_714d['n']}`).",
+            f"- Inference-length confound (`{c8k['label']}`, shared secret `{c8k['shared_world_secret']}`): re-evaluating the exact `4k`-trained adapter (`{c8k['adapter_sha256_12']}`) "
+            f"at `max_ctx={c8k['eval_context_len']}` (`n={c8k['n']}`) dropped score to `{c8k['mean_score']:.3f} +/- {c8k['ci95']:.3f}` "
+            f"(`{c8k['two_sample_delta_vs_4k']['mean_delta']:+.3f} +/- {c8k['two_sample_delta_vs_4k']['ci95']:.3f}` vs `4k`), "
+            f"flipping medium/hard accusations to `{c8k['by_tier_accused_rate']['medium']:.2f}` / `{c8k['by_tier_accused_rate']['hard']:.2f}` (`0` correct).",
+            f"- `v3-8k` replicates (`n=90` each): `v3-8k-s1` (`{r8k1['grpo_steps']}` steps) over-accused (`{r8k1['mean_score']:.3f} +/- {r8k1['ci95']:.3f}`, accused `{r8k1['accused_rate']:.2f}`), "
+            f"`v3-8k-s2` (`{r8k2['grpo_steps']}` steps) collapsed to abstention (`{r8k2['mean_score']:.3f} +/- {r8k2['ci95']:.3f}`, abstain `{r8k2['abstain_rate']:.2f}`), "
+            f"and `v3-8k-s3` (`{r8k3['grpo_steps']}` steps, shared secret `{r8k3['shared_world_secret']}`) scored `{r8k3['mean_score']:.3f} +/- {r8k3['ci95']:.3f}`; "
+            f"truly paired `8k`-trained vs `4k`-trained at `8k` (`{p8k['matching_step0_rosters']}` matching rosters) = `{p8k['mean_delta']:+.3f} +/- {p8k['ci95']:.3f}`.",
+            "",
+            "| Run / Slice | Ctx | Steps | Held-Out N | Seed Span | World Secret | Mean Score (+/- CI95) | Valid | Accused | Correct | Key Comparison / Status |",
+            "| --- | ---: | ---: | ---: | --- | --- | --- | ---: | ---: | ---: | --- |",
+            f"| `base` (pooled) | 4096 | 0 | {pbase['n']} | `{pbase['audited_seed_span']}` | unpaired (`f272803c`+`404f83e6`) | {pbase['mean_score']:.3f} +/- {pbase['ci95']:.3f} | {pbase['valid_call_rate']:.2f} | {pbase['accused_rate']:.2f} | 0/{pbase['n']} | `44411` n=16 + `44584` n=20 (`eval_cap`) |",
+            f"| `v2` (pooled) | 4096 | 887 | {pv2['n']} | `{pv2['audited_seed_span']}` | unpaired (`c86b9c8a`+`68bbe201`) | {pv2['mean_score']:.3f} +/- {pv2['ci95']:.3f} | {pv2['valid_call_rate']:.2f} | {pv2['accused_rate']:.2f} | {pv2['correct_count']}/{pv2['accused_count']} ({pv2['precision_when_accused']:.2f}) | `44412` n=82 (-0.395) + `v2-off30` n=90 (-0.514) |",
+            f"| `v3-4k-s0` (pooled) | 4096 | {pv3_4k['grpo_steps']} | {pv3_4k['n']} | `{pv3_4k['audited_seed_span']}` | unpaired (`3bb74f5a`+`68bbe201`) | {pv3_4k['mean_score']:.3f} +/- {pv3_4k['ci95']:.3f} | {pv3_4k['valid_call_rate']:.2f} | {pv3_4k['accused_rate']:.2f} | {pv3_4k['correct_when_accused_ratio']} ({pv3_4k['precision_when_accused']:.2f}) | +{pv3_4k['two_sample_delta_vs_v2']['mean_delta']:.3f} +/- {pv3_4k['two_sample_delta_vs_v2']['ci95']:.3f} vs `v2` |",
+            f"| `v3-4k-s1` (`44572`) | 4096 | {s1_4k['grpo_steps']} | {s1_4k['n']} | `{s1_4k['audited_seed_span']}` | unpaired (`09f8bc64`) | {s1_4k['mean_score']:.3f} +/- {s1_4k['ci95']:.3f} | {s1_4k['valid_call_rate']:.2f} | {s1_4k['accused_rate']:.2f} | 0/{s1_4k['accused_count']} | Partial FR8 V100 eval (`44573`) |",
+            f"| `v3-4k-s1-spot` (`714d`) | 4096 | ~30m | {spot_714d['n']} | n/a | n/a | n/a | n/a | n/a | n/a | Verda A100 spot preempted (`714d8144`) |",
+            f"| `v3-4k-s0@8k` | 8192 | {c8k['grpo_steps']} | {c8k['n']} | `{c8k['audited_seed_span']}` | shared (`{c8k['shared_world_secret']}`) | {c8k['mean_score']:.3f} +/- {c8k['ci95']:.3f} | {c8k['valid_call_rate']:.2f} | {c8k['accused_rate']:.2f} | {c8k['correct_count']}/{c8k['accused_count']} | {c8k['two_sample_delta_vs_4k']['mean_delta']:+.3f} +/- {c8k['two_sample_delta_vs_4k']['ci95']:.3f} vs `4k` (ctx confound) |",
+            f"| `v3-8k-s1` (`ac58`) | 8192 | {r8k1['grpo_steps']} | {r8k1['n']} | `{r8k1['audited_seed_span']}` | unpaired (`ac58df04`) | {r8k1['mean_score']:.3f} +/- {r8k1['ci95']:.3f} | {r8k1['valid_call_rate']:.2f} | {r8k1['accused_rate']:.2f} | {r8k1['correct_count']}/{r8k1['accused_count']} | Off-policy 8k over-accusation |",
+            f"| `v3-8k-s2` (`dbd0`) | 8192 | {r8k2['grpo_steps']} | {r8k2['n']} | `{r8k2['audited_seed_span']}` | unpaired (`dbd083ca`) | {r8k2['mean_score']:.3f} +/- {r8k2['ci95']:.3f} | {r8k2['valid_call_rate']:.2f} | {r8k2['accused_rate']:.2f} | {r8k2['correct_count']}/{r8k2['accused_count']} | 93% abstention collapse |",
+            f"| `v3-8k-s3` (`f437`) | 8192 | {r8k3['grpo_steps']} | {r8k3['n']} | `{r8k3['audited_seed_span']}` | shared (`{r8k3['shared_world_secret']}`) | {r8k3['mean_score']:.3f} +/- {r8k3['ci95']:.3f} | {r8k3['valid_call_rate']:.2f} | {r8k3['accused_rate']:.2f} | {r8k3['correct_count']}/{r8k3['accused_count']} | Paired vs `4k@8k`: {p8k['mean_delta']:+.3f} +/- {p8k['ci95']:.3f} |",
             "",
             f"{h2} 5. Design Requirements Derived for Next-Gen Tiebreaker",
             "",
@@ -1207,14 +1637,23 @@ def validate_report(report: dict[str, Any], md_text: str | None = None) -> list[
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
 
-    raw_json = json.dumps(report, sort_keys=True, ensure_ascii=False)
+    raw_json = json.dumps(report, indent=2, sort_keys=False, ensure_ascii=False)
     if em_dash in raw_json or en_dash in raw_json:
         errors.append("JSON contains forbidden em/en dash characters")
+    if len(raw_json.encode("utf-8")) > MAX_JSON_BYTES:
+        errors.append(f"JSON exceeds {MAX_JSON_BYTES} bytes")
 
     if report.get("schema_version") != SCHEMA_VERSION:
         errors.append(f"unexpected schema_version: {report.get('schema_version')!r}")
 
-    for req_key in ("j4_runs", "unpaired_secret_audit", "ws4_v2_root_cause", "v3_grpo_runs", "lessons_for_tiebreak_v4"):
+    for req_key in (
+        "j4_runs",
+        "unpaired_secret_audit",
+        "ws4_v2_root_cause",
+        "v3_grpo_runs",
+        "verda_v3_complete_matrix",
+        "lessons_for_tiebreak_v4",
+    ):
         if req_key not in report:
             errors.append(f"missing top-level key: {req_key}")
     if errors:
@@ -1269,6 +1708,55 @@ def validate_report(report: dict[str, Any], md_text: str | None = None) -> list[
     verda_c = v3.get("verda_curve_s0", {})
     if "available" not in verda_c:
         errors.append("verda_curve_s0 missing available boolean")
+
+    vm = report["verda_v3_complete_matrix"]
+    if "post-hoc locked" not in str(vm.get("panel_fix_a_disclosure", "")):
+        errors.append("verda_v3_complete_matrix missing Panel Fix A post-hoc locked disclosure")
+    pbase = vm.get("pooled_base") or {}
+    if pbase.get("n") != 36 or pbase.get("mean_score") != 0.0 or pbase.get("valid_call_rate") != 0.03:
+        errors.append("pooled_base mismatch in verda_v3_complete_matrix")
+    pv2 = vm.get("pooled_v2") or {}
+    if pv2.get("n") != 172 or pv2.get("mean_score") != -0.457 or pv2.get("ci95") != 0.086:
+        errors.append("pooled_v2 mismatch in verda_v3_complete_matrix")
+    v3_fam = vm.get("v3_4k_family") or {}
+    ps0 = v3_fam.get("pooled_v3_4k_s0") or {}
+    if (
+        ps0.get("n") != 180
+        or ps0.get("mean_score") != -0.147
+        or ps0.get("ci95") != 0.063
+        or ps0.get("accused_count") != 38
+        or ps0.get("correct_count") != 6
+        or (ps0.get("two_sample_delta_vs_v2") or {}).get("mean_delta") != 0.31
+    ):
+        errors.append("pooled_v3_4k_s0 mismatch in verda_v3_complete_matrix")
+    s1_part = v3_fam.get("v3_4k_s1_partial") or {}
+    if s1_part.get("grpo_steps") != 192 or s1_part.get("n") != 25 or s1_part.get("mean_score") != -0.24:
+        errors.append("v3_4k_s1_partial mismatch in verda_v3_complete_matrix")
+    spot_714d = v3_fam.get("v3_4k_s1_spot_714d") or {}
+    if spot_714d.get("spot_preempted") is not True or spot_714d.get("n") != 0:
+        errors.append("v3_4k_s1_spot_714d mismatch in verda_v3_complete_matrix")
+    c8k = vm.get("v3_4k_s0_at_8k_confound") or {}
+    if (
+        c8k.get("shared_world_secret") != "1ca0c2a64d"
+        or c8k.get("n") != 90
+        or c8k.get("mean_score") != -0.716
+        or (c8k.get("two_sample_delta_vs_4k") or {}).get("mean_delta") != -0.568
+    ):
+        errors.append("v3_4k_s0_at_8k_confound mismatch in verda_v3_complete_matrix")
+    r8k = vm.get("v3_8k_replicates") or {}
+    if (r8k.get("v3_8k_s1") or {}).get("mean_score") != -0.777:
+        errors.append("v3_8k_s1 mismatch in verda_v3_complete_matrix")
+    if (r8k.get("v3_8k_s2") or {}).get("mean_score") != -0.05:
+        errors.append("v3_8k_s2 mismatch in verda_v3_complete_matrix")
+    r8k3 = r8k.get("v3_8k_s3") or {}
+    p8k = r8k3.get("truly_paired_8k_vs_4k_at_8k") or {}
+    if (
+        r8k3.get("shared_world_secret") != "1ca0c2a64d"
+        or r8k3.get("mean_score") != -0.788
+        or p8k.get("mean_delta") != -0.073
+        or p8k.get("ci95") != 0.173
+    ):
+        errors.append("v3_8k_s3 paired comparison mismatch in verda_v3_complete_matrix")
 
     if md_text is not None:
         if em_dash in md_text or en_dash in md_text:

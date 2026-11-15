@@ -1,5 +1,7 @@
 # Gemini CEO log (newest first)
 
+## Sun 03:29: blind-atlas check: unchanged (origin/gemini-atlas still 89294e0e, already merged; SUBMISSION numbers already from atlas_blind.json)
+
 ## Sun 03:01: ablations merged (PR #55); §4 is now measured
 - Merged origin/gemini-ablations (b4dc1e68): no PR #9; code changes are an opt-in --no-thought-signatures flag (default off). Every §4 number verified in results/gemini/ablations.md/json: signatures OFF → 10/10 episodes rejected (Wilson [72.2, 100]), ON → 0/628 errors; caching $58.56 → $21.72 on 464 atlas calls (62.9%), 75.9% ($678.19 of $893.08) over 29,150 calls (storage cost not ledgered); thinking sweep −32% → 78% for 3.6-flash on hard, 17/34 cells exclude parity. One-pager §4 = 3 compact sentences; LONG §4 = full sentences + caveat.
 

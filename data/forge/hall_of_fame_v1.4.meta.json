@@ -1,0 +1,1791 @@
+{
+  "code_sha": "84c96af5",
+  "tiers_version": "v1.4",
+  "tier": "hard",
+  "seeds": "6200:6220",
+  "heldout_seeds": "6200-6219",
+  "n_heldout_seeds": 20,
+  "dev_seeds": "10000-10019",
+  "n_dev_seeds": 20,
+  "forbidden_seed_ranges": [
+    "0-29",
+    "30-44",
+    "45-59",
+    "30000-30199",
+    "800000+",
+    "900000+"
+  ],
+  "workers": 2,
+  "investigators": [
+    "grok_tactics",
+    "heuristic",
+    "hinted_heuristic",
+    "codex_horizon_proxy",
+    "gemini_carbon_proxy"
+  ],
+  "feasibility": "solver_acc >= 0.85 AND solver_score >= 0.5 * default_solver_score AND min_regret > default_min_regret AND core_min_regret > default_core_min_regret AND logs_only_acc <= 0.1 AND accuse_most_logs_acc <= 0.1 AND do_nothing == 0 AND stop_early == 0 AND guess_day1 < 0 (required on both dev and held-out slices)",
+  "dedupe_method": "outcome + behavior: sha256[:10] of (agent, seed, day, event, doc_id|employee) for leak/framed ledger events under do_nothing and solver on hard seeds 6200..6219 AND canary.mole.evolve_v14.behavior_hash across 64 representative MoleViews",
+  "outcome_groups": {
+    "8d7741b268": [
+      "two_wave_blackout"
+    ],
+    "01082b3144": [
+      "frontload_oldest_d11"
+    ],
+    "3e7c5bb2e5": [
+      "sleeper_d3_burst"
+    ],
+    "2062adda82": [
+      "v13_adapted_v14"
+    ],
+    "bd1a9aa973": [
+      "frontload_blackout_d9"
+    ],
+    "a6a8b54037": [
+      "window_crowd_stale"
+    ],
+    "3a1c0250dc": [
+      "surgical_trap_shield"
+    ],
+    "f5bb5aa829": [
+      "gemini_midsize_shield"
+    ],
+    "5e46777895": [
+      "reactive_canary_lag"
+    ],
+    "662cc66b08": [
+      "non_decoy_tiebreak_framer"
+    ],
+    "9155d7b339": [
+      "early_burst_midgame_pace"
+    ],
+    "69c6f9f77f": [
+      "frontier_synthesis_v14"
+    ]
+  },
+  "behavior_groups": {
+    "ca7182e045d39a76fe1cfe8b905dbabf": [
+      "two_wave_blackout"
+    ],
+    "125779d9b73715065fd63f57c2612101": [
+      "frontload_oldest_d11"
+    ],
+    "ae96d6687e3b6e56ceb3748c0b36cf03": [
+      "sleeper_d3_burst"
+    ],
+    "e5ddcd62a8f687855a621ed693754729": [
+      "v13_adapted_v14"
+    ],
+    "f4dd369d40aca5ce4bf9d7472ab56584": [
+      "frontload_blackout_d9"
+    ],
+    "1fa0458fbea558cbba4b8088f9d862a8": [
+      "window_crowd_stale"
+    ],
+    "e55c0473d2685c858c818e49bab106a1": [
+      "surgical_trap_shield"
+    ],
+    "6153914e768647835177cd6099e312c8": [
+      "gemini_midsize_shield"
+    ],
+    "637c34ad367fd384918bcbeb2fa2b16a": [
+      "reactive_canary_lag"
+    ],
+    "eb452649e501ad9f571a7a049b65cf6a": [
+      "non_decoy_tiebreak_framer"
+    ],
+    "3635b8fc202b2fef5a1846f25f4c0629": [
+      "early_burst_midgame_pace"
+    ],
+    "eec9419bd531541cef0d1bfb6879576e": [
+      "frontier_synthesis_v14"
+    ]
+  },
+  "survivor_names": [
+    "window_crowd_stale",
+    "two_wave_blackout",
+    "surgical_trap_shield",
+    "early_burst_midgame_pace"
+  ],
+  "survivor_outcome_hashes": {
+    "window_crowd_stale": "a6a8b54037",
+    "two_wave_blackout": "8d7741b268",
+    "surgical_trap_shield": "3a1c0250dc",
+    "early_burst_midgame_pace": "9155d7b339"
+  },
+  "survivor_behavior_hashes": {
+    "window_crowd_stale": "1fa0458fbea558cbba4b8088f9d862a8",
+    "two_wave_blackout": "ca7182e045d39a76fe1cfe8b905dbabf",
+    "surgical_trap_shield": "e55c0473d2685c858c818e49bab106a1",
+    "early_burst_midgame_pace": "3635b8fc202b2fef5a1846f25f4c0629"
+  },
+  "default_heldout": {
+    "name": "default",
+    "description": "Default v0 MoleStrategy (random_seeded leak under careful_mole weights, no extra DSL rules).",
+    "n_rules": 0,
+    "n_seeds": 20,
+    "solver_score": 0.5625,
+    "solver_ci": 0.168934,
+    "solver_acc": 0.95,
+    "solver_none_rate": 0.0,
+    "solver_mean_day": 8.1,
+    "min_regret": 0.0725,
+    "core_min_regret": 0.077,
+    "mean_regret": 0.1504,
+    "min_regret_gain": 0.0,
+    "core_regret_gain": 0.0,
+    "strongest_investigator": "codex_horizon_proxy",
+    "per_investigator": {
+      "codex_horizon_proxy": {
+        "score": 0.49,
+        "acc": 0.95,
+        "regret": 0.0725,
+        "regret_ci": 0.233062
+      },
+      "gemini_carbon_proxy": {
+        "score": 0.402,
+        "acc": 0.8,
+        "regret": 0.1605,
+        "regret_ci": 0.262351
+      },
+      "grok_tactics": {
+        "score": 0.4375,
+        "acc": 0.8,
+        "regret": 0.125,
+        "regret_ci": 0.221637
+      },
+      "heuristic": {
+        "score": 0.2455,
+        "acc": 0.95,
+        "regret": 0.317,
+        "regret_ci": 0.226445
+      },
+      "hinted_heuristic": {
+        "score": 0.4855,
+        "acc": 0.9,
+        "regret": 0.077,
+        "regret_ci": 0.167542
+      }
+    },
+    "logs_only_score": -1.0,
+    "logs_only_acc": 0.0,
+    "accuse_most_logs_score": -1.0,
+    "accuse_most_logs_acc": 0.0,
+    "do_nothing_score": 0.0,
+    "stop_early_score": 0.0,
+    "guess_day1_score": -1.0,
+    "outcome_hash": "3748589284",
+    "behavior_hash": "4ce97ce85124050ce478649ec860136b",
+    "canon_hash": "127e20b1b5",
+    "strict_s7": true,
+    "fairness_passed": true,
+    "beats_default_regret": false,
+    "distinct_from_default": false,
+    "all_gates_passed": false
+  },
+  "default_dev": {
+    "name": "default",
+    "description": "Default v0 MoleStrategy (random_seeded leak under careful_mole weights, no extra DSL rules).",
+    "n_rules": 0,
+    "n_seeds": 20,
+    "solver_score": 0.5545,
+    "solver_ci": 0.057785,
+    "solver_acc": 1.0,
+    "solver_none_rate": 0.0,
+    "solver_mean_day": 9.95,
+    "min_regret": 0.126,
+    "core_min_regret": 0.126,
+    "mean_regret": 0.2129,
+    "min_regret_gain": 0.0,
+    "core_regret_gain": 0.0,
+    "strongest_investigator": "hinted_heuristic",
+    "per_investigator": {
+      "codex_horizon_proxy": {
+        "score": 0.413,
+        "acc": 0.9,
+        "regret": 0.1415,
+        "regret_ci": 0.232964
+      },
+      "gemini_carbon_proxy": {
+        "score": 0.4205,
+        "acc": 0.9,
+        "regret": 0.134,
+        "regret_ci": 0.243634
+      },
+      "grok_tactics": {
+        "score": 0.346,
+        "acc": 0.9,
+        "regret": 0.2085,
+        "regret_ci": 0.177259
+      },
+      "heuristic": {
+        "score": 0.1,
+        "acc": 0.85,
+        "regret": 0.4545,
+        "regret_ci": 0.238056
+      },
+      "hinted_heuristic": {
+        "score": 0.4285,
+        "acc": 0.75,
+        "regret": 0.126,
+        "regret_ci": 0.142367
+      }
+    },
+    "logs_only_score": -0.9175,
+    "logs_only_acc": 0.05,
+    "accuse_most_logs_score": -0.91,
+    "accuse_most_logs_acc": 0.05,
+    "do_nothing_score": 0.0,
+    "stop_early_score": 0.0,
+    "guess_day1_score": -1.0,
+    "outcome_hash": "0112ad704c",
+    "behavior_hash": "4ce97ce85124050ce478649ec860136b",
+    "canon_hash": "127e20b1b5",
+    "strict_s7": true,
+    "fairness_passed": true,
+    "beats_default_regret": false,
+    "distinct_from_default": false,
+    "all_gates_passed": false
+  },
+  "heldout_candidates": [
+    {
+      "name": "two_wave_blackout",
+      "description": "Two-wave intermittent pulse: leaks narrow docs on days 1..6, goes dark on days 7..9 while delayed Wave 1 leaks surface, leaks aged stale docs on days 10..12 plus a day-15 newest pulse, and suppresses 2-recipient trap canaries.",
+      "n_rules": 5,
+      "n_seeds": 20,
+      "solver_score": 0.7265,
+      "solver_ci": 0.026383,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 6.35,
+      "min_regret": 0.3475,
+      "core_min_regret": 0.4855,
+      "mean_regret": 0.554,
+      "min_regret_gain": 0.275,
+      "core_regret_gain": 0.4085,
+      "strongest_investigator": "codex_horizon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.379,
+          "acc": 0.8,
+          "regret": 0.3475,
+          "regret_ci": 0.313422
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.328,
+          "acc": 0.45,
+          "regret": 0.3985,
+          "regret_ci": 0.173192
+        },
+        "grok_tactics": {
+          "score": 0.0,
+          "acc": 0.0,
+          "regret": 0.7265,
+          "regret_ci": 0.026383
+        },
+        "heuristic": {
+          "score": -0.0855,
+          "acc": 0.6,
+          "regret": 0.812,
+          "regret_ci": 0.338753
+        },
+        "hinted_heuristic": {
+          "score": 0.241,
+          "acc": 0.35,
+          "regret": 0.4855,
+          "regret_ci": 0.15046
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "8d7741b268",
+      "behavior_hash": "ca7182e045d39a76fe1cfe8b905dbabf",
+      "canon_hash": "02cd036b05",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "frontload_oldest_d11",
+      "description": "Early narrow-doc leaks on days 1..7 transitioning to cooldown-paced stale-doc leaks (days 8..11 with days_since_last_leak >= 2) and a day-14 seeded pulse, while suppressing 2-recipient traps and framing restricted peers late.",
+      "n_rules": 4,
+      "n_seeds": 20,
+      "solver_score": 0.728,
+      "solver_ci": 0.026587,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 6.2,
+      "min_regret": 0.0865,
+      "core_min_regret": 0.4305,
+      "mean_regret": 0.4765,
+      "min_regret_gain": 0.014,
+      "core_regret_gain": 0.3535,
+      "strongest_investigator": "codex_horizon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.6415,
+          "acc": 0.95,
+          "regret": 0.0865,
+          "regret_ci": 0.180026
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.467,
+          "acc": 0.65,
+          "regret": 0.261,
+          "regret_ci": 0.167087
+        },
+        "grok_tactics": {
+          "score": 0.0,
+          "acc": 0.0,
+          "regret": 0.728,
+          "regret_ci": 0.026587
+        },
+        "heuristic": {
+          "score": -0.1485,
+          "acc": 0.55,
+          "regret": 0.8765,
+          "regret_ci": 0.346585
+        },
+        "hinted_heuristic": {
+          "score": 0.2975,
+          "acc": 0.45,
+          "regret": 0.4305,
+          "regret_ci": 0.156196
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "01082b3144",
+      "behavior_hash": "125779d9b73715065fd63f57c2612101",
+      "canon_hash": "93a56d6188",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "sleeper_d3_burst",
+      "description": "Opening sleeper that stays silent on days 1..2 so early un-narrowed splits age, diverts 2-recipient traps onto wide regular docs, leaks actively on days 3..10, and emits sparse pulses on days 13 and 16.",
+      "n_rules": 5,
+      "n_seeds": 20,
+      "solver_score": 0.5805,
+      "solver_ci": 0.179245,
+      "solver_acc": 0.9,
+      "solver_none_rate": 0.05,
+      "solver_mean_day": 9.7,
+      "min_regret": -0.107,
+      "core_min_regret": 0.3345,
+      "mean_regret": 0.3278,
+      "min_regret_gain": -0.1795,
+      "core_regret_gain": 0.2575,
+      "strongest_investigator": "codex_horizon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.6875,
+          "acc": 1.0,
+          "regret": -0.107,
+          "regret_ci": 0.198027
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.425,
+          "acc": 0.7,
+          "regret": 0.1555,
+          "regret_ci": 0.294812
+        },
+        "grok_tactics": {
+          "score": 0.1055,
+          "acc": 0.3,
+          "regret": 0.475,
+          "regret_ci": 0.176786
+        },
+        "heuristic": {
+          "score": -0.2005,
+          "acc": 0.55,
+          "regret": 0.781,
+          "regret_ci": 0.417109
+        },
+        "hinted_heuristic": {
+          "score": 0.246,
+          "acc": 0.55,
+          "regret": 0.3345,
+          "regret_ci": 0.276344
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "3e7c5bb2e5",
+      "behavior_hash": "ae96d6687e3b6e56ceb3748c0b36cf03",
+      "canon_hash": "f1b46cdd2b",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": false,
+      "distinct_from_default": true,
+      "all_gates_passed": false
+    },
+    {
+      "name": "v13_adapted_v14",
+      "description": "Restriction counter-probe that halts leaks and frames restricted colleagues whenever n_restricted_colleagues >= 2, diverts 2-recipient traps to wide regular docs, pauses on days 8..9, resumes on days 10..11, and pulses on day 14.",
+      "n_rules": 6,
+      "n_seeds": 20,
+      "solver_score": 0.728,
+      "solver_ci": 0.026587,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 6.2,
+      "min_regret": 0.0935,
+      "core_min_regret": 0.3795,
+      "mean_regret": 0.3996,
+      "min_regret_gain": 0.021,
+      "core_regret_gain": 0.3025,
+      "strongest_investigator": "codex_horizon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.6345,
+          "acc": 0.95,
+          "regret": 0.0935,
+          "regret_ci": 0.167675
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.4935,
+          "acc": 0.8,
+          "regret": 0.2345,
+          "regret_ci": 0.200091
+        },
+        "grok_tactics": {
+          "score": 0.139,
+          "acc": 0.35,
+          "regret": 0.589,
+          "regret_ci": 0.105126
+        },
+        "heuristic": {
+          "score": 0.0265,
+          "acc": 0.7,
+          "regret": 0.7015,
+          "regret_ci": 0.31291
+        },
+        "hinted_heuristic": {
+          "score": 0.3485,
+          "acc": 0.55,
+          "regret": 0.3795,
+          "regret_ci": 0.150117
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "2062adda82",
+      "behavior_hash": "e5ddcd62a8f687855a621ed693754729",
+      "canon_hash": "67732d792b",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "frontload_blackout_d9",
+      "description": "Front-loaded active window on days 1..9 with broad-doc trap diversion against 2-recipient canaries, followed by a sustained horizon blackout except a day-13 stale-doc pulse.",
+      "n_rules": 3,
+      "n_seeds": 20,
+      "solver_score": 0.728,
+      "solver_ci": 0.026587,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 6.2,
+      "min_regret": 0.1115,
+      "core_min_regret": 0.3755,
+      "mean_regret": 0.4393,
+      "min_regret_gain": 0.039,
+      "core_regret_gain": 0.2985,
+      "strongest_investigator": "codex_horizon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.6165,
+          "acc": 0.95,
+          "regret": 0.1115,
+          "regret_ci": 0.178475
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.3655,
+          "acc": 0.7,
+          "regret": 0.3625,
+          "regret_ci": 0.250082
+        },
+        "grok_tactics": {
+          "score": 0.2085,
+          "acc": 0.5,
+          "regret": 0.5195,
+          "regret_ci": 0.108994
+        },
+        "heuristic": {
+          "score": -0.0995,
+          "acc": 0.6,
+          "regret": 0.8275,
+          "regret_ci": 0.343514
+        },
+        "hinted_heuristic": {
+          "score": 0.3525,
+          "acc": 0.55,
+          "regret": 0.3755,
+          "regret_ci": 0.150809
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "bd1a9aa973",
+      "behavior_hash": "f4dd369d40aca5ce4bf9d7472ab56584",
+      "canon_hash": "5266316e21",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "window_crowd_stale",
+      "description": "Early narrow-doc leaks on days 1..6 followed by queue-depth conditional stale-doc leaks when n_leakable >= 7 on days 7..11 to dodge freshly planted splits, plus sparse pulses on days 13 and 15.",
+      "n_rules": 5,
+      "n_seeds": 20,
+      "solver_score": 0.73,
+      "solver_ci": 0.024629,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 6.25,
+      "min_regret": 0.3645,
+      "core_min_regret": 0.406,
+      "mean_regret": 0.5707,
+      "min_regret_gain": 0.292,
+      "core_regret_gain": 0.329,
+      "strongest_investigator": "codex_horizon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.3655,
+          "acc": 0.8,
+          "regret": 0.3645,
+          "regret_ci": 0.30653
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.2195,
+          "acc": 0.5,
+          "regret": 0.5105,
+          "regret_ci": 0.242203
+        },
+        "grok_tactics": {
+          "score": 0.21,
+          "acc": 0.55,
+          "regret": 0.52,
+          "regret_ci": 0.108822
+        },
+        "heuristic": {
+          "score": -0.3225,
+          "acc": 0.5,
+          "regret": 1.0525,
+          "regret_ci": 0.315521
+        },
+        "hinted_heuristic": {
+          "score": 0.324,
+          "acc": 0.5,
+          "regret": 0.406,
+          "regret_ci": 0.146255
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "a6a8b54037",
+      "behavior_hash": "1fa0458fbea558cbba4b8088f9d862a8",
+      "canon_hash": "a7c2a59f3a",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "surgical_trap_shield",
+      "description": "Codex and GPT-5.5 place 30.6% to 75.3% of planted canaries into <=3-recipient surgical traps while dismissing the angry decoy in 100.0% of 159 frontier episodes.",
+      "n_rules": 3,
+      "n_seeds": 20,
+      "solver_score": 0.614,
+      "solver_ci": 0.064183,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 9.45,
+      "min_regret": 0.2715,
+      "core_min_regret": 0.2715,
+      "mean_regret": 0.338,
+      "min_regret_gain": 0.199,
+      "core_regret_gain": 0.1945,
+      "strongest_investigator": "hinted_heuristic",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.2235,
+          "acc": 0.75,
+          "regret": 0.3905,
+          "regret_ci": 0.336285
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.328,
+          "acc": 0.75,
+          "regret": 0.286,
+          "regret_ci": 0.168728
+        },
+        "grok_tactics": {
+          "score": 0.2795,
+          "acc": 0.75,
+          "regret": 0.3345,
+          "regret_ci": 0.233818
+        },
+        "heuristic": {
+          "score": 0.2065,
+          "acc": 0.9,
+          "regret": 0.4075,
+          "regret_ci": 0.150281
+        },
+        "hinted_heuristic": {
+          "score": 0.3425,
+          "acc": 0.75,
+          "regret": 0.2715,
+          "regret_ci": 0.19721
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "3a1c0250dc",
+      "behavior_hash": "e55c0473d2685c858c818e49bab106a1",
+      "canon_hash": "6b4b12f119",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "gemini_midsize_shield",
+      "description": "Gemini-4-carbon places 0.0% to 0.6% of canaries in <=3 recipients and concentrates 43.6% to 73.6% of canaries in 4-8 recipient 3-variant cells, failing on 0-hit seeds.",
+      "n_rules": 2,
+      "n_seeds": 20,
+      "solver_score": 0.6065,
+      "solver_ci": 0.054708,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 9.9,
+      "min_regret": 0.289,
+      "core_min_regret": 0.289,
+      "mean_regret": 0.3291,
+      "min_regret_gain": 0.2165,
+      "core_regret_gain": 0.212,
+      "strongest_investigator": "hinted_heuristic",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.26,
+          "acc": 0.85,
+          "regret": 0.3465,
+          "regret_ci": 0.26572
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.245,
+          "acc": 0.75,
+          "regret": 0.3615,
+          "regret_ci": 0.183017
+        },
+        "grok_tactics": {
+          "score": 0.257,
+          "acc": 0.8,
+          "regret": 0.3495,
+          "regret_ci": 0.229269
+        },
+        "heuristic": {
+          "score": 0.3075,
+          "acc": 1.0,
+          "regret": 0.299,
+          "regret_ci": 0.058089
+        },
+        "hinted_heuristic": {
+          "score": 0.3175,
+          "acc": 0.75,
+          "regret": 0.289,
+          "regret_ci": 0.189933
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "f5bb5aa829",
+      "behavior_hash": "6153914e768647835177cd6099e312c8",
+      "canon_hash": "c35a621c9f",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "reactive_canary_lag",
+      "description": "On v1.4 Hard, Gemini delays its first canary to mean day 3.03 (OpenCode) and 3.40 (in-proc) versus Solver day 1.00, planting reactive age-0 canaries and making 7/10 Hard wrong accusations with <=1 separating canary under 0.95 fingerprint accuracy.",
+      "n_rules": 2,
+      "n_seeds": 20,
+      "solver_score": 0.5005,
+      "solver_ci": 0.170178,
+      "solver_acc": 0.95,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 10.55,
+      "min_regret": 0.1135,
+      "core_min_regret": 0.1135,
+      "mean_regret": 0.1966,
+      "min_regret_gain": 0.041,
+      "core_regret_gain": 0.0365,
+      "strongest_investigator": "hinted_heuristic",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.2805,
+          "acc": 0.85,
+          "regret": 0.22,
+          "regret_ci": 0.279742
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.3185,
+          "acc": 0.85,
+          "regret": 0.182,
+          "regret_ci": 0.225243
+        },
+        "grok_tactics": {
+          "score": 0.3475,
+          "acc": 0.95,
+          "regret": 0.153,
+          "regret_ci": 0.22976
+        },
+        "heuristic": {
+          "score": 0.186,
+          "acc": 0.85,
+          "regret": 0.3145,
+          "regret_ci": 0.313418
+        },
+        "hinted_heuristic": {
+          "score": 0.387,
+          "acc": 0.85,
+          "regret": 0.1135,
+          "regret_ci": 0.148156
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "5e46777895",
+      "behavior_hash": "637c34ad367fd384918bcbeb2fa2b16a",
+      "canon_hash": "8262379fd3",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "non_decoy_tiebreak_framer",
+      "description": "Frontier investigators dismissed the angry decoy in 100.0% of 159 decoy-enabled episodes (0 accusations, 0 restrictions), whereas non-decoy framed after-hours logs broke 0-separation canary ties into -1.0 wrong accusations in 5/10 total frontier wrong accusations.",
+      "n_rules": 3,
+      "n_seeds": 20,
+      "solver_score": 0.6565,
+      "solver_ci": 0.045707,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 8.9,
+      "min_regret": 0.202,
+      "core_min_regret": 0.451,
+      "mean_regret": 0.4521,
+      "min_regret_gain": 0.1295,
+      "core_regret_gain": 0.374,
+      "strongest_investigator": "gemini_carbon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.18,
+          "acc": 0.75,
+          "regret": 0.4765,
+          "regret_ci": 0.331397
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.4545,
+          "acc": 0.9,
+          "regret": 0.202,
+          "regret_ci": 0.107058
+        },
+        "grok_tactics": {
+          "score": 0.2055,
+          "acc": 0.8,
+          "regret": 0.451,
+          "regret_ci": 0.214122
+        },
+        "heuristic": {
+          "score": 0.041,
+          "acc": 0.7,
+          "regret": 0.6155,
+          "regret_ci": 0.285789
+        },
+        "hinted_heuristic": {
+          "score": 0.141,
+          "acc": 0.7,
+          "regret": 0.5155,
+          "regret_ci": 0.240758
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "662cc66b08",
+      "behavior_hash": "eb452649e501ad9f571a7a049b65cf6a",
+      "canon_hash": "4bb40853aa",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "early_burst_midgame_pace",
+      "description": "Gemini spends 57.27 to 68.03 calls per Hard episode on low-LR interviews (64.4% to 68.0% of investigative budget), lags Solver by +1.97 to +2.52 days, and makes 22 below-breakeven gambles.",
+      "n_rules": 3,
+      "n_seeds": 20,
+      "solver_score": 0.6375,
+      "solver_ci": 0.063461,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 9.9,
+      "min_regret": 0.2475,
+      "core_min_regret": 0.2475,
+      "mean_regret": 0.3918,
+      "min_regret_gain": 0.175,
+      "core_regret_gain": 0.1705,
+      "strongest_investigator": "hinted_heuristic",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.2635,
+          "acc": 0.8,
+          "regret": 0.374,
+          "regret_ci": 0.301957
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.1665,
+          "acc": 0.65,
+          "regret": 0.471,
+          "regret_ci": 0.283906
+        },
+        "grok_tactics": {
+          "score": 0.3495,
+          "acc": 0.8,
+          "regret": 0.288,
+          "regret_ci": 0.245968
+        },
+        "heuristic": {
+          "score": 0.059,
+          "acc": 0.75,
+          "regret": 0.5785,
+          "regret_ci": 0.268946
+        },
+        "hinted_heuristic": {
+          "score": 0.39,
+          "acc": 0.85,
+          "regret": 0.2475,
+          "regret_ci": 0.115158
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "9155d7b339",
+      "behavior_hash": "3635b8fc202b2fef5a1846f25f4c0629",
+      "canon_hash": "3ec06f8a27",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "frontier_synthesis_v14",
+      "description": "Combines early surgical-trap deflection, reactive age-0 canary evasion on days 1-7, bounded midgame pacing on days 5-8, and non-decoy peer framing across restricted and peer pools.",
+      "n_rules": 4,
+      "n_seeds": 20,
+      "solver_score": 0.518,
+      "solver_ci": 0.170446,
+      "solver_acc": 0.95,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 10.3,
+      "min_regret": 0.0975,
+      "core_min_regret": 0.0975,
+      "mean_regret": 0.173,
+      "min_regret_gain": 0.025,
+      "core_regret_gain": 0.0205,
+      "strongest_investigator": "hinted_heuristic",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.374,
+          "acc": 0.9,
+          "regret": 0.144,
+          "regret_ci": 0.250274
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.378,
+          "acc": 0.8,
+          "regret": 0.14,
+          "regret_ci": 0.175648
+        },
+        "grok_tactics": {
+          "score": 0.248,
+          "acc": 0.8,
+          "regret": 0.27,
+          "regret_ci": 0.264717
+        },
+        "heuristic": {
+          "score": 0.3045,
+          "acc": 0.95,
+          "regret": 0.2135,
+          "regret_ci": 0.248904
+        },
+        "hinted_heuristic": {
+          "score": 0.4205,
+          "acc": 0.9,
+          "regret": 0.0975,
+          "regret_ci": 0.164919
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "69c6f9f77f",
+      "behavior_hash": "eec9419bd531541cef0d1bfb6879576e",
+      "canon_hash": "415b4a4bf0",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    }
+  ],
+  "dev_candidates": [
+    {
+      "name": "two_wave_blackout",
+      "description": "Two-wave intermittent pulse: leaks narrow docs on days 1..6, goes dark on days 7..9 while delayed Wave 1 leaks surface, leaks aged stale docs on days 10..12 plus a day-15 newest pulse, and suppresses 2-recipient trap canaries.",
+      "n_rules": 5,
+      "n_seeds": 20,
+      "solver_score": 0.706,
+      "solver_ci": 0.076566,
+      "solver_acc": 0.95,
+      "solver_none_rate": 0.05,
+      "solver_mean_day": 7.6,
+      "min_regret": 0.1925,
+      "core_min_regret": 0.3485,
+      "mean_regret": 0.5311,
+      "min_regret_gain": 0.0665,
+      "core_regret_gain": 0.2225,
+      "strongest_investigator": "gemini_carbon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.459,
+          "acc": 0.85,
+          "regret": 0.247,
+          "regret_ci": 0.312635
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.5135,
+          "acc": 0.75,
+          "regret": 0.1925,
+          "regret_ci": 0.1642
+        },
+        "grok_tactics": {
+          "score": 0.0,
+          "acc": 0.0,
+          "regret": 0.706,
+          "regret_ci": 0.076566
+        },
+        "heuristic": {
+          "score": -0.4555,
+          "acc": 0.35,
+          "regret": 1.1615,
+          "regret_ci": 0.333565
+        },
+        "hinted_heuristic": {
+          "score": 0.3575,
+          "acc": 0.55,
+          "regret": 0.3485,
+          "regret_ci": 0.18494
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "8219834e19",
+      "behavior_hash": "ca7182e045d39a76fe1cfe8b905dbabf",
+      "canon_hash": "02cd036b05",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "frontload_oldest_d11",
+      "description": "Early narrow-doc leaks on days 1..7 transitioning to cooldown-paced stale-doc leaks (days 8..11 with days_since_last_leak >= 2) and a day-14 seeded pulse, while suppressing 2-recipient traps and framing restricted peers late.",
+      "n_rules": 4,
+      "n_seeds": 20,
+      "solver_score": 0.727,
+      "solver_ci": 0.032985,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 7.2,
+      "min_regret": 0.1645,
+      "core_min_regret": 0.365,
+      "mean_regret": 0.4967,
+      "min_regret_gain": 0.0385,
+      "core_regret_gain": 0.239,
+      "strongest_investigator": "codex_horizon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.5625,
+          "acc": 0.9,
+          "regret": 0.1645,
+          "regret_ci": 0.256005
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.471,
+          "acc": 0.75,
+          "regret": 0.256,
+          "regret_ci": 0.205583
+        },
+        "grok_tactics": {
+          "score": 0.0,
+          "acc": 0.0,
+          "regret": 0.727,
+          "regret_ci": 0.032985
+        },
+        "heuristic": {
+          "score": -0.244,
+          "acc": 0.5,
+          "regret": 0.971,
+          "regret_ci": 0.342954
+        },
+        "hinted_heuristic": {
+          "score": 0.362,
+          "acc": 0.55,
+          "regret": 0.365,
+          "regret_ci": 0.153005
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "f665620045",
+      "behavior_hash": "125779d9b73715065fd63f57c2612101",
+      "canon_hash": "93a56d6188",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "sleeper_d3_burst",
+      "description": "Opening sleeper that stays silent on days 1..2 so early un-narrowed splits age, diverts 2-recipient traps onto wide regular docs, leaks actively on days 3..10, and emits sparse pulses on days 13 and 16.",
+      "n_rules": 5,
+      "n_seeds": 20,
+      "solver_score": 0.6875,
+      "solver_ci": 0.026975,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 8.55,
+      "min_regret": 0.2305,
+      "core_min_regret": 0.4155,
+      "mean_regret": 0.5206,
+      "min_regret_gain": 0.1045,
+      "core_regret_gain": 0.2895,
+      "strongest_investigator": "codex_horizon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.457,
+          "acc": 0.85,
+          "regret": 0.2305,
+          "regret_ci": 0.280357
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.43,
+          "acc": 0.8,
+          "regret": 0.2575,
+          "regret_ci": 0.27697
+        },
+        "grok_tactics": {
+          "score": 0.035,
+          "acc": 0.1,
+          "regret": 0.6525,
+          "regret_ci": 0.058867
+        },
+        "heuristic": {
+          "score": -0.3595,
+          "acc": 0.45,
+          "regret": 1.047,
+          "regret_ci": 0.322704
+        },
+        "hinted_heuristic": {
+          "score": 0.272,
+          "acc": 0.45,
+          "regret": 0.4155,
+          "regret_ci": 0.145236
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "e15605321b",
+      "behavior_hash": "ae96d6687e3b6e56ceb3748c0b36cf03",
+      "canon_hash": "f1b46cdd2b",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "v13_adapted_v14",
+      "description": "Restriction counter-probe that halts leaks and frames restricted colleagues whenever n_restricted_colleagues >= 2, diverts 2-recipient traps to wide regular docs, pauses on days 8..9, resumes on days 10..11, and pulses on day 14.",
+      "n_rules": 6,
+      "n_seeds": 20,
+      "solver_score": 0.7,
+      "solver_ci": 0.077008,
+      "solver_acc": 0.95,
+      "solver_none_rate": 0.05,
+      "solver_mean_day": 7.45,
+      "min_regret": 0.13,
+      "core_min_regret": 0.3305,
+      "mean_regret": 0.423,
+      "min_regret_gain": 0.004,
+      "core_regret_gain": 0.2045,
+      "strongest_investigator": "gemini_carbon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.567,
+          "acc": 0.9,
+          "regret": 0.133,
+          "regret_ci": 0.269868
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.57,
+          "acc": 0.85,
+          "regret": 0.13,
+          "regret_ci": 0.150939
+        },
+        "grok_tactics": {
+          "score": 0.01,
+          "acc": 0.15,
+          "regret": 0.69,
+          "regret_ci": 0.14668
+        },
+        "heuristic": {
+          "score": -0.1315,
+          "acc": 0.6,
+          "regret": 0.8315,
+          "regret_ci": 0.351247
+        },
+        "hinted_heuristic": {
+          "score": 0.3695,
+          "acc": 0.65,
+          "regret": 0.3305,
+          "regret_ci": 0.226875
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "d3ca766b92",
+      "behavior_hash": "e5ddcd62a8f687855a621ed693754729",
+      "canon_hash": "67732d792b",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "frontload_blackout_d9",
+      "description": "Front-loaded active window on days 1..9 with broad-doc trap diversion against 2-recipient canaries, followed by a sustained horizon blackout except a day-13 stale-doc pulse.",
+      "n_rules": 3,
+      "n_seeds": 20,
+      "solver_score": 0.645,
+      "solver_ci": 0.172051,
+      "solver_acc": 0.95,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 6.9,
+      "min_regret": 0.0845,
+      "core_min_regret": 0.281,
+      "mean_regret": 0.4197,
+      "min_regret_gain": -0.0415,
+      "core_regret_gain": 0.155,
+      "strongest_investigator": "codex_horizon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.5605,
+          "acc": 0.9,
+          "regret": 0.0845,
+          "regret_ci": 0.316991
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.5155,
+          "acc": 0.8,
+          "regret": 0.1295,
+          "regret_ci": 0.22892
+        },
+        "grok_tactics": {
+          "score": -0.0455,
+          "acc": 0.15,
+          "regret": 0.6905,
+          "regret_ci": 0.236753
+        },
+        "heuristic": {
+          "score": -0.268,
+          "acc": 0.5,
+          "regret": 0.913,
+          "regret_ci": 0.345951
+        },
+        "hinted_heuristic": {
+          "score": 0.364,
+          "acc": 0.55,
+          "regret": 0.281,
+          "regret_ci": 0.250897
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "eee76747b5",
+      "behavior_hash": "f4dd369d40aca5ce4bf9d7472ab56584",
+      "canon_hash": "5266316e21",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": false,
+      "distinct_from_default": true,
+      "all_gates_passed": false
+    },
+    {
+      "name": "window_crowd_stale",
+      "description": "Early narrow-doc leaks on days 1..6 followed by queue-depth conditional stale-doc leaks when n_leakable >= 7 on days 7..11 to dodge freshly planted splits, plus sparse pulses on days 13 and 15.",
+      "n_rules": 5,
+      "n_seeds": 20,
+      "solver_score": 0.7025,
+      "solver_ci": 0.076835,
+      "solver_acc": 0.95,
+      "solver_none_rate": 0.05,
+      "solver_mean_day": 7.7,
+      "min_regret": 0.246,
+      "core_min_regret": 0.452,
+      "mean_regret": 0.5227,
+      "min_regret_gain": 0.12,
+      "core_regret_gain": 0.326,
+      "strongest_investigator": "gemini_carbon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.452,
+          "acc": 0.85,
+          "regret": 0.2505,
+          "regret_ci": 0.30539
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.4565,
+          "acc": 0.75,
+          "regret": 0.246,
+          "regret_ci": 0.153848
+        },
+        "grok_tactics": {
+          "score": 0.0195,
+          "acc": 0.2,
+          "regret": 0.683,
+          "regret_ci": 0.149878
+        },
+        "heuristic": {
+          "score": -0.2795,
+          "acc": 0.5,
+          "regret": 0.982,
+          "regret_ci": 0.328293
+        },
+        "hinted_heuristic": {
+          "score": 0.2505,
+          "acc": 0.4,
+          "regret": 0.452,
+          "regret_ci": 0.18156
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "b1c21fd08f",
+      "behavior_hash": "1fa0458fbea558cbba4b8088f9d862a8",
+      "canon_hash": "a7c2a59f3a",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "surgical_trap_shield",
+      "description": "Codex and GPT-5.5 place 30.6% to 75.3% of planted canaries into <=3-recipient surgical traps while dismissing the angry decoy in 100.0% of 159 frontier episodes.",
+      "n_rules": 3,
+      "n_seeds": 20,
+      "solver_score": 0.609,
+      "solver_ci": 0.063796,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 9.25,
+      "min_regret": 0.1275,
+      "core_min_regret": 0.1275,
+      "mean_regret": 0.2875,
+      "min_regret_gain": 0.0015,
+      "core_regret_gain": 0.0015,
+      "strongest_investigator": "hinted_heuristic",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.2875,
+          "acc": 0.85,
+          "regret": 0.3215,
+          "regret_ci": 0.270109
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.468,
+          "acc": 0.95,
+          "regret": 0.141,
+          "regret_ci": 0.128391
+        },
+        "grok_tactics": {
+          "score": 0.3775,
+          "acc": 0.9,
+          "regret": 0.2315,
+          "regret_ci": 0.113819
+        },
+        "heuristic": {
+          "score": -0.007,
+          "acc": 0.75,
+          "regret": 0.616,
+          "regret_ci": 0.282748
+        },
+        "hinted_heuristic": {
+          "score": 0.4815,
+          "acc": 0.95,
+          "regret": 0.1275,
+          "regret_ci": 0.102831
+        }
+      },
+      "logs_only_score": -0.9175,
+      "logs_only_acc": 0.05,
+      "accuse_most_logs_score": -0.91,
+      "accuse_most_logs_acc": 0.05,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "d95b636883",
+      "behavior_hash": "e55c0473d2685c858c818e49bab106a1",
+      "canon_hash": "6b4b12f119",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "gemini_midsize_shield",
+      "description": "Gemini-4-carbon places 0.0% to 0.6% of canaries in <=3 recipients and concentrates 43.6% to 73.6% of canaries in 4-8 recipient 3-variant cells, failing on 0-hit seeds.",
+      "n_rules": 2,
+      "n_seeds": 20,
+      "solver_score": 0.5935,
+      "solver_ci": 0.085698,
+      "solver_acc": 0.95,
+      "solver_none_rate": 0.05,
+      "solver_mean_day": 9.3,
+      "min_regret": 0.0935,
+      "core_min_regret": 0.0935,
+      "mean_regret": 0.3543,
+      "min_regret_gain": -0.0325,
+      "core_regret_gain": -0.0325,
+      "strongest_investigator": "hinted_heuristic",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": -0.0275,
+          "acc": 0.7,
+          "regret": 0.621,
+          "regret_ci": 0.32584
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.4185,
+          "acc": 0.95,
+          "regret": 0.175,
+          "regret_ci": 0.124372
+        },
+        "grok_tactics": {
+          "score": 0.3615,
+          "acc": 0.9,
+          "regret": 0.232,
+          "regret_ci": 0.114327
+        },
+        "heuristic": {
+          "score": -0.0565,
+          "acc": 0.7,
+          "regret": 0.65,
+          "regret_ci": 0.317435
+        },
+        "hinted_heuristic": {
+          "score": 0.5,
+          "acc": 0.95,
+          "regret": 0.0935,
+          "regret_ci": 0.1218
+        }
+      },
+      "logs_only_score": -0.9175,
+      "logs_only_acc": 0.05,
+      "accuse_most_logs_score": -0.91,
+      "accuse_most_logs_acc": 0.05,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "d2781f46b7",
+      "behavior_hash": "6153914e768647835177cd6099e312c8",
+      "canon_hash": "c35a621c9f",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": false,
+      "distinct_from_default": true,
+      "all_gates_passed": false
+    },
+    {
+      "name": "reactive_canary_lag",
+      "description": "On v1.4 Hard, Gemini delays its first canary to mean day 3.03 (OpenCode) and 3.40 (in-proc) versus Solver day 1.00, planting reactive age-0 canaries and making 7/10 Hard wrong accusations with <=1 separating canary under 0.95 fingerprint accuracy.",
+      "n_rules": 2,
+      "n_seeds": 20,
+      "solver_score": 0.568,
+      "solver_ci": 0.086966,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 10.1,
+      "min_regret": 0.2575,
+      "core_min_regret": 0.3445,
+      "mean_regret": 0.3943,
+      "min_regret_gain": 0.1315,
+      "core_regret_gain": 0.2185,
+      "strongest_investigator": "gemini_carbon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.258,
+          "acc": 0.85,
+          "regret": 0.31,
+          "regret_ci": 0.246922
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.3105,
+          "acc": 0.85,
+          "regret": 0.2575,
+          "regret_ci": 0.189613
+        },
+        "grok_tactics": {
+          "score": 0.2215,
+          "acc": 0.75,
+          "regret": 0.3465,
+          "regret_ci": 0.199275
+        },
+        "heuristic": {
+          "score": -0.145,
+          "acc": 0.65,
+          "regret": 0.713,
+          "regret_ci": 0.291233
+        },
+        "hinted_heuristic": {
+          "score": 0.2235,
+          "acc": 0.8,
+          "regret": 0.3445,
+          "regret_ci": 0.275685
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "74789709f0",
+      "behavior_hash": "637c34ad367fd384918bcbeb2fa2b16a",
+      "canon_hash": "8262379fd3",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "non_decoy_tiebreak_framer",
+      "description": "Frontier investigators dismissed the angry decoy in 100.0% of 159 decoy-enabled episodes (0 accusations, 0 restrictions), whereas non-decoy framed after-hours logs broke 0-separation canary ties into -1.0 wrong accusations in 5/10 total frontier wrong accusations.",
+      "n_rules": 3,
+      "n_seeds": 20,
+      "solver_score": 0.6015,
+      "solver_ci": 0.071243,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 9.5,
+      "min_regret": 0.235,
+      "core_min_regret": 0.252,
+      "mean_regret": 0.3467,
+      "min_regret_gain": 0.109,
+      "core_regret_gain": 0.126,
+      "strongest_investigator": "codex_horizon_proxy",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.3665,
+          "acc": 0.9,
+          "regret": 0.235,
+          "regret_ci": 0.248978
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.277,
+          "acc": 0.85,
+          "regret": 0.3245,
+          "regret_ci": 0.239196
+        },
+        "grok_tactics": {
+          "score": 0.312,
+          "acc": 0.8,
+          "regret": 0.2895,
+          "regret_ci": 0.111443
+        },
+        "heuristic": {
+          "score": -0.031,
+          "acc": 0.65,
+          "regret": 0.6325,
+          "regret_ci": 0.324179
+        },
+        "hinted_heuristic": {
+          "score": 0.3495,
+          "acc": 0.9,
+          "regret": 0.252,
+          "regret_ci": 0.169524
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -0.91,
+      "accuse_most_logs_acc": 0.05,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "c3fd26df75",
+      "behavior_hash": "eb452649e501ad9f571a7a049b65cf6a",
+      "canon_hash": "4bb40853aa",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "early_burst_midgame_pace",
+      "description": "Gemini spends 57.27 to 68.03 calls per Hard episode on low-LR interviews (64.4% to 68.0% of investigative budget), lags Solver by +1.97 to +2.52 days, and makes 22 below-breakeven gambles.",
+      "n_rules": 3,
+      "n_seeds": 20,
+      "solver_score": 0.6115,
+      "solver_ci": 0.087519,
+      "solver_acc": 0.95,
+      "solver_none_rate": 0.05,
+      "solver_mean_day": 10.1,
+      "min_regret": 0.247,
+      "core_min_regret": 0.247,
+      "mean_regret": 0.4098,
+      "min_regret_gain": 0.121,
+      "core_regret_gain": 0.121,
+      "strongest_investigator": "grok_tactics",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": -0.0015,
+          "acc": 0.65,
+          "regret": 0.613,
+          "regret_ci": 0.34451
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.3285,
+          "acc": 0.85,
+          "regret": 0.283,
+          "regret_ci": 0.169288
+        },
+        "grok_tactics": {
+          "score": 0.3645,
+          "acc": 0.95,
+          "regret": 0.247,
+          "regret_ci": 0.096672
+        },
+        "heuristic": {
+          "score": 0.0975,
+          "acc": 0.75,
+          "regret": 0.514,
+          "regret_ci": 0.287443
+        },
+        "hinted_heuristic": {
+          "score": 0.2195,
+          "acc": 0.75,
+          "regret": 0.392,
+          "regret_ci": 0.246161
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "8cc2f3700f",
+      "behavior_hash": "3635b8fc202b2fef5a1846f25f4c0629",
+      "canon_hash": "3ec06f8a27",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    },
+    {
+      "name": "frontier_synthesis_v14",
+      "description": "Combines early surgical-trap deflection, reactive age-0 canary evasion on days 1-7, bounded midgame pacing on days 5-8, and non-decoy peer framing across restricted and peer pools.",
+      "n_rules": 4,
+      "n_seeds": 20,
+      "solver_score": 0.564,
+      "solver_ci": 0.084535,
+      "solver_acc": 1.0,
+      "solver_none_rate": 0.0,
+      "solver_mean_day": 10.75,
+      "min_regret": 0.2095,
+      "core_min_regret": 0.2095,
+      "mean_regret": 0.4038,
+      "min_regret_gain": 0.0835,
+      "core_regret_gain": 0.0835,
+      "strongest_investigator": "hinted_heuristic",
+      "per_investigator": {
+        "codex_horizon_proxy": {
+          "score": 0.1855,
+          "acc": 0.8,
+          "regret": 0.3785,
+          "regret_ci": 0.273552
+        },
+        "gemini_carbon_proxy": {
+          "score": 0.291,
+          "acc": 0.9,
+          "regret": 0.273,
+          "regret_ci": 0.182191
+        },
+        "grok_tactics": {
+          "score": 0.118,
+          "acc": 0.8,
+          "regret": 0.446,
+          "regret_ci": 0.230715
+        },
+        "heuristic": {
+          "score": -0.148,
+          "acc": 0.65,
+          "regret": 0.712,
+          "regret_ci": 0.2929
+        },
+        "hinted_heuristic": {
+          "score": 0.3545,
+          "acc": 0.85,
+          "regret": 0.2095,
+          "regret_ci": 0.194729
+        }
+      },
+      "logs_only_score": -1.0,
+      "logs_only_acc": 0.0,
+      "accuse_most_logs_score": -1.0,
+      "accuse_most_logs_acc": 0.0,
+      "do_nothing_score": 0.0,
+      "stop_early_score": 0.0,
+      "guess_day1_score": -1.0,
+      "outcome_hash": "b1348fa36c",
+      "behavior_hash": "eec9419bd531541cef0d1bfb6879576e",
+      "canon_hash": "415b4a4bf0",
+      "strict_s7": true,
+      "fairness_passed": true,
+      "beats_default_regret": true,
+      "distinct_from_default": true,
+      "all_gates_passed": true
+    }
+  ],
+  "n_survivors": 4
+}

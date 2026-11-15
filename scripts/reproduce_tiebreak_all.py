@@ -8,14 +8,19 @@ import inspect
 import io
 import json
 import multiprocessing
+import os
 import re
 import subprocess
 import sys
+import threading
 import time
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
+
+for _blas_var in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+    os.environ.setdefault(_blas_var, "1")
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -796,6 +801,8 @@ def run_all_gates(
         and resolved_root == ROOT.resolve()
         and not multiprocessing.current_process().daemon
         and "fork" in multiprocessing.get_all_start_methods()
+        and threading.active_count() == 1
+        and "torch" not in sys.modules
     )
 
     if use_fork:

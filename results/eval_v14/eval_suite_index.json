@@ -3,6 +3,7 @@
  "tiers_version": "v1.4",
  "float_tolerance": 1e-09,
  "primary_seeds": "0-29",
+ "primary_seeds_lock": "post-hoc locked paired dev seeds 0-29 (671ed96, 28 s after 8fd4dec; lock against later reruns and cherry-picking, not a pre-registration)",
  "n_primary_seeds_per_tier": 30,
  "core_verifiers": [
   {
@@ -50,7 +51,7 @@
   "json": ["results/eval_v14/claims_manifest.json", "results/eval_v14/headline_gap_table_v14.json", "results/eval_v14/harness_and_tier_v14.json", "results/eval_v14/judge_rerun_power_v14.json", "results/eval_v14/hint_ablation_v14.json"],
   "reports": ["docs/reports/eval_claims_verification.md", "docs/reports/headline_gap_table_v14.md", "docs/reports/medium_vs_hard_and_harness_v14.md", "docs/reports/judge_rerun_operating_characteristics.md", "docs/reports/hint_ablation_v14_audit.md"]
  },
- "optional_verifiers_registry": ["eval_replication_and_crossmodel", "counterfactual_decomposition_v14", "verify_harbor_rehearsal", "eval_candidate_tiers", "build_eval_charts_v14", "harbor_luck_adjusted_v14", "ladder_pareto_v14", "version_evolution_v14", "version_evolution_audit"],
+ "optional_verifiers_registry": ["eval_replication_and_crossmodel", "counterfactual_decomposition_v14", "verify_harbor_rehearsal", "eval_candidate_tiers", "build_eval_charts_v14", "harbor_luck_adjusted_v14", "ladder_pareto_v14", "version_evolution_v14", "version_evolution_audit", "paired_seed_diagnostics_v14"],
  "present_optional_verifiers": [
   {
    "check_passed": true,
@@ -61,9 +62,14 @@
    "check_passed": true,
    "name": "build_eval_charts_v14",
    "script": "scripts/build_eval_charts_v14.py"
+  },
+  {
+   "check_passed": true,
+   "name": "harbor_luck_adjusted_v14",
+   "script": "scripts/harbor_luck_adjusted_v14.py"
   }
  ],
- "present_eval_v14_artifacts": ["results/eval_v14/claims_manifest.json", "results/eval_v14/crossmodel_and_replication_v14.json", "results/eval_v14/harness_and_tier_v14.json", "results/eval_v14/headline_gap_paired_v14.png", "results/eval_v14/headline_gap_table_v14.json", "results/eval_v14/hint_ablation_v14.json", "results/eval_v14/judge_rerun_power_v14.json", "results/eval_v14/posterior_calibration_v14.png"],
+ "present_eval_v14_artifacts": ["results/eval_v14/README.md", "results/eval_v14/claims_manifest.json", "results/eval_v14/crossmodel_and_replication_v14.json", "results/eval_v14/harbor_rehearsal_dry_posteriors.json", "results/eval_v14/harness_and_tier_v14.json", "results/eval_v14/headline_gap_paired_v14.png", "results/eval_v14/headline_gap_table_v14.json", "results/eval_v14/hint_ablation_v14.json", "results/eval_v14/judge_rerun_power_v14.json", "results/eval_v14/posterior_calibration_v14.png"],
  "core_headline_summary": {
   "claims_and_hygiene": {
    "schema_version": "eval_claims_manifest_v2",
@@ -89,8 +95,8 @@
     "paired_groups_checked": 14,
     "judge_table_v14_rows_checked": 17,
     "v14_meta_files_checked": 19,
-    "preregistered_frontier_cohorts": 5,
-    "preregistration_rule_verified": true,
+    "primary_locked_frontier_cohorts": 5,
+    "seed_lock_rule_verified": true,
     "active_docs_checked_count": 6,
     "protected_path_rules_count": 15,
     "secret_pattern_rules_count": 7
@@ -103,13 +109,13 @@
     "all_replay_consistent": true,
     "section_a_min_n": 30,
     "section_a_rows": 23,
-    "section_b_rows": 32,
+    "section_b_rows": 42,
     "frontier_cached_episodes_replayed": 150,
     "stored_solver_episodes_replayed": 60,
     "inproc_baseline_episodes_verified": 420,
-    "ladder_cached_episodes_replayed": 320,
-    "ladder_total_reported_episodes": 357,
-    "ladder_total_reported_cells": 34
+    "ladder_cached_episodes_replayed": 550,
+    "ladder_total_reported_episodes": 587,
+    "ladder_total_reported_cells": 42
    },
    "cohorts": {
     "hard_opencode_gemini_4_carbon": {
@@ -599,6 +605,8 @@
    "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
    "ablation_episodes_verified": 30,
    "context_episodes_verified": 30,
+   "total_steps_verified": 5986,
+   "step_mismatches": 0,
    "all_passed": true,
    "arms": {
     "control": {
@@ -665,6 +673,60 @@
    "solver_same_seeds_context": {
     "score_mean": 0.576,
     "luck_adjusted_mean": 0.555859
+   }
+  },
+  "repo_milestones": {
+   "seed_lock": {
+    "commit": "671ed96",
+    "primary_commit": "8fd4dec",
+    "delay_seconds": 28,
+    "classification": "post_hoc_lock_not_preregistered",
+    "solver_hard_reference_dirs": ["data/runs/committed/v1.4/reference/solver-hard-20261114-121126", "data/runs/committed/v1.4/reference/solver-hard-seeds20to29"]
+   },
+   "replay_panel_fix_d": {
+    "commit": "1bc3e281",
+    "invalid_arguments_detail_compat": true
+   },
+   "g1_partial_extension": {
+    "prereg_commit": "f9fb7a4a",
+    "data_commit": "364fe657",
+    "ext_only": {
+     "n": 2,
+     "seeds": [34, 37],
+     "mean": 0.745,
+     "ci": 0.0882,
+     "solver_same_seeds": 0.735,
+     "ratio": 1.0136054422,
+     "ratio_ci": [0.9090909091, 1.1285714286],
+     "luck_adj_ratio": 1.0940080735,
+     "luck_adj_ci": [1.0507018317, 1.135541805]
+    },
+    "pooled_0_59": {
+     "n": 32,
+     "mean": 0.34875,
+     "ci": 0.1897552666,
+     "solver_same_seeds": 0.51375,
+     "ratio": 0.6788321168,
+     "ratio_ci": [0.3168859649, 0.9970149254],
+     "luck_adj_ratio": 0.7499216685,
+     "luck_adj_ci": [0.5575948644, 0.9345075235],
+     "diff": -0.165,
+     "diff_ci": 0.1824073419
+    }
+   },
+   "canonical_gemini_ladder": {
+    "commit": "eb363eb9",
+    "episodes": 587,
+    "cells": 42,
+    "gemma_episodes": 5
+   },
+   "gpt_5_5_preregistration": {
+    "commit": "cf394894",
+    "env_tag": "afterquery-final",
+    "seeds": "0-29",
+    "stop_time_eet": "08:15",
+    "spend_cap_usd": 200,
+    "committed_dir_present": false
    }
   }
  }

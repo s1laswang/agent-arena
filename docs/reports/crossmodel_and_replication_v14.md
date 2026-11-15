@@ -1,22 +1,31 @@
-# Canary v1.4 Cross-Model Comparison and Seeds 30-59 Replication Audit
+# Canary v1.4 Cross-Model Comparison and Seeds 30-59 Extension Audit
 
-Generated deterministically offline (`0` live LLM calls, single-process) by:
+Generated deterministically offline from committed working-tree caches (`0` live LLM calls, single-process) by:
 ```bash
 python scripts/eval_replication_and_crossmodel.py
 python scripts/eval_replication_and_crossmodel.py --check
 ```
 
-## Data Rule and Replay Integrity
+## Headline Anchor and Provenance Discipline
 
-- Rules version verified: `v1.4` (`Env(tier, seed)` step-by-step replay tolerance `1e-09`).
-- Total episode records inspected and replay-verified: `875/875` valid (`0` rejected by DATA RULE).
+- **Authoritative headline table of record:** `docs/reports/gap.md` and `data/runs/committed/v1.4/paired_table_gemini.md`.
+- **Primary `hard` headline (`opencode-gemini-4-carbon`, `n=30`, `seeds 0-29`):** raw **`65% [24%, 98%]`** (`64.6% [23.8%, 98.3%]`, `+0.322 +/- 0.199` vs solver `+0.499 +/- 0.119`, paired diff `-0.177 +/- 0.194`, bootstrap 95% CI `[-0.384, -0.008]`) first; luck-adjusted **`72% [52%, 91%]`** (`72.0% [51.7%, 91.2%]`, `+0.360` vs solver `+0.499`) second.
+- **Post-hoc seed lock vs true pre-registrations (Panel Fix A, commits `92708834` and `dcd8c372`):** Primary `seeds 0-29` were **post-hoc locked in `671ed96` (28 s after `8fd4dec`), not pre-registered** (a lock against later reruns and cherry-picking). By contrast, the `seeds 30-59` hard extension (`f9fb7a4a`), the `--hint gather` causal test (`fd8c1cb0`), and the second frontier family `gpt-5.5` OpenCode `1.19.5` `v1.4` hard run (`cf394894`, `seeds 0-29`, stop `08:15` Helsinki / `$200` cap, tag `afterquery-final`; auto-included from `data/runs/committed/v1.4/opencode-gpt-5.5` if committed) were pre-registered before any episode.
+
+## Data Rule and Step-Level Replay Integrity
+
+- Rules version verified: `v1.4` (`Env(tier, seed)` step-by-step tool replay + final score tolerance `1e-09`; backward-compatible with Panel Fix D commit `1bc3e281` `invalid arguments` `data.detail` payloads).
+- Working-tree self-contained: `True` (zero reliance on unmerged or moving remote git refs).
+- Total episode records inspected and replay-verified: `872/872` valid (`42885` MCP/Env steps verified, `2` client-truncated byte lengths verified, `1` client-only unavailable-tool steps skipped, `0` rejected by DATA RULE).
 - Fleet shard wall-clock guard: `wall_s < 3590s` (`rc != timeout`, `end_reason != error`, `valid != False`).
-- Pre-registered primary `0-29` clean completions exceeding 3590s (run prior to the fleet 3600s cap, motivating Harbor's `3600s -> 10800s` bump in commit `512836b9`): `6` episodes, all `rc=0` and replay-exact.
+- Primary `0-29` clean completions exceeding 3590s (post-hoc locked in `671ed96`, run prior to the fleet 3600s cap, motivating Harbor's `3600s -> 10800s` bump in commit `512836b9`): `6` episodes, all `rc=0` and replay-exact.
+- Reference solver `0-29` split (`20 + 10` dirs, strictly filtered to `seeds 0-29` and never mixing committed `solver-hard-seeds30to59` `30-59` `n=30`): medium `solver-medium-20261114-121126` (`0-19`, `n=20`), `solver-medium-seeds20to29` (`20-29`, `n=10`); hard `solver-hard-20261114-121126` (`0-19`, `n=20`), `solver-hard-seeds20to29` (`20-29`, `n=10`); `30-59` extension/replication paired directly against `data/runs/committed/v1.4/reference/solver-hard-seeds30to59`.
+- Hard clearance disclosure (`docs/DIFFICULTY.md` W4 / `92708834`): `access_constraints` on `hard` never binds because `canary_level = 1` while every employee's clearance is `1-3`.
 - Paired bootstrap: `10000` resamples over shared seeds (`seed=0`).
 
-## Part A: Primary Evaluation (`seeds 0-29`, Pre-Registered Headline Scope)
+## Part A: Primary Evaluation (`seeds 0-29`, Post-Hoc Seed Lock `671ed96`)
 
-Seeds 0-29 per tier (pre-registered Sat 14 Nov ~22:45 Helsinki, commit 671ed96, docs/reports/gap.md) form the sole primary headline result.
+Seeds 0-29 per tier were post-hoc locked in commit 671ed96 (28 s after 8fd4dec), not pre-registered: a post-hoc lock against later reruns and cherry-picking. docs/reports/gap.md and data/runs/committed/v1.4/paired_table_gemini.md form the authoritative headline table of record (hard OpenCode gemini-4-carbon n=30: raw 65% [24%, 98%] first, luck-adjusted 72% [52%, 91%] second; on hard, access_constraints never binds per docs/DIFFICULTY.md W4). Separately, the hard seeds 30-59 extension was pre-registered before any episode in f9fb7a4a, and the gpt-5.5 OpenCode 1.19.5 v1.4 hard run (seeds 0-29, stop 08:15 / $200, tag afterquery-final) was pre-registered before any episode in cf394894.
 
 ### Medium Tier (`seeds 0-29`, `n=30` paired per cohort)
 
@@ -32,6 +41,8 @@ Seeds 0-29 per tier (pre-registered Sat 14 Nov ~22:45 Helsinki, commit 671ed96, 
 | medium | `do_nothing` | 30 | +0.000 +/- 0.000 | 0.0% [0.0%, 0.0%] | -0.645 [-0.723, -0.552] | 0.00 | 0.00 | n/a | n/a | +0.000 | 0.0% [0.0%, 0.0%] | 0/30 (0%) | +0.000 |
 | medium | `stop_early` | 30 | +0.000 +/- 0.000 | 0.0% [0.0%, 0.0%] | -0.645 [-0.723, -0.552] | 0.00 | 0.00 | n/a | n/a | +0.000 | 0.0% [0.0%, 0.0%] | 0/30 (0%) | +0.000 |
 | medium | `guess_day1` | 30 | -0.933 +/- 0.131 | -144.7% [-174.9%, -117.9%] | -1.578 [-1.710, -1.402] | 0.03 | 1.00 | 1.0 | 0.05 | -0.900 | -139.5% [-162.9%, -124.5%] | 30/30 (100%) | -0.033 |
+
+**Provenance caveat on `opencode-gemini-3.5-flash` medium (`d4bc4f3d`, `+0.434 +/- 0.236`, raw `67.3% [29.4%, 103.3%]`, luck-adjusted `75.2% [44.9%, 105.4%]`):** Brought from PR 51 in commit d4bc4f3d across three shards at three git SHAs (medium-00-14 @ c01f371a, medium-15-29 @ 55d9781c, medium-s28 @ a5d12c7e). Seed 28 failed in medium-15-29 (meta.json status INCOMPLETE: seed [28] pending rerun) and was re-run alone as medium-s28; its first attempt is not in the committed data. Verified working-tree shards: `medium-00-14` @ `c01f371a` (`n=15`), `medium-15-29` @ `55d9781c` (`n=14`, status `INCOMPLETE: seed [28] pending rerun`), `medium-s28` @ `a5d12c7e` (`n=1`).
 
 ### Hard Tier (`seeds 0-29`, `n=30` paired per cohort)
 
@@ -62,26 +73,24 @@ Seeds 0-29 per tier (pre-registered Sat 14 Nov ~22:45 Helsinki, commit 671ed96, 
 3. **Decision-quality reversal**: Scoring each accusation by its exact solver-posterior expected value `P * V - (1 - P)` drops `gemini-3.5-flash` from `+0.373` (`74.7% [35.9%, 122.8%]`) to `+0.110` (`22.0% [-22.6%, 63.2%]` of solver), while `gemini-4-carbon` rises to `+0.360` (`72.0% [51.7%, 91.2%]` of solver), giving `gemini-4-carbon` a `+0.250` (`[+0.038, +0.475]`) paired luck-adjusted advantage on `hard` alongside a `+0.167` (`[-0.006, +0.358]`) paired luck-adjusted advantage on `medium` (`n=30`).
 4. **Concordance on `hard` (`n=30`)**: Accuracy concordance is `both_correct=23`, `carbon_only=2`, `flash_only=4`, `neither=1`; sub-breakeven gamble concordance is `both_gamble=2`, `carbon_only=1`, `flash_only=8`, `neither=19`.
 
-## Part B: Hard Replication Audit (`seeds 30-59`, Strictly Separated from Headline)
+## Part B: Pre-Registered Hard Extension Audit (`seeds 30-59`, Strictly Separated from Headline)
 
-Seeds 30-59 extension/replication shards are reported (a) strictly separately on their own and (b) pooled with seeds 0-29 as a secondary sensitivity check only, never replacing the primary n=30 row (commits 671ed96 and f9fb7a4a, docs/reports/gap.md).
+Hard seeds 30-59 extension (opencode-gemini-4-carbon-ext) was pre-registered before any episode in commit f9fb7a4a (docs/reports/gap.md) to be reported (a) strictly separately on its own and (b) pooled with post-hoc locked primary seeds 0-29 (671ed96, 28 s after 8fd4dec) as a secondary sensitivity check only, never replacing the primary n=30 headline row.
 
-### Replication Cohort (`opencode-gemini-4-carbon` on Completed Seeds `[30, 34, 42, 45, 57]`) and Secondary Pooled Sensitivity
+### Committed G1 Extension (`opencode-gemini-4-carbon-ext` on Valid Seeds `[34, 37]`) and Secondary Pooled Sensitivity (`n=32`)
 
 | tier | cohort | n | score +/- 95% CI | / solver [95% CI] | paired diff [95% CI] | acc | accused | day | mean P(acc) | luck-adj | luck-adj / solver [95% CI] | gambles | luck |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| hard | `opencode-gemini-4-carbon-replication` | 5 | +0.656 +/- 0.110 | 264.5% [115.4%, 304.0%] | +0.408 [+0.088, +0.980] | 1.00 | 1.00 | 11.0 | 0.89 | +0.472 | 109.6% [57.7%, 179.0%] | 0/5 (0%) | +0.184 |
-| hard | `opencode-gemini-4-carbon-pooled-sensitivity` | 35 | +0.370 +/- 0.175 | 79.9% [41.6%, 124.4%] | -0.093 [-0.290, +0.090] | 0.86 | 0.97 | 12.9 | 0.88 | +0.376 | 76.7% [57.7%, 95.9%] | 3/35 (9%) | -0.006 |
+| hard | `opencode-gemini-4-carbon-ext` | 2 | +0.745 +/- 0.088 | 101.4% [90.9%, 112.9%] | +0.010 [-0.070, +0.090] | 1.00 | 1.00 | 5.5 | 0.98 | +0.710 | 109.4% [105.1%, 113.6%] | 0/2 (0%) | +0.035 |
+| hard | `opencode-gemini-4-carbon-pooled-sensitivity` | 32 | +0.349 +/- 0.190 | 67.9% [31.7%, 99.7%] | -0.165 [-0.358, -0.002] | 0.84 | 0.97 | 12.7 | 0.89 | +0.381 | 75.0% [55.8%, 93.5%] | 3/32 (9%) | -0.033 |
 
 | seed | carbon score | carbon day | carbon P(acc) | carbon luck-adj | solver score | solver day | solver luck-adj |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 30 | +0.540 | 11 | 0.909 | +0.400 | -1.000 | 18 | +0.175 |
-| 34 | +0.820 | 8 | 0.650 | +0.183 | +0.700 | 6 | +0.663 |
-| 42 | +0.570 | 12 | 0.969 | +0.521 | +0.510 | 10 | +0.505 |
-| 45 | +0.590 | 16 | 0.973 | +0.547 | +0.490 | 11 | +0.423 |
-| 57 | +0.760 | 8 | 0.970 | +0.707 | +0.540 | 8 | +0.384 |
+| 34 | +0.790 | 5 | 0.979 | +0.752 | +0.700 | 6 | +0.663 |
+| 37 | +0.700 | 6 | 0.981 | +0.668 | +0.770 | 5 | +0.635 |
 
-Note on small-sample replication ratio (`n=5`): on seed `30` the reference solver suffered a 5% canary fingerprint flip (`score = -1.000`, `luck_adjusted = +0.175`), depressing the 5-seed raw solver denominator to `+0.248` (vs `+0.498` across all 30 seeds `30-59`). Under the secondary pooled sensitivity check (`n=35`), the luck-adjusted ratio is `76.7% [57.7%, 95.9%]` (95% CI upper bound `< 100%`). Per pre-registration (`docs/reports/gap.md`), `primary_0_29` (`n=30`) remains the sole headline.
+- **G1 extension provenance (`f9fb7a4a` / PR 60):** `2` valid episodes completed (`seeds=[34, 37]`, raw `101% [91%, 113%]` / `101.4% [90.9%, 112.9%]`, luck-adjusted `109% [105%, 114%]` / `109.4% [105.1%, 113.6%]`) before early stop at `03:22` Helsinki to preserve shared carbon quota for the judge rehearsal; `31`/`31` excluded attempts hit `infra:provider_quota` (`meta.json` git SHA `f9fb7a4a`). Per commit d4bc4f3d, PR 51's 5-seed opencode-gemini-4-carbon hard shard on origin/fr8/canary/frontier was intentionally not brought into justSilas because it overlapped this pre-registered G1 seeds 30-59 extension.
+- **Secondary pooled sensitivity (`n=32`, `seeds 0-29 + [34, 37]`):** `+0.349 +/- 0.190` vs solver `+0.514` (vs `+0.498 +/- 0.156` across all 30 seeds `30-59`), raw `68% [32%, 100%]` (`67.9% [31.7%, 99.7%]`), paired diff `-0.165 +/- 0.182` (bootstrap 95% CI `[-0.358, -0.002]`), luck-adjusted `75% [56%, 93%]` (`75.0% [55.8%, 93.5%]`). Cross-check against `paired_table_{ext30to59,pooled0to59}.json`: `checked=True`, `ext_match=True`, `pooled_match=True`, `solver30to59_match=True`. Per the post-hoc seed lock (`671ed96`) and pre-registered extension rule (`f9fb7a4a`), `primary_0_29` (`n=30`) remains the sole headline.
 
 ### Reference Baselines on Hard Seeds `30-59` (`n=30` Each, Post-PR16 Verification)
 

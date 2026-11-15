@@ -35,6 +35,10 @@ PLUS_MINUS = chr(0x00B1)
 SCHEMA_VERSION = "eval_suite_index_v14.v1"
 TIERS_VERSION = "v1.4"
 PRIMARY_SEEDS = "0-29"
+PRIMARY_SEEDS_LOCK = (
+    "post-hoc locked paired dev seeds 0-29 (671ed96, 28 s after 8fd4dec; "
+    "lock against later reruns and cherry-picking, not a pre-registration)"
+)
 N_PRIMARY_SEEDS = 30
 FLOAT_TOL = 1e-9
 MAX_INDEX_BYTES = 50 * 1024
@@ -90,6 +94,7 @@ OPTIONAL_VERIFIER_NAMES: tuple[str, ...] = (
     "ladder_pareto_v14",
     "version_evolution_v14",
     "version_evolution_audit",
+    "paired_seed_diagnostics_v14",
 )
 
 SECRET_AND_LEAK_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -344,6 +349,108 @@ def _load_json_required(path: Path, root: Path) -> dict[str, Any]:
     return data
 
 
+def _load_repo_milestones(root: Path) -> dict[str, Any]:
+    g1_summary: dict[str, Any] | None = None
+    pooled_path = root / "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.json"
+    if pooled_path.is_file():
+        rows = json.loads(pooled_path.read_text(encoding="utf-8"))
+        if isinstance(rows, list):
+            ext_row = next(
+                (
+                    r
+                    for r in rows
+                    if isinstance(r, dict)
+                    and r.get("group") == "v1.4/opencode-gemini-4-carbon-ext"
+                    and r.get("tier") == "hard"
+                ),
+                None,
+            )
+            pool_row = next(
+                (
+                    r
+                    for r in rows
+                    if isinstance(r, dict)
+                    and r.get("group") == "v1.4/opencode-gemini-4-carbon+v1.4/opencode-gemini-4-carbon-ext"
+                    and r.get("tier") == "hard"
+                ),
+                None,
+            )
+            if ext_row is not None and pool_row is not None:
+                g1_summary = {
+                    "prereg_commit": "f9fb7a4a",
+                    "data_commit": "364fe657",
+                    "ext_only": {
+                        "n": int(ext_row["n"]),
+                        "seeds": [int(s) for s in ext_row["seeds"]],
+                        "mean": float(ext_row["mean"]),
+                        "ci": float(ext_row["ci"]),
+                        "solver_same_seeds": float(ext_row["solver_same_seeds"]),
+                        "ratio": float(ext_row["ratio"]),
+                        "ratio_ci": [float(ext_row["ratio_lo"]), float(ext_row["ratio_hi"])],
+                        "luck_adj_ratio": float(ext_row["post_expected_ratio"]),
+                        "luck_adj_ci": [
+                            float(ext_row["post_expected_lo"]),
+                            float(ext_row["post_expected_hi"]),
+                        ],
+                    },
+                    "pooled_0_59": {
+                        "n": int(pool_row["n"]),
+                        "mean": float(pool_row["mean"]),
+                        "ci": float(pool_row["ci"]),
+                        "solver_same_seeds": float(pool_row["solver_same_seeds"]),
+                        "ratio": float(pool_row["ratio"]),
+                        "ratio_ci": [float(pool_row["ratio_lo"]), float(pool_row["ratio_hi"])],
+                        "luck_adj_ratio": float(pool_row["post_expected_ratio"]),
+                        "luck_adj_ci": [
+                            float(pool_row["post_expected_lo"]),
+                            float(pool_row["post_expected_hi"]),
+                        ],
+                        "diff": float(pool_row["diff"]),
+                        "diff_ci": float(pool_row["diff_ci"]),
+                    },
+                }
+
+    ladder_summary: dict[str, Any] | None = None
+    ladder_path = root / "results/gemini/ladder.json"
+    if ladder_path.is_file():
+        lad = json.loads(ladder_path.read_text(encoding="utf-8"))
+        if isinstance(lad, dict) and isinstance(lad.get("rows"), list) and "episodes" in lad:
+            gemma_d = lad.get("gemma") if isinstance(lad.get("gemma"), dict) else {}
+            ladder_summary = {
+                "commit": "eb363eb9",
+                "episodes": int(lad["episodes"]),
+                "cells": len(lad["rows"]),
+                "gemma_episodes": int(gemma_d.get("episodes", 0)),
+            }
+
+    return {
+        "seed_lock": {
+            "commit": "671ed96",
+            "primary_commit": "8fd4dec",
+            "delay_seconds": 28,
+            "classification": "post_hoc_lock_not_preregistered",
+            "solver_hard_reference_dirs": [
+                "data/runs/committed/v1.4/reference/solver-hard-20261114-121126",
+                "data/runs/committed/v1.4/reference/solver-hard-seeds20to29",
+            ],
+        },
+        "replay_panel_fix_d": {
+            "commit": "1bc3e281",
+            "invalid_arguments_detail_compat": True,
+        },
+        "g1_partial_extension": g1_summary,
+        "canonical_gemini_ladder": ladder_summary,
+        "gpt_5_5_preregistration": {
+            "commit": "cf394894",
+            "env_tag": "afterquery-final",
+            "seeds": "0-29",
+            "stop_time_eet": "08:15",
+            "spend_cap_usd": 200,
+            "committed_dir_present": (root / "data/runs/committed/v1.4/opencode-gpt-5.5").is_dir(),
+        },
+    }
+
+
 def build_core_headline_summary(root: Path) -> dict[str, Any]:
     cm = _load_json_required(root / "results/eval_v14/claims_manifest.json", root)
     hgt = _load_json_required(root / "results/eval_v14/headline_gap_table_v14.json", root)
@@ -381,8 +488,24 @@ def build_core_headline_summary(root: Path) -> dict[str, Any]:
             "paired_groups_checked": int(vhyg["paired_groups_checked"]),
             "judge_table_v14_rows_checked": int(vhyg["judge_table_v14_rows_checked"]),
             "v14_meta_files_checked": int(vhyg["v14_meta_files_checked"]),
-            "preregistered_frontier_cohorts": int(vhyg["preregistered_frontier_cohorts"]),
-            "preregistration_rule_verified": bool(vhyg["preregistration_rule_verified"]),
+            "primary_locked_frontier_cohorts": int(
+                vhyg.get(
+                    "posthoc_locked_primary_frontier_cohorts",
+                    vhyg.get(
+                        "locked_primary_frontier_cohorts",
+                        vhyg.get(
+                            "primary_locked_frontier_cohorts",
+                            vhyg.get("primary_frontier_cohorts", vhyg.get("preregistered_frontier_cohorts", 0)),
+                        ),
+                    ),
+                )
+            ),
+            "seed_lock_rule_verified": bool(
+                vhyg.get(
+                    "seed_lock_rule_verified",
+                    vhyg.get("post_hoc_seed_lock_verified", vhyg.get("preregistration_rule_verified", False)),
+                )
+            ),
             "active_docs_checked_count": len(vhyg.get("active_docs_checked") or []),
             "protected_path_rules_count": int(cm["protected_path_rules_count"]),
             "secret_pattern_rules_count": int(cm["secret_pattern_rules_count"]),
@@ -407,11 +530,18 @@ def build_core_headline_summary(root: Path) -> dict[str, Any]:
         ("medium_inproc_gemini_4_carbon", ("medium", "gemini:gemini-4-carbon", "frontier")),
         ("medium_solver", ("medium", "solver", "reference")),
     )
+    optional_cohort_specs = (
+        ("hard_opencode_gpt_5_5", ("hard", "opencode:openai/gpt-5.5", "frontier")),
+        ("medium_opencode_gemini_3_5_flash", ("medium", "opencode:google/gemini-3.5-flash", "frontier")),
+    )
     cohorts_out: dict[str, Any] = {}
     for c_name, key in cohort_specs:
         if key not in by_tak:
             raise KeyError(f"headline_gap_table_v14.json missing Section A cohort {key}")
         cohorts_out[c_name] = _extract_hgt_cohort(by_tak[key])
+    for c_name, key in optional_cohort_specs:
+        if key in by_tak:
+            cohorts_out[c_name] = _extract_hgt_cohort(by_tak[key])
 
     hgt_ver = hgt["verification"]
     headline_summary = {
@@ -585,6 +715,8 @@ def build_core_headline_summary(root: Path) -> dict[str, Any]:
         "seeds": [int(s) for s in ha["seeds"]],
         "ablation_episodes_verified": int(ha_rv["ablation_episodes_verified"]),
         "context_episodes_verified": int(ha_rv["context_episodes_verified"]),
+        "total_steps_verified": int(ha_rv.get("total_steps_verified", 0)),
+        "step_mismatches": int(ha_rv.get("step_mismatches", 0)),
         "all_passed": bool(ha_rv["all_passed"]),
         "arms": ha_arms,
         "paired_vs_control": ha_vs_ctrl,
@@ -607,6 +739,7 @@ def build_core_headline_summary(root: Path) -> dict[str, Any]:
             "harness_and_tier_2x2": harness_tier_summary,
             "judge_rerun_power": rerun_power_summary,
             "hint_ablation": hint_ablation_summary,
+            "repo_milestones": _load_repo_milestones(root),
         }
     )
 
@@ -672,6 +805,7 @@ def build_suite_index(root: Path, index_path: Path) -> dict[str, Any]:
             "tiers_version": TIERS_VERSION,
             "float_tolerance": FLOAT_TOL,
             "primary_seeds": PRIMARY_SEEDS,
+            "primary_seeds_lock": PRIMARY_SEEDS_LOCK,
             "n_primary_seeds_per_tier": N_PRIMARY_SEEDS,
             "core_verifiers": core_manifest,
             "core_artifacts": core_artifacts,
@@ -741,11 +875,27 @@ def render_overview_md(core_summary: dict[str, Any]) -> str:
     vc_d = ha["paired_vs_control"]["decoy_chase"]
     ha_seeds = ha["seeds"]
     ha_seed_lbl = f"{ha_seeds[0]}-{ha_seeds[-1]}"
+    rm = core_summary.get("repo_milestones") or {}
+    g1_ext = rm.get("g1_partial_extension")
+    lad_canon = rm.get("canonical_gemini_ladder")
+    gpt55_pre = rm.get("gpt_5_5_preregistration") or {}
+
+    if lad_canon is not None:
+        ladder_clause = (
+            f"and `{lad_canon['episodes']}` canonical Gemini thinking-ladder episodes across "
+            f"`{lad_canon['cells']}` cells (`eb363eb9`, plus `{lad_canon['gemma_episodes']}` Gemma episodes in "
+            f"`results/gemini/ladder.json`; `{ver['ladder_cached_episodes_replayed']}` local archive episodes step-replayed)"
+        )
+    else:
+        ladder_clause = (
+            f"and `{ver['ladder_cached_episodes_replayed']}` native multi-model thinking-ladder episodes "
+            f"(`{ver['ladder_total_reported_episodes']}` total reported across `{ver['ladder_total_reported_cells']}` cells)"
+        )
 
     lines: list[str] = [
         H1 + "Canary v1.4 Evaluation Suite: One-Command Verification & Evidence Map",
         "",
-        f"**Scope.** Rules `{TIERS_VERSION}`, pre-registered paired dev seeds `{PRIMARY_SEEDS}` (`n = {N_PRIMARY_SEEDS}` per tier on every primary Section A row), 100% deterministic offline `canary.env.Env(tier, seed)` replay verification (`0` live LLM calls, `0` API keys, single-process).",
+        f"**Scope.** Rules `{TIERS_VERSION}`, post-hoc locked paired dev seeds `{PRIMARY_SEEDS}` (`671ed96`, 28 s after `8fd4dec`; `n = {N_PRIMARY_SEEDS}` per tier on every primary Section A row; lock against later reruns and cherry-picking, not a pre-registration), 100% deterministic offline `canary.env.Env(tier, seed)` replay verification (`0` live LLM calls, `0` API keys, single-process, `1bc3e281` `data.detail` step-replay compatible).",
         "",
         "```bash",
         "python scripts/run_all_eval_checks.py --check",
@@ -771,28 +921,38 @@ def render_overview_md(core_summary: dict[str, Any]) -> str:
             "",
             f"- **Auto-discovered sibling `--check` modules:** `run_all_eval_checks.py --check` also discovers and verifies any present sibling scripts among {opt_list_str} while keeping `core_headline_summary` pinned to the 5 deterministic core JSON artifacts (`tol = 1e-9`).",
             "",
-            H2 + "2. Headline Gap Table (Paired Seeds `0-29`, `n = 30` per Tier, Replay-Verified)",
+            H2 + "2. Headline Gap Table (Post-Hoc Locked Paired Seeds `0-29`, `n = 30` per Tier, Replay-Verified)",
             "",
-            f"Recomputed with `{hgt['bootstrap_resamples']:,}` paired bootstrap resamples (`rng_seed = 0`) across `{ver['frontier_cached_episodes_replayed']}` primary frontier episodes, `{ver['stored_solver_episodes_replayed']}` stored reference solver episodes, `{ver['inproc_baseline_episodes_verified']}` scripted baseline episodes, and `{ver['ladder_cached_episodes_replayed']}` native multi-model thinking-ladder episodes (`{ver['ladder_total_reported_episodes']}` total reported across `{ver['ladder_total_reported_cells']}` cells) with **zero** `Env` score, accusation, or tool-output mismatches.",
+            f"- **Primary `n = 30` Hard headline (raw first, luck-adjusted second):** OpenCode + `gemini-4-carbon` over MCP scores **`{_fmt_pct_ci(oc_h['ratio'], oc_h['ratio_ci'])}`** of the reference solver raw (`{oc_h['mean']:+.3f} +/- {oc_h['score_ci']:.3f}` vs `{sv_h['mean']:+.3f} +/- {sv_h['score_ci']:.3f}`) and **`{_fmt_pct_ci(oc_h['luck_adj_ratio'], oc_h['luck_adj_ci'])}`** luck-adjusted (`{oc_h['luck_adjusted_score']:+.3f}` vs `{sv_h['luck_adjusted_score']:+.3f}`, `p_luck = {_fmt_p(oc_h['p_wilcoxon_luck'])}`). Reference solver seeds `0-29` come from two committed directories (`solver-hard-20261114-121126` seeds `0-19` + `solver-hard-seeds20to29` seeds `20-29`); Hard's canary clearance rule never binds (`docs/DIFFICULTY.md` W4).",
+            f"- **Replay corpus:** Recomputed with `{hgt['bootstrap_resamples']:,}` paired bootstrap resamples (`rng_seed = 0`) across `{ver['frontier_cached_episodes_replayed']}` primary frontier episodes, `{ver['stored_solver_episodes_replayed']}` stored reference solver episodes, `{ver['inproc_baseline_episodes_verified']}` scripted baseline episodes, {ladder_clause} with **zero** `Env` score, accusation, or tool-output mismatches (`1bc3e281` `invalid arguments` `data.detail` rule enforced for pre-`1bc3e281` transcripts).",
             "",
             "| Tier | Cohort (`n = 30`, seeds `0-29`) | Raw Score +/- 95% CI | Raw / Solver `[95% CI]` | Luck-Adj Score | Luck-Adj / Solver `[95% CI]` | `p_luck` (Wilcoxon) | Cal. `pass^3` | Winnable / Solver `[95% CI]` |",
             "|---|---|---:|---|---:|---|---:|---:|---|",
         ]
     )
 
-    table_rows = (
+    table_rows: list[tuple[str, str, dict[str, Any], bool]] = [
         ("hard", "OpenCode + gemini-4-carbon (judges' MCP)", oc_h, False),
         ("hard", "OpenCode + gemini-4-carbon (0-imputed sens.)", oc_h0, False),
         ("hard", "in-process gemini-4-carbon (full history)", ip_h, False),
         ("hard", "OpenCode + gemini-3.5-flash (judges' MCP)", fl_h, False),
-        ("hard", "reference solver (Harbor oracle)", sv_h, True),
-        ("hard", "grok_tactics (scripted baseline)", gt_h, False),
-        ("hard", "do_nothing / stop_early (zero baseline)", dn_h, False),
-        ("hard", "guess_day1 (day-1 guess baseline)", g1_h, False),
-        ("medium", "OpenCode + gemini-4-carbon (judges' MCP)", oc_m, False),
-        ("medium", "in-process gemini-4-carbon (full history)", ip_m, False),
-        ("medium", "reference solver (Harbor oracle)", sv_m, True),
+    ]
+    if "hard_opencode_gpt_5_5" in coh:
+        table_rows.append(("hard", "OpenCode + gpt-5.5 (judges' MCP)", coh["hard_opencode_gpt_5_5"], False))
+    table_rows.extend(
+        [
+            ("hard", "reference solver (Harbor oracle)", sv_h, True),
+            ("hard", "grok_tactics (scripted baseline)", gt_h, False),
+            ("hard", "do_nothing / stop_early (zero baseline)", dn_h, False),
+            ("hard", "guess_day1 (day-1 guess baseline)", g1_h, False),
+            ("medium", "OpenCode + gemini-4-carbon (judges' MCP)", oc_m, False),
+            ("medium", "in-process gemini-4-carbon (full history)", ip_m, False),
+        ]
     )
+    if "medium_opencode_gemini_3_5_flash" in coh:
+        table_rows.append(("medium", "OpenCode + gemini-3.5-flash (judges' MCP)", coh["medium_opencode_gemini_3_5_flash"], False))
+    table_rows.append(("medium", "reference solver (Harbor oracle)", sv_m, True))
+
     for tier_lbl, label, r, is_ref in table_rows:
         lines.append(
             f"| `{tier_lbl}` | {label} | `{r['mean']:+.3f} +/- {r['score_ci']:.3f}` | "
@@ -801,6 +961,29 @@ def render_overview_md(core_summary: dict[str, Any]) -> str:
             f"`{_fmt_p(r['p_wilcoxon_luck'], is_ref)}` | `{r['pass3_calibrated']:.3f}` | "
             f"`{_fmt_pct_ci(r['winnable_ratio'], r['winnable_ratio_ci'], is_ref)}` |"
         )
+
+    lines.append("")
+    if g1_ext is not None:
+        g1_e = g1_ext["ext_only"]
+        g1_p = g1_ext["pooled_0_59"]
+        g1_seeds_s = ", ".join(str(s) for s in g1_e["seeds"])
+        lines.append(
+            f"- **Pre-registered G1 extension (`{g1_ext['prereg_commit']}`, data `{g1_ext['data_commit']}`, stopped early for rehearsal quota):** "
+            f"`n = {g1_e['n']}` completed valid OpenCode `gemini-4-carbon` hard episodes (`seeds = [{g1_seeds_s}]`, "
+            f"`{g1_e['mean']:+.3f} +/- {g1_e['ci']:.3f}` vs solver `{g1_e['solver_same_seeds']:+.3f}`, "
+            f"raw `{_fmt_pct_ci(g1_e['ratio'], g1_e['ratio_ci'])}`, luck-adjusted `{_fmt_pct_ci(g1_e['luck_adj_ratio'], g1_e['luck_adj_ci'])}`); "
+            f"pooled `n = {g1_p['n']}` (`0-29` + `[{g1_seeds_s}]`) is **`{_fmt_pct_ci(g1_p['ratio'], g1_p['ratio_ci'])}`** raw "
+            f"(`{g1_p['mean']:+.3f} +/- {g1_p['ci']:.3f}` vs solver `{g1_p['solver_same_seeds']:+.3f}`, paired diff `{g1_p['diff']:+.3f} +/- {g1_p['diff_ci']:.3f}`) "
+            f"and **`{_fmt_pct_ci(g1_p['luck_adj_ratio'], g1_p['luck_adj_ci'])}`** luck-adjusted (`make reproduce` pools `n = 32` OpenCode and `n = 60` solver in `judge_table.md`, while `HEADLINE` recomputes locked `n = 30`)."
+        )
+    gpt55_state = (
+        "committed directory `data/runs/committed/v1.4/opencode-gpt-5.5` present"
+        if gpt55_pre.get("committed_dir_present")
+        else "pre-registered before any episode (`data/runs/committed/v1.4/opencode-gpt-5.5` auto-included if committed)"
+    )
+    lines.append(
+        f"- **Pre-registered second frontier family (`{gpt55_pre.get('commit', 'cf394894')}`):** `gpt-5.5` via OpenCode 1.19.5 over MCP on `v1.4` hard seeds `{gpt55_pre.get('seeds', '0-29')}` (env tag `{gpt55_pre.get('env_tag', 'afterquery-final')}`, stop `{gpt55_pre.get('stop_time_eet', '08:15')}` Helsinki / `${gpt55_pre.get('spend_cap_usd', 200)}` cap; {gpt55_state})."
+    )
 
     lines.extend(
         [
@@ -819,11 +1002,11 @@ def render_overview_md(core_summary: dict[str, Any]) -> str:
             "",
             H2 + f"5. Fact-Only Hint Ablation Causal Audit (`v1.4` Hard, Paired Seeds `{ha_seed_lbl}`)",
             "",
-            f"- **Replay & mechanism shifts (`{ha['ablation_episodes_verified']}/30` ablation + `{ha['context_episodes_verified']}/30` context episodes verified):** Appending single-sentence rule reminders (`HINTS_V2`) to in-process `gemini-4-carbon` shifts mechanism cleanly: `premature_accusation` (`{ha_p['score_mean']:+.3f} +/- {ha_p['score_ci95']:.3f}` raw, `{ha_p['luck_adjusted_mean']:+.3f}` LA vs `control` `{ha_c['score_mean']:+.3f} +/- {ha_c['score_ci95']:.3f}` raw, `{ha_c['luck_adjusted_mean']:+.3f}` LA) eliminates negative-EV gambles (`{ha_c['ev_negative_gamble_count']} -> {ha_p['ev_negative_gamble_count']}`, `P(accused)` `{ha_c['p_accused_mean']:.3f} -> {ha_p['p_accused_mean']:.3f}`, interviews `{vc_p['interviews_diff_mean']:+.1f} [{vc_p['interviews_diff_boot_ci95'][0]:+.1f}, {vc_p['interviews_diff_boot_ci95'][1]:+.1f}]`); `decoy_chase` (`{ha_d['score_mean']:+.3f} +/- {ha_d['score_ci95']:.3f}` raw, `{ha_d['luck_adjusted_mean']:+.3f}` LA; paired diff vs `control` `{vc_d['score_diff_mean']:+.3f} [{vc_d['score_diff_boot_ci95'][0]:+.3f}, {vc_d['score_diff_boot_ci95'][1]:+.3f}]` raw, `{vc_d['luck_adjusted_diff_mean']:+.3f} [{vc_d['luck_adjusted_diff_boot_ci95'][0]:+.3f}, {vc_d['luck_adjusted_diff_boot_ci95'][1]:+.3f}]` LA) raises day-1 canary planting (`{ha_c['day1_canary_count']}/10 -> {ha_d['day1_canary_count']}/10`) and cuts interviews (`{vc_d['interviews_diff_mean']:+.1f} [{vc_d['interviews_diff_boot_ci95'][0]:+.1f}, {vc_d['interviews_diff_boot_ci95'][1]:+.1f}]`). At `n = {ha_c['n']}`, paired score 95% CIs straddle `0.000` (unhinted `inproc` replicate on `{ha_seed_lbl}`: `{ha['inproc_no_hint_context']['score_mean']:+.3f}` raw / `{ha['inproc_no_hint_context']['luck_adjusted_mean']:+.3f}` LA, vs `solver` `{ha['solver_same_seeds_context']['score_mean']:+.3f}` / `{ha['solver_same_seeds_context']['luck_adjusted_mean']:+.3f}`), so we claim causal mechanism shifts rather than `n = 10` score significance.",
+            f"- **Replay & mechanism shifts (`{ha['ablation_episodes_verified']}/30` ablation + `{ha['context_episodes_verified']}/30` context episodes, `{ha['total_steps_verified']}` step-verified tool calls, `{ha['step_mismatches']}` mismatches):** Appending single-sentence rule reminders (`HINTS_V2`) to in-process `gemini-4-carbon` shifts mechanism cleanly: `premature_accusation` (`{ha_p['score_mean']:+.3f} +/- {ha_p['score_ci95']:.3f}` raw, `{ha_p['luck_adjusted_mean']:+.3f}` LA vs `control` `{ha_c['score_mean']:+.3f} +/- {ha_c['score_ci95']:.3f}` raw, `{ha_c['luck_adjusted_mean']:+.3f}` LA) eliminates negative-EV gambles (`{ha_c['ev_negative_gamble_count']} -> {ha_p['ev_negative_gamble_count']}`, `P(accused)` `{ha_c['p_accused_mean']:.3f} -> {ha_p['p_accused_mean']:.3f}`, interviews `{vc_p['interviews_diff_mean']:+.1f} [{vc_p['interviews_diff_boot_ci95'][0]:+.1f}, {vc_p['interviews_diff_boot_ci95'][1]:+.1f}]`); `decoy_chase` (`{ha_d['score_mean']:+.3f} +/- {ha_d['score_ci95']:.3f}` raw, `{ha_d['luck_adjusted_mean']:+.3f}` LA; paired diff vs `control` `{vc_d['score_diff_mean']:+.3f} [{vc_d['score_diff_boot_ci95'][0]:+.3f}, {vc_d['score_diff_boot_ci95'][1]:+.3f}]` raw, `{vc_d['luck_adjusted_diff_mean']:+.3f} [{vc_d['luck_adjusted_diff_boot_ci95'][0]:+.3f}, {vc_d['luck_adjusted_diff_boot_ci95'][1]:+.3f}]` LA) raises day-1 canary planting (`{ha_c['day1_canary_count']}/10 -> {ha_d['day1_canary_count']}/10`) and cuts interviews (`{vc_d['interviews_diff_mean']:+.1f} [{vc_d['interviews_diff_boot_ci95'][0]:+.1f}, {vc_d['interviews_diff_boot_ci95'][1]:+.1f}]`). At `n = {ha_c['n']}`, paired score 95% CIs straddle `0.000` (unhinted `inproc` replicate on `{ha_seed_lbl}`: `{ha['inproc_no_hint_context']['score_mean']:+.3f}` raw / `{ha['inproc_no_hint_context']['luck_adjusted_mean']:+.3f}` LA, vs `solver` `{ha['solver_same_seeds_context']['score_mean']:+.3f}` / `{ha['solver_same_seeds_context']['luck_adjusted_mean']:+.3f}`), so we claim causal mechanism shifts rather than `n = 10` score significance (the separate pre-registered OpenCode `--hint gather` protocol in `docs/reports/gap.md` `fd8c1cb0` was stopped before `05:40` to preserve shared Gemini quota for the Harbor rehearsal).",
             "",
             H2 + "6. 5-Gate Claims, Version & Protected-Path Hygiene (`claims_manifest.json`)",
             "",
-            f"- **All `{cm['gates_passed_count']}/{cm['gate_count']}` deterministic gates PASS (`{cm['total_violations']}` violations):** Gate 1 cross-checks `README.md`, `docs/reports/gap.md`, `results/judge_table.md`, and `{cm['committed_paired_rows_verified']}` committed `paired_table_gemini.json` rows within `1e-9`; Gate 2 verifies seed completeness (`0..29`, `0` duplicates) and 100% `Env` step replay; Gate 3 confirms `do_nothing` (`{cm['hard_baselines']['do_nothing_score_ci']}`) and `stop_early` (`{cm['hard_baselines']['stop_early_score_ci']}`) equal `0.0` while `guess_day1` averages `{cm['hard_baselines']['guess_day1_300secret_mean']:+.3f}` (max `{cm['hard_baselines']['guess_day1_300secret_max']:+.2f} < 0`) across `300` fresh judge secrets; Gate 4 enforces zero `v1.2`/`v1.3`/`superseded` mixing across `{cm['hygiene']['v14_meta_files_checked']}` `v1.4` meta files and `{cm['hygiene']['active_docs_checked_count']}` active docs (`PRIMARY` vs `REPLICATION` seed rule verified); Gate 5 enforces all `{cm['hygiene']['protected_path_rules_count']}` `.github/protected-paths.txt` rules and `{cm['hygiene']['secret_pattern_rules_count']}` secret/mole-leak pattern classes across `results/eval*` and `docs/reports/`.",
+            f"- **All `{cm['gates_passed_count']}/{cm['gate_count']}` deterministic gates PASS (`{cm['total_violations']}` violations):** Gate 1 cross-checks `README.md`, `docs/reports/gap.md`, `results/judge_table.md`, and `{cm['committed_paired_rows_verified']}` committed `paired_table_gemini.json` rows within `1e-9`; Gate 2 verifies seed completeness (`0..29`, `0` duplicates) and 100% `Env` step replay; Gate 3 confirms `do_nothing` (`{cm['hard_baselines']['do_nothing_score_ci']}`) and `stop_early` (`{cm['hard_baselines']['stop_early_score_ci']}`) equal `0.0` while `guess_day1` averages `{cm['hard_baselines']['guess_day1_300secret_mean']:+.3f}` (max `{cm['hard_baselines']['guess_day1_300secret_max']:+.2f} < 0`) across `300` fresh judge secrets; Gate 4 enforces zero `v1.2`/`v1.3`/`superseded` mixing across `{cm['hygiene']['v14_meta_files_checked']}` `v1.4` meta files and `{cm['hygiene']['active_docs_checked_count']}` active docs (`PRIMARY` post-hoc seed lock `671ed96` vs `REPLICATION` and pre-registered `EXTENSION` `f9fb7a4a` / `cf394894` verified); Gate 5 enforces all `{cm['hygiene']['protected_path_rules_count']}` `.github/protected-paths.txt` rules and `{cm['hygiene']['secret_pattern_rules_count']}` secret/mole-leak pattern classes across `results/eval*` and `docs/reports/`.",
             "",
         ]
     )
@@ -893,6 +1076,8 @@ def verify_suite_artifacts(
         errors.append(f"float_tolerance mismatch: got {stored.get('float_tolerance')!r}")
     if stored.get("primary_seeds") != PRIMARY_SEEDS:
         errors.append(f"primary_seeds mismatch: got {stored.get('primary_seeds')!r}")
+    if stored.get("primary_seeds_lock") != PRIMARY_SEEDS_LOCK:
+        errors.append(f"primary_seeds_lock mismatch: got {stored.get('primary_seeds_lock')!r}")
     if stored.get("n_primary_seeds_per_tier") != N_PRIMARY_SEEDS:
         errors.append(f"n_primary_seeds_per_tier mismatch: got {stored.get('n_primary_seeds_per_tier')!r}")
 

@@ -9,6 +9,7 @@ import json
 import math
 import os
 import random
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -20,7 +21,7 @@ if str(ROOT) not in sys.path:
 os.environ.setdefault("CANARY_ALLOW_DEV", "1")
 
 from canary.agents.llm_policy import HINT_SETS
-from canary.env import Env
+from canary.env import Env, _SPECS
 from canary.rules import DEV_SEEDS, TIERS_VERSION, tier_params_for_episode
 from canary.solver.policy import SolverPolicy, accuse_value
 from canary.types import Step
@@ -35,8 +36,48 @@ DEFAULT_OUT_MD = ROOT / "docs/reports/hint_ablation_v14_audit.md"
 TIER = "hard"
 BOOTSTRAP_B = 10000
 BOOTSTRAP_RNG_SEED = 0
-MAX_JSON_BYTES = 80 * 1024
+MAX_JSON_BYTES = 65 * 1024
 H = chr(35)
+
+_OC_TRUNC = re.compile(
+    r"\A\s*\.\.\.(\d+) bytes truncated\.\.\.\s+The tool call succeeded but the output was "
+    r"truncated\. Full output saved to: "
+)
+_OC_NO_TOOL = "Model tried to call unavailable tool"
+
+
+def _canon_payload(obj: Any) -> str:
+    return json.dumps(obj, sort_keys=True, default=str)
+
+
+def _norm_recorded_result(want: Any) -> Any:
+    if isinstance(want, dict) and isinstance(want.get("error"), str) and want["error"].startswith("{"):
+        try:
+            inner = json.loads(want["error"])
+        except ValueError:
+            return want
+        if isinstance(inner, dict) and {"ok", "data", "error"} <= set(inner):
+            return inner
+    return want
+
+
+def _client_truncated_bytes(want: Any) -> int | None:
+    if isinstance(want, dict) and set(want) == {"raw"} and isinstance(want["raw"], str):
+        m = _OC_TRUNC.match(want["raw"])
+        if m:
+            return int(m.group(1))
+    return None
+
+
+def _client_only_step(st: Step) -> bool:
+    res = st.result
+    return (
+        st.tool not in _SPECS
+        and isinstance(res, dict)
+        and res.get("ok") is False
+        and isinstance(res.get("error"), str)
+        and res["error"].startswith(_OC_NO_TOOL)
+    )
 
 
 def parse_seed_spec(spec: str) -> list[int]:
@@ -133,6 +174,9 @@ def parse_jsonl(text: str, tier: str, seeds: set[int]) -> dict[int, dict[str, An
         ep = json.loads(line)
         if ep.get("tier") != tier:
             continue
+        meta = ep.get("meta") if isinstance(ep.get("meta"), dict) else {}
+        if meta.get("valid") is False or ep.get("valid") is False:
+            continue
         seed = int(ep["seed"])
         if seed not in seeds:
             continue
@@ -220,10 +264,15 @@ def load_context_raw(
     if not solver_files:
         solver_files = sorted((committed_v14_dir / "reference").glob("solver-*/episodes.jsonl"))
     solver_eps: dict[int, dict[str, Any]] = {}
+    only_primary_range = bool(seeds) and all(0 <= s < 30 for s in seeds)
     for fp in solver_files:
+        if only_primary_range and "seeds30to59" in fp.parent.name:
+            continue
         parsed = parse_jsonl(fp.read_text(encoding="utf-8"), tier, seeds)
         for s, ep in parsed.items():
             if ep.get("agent") == "solver":
+                if s in solver_eps:
+                    raise ValueError(f"duplicate reference solver episode for seed {s} in {fp}")
                 solver_eps[s] = ep
 
     inproc_path = committed_v14_dir / "inproc-gemini-4-carbon" / tier / "episodes.jsonl"
@@ -298,10 +347,35 @@ def audit_episode_replay(group: str, ep: dict[str, Any], tier: str = TIER) -> di
     seed = int(ep["seed"])
     steps = steps_of(ep)
     env = Env(tier, seed)
-    for st in steps:
-        if env.done:
-            break
-        env.call(st.tool, st.args or {})
+    steps_verified = 0
+    steps_truncated = 0
+    steps_client_only = 0
+    for step_idx, st in enumerate(steps):
+        if _client_only_step(st):
+            steps_client_only += 1
+            continue
+        r = env.call(st.tool, st.args or {})
+        got_payload = {"ok": r.ok, "data": r.data, "error": r.error}
+        rec = st.result
+        if (
+            not r.ok
+            and isinstance(r.data, dict)
+            and set(r.data) == {"detail"}
+            and not (isinstance(rec, dict) and isinstance(rec.get("data"), dict) and "detail" in rec["data"])
+        ):
+            got_payload = {"ok": r.ok, "data": {}, "error": r.error}
+        trunc = _client_truncated_bytes(rec)
+        if trunc is not None:
+            steps_truncated += 1
+            ok_step = len(json.dumps(got_payload).encode()) == trunc
+        else:
+            want = _norm_recorded_result(rec)
+            ok_step = want is None or _canon_payload(got_payload) == _canon_payload(want)
+        if not ok_step:
+            raise ValueError(
+                f"replay step result mismatch on {group} seed {seed} step {step_idx} ({st.tool})"
+            )
+        steps_verified += 1
 
     recorded_score = float(ep["score"])
     replayed_score = float(env.score())
@@ -413,6 +487,9 @@ def audit_episode_replay(group: str, ep: dict[str, Any], tier: str = TIER) -> di
         "consistent_n": len(cons),
         "flips": flips,
         "_max_diff": round(score_diff, 12),
+        "_steps_verified": steps_verified,
+        "_steps_truncated": steps_truncated,
+        "_steps_client_only": steps_client_only,
     }
     return row
 
@@ -753,8 +830,12 @@ def extract_and_compute(
         for s in seeds:
             context_rows.append(audit_episode_replay(ctx, ctx_eps[ctx][s], TIER))
 
+    all_rows = ablation_rows + context_rows
+    total_steps_verified = sum(int(r.pop("_steps_verified", 0)) for r in all_rows)
+    total_steps_truncated = sum(int(r.pop("_steps_truncated", 0)) for r in all_rows)
+    total_steps_client_only = sum(int(r.pop("_steps_client_only", 0)) for r in all_rows)
     max_abs_diff = max(
-        (float(r.pop("_max_diff", 0.0)) for r in ablation_rows + context_rows),
+        (float(r.pop("_max_diff", 0.0)) for r in all_rows),
         default=0.0,
     )
     agg = build_aggregates(ablation_rows, context_rows, seeds, b_resamples, rng_seed)
@@ -771,6 +852,10 @@ def extract_and_compute(
         "replay_verification": {
             "ablation_episodes_verified": len(ablation_rows),
             "context_episodes_verified": len(context_rows),
+            "total_steps_verified": total_steps_verified,
+            "steps_truncated_checked": total_steps_truncated,
+            "steps_client_only": total_steps_client_only,
+            "step_mismatches": 0,
             "score_mismatches": 0,
             "accused_mismatches": 0,
             "errors_or_timeouts": 0,
@@ -837,7 +922,7 @@ def render_markdown(data: dict[str, Any]) -> str:
     lines: list[str] = [
         f"{H} Hint Ablation v1.4 Hard Causal Audit (Paired Posterior, Exploration & Luck-Adjusted EV)",
         "",
-        f"**Scope.** Rules `{data['tiers_version']}`, `{data['tier']}` tier, paired dev seeds `{seed_label}` (`n={n_arm}` per arm; `{rv['ablation_episodes_verified']}` real `gemini-4-carbon` in-process episodes from `{data['source']['subpath']}` commit `{data['source']['source_commit'] or 'fixture'}`), replay-verified in `canary.env.Env('hard', seed)` and paired seed-by-seed against `control`, the `v1.4` reference `solver`, and committed `v1.4` `inproc-gemini-4-carbon` and `opencode-gemini-4-carbon` runs on the same seeds (`{rv['context_episodes_verified']}` context episodes).",
+        f"**Scope.** Rules `{data['tiers_version']}`, `{data['tier']}` tier, paired dev seeds `{seed_label}` (`n={n_arm}` per arm; `{rv['ablation_episodes_verified']}` real `gemini-4-carbon` in-process episodes from `{data['source']['subpath']}` commit `{data['source']['source_commit'] or 'fixture'}`), step-level replay-verified in `canary.env.Env('hard', seed)` and paired seed-by-seed against `control`, the `v1.4` reference `solver`, and committed `v1.4` `inproc-gemini-4-carbon` and `opencode-gemini-4-carbon` runs on the same seeds (`{rv['context_episodes_verified']}` context episodes from the post-hoc locked `0-29` primary set in `671ed96`).",
         "",
         "**Reproduce (offline, deterministic, no API keys):**",
         "- Re-verify committed audit JSON + report (works on shallow CI clones): `python scripts/hint_ablation_audit.py --verify-json`",
@@ -845,7 +930,7 @@ def render_markdown(data: dict[str, Any]) -> str:
         "",
         f"{H}{H} 1. Executive Summary & Honest Causal Verdict",
         "",
-        f"- **Replay integrity:** `{rv['ablation_episodes_verified']}/30` ablation episodes and `{rv['context_episodes_verified']}/30` context episodes replay in `Env('hard', seed)` with `{rv['score_mismatches']}` score mismatches, `{rv['accused_mismatches']}` accusation mismatches, and `{rv['errors_or_timeouts']}` errors/timeouts (`max |score_diff| = {rv['max_abs_score_diff']:.1e}`).",
+        f"- **Replay integrity:** `{rv['ablation_episodes_verified']}/30` ablation episodes and `{rv['context_episodes_verified']}/30` context episodes (`{rv['total_steps_verified']}` server tool-call steps; `{rv['steps_truncated_checked']}` OpenCode client-truncated payload byte checks, `{rv['steps_client_only']}` client-only steps skipped) replay in `Env('hard', seed)` with `{rv['step_mismatches']}` step-output mismatches (compatible with `1bc3e281` `invalid arguments` `data.detail` payloads), `{rv['score_mismatches']}` score mismatches, `{rv['accused_mismatches']}` accusation mismatches, and `{rv['errors_or_timeouts']}` errors/timeouts (`max |score_diff| = {rv['max_abs_score_diff']:.1e}`).",
         f"- **Raw scoreboard vs luck-adjusted EV (`P*V - (1-P)`):** On raw score, `control` averages `{fmt_num(c_arm['score_mean'], 3, True)}` (`+/- {fmt_num(c_arm['score_ci95'])}`), `premature_accusation` `{fmt_num(p_arm['score_mean'], 3, True)}` (`+/- {fmt_num(p_arm['score_ci95'])}`), and `decoy_chase` `{fmt_num(d_arm['score_mean'], 3, True)}` (`+/- {fmt_num(d_arm['score_ci95'])}`), vs reference `solver` `{fmt_num(sol['score_mean'], 3, True)}` (`+/- {fmt_num(sol['score_ci95'])}`). Under `SolverPolicy`'s exact Bayesian posterior over each agent's own observations, luck-adjusted scores are `{fmt_num(c_arm['luck_adjusted_mean'], 3, True)}` (`control`), `{fmt_num(p_arm['luck_adjusted_mean'], 3, True)}` (`premature_accusation`), `{fmt_num(d_arm['luck_adjusted_mean'], 3, True)}` (`decoy_chase`), and `{fmt_num(sol['luck_adjusted_mean'], 3, True)}` (`solver`).",
         f"- **Paired treatment effects vs `control` (10,000-resample bootstrap 95% CIs):**",
         f"  - `premature_accusation - control`: raw `{fmt_num(vp['score_diff_mean'], 3, True)}` {fmt_ci(vp['score_diff_boot_ci95'], 3, True)}; luck-adjusted `{fmt_num(vp['luck_adjusted_diff_mean'], 3, True)}` {fmt_ci(vp['luck_adjusted_diff_boot_ci95'], 3, True)}.",
@@ -1027,7 +1112,7 @@ def render_markdown(data: dict[str, Any]) -> str:
         f"1. **Forensic correction to raw-only reading (`control` wrong accusation != premature accusation):** Replay + `SolverPolicy` belief reconstruction reveals two opposite luck events hidden inside `control`'s `{fmt_num(c_arm['score_mean'], 3, True)}` raw mean (`{fmt_num(c_arm['luck_adjusted_mean'], 3, True)}` luck-adjusted). `control`'s wrong accusation ({wrong_note}) was **not** a premature gamble -- it occurred at high Bayesian posterior after a 5% canary fingerprint flip, so `control` suffered bad luck there. Conversely, `control`'s actual premature / negative-EV gamble ({evneg_note}) **succeeded by luck** above posterior EV. Those two opposite luck shocks nearly cancelled in `control`'s aggregate (`raw - LA = {fmt_num(c_arm['luck_windfall_mean'], 3, True)}`).",
         f"2. **Why `decoy_chase` works via canary-vs-log weighting, not decoy avoidance:** Across all unhinted runs (`control` `{c_arm['decoy_interviews_total']}/{c_arm['interviews_total']}` = `{c_arm['decoy_interview_share_pooled'] * 100:.1f}%`, `inproc` `{inp['decoy_interviews_total']}/{inp['interviews_total']}` = `{inp['decoy_interview_share_pooled'] * 100:.1f}%`, `opencode` `{opc['decoy_interviews_total']}/{opc['interviews_total']}` = `0.0%`), `gemini-4-carbon` already avoids interviewing, restricting (`0/{n_arm}`), or accusing (`0/{n_arm}`) the angry decoy (well below the `1/40 = 2.5%` uniform rate). Instead, the second clause of `HINTS_V2['decoy_chase']` (*\"logs and anger are weak evidence; leaked canary variants are strong evidence\"*) shifts exploration from Day 1: day-1 canary episodes rise from `{c_arm['day1_canary_count']}/{n_arm}` (`control`) to `{d_arm['day1_canary_count']}/{n_arm}` (`decoy_chase`), daily canary capacity utilization rises from `{c_arm['canary_capacity_used'] * 100:.1f}%` to `{d_arm['canary_capacity_used'] * 100:.1f}%`, access-log reads drop `{fmt_num(c_arm['read_access_logs_mean'], 1)} -> {fmt_num(d_arm['read_access_logs_mean'], 1)}`, interviews drop by `{fmt_num(vd['interviews_diff_mean'], 1, True)}` {fmt_ci(vd['interviews_diff_boot_ci95'], 1, True)} (`{c_arm['interviews_total']} -> {d_arm['interviews_total']}`), and accusation day advances from `{fmt_num(c_arm['accuse_day_mean'], 1)}` to `{fmt_num(d_arm['accuse_day_mean'], 1)}` (`{vd['raw_seed_wins']}/{n_arm}` paired seed wins raw, `{vd['luck_adjusted_seed_wins']}/{n_arm}` luck-adjusted). Removing its `{fmt_num(d_arm['luck_windfall_mean'], 3, True)}` luck windfall (`0` wrong vs `{fmt_num(d_arm['expected_wrong_from_posteriors'], 2)}` expected) trims `decoy_chase` from `{fmt_num(d_arm['score_mean'], 3, True)}` raw to `{fmt_num(d_arm['luck_adjusted_mean'], 3, True)}` luck-adjusted ({vsd_la_ratio_txt}).",
         f"3. **Why `premature_accusation` improves posterior calibration but trades away time/leak V:** Reminding the agent of `P x V - (1 - P) > 0` eliminates negative-EV horizon gambling (`{c_arm['ev_negative_gamble_count']} -> {p_arm['ev_negative_gamble_count']}` gambles; `P(accused)` mean `{fmt_num(c_arm['p_accused_mean'], 3)} -> {fmt_num(p_arm['p_accused_mean'], 3)}`, paired diff `{fmt_num(vp['p_accused_diff_joint_mean'], 3, True)}` {fmt_ci(vp['p_accused_diff_joint_boot_ci95'], 3, True)}) and cuts interviews by `{fmt_num(vp['interviews_diff_mean'], 1, True)}` {fmt_ci(vp['interviews_diff_boot_ci95'], 1, True)}. However, it also delays first canary planting (`{fmt_num(c_arm['first_canary_day_mean'], 1)} -> {fmt_num(p_arm['first_canary_day_mean'], 1)}`) and delays accusation (`{fmt_num(c_arm['accuse_day_mean'], 1)} -> {fmt_num(p_arm['accuse_day_mean'], 1)}`, leaks `{fmt_num(c_arm['leaks_at_accusation_mean'], 1)} -> {fmt_num(p_arm['leaks_at_accusation_mean'], 1)}`, `true_V_end` `{fmt_num(c_arm['true_V_end_mean'], 3)} -> {fmt_num(p_arm['true_V_end_mean'], 3)}`), leaving a modest net luck-adjusted diff of `{fmt_num(vp['luck_adjusted_diff_mean'], 3, True)}` {fmt_ci(vp['luck_adjusted_diff_boot_ci95'], 3, True)}.",
-        f"4. **Honest `n={n_arm}` statistical power caveat:** With `n={n_arm}` paired seeds per arm, every paired score 95% bootstrap CI against `control` crosses zero (`premature_accusation`: raw `{fmt_ci(vp['score_diff_boot_ci95'], 3, True)}`, LA `{fmt_ci(vp['luck_adjusted_diff_boot_ci95'], 3, True)}`; `decoy_chase`: raw `{fmt_ci(vd['score_diff_boot_ci95'], 3, True)}`, LA `{fmt_ci(vd['luck_adjusted_diff_boot_ci95'], 3, True)}`), and an independent no-hint `inproc-gemini-4-carbon` run on seeds `{seed_label}` differs from `control` by `{fmt_num(ivc['score_diff_mean'], 3, True)}` {fmt_ci(ivc['score_diff_boot_ci95'], 3, True)} raw (`{fmt_num(ivc['luck_adjusted_diff_mean'], 3, True)}` {fmt_ci(ivc['luck_adjusted_diff_boot_ci95'], 3, True)} LA). The behavioral shifts (fewer wasted interviews, higher accusation posteriors `{fmt_num(p_arm['p_accused_mean'], 3)}` / `{fmt_num(d_arm['p_accused_mean'], 3)}` vs `{fmt_num(c_arm['p_accused_mean'], 3)}`, and earlier canary pipelining under `decoy_chase`) are clear in mechanism, while headline score superiority requires `n >= 30` paired seeds to resolve.",
+        f"4. **Honest `n={n_arm}` statistical power caveat & OpenCode `--hint gather` status:** With `n={n_arm}` paired seeds per arm, every paired score 95% bootstrap CI against `control` crosses zero (`premature_accusation`: raw `{fmt_ci(vp['score_diff_boot_ci95'], 3, True)}`, LA `{fmt_ci(vp['luck_adjusted_diff_boot_ci95'], 3, True)}`; `decoy_chase`: raw `{fmt_ci(vd['score_diff_boot_ci95'], 3, True)}`, LA `{fmt_ci(vd['luck_adjusted_diff_boot_ci95'], 3, True)}`), and an independent no-hint `inproc-gemini-4-carbon` run on seeds `{seed_label}` differs from `control` by `{fmt_num(ivc['score_diff_mean'], 3, True)}` {fmt_ci(ivc['score_diff_boot_ci95'], 3, True)} raw (`{fmt_num(ivc['luck_adjusted_diff_mean'], 3, True)}` {fmt_ci(ivc['luck_adjusted_diff_boot_ci95'], 3, True)} LA). The behavioral shifts (fewer wasted interviews, higher accusation posteriors `{fmt_num(p_arm['p_accused_mean'], 3)}` / `{fmt_num(d_arm['p_accused_mean'], 3)}` vs `{fmt_num(c_arm['p_accused_mean'], 3)}`, and earlier canary pipelining under `decoy_chase`) are clear in mechanism, while headline score superiority requires `n >= 30` paired seeds to resolve (the separate pre-registered OpenCode `--hint gather` protocol in `docs/reports/gap.md` `fd8c1cb0` was stopped before `05:40` to preserve shared Gemini quota for the Harbor rehearsal).",
         "",
     ])
     return "\n".join(lines)
@@ -1071,6 +1156,8 @@ def verify_committed_json(
     rv = data.get("replay_verification") or {}
     if (
         not rv.get("all_passed")
+        or rv.get("step_mismatches") != 0
+        or int(rv.get("total_steps_verified", 0)) <= 0
         or rv.get("score_mismatches") != 0
         or rv.get("accused_mismatches") != 0
         or rv.get("errors_or_timeouts") != 0
@@ -1168,7 +1255,8 @@ def verify_committed_json(
                 raise ValueError(f"committed v1.4 context {ctx} missing seeds: {missing_ctx}")
             for s in seeds:
                 r_ctx = audit_episode_replay(ctx, ctx_raw[ctx][s], tier_name)
-                r_ctx.pop("_max_diff", None)
+                for priv_k in [k for k in r_ctx if k.startswith("_")]:
+                    r_ctx.pop(priv_k, None)
                 fresh_ctx.append(r_ctx)
         if not approx_equal(ct_eps, fresh_ctx):
             raise ValueError("committed v1.4 context episodes differ from fresh Env replay")
@@ -1181,6 +1269,8 @@ def _compact_json_lines(val: Any, indent_level: int = 1) -> str:
     if isinstance(val, dict):
         if not val:
             return "{}"
+        if indent_level >= 3:
+            return json.dumps(val, sort_keys=True, separators=(",", ":"))
         items = []
         for k in sorted(val.keys()):
             items.append(f'{pad} "{k}": {_compact_json_lines(val[k], indent_level + 1)}')

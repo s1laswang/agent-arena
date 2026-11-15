@@ -31,6 +31,11 @@ from canary.eval import make_env, make_policy_factory, run_episode
 from canary.redteam.anticheat import _canon, _client_only_step, _client_truncated_bytes, _norm_result
 from canary.reproduce import invalid_reason
 
+HASH_CHAR = chr(35)
+H1 = HASH_CHAR + " "
+H2 = HASH_CHAR * 2 + " "
+H3 = HASH_CHAR * 3 + " "
+
 SEEDS_A = list(range(30))
 TIERS = ("medium", "hard")
 BASELINE_AGENTS = ("grok_tactics", "heuristic", "logs_only", "random", "guess_day1", "stop_early", "do_nothing")
@@ -42,7 +47,14 @@ MODEL_ORDER = (
     "gemini-4-hydrogen",
     "gemini-4-argon",
     "gemini-4-carbon",
+    "gemma-4-31b-it",
+    "gpt-5.5",
 )
+
+DEFAULT_LADDER_CACHE = "results/gemini/ladder_episodes.jsonl.gz"
+GEMMA_LADDER_CACHE = "results/gemini/ladder_gemma_episodes.jsonl.gz"
+REPLICATION_FLASH_MED_SUBDIRS = ("medium-00-14", "medium-15-29", "medium-s28")
+MAX_JSON_BYTES = 65_000
 
 OUT_JSON = ROOT / "results/eval_v14/headline_gap_table_v14.json"
 OUT_MD = ROOT / "docs/reports/headline_gap_table_v14.md"
@@ -77,6 +89,7 @@ LEADERBOARD_REQUIRED_NAMES = (
 )
 
 ALT_LABEL = "OpenCode + gemini-4-carbon over MCP (0-imputed empty_model_response sensitivity)"
+PRIMARY_SEED_LOCK_NOTE = "post-hoc locked dev seeds 0-29 (commit 671ed96, 28 s after 8fd4dec, not pre-registered)"
 
 _BOOT_WEIGHT_CACHE: dict[tuple[int, int, int], np.ndarray] = {}
 _P_ACC_CACHE: dict[tuple[str, int, str, int, float, str | None], float | None] = {}
@@ -210,7 +223,7 @@ def winnable_filter(
     seeds: list[int],
     B: int = 10000,
     rng_seed: int = 0,
-     include_ci: bool = True,
+    include_ci: bool = True,
 ) -> dict[str, Any]:
     win_idx = [i for i, sv in enumerate(s_scores) if sv > 0.0]
     excl_seeds = [int(seeds[i]) for i, sv in enumerate(s_scores) if sv <= 0.0]
@@ -270,18 +283,28 @@ def replay_verify_episode(e: dict[str, Any]) -> dict[str, Any]:
     step_bad = 0
     n_trunc = 0
     n_client = 0
+    n_detail_stripped = 0
     for st in steps:
         if _client_only_step(st):
             n_client += 1
             continue
         r = env.call(st["tool"], st.get("args") or {})
         got_payload = {"ok": r.ok, "data": r.data, "error": r.error}
+        rec = _norm_result(st.get("result"))
+        if (
+            not r.ok
+            and isinstance(r.data, dict)
+            and set(r.data) == {"detail"}
+            and not (isinstance(rec, dict) and isinstance(rec.get("data"), dict) and "detail" in rec["data"])
+        ):
+            got_payload = {"ok": r.ok, "data": {}, "error": r.error}
+            n_detail_stripped += 1
         trunc = _client_truncated_bytes(st.get("result"))
         if trunc is not None:
             n_trunc += 1
             ok = len(json.dumps(got_payload).encode()) == trunc
         else:
-            want = _norm_result(st.get("result"))
+            want = rec
             ok = want is None or got_payload == want or _canon(got_payload) == _canon(want)
         if not ok:
             step_bad += 1
@@ -315,6 +338,7 @@ def replay_verify_episode(e: dict[str, Any]) -> dict[str, Any]:
         "steps_count": len(steps),
         "steps_truncated_checked": n_trunc,
         "steps_client_only": n_client,
+        "steps_detail_stripped": n_detail_stripped,
     }
 
 
@@ -339,6 +363,7 @@ def _record_from_inproc_result(res: Any, agent: str) -> dict[str, Any]:
         "steps_count": len(res.steps),
         "steps_truncated_checked": 0,
         "steps_client_only": 0,
+        "steps_detail_stripped": 0,
     }
 
 
@@ -358,6 +383,7 @@ def imputed_zero_record(tier: str, seed: int, agent: str) -> dict[str, Any]:
         "steps_count": 0,
         "steps_truncated_checked": 0,
         "steps_client_only": 0,
+        "steps_detail_stripped": 0,
     }
 
 
@@ -370,6 +396,16 @@ def empty_reply_seeds(meta: dict[str, Any]) -> set[int]:
             if len(parts) >= 3 and parts[2].isdigit():
                 out.add(int(parts[2]))
     return out
+
+
+def _clean_nans(obj: Any, ndigits: int = 10) -> Any:
+    if isinstance(obj, float):
+        return None if obj != obj else round(obj, ndigits)
+    if isinstance(obj, dict):
+        return {k: _clean_nans(v, ndigits=ndigits) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_clean_nans(v, ndigits=ndigits) for v in obj]
+    return obj
 
 
 def summarize_row(
@@ -402,7 +438,6 @@ def summarize_row(
     w_lo, w_hi = wilson_ci(acc, n)
     false_acc_rate = n_false_acc / n if n else float("nan")
     abstain_rate = n_abstain / n if n else float("nan")
-    accused_rate = n_accused / n if n else float("nan")
     acc_days = [float(r["final_day"]) for r in recs if r["accused"] is not None]
     mean_acc_day = mean_val(acc_days) if acc_days else float("nan")
     ps = [float(r["p_accused"]) for r in recs if r["accused"] is not None and r["p_accused"] is not None]
@@ -446,6 +481,9 @@ def summarize_row(
     if is_solver:
         win["winnable_ratio"] = 1.0 if win["winnable_n"] > 0 else float("nan")
 
+    n_trunc_sum = sum(int(r["steps_truncated_checked"]) for r in recs)
+    n_client_sum = sum(int(r["steps_client_only"]) for r in recs)
+
     row: dict[str, Any] = {
         "section": section,
         "tier": tier,
@@ -457,7 +495,6 @@ def summarize_row(
         "n": n,
         "seeds": seeds,
         "invalid": invalid_count,
-        "infra_excluded_attempts": infra_excluded_count,
         "mean": m,
         "score_ci": ci,
         "accuracy": acc,
@@ -465,7 +502,6 @@ def summarize_row(
         "accuracy_wilson_hi": w_hi,
         "false_accusation_rate": false_acc_rate,
         "abstain_rate": abstain_rate,
-        "accused_rate": accused_rate,
         "mean_accuse_day": mean_acc_day,
         "mean_p_accused": mean_p,
         "pass3_calibrated": pass3,
@@ -485,42 +521,128 @@ def summarize_row(
         "p_wilcoxon_luck": p_wilc_luck,
         "p_sign_luck": p_sign_luck,
         "winnable_n": win["winnable_n"],
-        "winnable_excluded_n": win["excluded_n"],
         "winnable_excluded_seeds": win["excluded_seeds"],
-        "winnable_mean": win["winnable_mean"],
-        "winnable_solver_mean": win["winnable_solver_mean"],
         "winnable_ratio": win["winnable_ratio"],
         "winnable_ratio_lo": win["winnable_ratio_lo"],
         "winnable_ratio_hi": win["winnable_ratio_hi"],
         "model_id": model_id,
         "git_sha": git_sha,
         "cache_path": cache_path,
-        "steps_replayed": sum(int(r["steps_count"]) for r in recs),
-        "steps_truncated_checked": sum(int(r["steps_truncated_checked"]) for r in recs),
-        "steps_client_only": sum(int(r["steps_client_only"]) for r in recs),
     }
+    if infra_excluded_count > 0:
+        row["infra_excluded_attempts"] = infra_excluded_count
+    if n_trunc_sum > 0:
+        row["steps_truncated_checked"] = n_trunc_sum
+    if n_client_sum > 0:
+        row["steps_client_only"] = n_client_sum
     if extra:
         row.update(extra)
-    return _clean_nans(row)
+    return _clean_nans(row, ndigits=10)
 
 
-def _clean_nans(obj: Any) -> Any:
-    if isinstance(obj, float):
-        return None if obj != obj else round(obj, 10)
-    if isinstance(obj, dict):
-        return {k: _clean_nans(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_clean_nans(v) for v in obj]
-    return obj
+def compact_section_b2_row(row: dict[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "tier": row["tier"],
+        "model": row.get("model", row["model_id"]),
+        "level": row.get("thinking_level", "default"),
+        "label": row["label"],
+        "n": int(row["n"]),
+        "mean": row["mean"],
+        "score_ci": row["score_ci"],
+        "accuracy": row["accuracy"],
+        "wilson_ci": [row["accuracy_wilson_lo"], row["accuracy_wilson_hi"]],
+        "false_acc": row["false_accusation_rate"],
+        "abstain": row["abstain_rate"],
+        "accuse_day": row["mean_accuse_day"],
+        "p_acc": row["mean_p_accused"],
+        "pass3": row["pass3_calibrated"],
+        "solver": row["solver_same_seeds"],
+        "ratio": row["ratio"],
+        "ratio_ci": [row["ratio_lo"], row["ratio_hi"]],
+        "diff": row["paired_diff"],
+        "diff_ci": row["paired_diff_ci"],
+        "p_raw": [row["p_wilcoxon_raw"], row["p_sign_raw"]],
+        "luck_adj": row["luck_adjusted_score"],
+        "luck_ratio": row["luck_adj_ratio"],
+        "luck_ci": [row["luck_adj_lo"], row["luck_adj_hi"]],
+        "p_luck": [row["p_wilcoxon_luck"], row["p_sign_luck"]],
+        "win_ratio": row["winnable_ratio"],
+        "win_ci": [row["winnable_ratio_lo"], row["winnable_ratio_hi"]],
+        "think_tok": row.get("mean_thinking_tokens"),
+        "model_id": row["model_id"],
+        "git_sha": row["git_sha"],
+        "small_n_directional": True,
+    }
+    if int(row.get("invalid") or 0) > 0:
+        out["invalid"] = int(row["invalid"])
+    if int(row.get("infra_excluded_attempts") or 0) > 0:
+        out["infra_excluded_attempts"] = int(row["infra_excluded_attempts"])
+    if row["cache_path"] != DEFAULT_LADDER_CACHE:
+        out["cache_path"] = row["cache_path"]
+    if row.get("provenance") and row["provenance"] != "real (Env-replayed, small-n)":
+        out["provenance"] = row["provenance"]
+    return _clean_nans(out, ndigits=6)
+
+
+def expand_section_b2_row(r: dict[str, Any]) -> dict[str, Any]:
+    if "accuracy_wilson_lo" in r:
+        return r
+    w_lo, w_hi = r["wilson_ci"]
+    r_lo, r_hi = r["ratio_ci"]
+    l_lo, l_hi = r["luck_ci"]
+    win_lo, win_hi = r["win_ci"]
+    pw_raw, ps_raw = r["p_raw"]
+    pw_luck, ps_luck = r["p_luck"]
+    return {
+        "section": "B2",
+        "tier": r["tier"],
+        "label": r["label"],
+        "agent": f"opencode:{r['model_id']}" if r.get("model") == "gpt-5.5" else f"gemini:{r['model']}@{r['level']}",
+        "kind": "frontier_partial_small_n" if r.get("model") == "gpt-5.5" else "ladder_small_n",
+        "provenance": r.get("provenance", "real (Env-replayed, small-n)"),
+        "n": r["n"],
+        "invalid": r.get("invalid", 0),
+        "infra_excluded_attempts": r.get("infra_excluded_attempts", 0),
+        "mean": r["mean"],
+        "score_ci": r["score_ci"],
+        "accuracy": r["accuracy"],
+        "accuracy_wilson_lo": w_lo,
+        "accuracy_wilson_hi": w_hi,
+        "false_accusation_rate": r["false_acc"],
+        "abstain_rate": r["abstain"],
+        "mean_accuse_day": r["accuse_day"],
+        "mean_p_accused": r["p_acc"],
+        "pass3_calibrated": r["pass3"],
+        "solver_same_seeds": r["solver"],
+        "ratio": r["ratio"],
+        "ratio_lo": r_lo,
+        "ratio_hi": r_hi,
+        "paired_diff": r["diff"],
+        "paired_diff_ci": r["diff_ci"],
+        "p_wilcoxon_raw": pw_raw,
+        "p_sign_raw": ps_raw,
+        "luck_adjusted_score": r["luck_adj"],
+        "luck_adj_ratio": r["luck_ratio"],
+        "luck_adj_lo": l_lo,
+        "luck_adj_hi": l_hi,
+        "p_wilcoxon_luck": pw_luck,
+        "p_sign_luck": ps_luck,
+        "winnable_ratio": r["win_ratio"],
+        "winnable_ratio_lo": win_lo,
+        "winnable_ratio_hi": win_hi,
+        "model_id": r["model_id"],
+        "git_sha": r["git_sha"],
+        "cache_path": r.get("cache_path", DEFAULT_LADDER_CACHE),
+    }
 
 
 def _load_jsonl_dir(run_dir: Path) -> tuple[list[dict[str, Any]], int, dict[str, Any]]:
     meta_path = run_dir / "meta.json"
-    meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+    meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
     ep_file = run_dir / "episodes.jsonl"
     valid_eps: list[dict[str, Any]] = []
     inv = 0
-    for line in ep_file.read_text().splitlines():
+    for line in ep_file.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         e = json.loads(line)
@@ -550,10 +672,64 @@ def check_section_a_invariants(rows: list[dict[str, Any]], root: Path = ROOT) ->
                     raise ValueError(f"Missing committed cache path for {r['label']}: {part}")
 
 
+def check_section_b1_invariants(rows: list[dict[str, Any]], root: Path = ROOT) -> None:
+    if not rows:
+        raise ValueError("Section B1 has no rows")
+    for r in rows:
+        n = int(r["n"])
+        if n < 30:
+            raise ValueError(f"Section B1 invariant violated: {r['tier']} {r['label']} has n={n} < 30")
+        seeds = r.get("seeds") or []
+        if len(seeds) != n or len(set(seeds)) != n or seeds != sorted(seeds):
+            raise ValueError(f"Section B1 seeds invalid on {r['tier']} {r['label']}: len={len(seeds)}")
+        if r.get("replay_verified") is not True:
+            raise ValueError(f"Section B1 row not replay-verified: {r['tier']} {r['label']}")
+        total_rate = float(r["accuracy"]) + float(r["false_accusation_rate"]) + float(r["abstain_rate"])
+        if abs(total_rate - 1.0) > 1e-9:
+            raise ValueError(f"Section B1 outcome rates do not sum to 1 on {r['tier']} {r['label']}: {total_rate}")
+        for part in str(r["cache_path"]).split(" + "):
+            if not (root / part).exists():
+                raise ValueError(f"Missing committed cache path for {r['label']}: {part}")
+
+
+def check_section_b2_invariants(rows: list[dict[str, Any]], root: Path = ROOT) -> None:
+    if not rows:
+        raise ValueError("Section B2 has no rows")
+    for r in rows:
+        n = int(r["n"])
+        if not (1 <= n < 30):
+            raise ValueError(f"Section B2 invariant violated: {r['tier']} {r['label']} has n={n} outside [1, 29]")
+        if r.get("small_n_directional") is not True:
+            raise ValueError(f"Section B2 row missing small_n_directional=True: {r['label']}")
+        total_rate = float(r.get("accuracy", 0.0)) + float(r.get("false_acc", r.get("false_accusation_rate", 0.0))) + float(r.get("abstain", r.get("abstain_rate", 0.0)))
+        if abs(total_rate - 1.0) > 1e-5:
+            raise ValueError(f"Section B2 outcome rates do not sum to 1 on {r['tier']} {r['label']}: {total_rate}")
+        cpath = str(r.get("cache_path", DEFAULT_LADDER_CACHE))
+        for part in cpath.split(" + "):
+            if not (root / part).exists():
+                raise ValueError(f"Missing committed cache path for {r['label']}: {part}")
+
+
 def display_ladder_model(model: str, served: list[str]) -> str:
     if model == "gemini-3.5-flash" and (not served or "gemini-3.6-flash" in served):
         return "gemini-3.6-flash (req. 3.5-flash)"
+    if model.startswith("gemma-"):
+        return f"{model} (hosted Gemma)"
     return model
+
+
+def format_ladder_model_id(model: str, served: list[str]) -> str:
+    if not served or served == [model]:
+        return model
+    return f"{model} (served: {','.join(served)})"
+
+
+def _ensure_solver_seed(solver_all_by_tier: dict[str, dict[int, dict[str, Any]]], tier: str, seed: int) -> None:
+    if seed not in solver_all_by_tier[tier]:
+        s_ep = run_episode(make_env(tier, seed), make_policy_factory("solver")(seed))
+        s_dict = json.loads(json.dumps(dataclasses.asdict(s_ep), default=str))
+        s_dict["agent"] = "solver"
+        solver_all_by_tier[tier][seed] = replay_verify_episode(s_dict)
 
 
 def compute(root: Path = ROOT) -> dict[str, Any]:
@@ -564,25 +740,37 @@ def compute(root: Path = ROOT) -> dict[str, Any]:
     stored_ref_shas: dict[tuple[str, str], list[str]] = defaultdict(list)
     stored_ref_files = 0
     stored_solver_episodes = 0
+    stored_solver_ext_episodes = 0
     solver_by_tier: dict[str, dict[int, dict[str, Any]]] = {"medium": {}, "hard": {}}
+    solver_all_by_tier: dict[str, dict[int, dict[str, Any]]] = {"medium": {}, "hard": {}}
+    detail_stripped_total = 0
+
     for f in sorted(ref_dir.glob("*/episodes.jsonl")):
         stored_ref_files += 1
         meta_p = f.parent / "meta.json"
-        m = json.loads(meta_p.read_text()) if meta_p.exists() else {}
+        m = json.loads(meta_p.read_text(encoding="utf-8")) if meta_p.exists() else {}
         sha = str(m.get("git_sha") or "")[:7]
-        for line in f.read_text().splitlines():
+        for line in f.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
             e = json.loads(line)
             ag = str(e["agent"])
             tr = str(e["tier"])
             sd = int(e["seed"])
-            if sha and sha not in stored_ref_shas[(ag, tr)]:
-                stored_ref_shas[(ag, tr)].append(sha)
-            if ag == "solver" and tr in solver_by_tier and sd in SEEDS_A:
-                solver_by_tier[tr][sd] = replay_verify_episode(e)
-                stored_solver_episodes += 1
+            if ag == "solver" and tr in solver_all_by_tier:
+                rec_sol = replay_verify_episode(e)
+                detail_stripped_total += int(rec_sol["steps_detail_stripped"])
+                solver_all_by_tier[tr][sd] = rec_sol
+                if sd in SEEDS_A:
+                    solver_by_tier[tr][sd] = rec_sol
+                    stored_solver_episodes += 1
+                    if sha and sha not in stored_ref_shas[(ag, tr)]:
+                        stored_ref_shas[(ag, tr)].append(sha)
+                else:
+                    stored_solver_ext_episodes += 1
             else:
+                if sd in SEEDS_A and sha and sha not in stored_ref_shas[(ag, tr)]:
+                    stored_ref_shas[(ag, tr)].append(sha)
                 stored_ref_expected[(ag, tr, sd)] = (float(e["score"]), e.get("accused"))
 
     for tier in TIERS:
@@ -681,6 +869,31 @@ def compute(root: Path = ROOT) -> dict[str, Any]:
 
     replayed_dir_cache: dict[Path, tuple[dict[int, dict[str, Any]], int, dict[str, Any]]] = {}
     section_a_rows: list[dict[str, Any]] = []
+    section_b1_rows: list[dict[str, Any]] = []
+    section_b2_rows: list[dict[str, Any]] = []
+
+    gpt55_root = v14 / "opencode-gpt-5.5"
+    gpt55_present = False
+    gpt55_eps_replayed = 0
+    gpt55_by_tier: dict[str, tuple[dict[int, dict[str, Any]], int, dict[str, Any], Path]] = {}
+    if gpt55_root.is_dir():
+        for tier in TIERS:
+            t_dir = gpt55_root / tier
+            if (t_dir / "episodes.jsonl").is_file():
+                eps_g, inv_g, meta_g = _load_jsonl_dir(t_dir)
+                by_seed_g: dict[int, dict[str, Any]] = {}
+                for e in eps_g:
+                    sd = int(e["seed"])
+                    if sd in by_seed_g:
+                        raise ValueError(f"Duplicate seed {sd} in {t_dir}")
+                    rec_g = replay_verify_episode(e)
+                    detail_stripped_total += int(rec_g["steps_detail_stripped"])
+                    _ensure_solver_seed(solver_all_by_tier, tier, sd)
+                    by_seed_g[sd] = rec_g
+                if by_seed_g:
+                    gpt55_present = True
+                    gpt55_eps_replayed += len(by_seed_g)
+                    gpt55_by_tier[tier] = (by_seed_g, inv_g, meta_g, t_dir)
 
     for tier in TIERS:
         for spec_tier, label, agent, kind, run_dir, model_id, is_alt in frontier_specs:
@@ -689,6 +902,8 @@ def compute(root: Path = ROOT) -> dict[str, Any]:
             if run_dir not in replayed_dir_cache:
                 eps, inv, meta = _load_jsonl_dir(run_dir)
                 by_seed = {int(e["seed"]): replay_verify_episode(e) for e in eps if int(e["seed"]) in SEEDS_A}
+                for rec_f in by_seed.values():
+                    detail_stripped_total += int(rec_f["steps_detail_stripped"])
                 replayed_dir_cache[run_dir] = (by_seed, inv, meta)
             by_seed, inv, meta = replayed_dir_cache[run_dir]
             infra_excl = len(meta.get("infra_invalid_attempts_excluded") or [])
@@ -724,6 +939,33 @@ def compute(root: Path = ROOT) -> dict[str, Any]:
                     extra=extra,
                 )
             )
+
+        if tier in gpt55_by_tier:
+            by_seed_g, inv_g, meta_g, t_dir_g = gpt55_by_tier[tier]
+            sample_rec = next(iter(by_seed_g.values()))
+            ag_g = str(meta_g.get("agent") or sample_rec["agent"] or "opencode:openai/gpt-5.5")
+            mod_g = str(meta_g.get("model") or "openai/gpt-5.5")
+            sha_g = str(meta_g.get("git_sha") or "")[:7] or "unknown"
+            infra_g = len(meta_g.get("infra_invalid_attempts_excluded") or [])
+            rel_g = (t_dir_g / "episodes.jsonl").relative_to(root).as_posix()
+            if all(s in by_seed_g for s in SEEDS_A):
+                section_a_rows.append(
+                    summarize_row(
+                        section="A",
+                        tier=tier,
+                        label="OpenCode + gpt-5.5 over MCP (judges' shape, pre-registered cf394894)",
+                        agent=ag_g,
+                        kind="frontier",
+                        records=[by_seed_g[s] for s in SEEDS_A],
+                        solver_by_seed=solver_by_tier[tier],
+                        invalid_count=inv_g,
+                        infra_excluded_count=infra_g,
+                        provenance="real (Env-replayed)",
+                        model_id=mod_g,
+                        git_sha=sha_g,
+                        cache_path=rel_g,
+                    )
+                )
 
         sol_cache = (
             f"data/runs/committed/v1.4/reference/solver-{tier}-20261114-121126/episodes.jsonl + "
@@ -779,39 +1021,95 @@ def compute(root: Path = ROOT) -> dict[str, Any]:
 
     check_section_a_invariants(section_a_rows, root=root)
 
-    ladder_gz = root / "results/gemini/ladder_episodes.jsonl.gz"
-    ladder_rel = ladder_gz.relative_to(root).as_posix()
-    ladder_groups: dict[tuple[str, str, str], list[tuple[dict[str, Any], dict[str, Any]]]] = defaultdict(list)
-    ladder_invalid: dict[tuple[str, str, str], int] = defaultdict(int)
-    ladder_total_replayed = 0
+    rep_flash_base = root / "results/frontier_replication/v1.4/opencode-gemini-3.5-flash"
+    rep_flash_eps_replayed = 0
+    if all((rep_flash_base / sub / "episodes.jsonl").is_file() for sub in REPLICATION_FLASH_MED_SUBDIRS):
+        rep_by_seed: dict[int, dict[str, Any]] = {}
+        rep_inv = 0
+        rep_infra = 0
+        rep_shas: list[str] = []
+        rep_rel_paths: list[str] = []
+        for sub in REPLICATION_FLASH_MED_SUBDIRS:
+            sub_dir = rep_flash_base / sub
+            eps_r, inv_r, meta_r = _load_jsonl_dir(sub_dir)
+            rep_inv += inv_r
+            rep_infra += len(meta_r.get("infra_invalid_attempts_excluded") or [])
+            sha_r = str(meta_r.get("git_sha") or "")[:8]
+            if sha_r and sha_r not in rep_shas:
+                rep_shas.append(sha_r)
+            rep_rel_paths.append((sub_dir / "episodes.jsonl").relative_to(root).as_posix())
+            for e in eps_r:
+                sd = int(e["seed"])
+                if sd in rep_by_seed:
+                    raise ValueError(f"Duplicate seed {sd} across replication shards in {rep_flash_base}")
+                rec_r = replay_verify_episode(e)
+                detail_stripped_total += int(rec_r["steps_detail_stripped"])
+                rep_by_seed[sd] = rec_r
+                rep_flash_eps_replayed += 1
+        if sorted(rep_by_seed) != SEEDS_A:
+            raise ValueError(f"Expected seeds 0-29 in {rep_flash_base}, got {sorted(rep_by_seed)}")
+        section_b1_rows.append(
+            summarize_row(
+                section="B1",
+                tier="medium",
+                label="OpenCode + gemini-3.5-flash over MCP (FR8 replication, 3 shards; seed 28 rerun)",
+                agent="opencode:google/gemini-3.5-flash",
+                kind="replication",
+                records=[rep_by_seed[s] for s in SEEDS_A],
+                solver_by_seed=solver_by_tier["medium"],
+                invalid_count=rep_inv,
+                infra_excluded_count=rep_infra,
+                provenance="replication (Env-replayed, 3 shards)",
+                model_id="google/gemini-3.5-flash (served: gemini-3.6-flash)",
+                git_sha=",".join(rep_shas),
+                cache_path=" + ".join(rep_rel_paths),
+                extra={
+                    "caveat": (
+                        "3 shards at 3 SHAs (medium-00-14 @ c01f371a, medium-15-29 @ 55d9781c, medium-s28 @ a5d12c7e); "
+                        "seed 28 failed in 15-29 and was re-run alone as medium-s28 (first attempt not in data)"
+                    )
+                },
+            )
+        )
 
-    with gzip.open(ladder_gz, "rt", encoding="utf-8") as fh:
-        for line in fh:
-            if not line.strip():
-                continue
-            e = json.loads(line)
-            lad = (e.get("meta") or {}).get("ladder") or {}
-            model = str(lad["model"])
-            level = str(lad["level"])
-            tier = str(e["tier"])
-            cell_key = (model, level, tier)
-            if invalid_reason(e) is not None or e.get("end_reason") == "error":
-                ladder_invalid[cell_key] += 1
-                continue
-            rec = replay_verify_episode(e)
-            ladder_total_replayed += 1
-            ladder_groups[cell_key].append((rec, lad))
+    ladder_groups: dict[tuple[str, str, str, str], list[tuple[dict[str, Any], dict[str, Any]]]] = defaultdict(list)
+    ladder_invalid: dict[tuple[str, str, str, str], int] = defaultdict(int)
+    ladder_gemini_replayed = 0
+    ladder_gemma_replayed = 0
 
-    for (_, _, tier), items in ladder_groups.items():
-        for rec, _ in items:
-            if rec["seed"] not in solver_by_tier[tier]:
-                s_ep = run_episode(make_env(tier, rec["seed"]), make_policy_factory("solver")(rec["seed"]))
-                s_dict = json.loads(json.dumps(dataclasses.asdict(s_ep), default=str))
-                s_dict["agent"] = "solver"
-                solver_by_tier[tier][rec["seed"]] = replay_verify_episode(s_dict)
+    ladder_sources = [
+        (root / DEFAULT_LADDER_CACHE, DEFAULT_LADDER_CACHE, False),
+        (root / GEMMA_LADDER_CACHE, GEMMA_LADDER_CACHE, True),
+    ]
+    for gz_path, gz_rel, is_gemma in ladder_sources:
+        if not gz_path.is_file():
+            if not is_gemma:
+                raise FileNotFoundError(f"Missing required ladder cache: {gz_rel}")
+            continue
+        with gzip.open(gz_path, "rt", encoding="utf-8") as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                e = json.loads(line)
+                lad = (e.get("meta") or {}).get("ladder") or {}
+                model = str(lad["model"])
+                level = str(lad["level"])
+                tier = str(e["tier"])
+                cell_key = (model, level, tier, gz_rel)
+                if invalid_reason(e) is not None or e.get("end_reason") == "error":
+                    ladder_invalid[cell_key] += 1
+                    continue
+                rec = replay_verify_episode(e)
+                detail_stripped_total += int(rec["steps_detail_stripped"])
+                _ensure_solver_seed(solver_all_by_tier, tier, int(rec["seed"]))
+                if is_gemma:
+                    ladder_gemma_replayed += 1
+                else:
+                    ladder_gemini_replayed += 1
+                ladder_groups[cell_key].append((rec, lad))
 
-    def _ladder_sort_key(k: tuple[str, str, str]) -> tuple[int, int, int, str, str]:
-        model, level, tier = k
+    def _ladder_sort_key(k: tuple[str, str, str, str]) -> tuple[int, int, int, str, str]:
+        model, level, tier, _ = k
         return (
             TIERS.index(tier) if tier in TIERS else 99,
             MODEL_ORDER.index(model) if model in MODEL_ORDER else 99,
@@ -820,9 +1118,8 @@ def compute(root: Path = ROOT) -> dict[str, Any]:
             level,
         )
 
-    section_b_rows: list[dict[str, Any]] = []
     for cell_key in sorted(ladder_groups, key=_ladder_sort_key):
-        model, level, tier = cell_key
+        model, level, tier, gz_rel = cell_key
         items = ladder_groups[cell_key]
         recs = [it[0] for it in items]
         lads = [it[1] for it in items]
@@ -834,44 +1131,200 @@ def compute(root: Path = ROOT) -> dict[str, Any]:
             for lad in lads
             if (lad.get("tokens") or {}).get("thinking") is not None
         ]
-        section_b_rows.append(
-            summarize_row(
-                section="B",
-                tier=tier,
-                label=f"{disp} @ {level}",
-                agent=f"gemini:{model}@{level}",
-                kind="ladder_small_n",
-                records=recs,
-                solver_by_seed=solver_by_tier[tier],
-                invalid_count=ladder_invalid[cell_key],
-                infra_excluded_count=0,
-                provenance="real (Env-replayed, small-n)",
-                model_id=model if not served else f"{model} (served: {','.join(served)})",
-                git_sha=",".join(shas) or "unknown",
-                cache_path=ladder_rel,
-                extra={
-                    "model": model,
-                    "display_model": disp,
-                    "thinking_level": level,
-                    "mean_thinking_tokens": round(mean_val(thinking_vals), 1) if thinking_vals else None,
-                    "small_n_directional": True,
-                },
+        is_large_n = len(recs) >= 30
+        sec_code = "B1" if is_large_n else "B2"
+        kind_code = "ladder_n_ge_30" if is_large_n else "ladder_small_n"
+        prov_code = "real (Env-replayed, ladder n>=30)" if is_large_n else "real (Env-replayed, small-n)"
+        full_row = summarize_row(
+            section=sec_code,
+            tier=tier,
+            label=f"{disp} @ {level}",
+            agent=f"gemini:{model}@{level}",
+            kind=kind_code,
+            records=recs,
+            solver_by_seed=solver_all_by_tier[tier],
+            invalid_count=ladder_invalid[cell_key],
+            infra_excluded_count=0,
+            provenance=prov_code,
+            model_id=format_ladder_model_id(model, served),
+            git_sha=",".join(shas) or "unknown",
+            cache_path=gz_rel,
+            extra={
+                "model": model,
+                "thinking_level": level,
+                "mean_thinking_tokens": round(mean_val(thinking_vals), 1) if thinking_vals else None,
+            },
+        )
+        if is_large_n:
+            section_b1_rows.append(full_row)
+        else:
+            section_b2_rows.append(compact_section_b2_row(full_row))
+
+    for tier in TIERS:
+        if tier not in gpt55_by_tier:
+            continue
+        by_seed_g, inv_g, meta_g, t_dir_g = gpt55_by_tier[tier]
+        if all(s in by_seed_g for s in SEEDS_A):
+            continue
+        sample_rec = next(iter(by_seed_g.values()))
+        ag_g = str(meta_g.get("agent") or sample_rec["agent"] or "opencode:openai/gpt-5.5")
+        mod_g = str(meta_g.get("model") or "openai/gpt-5.5")
+        sha_g = str(meta_g.get("git_sha") or "")[:7] or "unknown"
+        infra_g = len(meta_g.get("infra_invalid_attempts_excluded") or [])
+        rel_g = (t_dir_g / "episodes.jsonl").relative_to(root).as_posix()
+        recs_g = [by_seed_g[s] for s in sorted(by_seed_g)]
+        if len(recs_g) >= 30:
+            section_b1_rows.append(
+                summarize_row(
+                    section="B1",
+                    tier=tier,
+                    label=f"OpenCode + gpt-5.5 over MCP (n={len(recs_g)}, cf394894)",
+                    agent=ag_g,
+                    kind="frontier_n_ge_30",
+                    records=recs_g,
+                    solver_by_seed=solver_all_by_tier[tier],
+                    invalid_count=inv_g,
+                    infra_excluded_count=infra_g,
+                    provenance="real (Env-replayed)",
+                    model_id=mod_g,
+                    git_sha=sha_g,
+                    cache_path=rel_g,
+                )
             )
+        else:
+            partial_row = summarize_row(
+                section="B2",
+                tier=tier,
+                label=f"OpenCode + gpt-5.5 over MCP (partial n={len(recs_g)}, cf394894)",
+                agent=ag_g,
+                kind="frontier_partial_small_n",
+                records=recs_g,
+                solver_by_seed=solver_all_by_tier[tier],
+                invalid_count=inv_g,
+                infra_excluded_count=infra_g,
+                provenance="real (Env-replayed, partial small-n)",
+                model_id=mod_g,
+                git_sha=sha_g,
+                cache_path=rel_g,
+                extra={"model": "gpt-5.5", "thinking_level": "default"},
+            )
+            section_b2_rows.append(compact_section_b2_row(partial_row))
+
+    section_b1_rows.sort(
+        key=lambda r: (
+            TIERS.index(r["tier"]) if r["tier"] in TIERS else 99,
+            MODEL_ORDER.index(r["model"]) if r.get("model") in MODEL_ORDER else -1,
+            LEVEL_ORDER.index(r["thinking_level"]) if r.get("thinking_level") in LEVEL_ORDER else -1,
+            str(r["label"]),
+        )
+    )
+    section_b2_rows.sort(
+        key=lambda r: (
+            TIERS.index(r["tier"]) if r["tier"] in TIERS else 99,
+            MODEL_ORDER.index(r["model"]) if r["model"] in MODEL_ORDER else 99,
+            LEVEL_ORDER.index(r["level"]) if r["level"] in LEVEL_ORDER else 99,
+            str(r["label"]),
+        )
+    )
+
+    check_section_b1_invariants(section_b1_rows, root=root)
+    check_section_b2_invariants(section_b2_rows, root=root)
+
+    ext_dir = v14 / "opencode-gemini-4-carbon-ext/hard"
+    g1_ext_eps_replayed = 0
+    g1_sensitivity: dict[str, Any] = {"present": False}
+    if (ext_dir / "episodes.jsonl").is_file():
+        eps_ext, inv_ext, meta_ext = _load_jsonl_dir(ext_dir)
+        ext_recs: list[dict[str, Any]] = []
+        for e in eps_ext:
+            rec_ext = replay_verify_episode(e)
+            detail_stripped_total += int(rec_ext["steps_detail_stripped"])
+            _ensure_solver_seed(solver_all_by_tier, "hard", int(rec_ext["seed"]))
+            ext_recs.append(rec_ext)
+            g1_ext_eps_replayed += 1
+        prim_hard_by_seed = replayed_dir_cache[v14 / "opencode-gemini-4-carbon/hard"][0]
+        pooled_recs = [prim_hard_by_seed[s] for s in SEEDS_A] + sorted(ext_recs, key=lambda r: r["seed"])
+        ext_only_row = summarize_row(
+            section="G1",
+            tier="hard",
+            label="OpenCode + gemini-4-carbon over MCP, extension alone (seeds 30-59)",
+            agent="opencode:google/gemini-4-carbon",
+            kind="extension",
+            records=ext_recs,
+            solver_by_seed=solver_all_by_tier["hard"],
+            invalid_count=inv_ext,
+            infra_excluded_count=len(meta_ext.get("infra_invalid_attempts_excluded") or []),
+            provenance="extension (Env-replayed)",
+            model_id="google/gemini-4-carbon",
+            git_sha=str(meta_ext.get("git_sha") or "")[:7] or "unknown",
+            cache_path=(ext_dir / "episodes.jsonl").relative_to(root).as_posix(),
+        )
+        pooled_row = summarize_row(
+            section="G1",
+            tier="hard",
+            label="OpenCode + gemini-4-carbon over MCP, pooled (primary 0-29 + extension)",
+            agent="opencode:google/gemini-4-carbon",
+            kind="extension_pooled",
+            records=pooled_recs,
+            solver_by_seed=solver_all_by_tier["hard"],
+            invalid_count=inv_ext,
+            infra_excluded_count=len(meta_ext.get("infra_invalid_attempts_excluded") or []),
+            provenance="pooled (Env-replayed)",
+            model_id="google/gemini-4-carbon",
+            git_sha=f"035105e,{str(meta_ext.get('git_sha') or '')[:7]}",
+            cache_path=(
+                "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl + "
+                "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard/episodes.jsonl"
+            ),
+        )
+        g1_sensitivity = _clean_nans(
+            {
+                "present": True,
+                "extension_seeds": sorted(int(r["seed"]) for r in ext_recs),
+                "extension_n": len(ext_recs),
+                "extension_infra_excluded": len(meta_ext.get("infra_invalid_attempts_excluded") or []),
+                "extension_mean": ext_only_row["mean"],
+                "extension_score_ci": ext_only_row["score_ci"],
+                "extension_solver_same_seeds": ext_only_row["solver_same_seeds"],
+                "extension_ratio": ext_only_row["ratio"],
+                "extension_ratio_ci": [ext_only_row["ratio_lo"], ext_only_row["ratio_hi"]],
+                "extension_paired_diff": ext_only_row["paired_diff"],
+                "extension_paired_diff_ci": ext_only_row["paired_diff_ci"],
+                "extension_luck_adjusted_score": ext_only_row["luck_adjusted_score"],
+                "extension_luck_adj_ratio": ext_only_row["luck_adj_ratio"],
+                "extension_luck_adj_ci": [ext_only_row["luck_adj_lo"], ext_only_row["luck_adj_hi"]],
+                "pooled_n": pooled_row["n"],
+                "pooled_mean": pooled_row["mean"],
+                "pooled_score_ci": pooled_row["score_ci"],
+                "pooled_solver_same_seeds": pooled_row["solver_same_seeds"],
+                "pooled_ratio": pooled_row["ratio"],
+                "pooled_ratio_ci": [pooled_row["ratio_lo"], pooled_row["ratio_hi"]],
+                "pooled_paired_diff": pooled_row["paired_diff"],
+                "pooled_paired_diff_ci": pooled_row["paired_diff_ci"],
+                "pooled_luck_adjusted_score": pooled_row["luck_adjusted_score"],
+                "pooled_luck_adj_ratio": pooled_row["luck_adj_ratio"],
+                "pooled_luck_adj_ci": [pooled_row["luck_adj_lo"], pooled_row["luck_adj_hi"]],
+            },
+            ndigits=6,
         )
 
-    frontier_unique_eps = sum(len(v[0]) for v in replayed_dir_cache.values())
+    frontier_unique_eps = sum(len(v[0]) for v in replayed_dir_cache.values()) + gpt55_eps_replayed
     frontier_trunc_steps = sum(
         sum(int(r["steps_truncated_checked"]) for r in v[0].values()) for v in replayed_dir_cache.values()
+    ) + sum(
+        sum(int(r["steps_truncated_checked"]) for r in v[0].values()) for v in gpt55_by_tier.values()
     )
     frontier_client_steps = sum(
         sum(int(r["steps_client_only"]) for r in v[0].values()) for v in replayed_dir_cache.values()
+    ) + sum(
+        sum(int(r["steps_client_only"]) for r in v[0].values()) for v in gpt55_by_tier.values()
     )
 
     ladder_json_path = root / "results/gemini/ladder.json"
     ladder_imp_med = 0
     ladder_imp_hard = 0
     ladder_imp_cells = 0
-    ladder_reported_total = ladder_total_replayed
+    ladder_reported_total = ladder_gemini_replayed
     if ladder_json_path.exists():
         lj = json.loads(ladder_json_path.read_text(encoding="utf-8"))
         for r_lj in lj.get("rows") or []:
@@ -881,14 +1334,18 @@ def compute(root: Path = ROOT) -> dict[str, Any]:
                     ladder_imp_med += int(r_lj.get("n", 0))
                 elif r_lj.get("tier") == "hard":
                     ladder_imp_hard += int(r_lj.get("n", 0))
-        ladder_reported_total = int(lj.get("episodes", ladder_total_replayed + ladder_imp_med + ladder_imp_hard))
+        ladder_reported_total = int(lj.get("episodes", ladder_gemini_replayed + ladder_imp_med + ladder_imp_hard))
     ladder_imp_total = ladder_imp_med + ladder_imp_hard
-    ladder_reported_cells = len(section_b_rows) + ladder_imp_cells
+    native_gemini_cells = sum(1 for (_, _, _, gz_rel) in ladder_groups if gz_rel == DEFAULT_LADDER_CACHE)
+    ladder_reported_cells = native_gemini_cells + ladder_imp_cells
+    total_sec_b_rows = len(section_b1_rows) + len(section_b2_rows)
 
     return {
         "schema_version": "headline_gap_table_v14.v1",
         "tiers_version": "v1.4",
         "primary_seeds": "0-29",
+        "primary_seeds_lock_note": PRIMARY_SEED_LOCK_NOTE,
+        "table_of_record": "data/runs/committed/v1.4/paired_table_gemini.md (see also docs/reports/gap.md)",
         "n_primary_seeds_per_tier": 30,
         "bootstrap_resamples": 10000,
         "bootstrap_seed": 0,
@@ -896,30 +1353,44 @@ def compute(root: Path = ROOT) -> dict[str, Any]:
             "all_replay_consistent": True,
             "section_a_min_n": min(int(r["n"]) for r in section_a_rows),
             "section_a_rows": len(section_a_rows),
-            "section_b_rows": len(section_b_rows),
+            "section_b_rows": total_sec_b_rows,
+            "section_b1_min_n": min(int(r["n"]) for r in section_b1_rows),
+            "section_b1_rows": len(section_b1_rows),
+            "section_b2_rows": len(section_b2_rows),
             "frontier_cached_episodes_replayed": frontier_unique_eps,
+            "replication_cached_episodes_replayed": rep_flash_eps_replayed,
+            "g1_extension_episodes_replayed": g1_ext_eps_replayed,
             "frontier_truncated_steps_verified": frontier_trunc_steps,
             "frontier_client_only_steps_skipped": frontier_client_steps,
+            "pre_1bc3e281_detail_steps_stripped": detail_stripped_total,
             "stored_reference_files_scanned": stored_ref_files,
             "stored_solver_episodes_replayed": stored_solver_episodes,
+            "stored_solver_extension_episodes_replayed": stored_solver_ext_episodes,
             "inproc_baseline_episodes_verified": sum(len(v) for v in baseline_records.values()),
             "reference_crosschecks_matched": crosscheck_counts,
-            "ladder_cached_episodes_replayed": ladder_total_replayed,
+            "ladder_cached_episodes_replayed": ladder_gemini_replayed,
+            "ladder_gemma_episodes_replayed": ladder_gemma_replayed,
             "ladder_imported_inproc_episodes": ladder_imp_total,
             "ladder_imported_medium_episodes": ladder_imp_med,
             "ladder_imported_hard_episodes": ladder_imp_hard,
             "ladder_total_reported_episodes": ladder_reported_total,
             "ladder_total_reported_cells": ladder_reported_cells,
+            "optional_opencode_gpt_5_5_present": gpt55_present,
+            "optional_opencode_gpt_5_5_episodes_replayed": gpt55_eps_replayed,
             "ladder_note": (
-                f"{ladder_total_replayed} native cached ladder episodes across {len(section_b_rows)} cells in "
-                f"results/gemini/ladder_episodes.jsonl.gz (ladder.md's {ladder_reported_total} figure across "
+                f"{ladder_gemini_replayed} native cached Gemini ladder episodes across {native_gemini_cells} cells in "
+                f"{DEFAULT_LADDER_CACHE} (2 hard n=40 gemini-3.6-flash cells in Section B1 + "
+                f"{native_gemini_cells - 2} n<30 cells in Section B2), plus {ladder_gemma_replayed} hosted Gemma "
+                f"episodes in {GEMMA_LADDER_CACHE}; ladder.md's {ladder_reported_total} figure across "
                 f"{ladder_reported_cells} cells also includes {ladder_imp_total} imported inproc-gemini-4-carbon "
-                f"default episodes: {ladder_imp_med} medium + {ladder_imp_hard} hard, superseded by the full n=30 "
+                f"default episodes ({ladder_imp_med} medium + {ladder_imp_hard} hard, superseded by the full n=30 "
                 f"inproc-gemini-4-carbon rows in Section A)."
             ),
         },
+        "g1_extension_sensitivity": g1_sensitivity,
         "section_a": section_a_rows,
-        "section_b": section_b_rows,
+        "section_b1": section_b1_rows,
+        "section_b2": section_b2_rows,
     }
 
 
@@ -941,6 +1412,14 @@ def _leaderboard_meta(row: dict[str, Any]) -> tuple[str, str, str, str, str]:
             "frontier",
             "OpenCode over MCP (judges' shape)",
             "Gemini API",
+        )
+    if agent.startswith("opencode:") and "gpt-5.5" in agent:
+        return (
+            agent,
+            str(row["model_id"]),
+            "frontier",
+            "OpenCode over MCP (judges' shape)",
+            "OpenAI API",
         )
     if agent == "gemini:gemini-4-carbon":
         return (
@@ -1115,9 +1594,10 @@ def _section_table_md(rows: list[dict[str, Any]]) -> list[str]:
         "| " + " | ".join(headers) + " |",
         "|" + "|".join(["---"] * len(headers)) + "|",
     ]
-    for r in rows:
+    for raw_r in rows:
+        r = expand_section_b2_row(raw_r)
         is_sol = r["agent"] == "solver" and r["kind"] == "reference"
-        inv_cell = str(r["invalid"])
+        inv_cell = str(r.get("invalid", 0))
         if r.get("infra_excluded_attempts"):
             inv_cell += f" (+{r['infra_excluded_attempts']} retried)"
         diff_cell = (
@@ -1159,28 +1639,57 @@ def _section_table_md(rows: list[dict[str, Any]]) -> list[str]:
 def render_md(data: dict[str, Any]) -> str:
     ver = data["verification"]
     sec_a = data["section_a"]
-    sec_b = data["section_b"]
+    sec_b1 = data["section_b1"]
+    sec_b2 = data["section_b2"]
+    g1 = data.get("g1_extension_sensitivity") or {}
     frontier_a = [r for r in sec_a if r["kind"] in ("frontier", "sensitivity", "reference")]
 
+    oc_hard = next(
+        r for r in sec_a if r["agent"] == "opencode:google/gemini-4-carbon" and r["tier"] == "hard" and r["kind"] == "frontier"
+    )
+    sol_hard = next(r for r in sec_a if r["agent"] == "solver" and r["tier"] == "hard" and r["kind"] == "reference")
+    raw_hl = _fmt_ratio_ci(oc_hard["ratio"], oc_hard["ratio_lo"], oc_hard["ratio_hi"])
+    luck_hl = _fmt_ratio_ci(oc_hard["luck_adj_ratio"], oc_hard["luck_adj_lo"], oc_hard["luck_adj_hi"])
+
     lines: list[str] = [
-        "# Canary v1.4 Headline Gap Table (Replay-Verified)",
+        H1 + "Canary v1.4 Headline Gap Table (Replay-Verified Companion Audit)",
         "",
-        "Reproduce without API keys (single process, <20s):",
+        "> **Authoritative table of record**: [`data/runs/committed/v1.4/paired_table_gemini.md`](../../data/runs/committed/v1.4/paired_table_gemini.md) and [`docs/reports/gap.md`](gap.md) are the primary, authoritative headline tables of record.",
+        f"> **Primary `v1.4` `hard` headline (`n = {oc_hard['n']}`, OpenCode + `gemini-4-carbon` over MCP, judges' harness shape)**: **{raw_hl}** raw (`{_fmt_num(oc_hard['mean'], 3, signed=True)} +/- {_fmt_num(oc_hard['score_ci'], 3)}` vs reference solver `{_fmt_num(sol_hard['mean'], 3, signed=True)} +/- {_fmt_num(sol_hard['score_ci'], 3)}`), and **{luck_hl}** luck-adjusted (`{_fmt_num(oc_hard['luck_adjusted_score'], 3, signed=True)}` vs solver `{_fmt_num(sol_hard['luck_adjusted_score'], 3, signed=True)}`, Wilcoxon `p = {_fmt_p(oc_hard['p_wilcoxon_luck'])}`).",
+        f"> **Seed-lock provenance**: Section A uses the **{data['primary_seeds_lock_note']}**, which locks the primary `0-29` evaluation set against later reruns or cherry-picking.",
+        "",
+        "Reproduce without API keys (single process, <35s):",
         "",
         "```bash",
         "python scripts/headline_gap_table.py",
         "python scripts/headline_gap_table.py --check",
         "```",
         "",
-        "## Replay & Integrity Summary",
+        H2 + "Replay & Integrity Summary",
         "",
-        f"- **Rules version**: `{data['tiers_version']}`; **Section A pre-registered dev seeds**: `{data['primary_seeds']}` (`n = {data['n_primary_seeds_per_tier']}` per tier on every Section A row; minimum Section A `n = {ver['section_a_min_n']}`).",
-        f"- **Env replay verification**: `{ver['frontier_cached_episodes_replayed']}` primary frontier episodes, `{ver['stored_solver_episodes_replayed']}` stored reference solver episodes (`0-29` across `{ver['stored_reference_files_scanned']}` reference cache files), `{ver['inproc_baseline_episodes_verified']}` deterministic in-process baseline episodes, and `{ver['ladder_cached_episodes_replayed']}` multi-model thinking-ladder episodes verified in `canary.env.Env(tier, seed)` with **zero** score, accusation, or tool-output mismatches (`{ver['frontier_truncated_steps_verified']}` OpenCode client-truncated outputs byte-length verified; `{ver['frontier_client_only_steps_skipped']}` OpenCode client-refused unavailable-tool call skipped).",
-        f"- **Stored reference cross-check**: deterministic in-process runs on `0-29` cross-checked against stored `data/runs/committed/v1.4/reference/` episodes on `0-19` (`heuristic`: `{ver['reference_crosschecks_matched']['heuristic']}`, `random`: `{ver['reference_crosschecks_matched']['random']}`, `do_nothing`: `{ver['reference_crosschecks_matched']['do_nothing']}`, `guess_day1` vs legacy `stop_early`: `{ver['reference_crosschecks_matched']['guess_day1']}` exact matches; `solver` verified on all `60` seeds `0-29`).",
+        f"- **Rules version**: `{data['tiers_version']}`; **Section A dev seeds**: `{data['primary_seeds']}` ({data['primary_seeds_lock_note']}; `n = {data['n_primary_seeds_per_tier']}` per tier on every Section A row; minimum Section A `n = {ver['section_a_min_n']}`).",
+        f"- **Env replay verification (`1bc3e281`-compatible)**: `{ver['frontier_cached_episodes_replayed']}` primary frontier episodes, `{ver['stored_solver_episodes_replayed']}` stored `0-29` reference solver episodes (plus `{ver['stored_solver_extension_episodes_replayed']}` stored `30-59` extension solver episodes across `{ver['stored_reference_files_scanned']}` reference cache files), `{ver['inproc_baseline_episodes_verified']}` deterministic in-process baseline episodes, `{ver['replication_cached_episodes_replayed']}` FR8 OpenCode replication episodes, `{ver['g1_extension_episodes_replayed']}` G1 extension episodes, `{ver['ladder_cached_episodes_replayed']}` native Gemini thinking-ladder episodes, and `{ver['ladder_gemma_episodes_replayed']}` hosted Gemma episodes verified in `canary.env.Env(tier, seed)` with **zero** score, accusation, or tool-output mismatches (`{ver['frontier_truncated_steps_verified']}` OpenCode client-truncated outputs byte-length verified; `{ver['frontier_client_only_steps_skipped']}` OpenCode client-refused unavailable-tool call skipped; `{ver['pre_1bc3e281_detail_steps_stripped']}` pre-`1bc3e281` `invalid arguments` steps matched after stripping post-`1bc3e281` `data.detail`).",
+        f"- **Baseline `n = 30` vs `paired_table_gemini.md` `n = 20` note (see `results/eval_v14/README.md`)**: In `data/runs/committed/v1.4/paired_table_gemini.md`, the stored baseline rows (`heuristic`, `do_nothing`, and legacy day-1-guess `stop_early`) are evaluated on `n = 20` seeds `0-19` (for example, `hard` `heuristic` is `40% [-12%, 108%]` at `n = 20`), whereas Section A here runs deterministic in-process `Env(tier, seed)` replays on all `n = 30` paired seeds `0-29` (including `grok_tactics`), cross-checking seeds `0-19` against the stored `data/runs/committed/v1.4/reference/` files (`heuristic`: `{ver['reference_crosschecks_matched']['heuristic']}`, `random`: `{ver['reference_crosschecks_matched']['random']}`, `do_nothing`: `{ver['reference_crosschecks_matched']['do_nothing']}`, `guess_day1` vs legacy `stop_early`: `{ver['reference_crosschecks_matched']['guess_day1']}` exact matches). Stored reference `solver` is assembled from the `20 + 10` reference directories (`0-19` + `20-29`) and strictly filtered to `0-29` (`n = 30` per tier) in Section A.",
+    ]
+
+    if g1.get("present"):
+        ext_r_ci = g1["extension_ratio_ci"]
+        ext_l_ci = g1["extension_luck_adj_ci"]
+        pool_r_ci = g1["pooled_ratio_ci"]
+        pool_l_ci = g1["pooled_luck_adj_ci"]
+        lines.append(
+            f"- **G1 pre-registered extension sensitivity (`f9fb7a4a`, `data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/`)**: "
+            f"`{g1['extension_n']}` valid `hard` OpenCode episodes (`seeds = {g1['extension_seeds']}`) completed before stopping at 03:22 EET to preserve the shared 2M TPM carbon quota (`{g1['extension_infra_excluded']}` `infra:provider_quota` attempts excluded). "
+            f"Extension alone (`n = {g1['extension_n']}`, not an estimate): `{_fmt_num(g1['extension_mean'], 3, signed=True)} +/- {_fmt_num(g1['extension_score_ci'], 3)}` vs solver `{_fmt_num(g1['extension_solver_same_seeds'], 3)}` (`{_fmt_ratio_ci(g1['extension_ratio'], ext_r_ci[0], ext_r_ci[1])}` raw, paired diff `{_fmt_num(g1['extension_paired_diff'], 3, signed=True)} +/- {_fmt_num(g1['extension_paired_diff_ci'], 3)}`, `{_fmt_ratio_ci(g1['extension_luck_adj_ratio'], ext_l_ci[0], ext_l_ci[1])}` luck-adjusted). "
+            f"Pooled primary `0-29` + extension (`n = {g1['pooled_n']}`, seeds `0-29, 34, 37`): `{_fmt_num(g1['pooled_mean'], 3, signed=True)} +/- {_fmt_num(g1['pooled_score_ci'], 3)}` vs solver `{_fmt_num(g1['pooled_solver_same_seeds'], 3)}`, **`{_fmt_ratio_ci(g1['pooled_ratio'], pool_r_ci[0], pool_r_ci[1])}`** raw, paired diff `{_fmt_num(g1['pooled_paired_diff'], 3, signed=True)} +/- {_fmt_num(g1['pooled_paired_diff_ci'], 3)}`, **`{_fmt_ratio_ci(g1['pooled_luck_adj_ratio'], pool_l_ci[0], pool_l_ci[1])}`** luck-adjusted (`{_fmt_num(g1['pooled_luck_adjusted_score'], 3, signed=True)}`). The primary headline remains the `n = 30` `0-29` row."
+        )
+
+    lines += [
+        f"- **Pre-registered `gpt-5.5` hook (`cf394894`)**: `docs/reports/gap.md` pre-registers an OpenCode 1.19.5 `gpt-5.5` `v1.4` `hard` run (`0-29`, stop 08:15 EET / $200 cap); `headline_gap_table.py` auto-includes and Env-replays `data/runs/committed/v1.4/opencode-gpt-5.5` when present (`present = {str(ver['optional_opencode_gpt_5_5_present']).lower()}`).",
         "- **Dashboard leaderboard export**: also writes `results/leaderboard_v14_hard.json` (`tier = hard`, `tiers_version = v1.4`, `seeds = 0-29`) for `canary.gemini.leaderboard` and `canary.gemini.dashboard`.",
         "- **Statistical & Sleeper-ported metrics**: 10,000-resample paired bootstrap 95% CIs (`rng_seed = 0`), 95% Wilson CIs on `pass^1` accuracy, exact two-sided paired Wilcoxon signed-rank and exact binomial sign-test p-values on both raw and luck-adjusted per-seed differences, exact `SolverPolicy` posterior `P(accused)` and luck-adjusted EV `P*V - (1-P)` (`0` when abstained), posterior-calibrated `pass^3 = mean(p_win_seed^3)`, winnable-world ratio restricted to seeds where `solver > 0` (`27/30` on `medium`, excluding abstained seeds `20, 21, 29`; `29/30` on `hard`, excluding fingerprint-flip seed `15`), and explicit cache provenance.",
         "",
-        "### Executive Summary (Frontier vs Reference Solver, Paired Seeds 0-29)",
+        H3 + "Executive Summary (Frontier vs Reference Solver, Paired Seeds 0-29)",
         "",
         "| tier | run | n | score +/- 95% CI | pass^1 [95% Wilson] | mean P(acc) | cal. pass^3 | frontier / solver [95% CI] | luck-adj. | luck-adj. / solver [95% CI] | p_luck (Wilcoxon) | winnable / solver [95% CI] |",
         "|---|---|---|---|---|---|---|---|---|---|---|---|",
@@ -1210,9 +1719,9 @@ def render_md(data: dict[str, Any]) -> str:
 
     lines += [
         "",
-        "## Section A: Primary v1.4 Paired Headline Table (n = 30 per tier, dev seeds 0-29)",
+        H2 + "Section A: Primary v1.4 Paired Headline Table (n = 30 per tier, post-hoc locked dev seeds 0-29)",
         "",
-        "Every row in Section A is evaluated on the exact pre-registered dev seeds `0-29` (`n = 30`) and Env-replay verified.",
+        "Every row in Section A is evaluated on the exact post-hoc locked dev seeds `0-29` (`671ed96`, 28 s after `8fd4dec`, not pre-registered; `n = 30`) and Env-replay verified.",
         "",
     ]
     for tier in TIERS:
@@ -1220,35 +1729,60 @@ def render_md(data: dict[str, Any]) -> str:
         excl = t_rows[0]["winnable_excluded_seeds"]
         w_n = t_rows[0]["winnable_n"]
         lines += [
-            f"### Section A -- `{tier}` tier (`n = 30` paired seeds `0-29`; winnable `solver > 0`: `{w_n}/30`, excluded `{excl}`)",
+            H3 + f"Section A -- `{tier}` tier (`n = 30` paired seeds `0-29`; winnable `solver > 0`: `{w_n}/30`, excluded `{excl}`)",
             "",
             *_section_table_md(t_rows),
             "",
         ]
 
     lines += [
-        "## Section B: Small-n Multi-Model Cache (n < 30, directional)",
+        H2 + "Section B1: Additional n >= 30 Multi-Model & Replication Caches (not headline; gap.md is primary)",
         "",
         (
-            f"**Small-n Multi-Model Cache (`n < 30`, directional)**: `{ver['ladder_cached_episodes_replayed']}` "
-            f"cached v1.4 episodes across `{len(sec_b)}` `(model, thinking_level, tier)` cells from "
-            f"`results/gemini/ladder_episodes.jsonl.gz` (`gemini-3.1-flash-lite`, `gemini-3.6-flash` requested as "
-            f"`gemini-3.5-flash`, `gemini-3.8-flash`, `gemini-4-argon`, `gemini-4-carbon`), each Env-replay verified "
-            f"and paired against `solver` on that cell's exact dev seeds. Note: `results/gemini/ladder.md` reports "
-            f"`{ver['ladder_total_reported_episodes']}` valid episodes across `{ver['ladder_total_reported_cells']}` "
-            f"cells by combining these `{ver['ladder_cached_episodes_replayed']}` native ladder episodes with "
-            f"`{ver['ladder_imported_inproc_episodes']}` imported `inproc-gemini-4-carbon` default-thinking episodes "
-            f"(`{ver['ladder_imported_medium_episodes']}` medium + `{ver['ladder_imported_hard_episodes']}` hard), "
-            f"which are superseded by the full `n = 30` `inproc-gemini-4-carbon` rows in Section A."
+            f"**Additional `n >= 30` Caches (`{len(sec_b1)}` cohorts, minimum `n = {ver['section_b1_min_n']}`, all Env-replayed)**: "
+            "Includes (1) the FR8 OpenCode `gemini-3.5-flash` (served as `gemini-3.6-flash`) `medium` `n = 30` (`0-29`) replication cohort from `results/frontier_replication/v1.4/opencode-gemini-3.5-flash/medium-{00-14,15-29,s28}/episodes.jsonl` (`d4bc4f3d`) -- **caveat**: assembled from 3 shards at 3 git SHAs (`medium-00-14` @ `c01f371a`, `medium-15-29` @ `55d9781c`, `medium-s28` @ `a5d12c7e`) where seed `28` failed in `15-29` (`INCOMPLETE: seed [28] pending rerun`) and was re-run alone as `medium-s28` (first attempt not in data); and "
+            "(2) the two canonical `n = 40` (`0-39`) `hard` in-process thinking-ladder cells for `gemini-3.6-flash` (requested as `gemini-3.5-flash`) at `medium` and `high` thinking (`eb363eb9`, paired against stored reference solver on `0-39`). Neither replaces the primary Section A / `gap.md` headline."
         ),
         "",
     ]
     for tier in TIERS:
-        b_rows = [r for r in sec_b if r["tier"] == tier]
+        b1_tier = [r for r in sec_b1 if r["tier"] == tier]
+        if not b1_tier:
+            continue
         lines += [
-            f"### Section B -- `{tier}` tier (`Small-n Multi-Model Cache (n < 30, directional)`)",
+            H3 + f"Section B1 -- `{tier}` tier (`n >= 30` multi-model & replication caches)",
             "",
-            *_section_table_md(b_rows),
+            *_section_table_md(b1_tier),
+            "",
+        ]
+
+    n_gemini_b2 = sum(1 for r in sec_b2 if r.get("cache_path", DEFAULT_LADDER_CACHE) == DEFAULT_LADDER_CACHE)
+    n_gemma_b2 = sum(1 for r in sec_b2 if r.get("cache_path") == GEMMA_LADDER_CACHE)
+    lines += [
+        H2 + "Section B2: Small-n Multi-Model Cache (n < 30, directional)",
+        "",
+        (
+            f"**Small-n Multi-Model Cache (`n < 30`, directional)**: `{len(sec_b2)}` `(model, thinking_level, tier)` cells "
+            f"(`{n_gemini_b2}` Gemini cells from `{DEFAULT_LADDER_CACHE}` across "
+            "`gemini-3.1-flash-lite`, `gemini-3.6-flash` requested as `gemini-3.5-flash`, `gemini-3.8-flash`, `gemini-4-hydrogen`, "
+            f"`gemini-4-argon`, and `gemini-4-carbon`, plus `{n_gemma_b2}` hosted open-weight "
+            f"`gemma-4-31b-it` `hard` cell of `{ver['ladder_gemma_episodes_replayed']}` episodes from `{GEMMA_LADDER_CACHE}`), "
+            f"each Env-replay verified and paired against `solver` on that cell's exact dev seeds. "
+            f"Canonical ladder count reconciliation (`eb363eb9`): `results/gemini/ladder.md` reports `{ver['ladder_total_reported_episodes']}` "
+            f"valid Gemini episodes across `{ver['ladder_total_reported_cells']}` cells = `{ver['ladder_cached_episodes_replayed']}` native "
+            f"episodes in `{DEFAULT_LADDER_CACHE}` (`80` in the two `n = 40` Section B1 cells + `{ver['ladder_cached_episodes_replayed'] - 80}` "
+            f"in Section B2) + `{ver['ladder_imported_inproc_episodes']}` imported `inproc-gemini-4-carbon` default-thinking episodes "
+            f"(`{ver['ladder_imported_medium_episodes']}` medium + `{ver['ladder_imported_hard_episodes']}` hard, superseded by Section A's "
+            "`n = 30` `inproc-gemini-4-carbon` rows)."
+        ),
+        "",
+    ]
+    for tier in TIERS:
+        b2_rows = [r for r in sec_b2 if r["tier"] == tier]
+        lines += [
+            H3 + f"Section B2 -- `{tier}` tier (`Small-n Multi-Model Cache (n < 30, directional)`)",
+            "",
+            *_section_table_md(b2_rows),
             "",
         ]
 
@@ -1275,16 +1809,15 @@ def _format_compact_json(data: dict[str, Any]) -> str:
     for ki, k in enumerate(keys):
         comma = "," if ki + 1 < len(keys) else ""
         val = data[k]
-        if k in ("section_a", "section_b") and isinstance(val, list):
+        if k in ("section_a", "section_b1", "section_b2") and isinstance(val, list):
             lines.append(f' "{k}": [')
             for ri, row in enumerate(val):
                 rcomma = "," if ri + 1 < len(val) else ""
                 lines.append("  " + json.dumps(row, sort_keys=True, separators=(",", ":")) + rcomma)
             lines.append(f" ]{comma}")
         elif isinstance(val, dict):
-            dumped = json.dumps(val, indent=2, sort_keys=True)
-            indented = "\n".join((" " + ln if i > 0 else ln) for i, ln in enumerate(dumped.splitlines()))
-            lines.append(f' "{k}": {indented}{comma}')
+            dumped = json.dumps(val, separators=(",", ":"), sort_keys=True)
+            lines.append(f' "{k}": {dumped}{comma}')
         else:
             lines.append(f' "{k}": {json.dumps(val, sort_keys=True)}{comma}')
     lines.append("}\n")
@@ -1319,7 +1852,11 @@ def main(argv: list[str] | None = None) -> int:
         if not out_lb.exists():
             print(f"missing {out_lb}", file=sys.stderr)
             return 1
-        stored_json = json.loads(out_json.read_text(encoding="utf-8"))
+        raw_bytes = out_json.read_bytes()
+        if len(raw_bytes) > MAX_JSON_BYTES:
+            print(f"{out_json} exceeds {MAX_JSON_BYTES} byte limit: {len(raw_bytes)} bytes", file=sys.stderr)
+            return 1
+        stored_json = json.loads(raw_bytes.decode("utf-8"))
         fresh_json = json.loads(json_blob)
         if not approx_equal(stored_json, fresh_json, tol=1e-9):
             print(f"{out_json} differs from recomputed data beyond 1e-9 tolerance", file=sys.stderr)
@@ -1341,8 +1878,8 @@ def main(argv: list[str] | None = None) -> int:
         print("headline_gap_table_v14 check OK")
         return 0
 
-    if len(json_blob.encode("utf-8")) >= 100_000:
-        raise ValueError(f"JSON output exceeds 100 KB limit: {len(json_blob.encode('utf-8'))} bytes")
+    if len(json_blob.encode("utf-8")) > MAX_JSON_BYTES:
+        raise ValueError(f"JSON output exceeds {MAX_JSON_BYTES} byte limit: {len(json_blob.encode('utf-8'))} bytes")
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_md.parent.mkdir(parents=True, exist_ok=True)
     out_lb.parent.mkdir(parents=True, exist_ok=True)

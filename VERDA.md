@@ -116,7 +116,17 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 
 ## 6. Cost and GPU-hours [Verda]
 
-All prices come from the Verda API at creation (€). The **upper bound** assumes every instance runs until its reaper deadline. Instances that finish early are deleted early, so the actual cost can only be lower.
+**Spend from the ledger** (account balance, `fr8/verda/README.md` on `justSilas-fr8`; measured, not projected):
+
+| time | balance | spent |
+|---|---|---|
+| start | €200.00 | – |
+| 23:37 | €195.25 | €4.75 |
+| 00:20 | €191.71 | €8.29 |
+| 03:08 | €153.98 | **€46.02** |
+| after the last reaper (08:00) | pending | **pending: final total** |
+
+**Per instance.** Prices come from the Verda API at creation (€). Hours run to each reaper deadline, so they are an **upper bound** until the ledger records the actual delete times.
 
 | instance | type | €/h | start → reaper | GPU-h (max) | € (max) | workloads |
 |---|---|---|---|---|---|---|
@@ -131,8 +141,21 @@ All prices come from the Verda API at creation (€). The **upper bound** assume
 | `e9ea8b2e` | A100 40GB on-demand | 1.5373 | 03:02 → 08:00 | 4.97 | 7.64 | X2 DAgger |
 | **total** | 9 instances (2 H100, 7 A100) | | | **≤ 53.5 GPU-h** | **≤ €120.7** | cap €300 |
 
-- **Measured spend:** the balance went from €200.00 (start) to €195.25 at 23:37, €191.71 at 00:20 and **€153.98 at 03:08 (€46.02 spent)**. The FR8 projection is €115–125 by the 07:30 reapers.
-- **Final measured spend:** pending (from the account balance after the last reaper).
+**GPU-hours per workload** (upper bound, attributed from the per-instance table):
+- The Meta and X1 work shared boxes that were already running, so their *incremental* cost was €0. The share below is attributed, not extra spend.
+- `18acfa5d` is split at the base eval's end (~04:50, 150 min budget); after that it only hosts X1.
+- `f4378173` is split at ~05:00, when v3-8k s3 yields to X2.
+
+| workload | instances | GPU-h | € |
+|---|---|---|---|
+| **Tiebreaker** (v3 GRPO 4k + 8k seeds, held-out evals, base eval) | `3bb74f5a` (less Meta), `ac58df04`, `dbd083ca`, `68bbe201`, `f4378173` to 05:00 (less Meta), `18acfa5d` to ~04:50, `714d8144` | ≤ 35.9 | ≤ 92.6 |
+| **Gemini J1** (Qwen3-14B on self-hosted vLLM; ~1.8 h of it idle, §7) | `924e81d8` | ≤ 6.7 | ≤ 7.2 |
+| **Meta glasses** (YOLOv8n + PaliGemma 2 3B, shared) | `3bb74f5a` 0.15 h, `f4378173` 0.65 h | 0.8 | 2.1 (€0 incremental) |
+| **X1 agent hosting** (Gemini OpenCode runners on the box's CPUs) | `18acfa5d` after ~04:50 | ≤ 2.7 | ≤ 5.8 (€0 incremental before 04:50) |
+| **X2 DAgger** | `e9ea8b2e`, `f4378173` from ~05:00 | ≤ 7.5 | ≤ 13.0 |
+| **total** | | **≤ 53.5** | **≤ €120.7** |
+
+These are finalised from the ledger's delete times after the reapers.
 - **Cost per result:** the headline v3-4k s0 run cost about **€17** on the on-demand H100: 22:46 → 02:20, including setup failures, 2.0 h of training and the n=90 eval.
 
 ## 7. What didn't work (honest log)
@@ -169,7 +192,8 @@ All prices come from the Verda API at creation (€). The **upper bound** assume
    - Canary already ships as an MCP environment and a Harbor task, with HMAC-signed ledgers and replay verification.
    - Packaged in an auto-scaling container, labs point their agent at an endpoint, play judge-seed episodes, and get a signed, replayable score.
    - It scales to zero between runs, and the data stays in EU data centres.
-4. **Inference API for open-weight agents.**
+4. **Inference API for open-weight agents (not used this weekend).**
+   - We had only cloud-instance credentials and the task was cancelled, so no number on this page comes from the Inference API or Nemotron.
    - Replace tonight's self-hosted vLLM with the Verda Inference API, or the Nemotron endpoint, for open-weight investigator baselines on every tier.
    - That needs no GPU setup and no 48 GB-disk workaround.
    - The tuned small model can be served from the same API for the demo.

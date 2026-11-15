@@ -104,7 +104,7 @@ def test_analytical_mi_surface_and_check_cli_invariants(
     dt = time.perf_counter() - t0
     out_check = capsys.readouterr().out
     assert rc_check == 0
-    assert dt < 0.25
+    assert dt < tcsda.MAX_CHECK_SECONDS
     assert "OK: verified" in out_check
 
     rc_default = tcsda.main([])

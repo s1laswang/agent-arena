@@ -286,22 +286,23 @@ def blind_numbers() -> dict:
             "cov": round(100 * B["regret_share_covered"]), "eps": B["episodes"]}
 
 
-def card_features(u: dict) -> Image.Image:
+def card_features() -> Image.Image:
+    """No exact call / cost / token totals: the usage total is regenerated after this cut (see VIDEO-2MIN.md)."""
     im, d = canvas(BG)
     kicker(d, (160, 130), "WHY GEMINI IS ESSENTIAL")
     d.text((154, 170), "Three Gemini features make this possible", font=font("serif", 66), fill=INK)
     rows = [("thinking_level", "the ladder's knob: minimal, low, medium, high"),
             ("thought signatures", "keep reasoning across tool calls"),
-            ("explicit context cache", f"served {round(100 * u['share'])}% of input tokens ({u['cached']} of {u['input']})")]
+            ("explicit context cache", "served most input tokens")]
     for i, (k, v) in enumerate(rows):
         y = 330 + i * 150
         d.rounded_rectangle((160, y, 1760, y + 120), 20, fill=(255, 255, 255), outline=(220, 218, 210), width=2)
         d.text((200, y + 30), f"{i + 1}", font=sans_b(56), fill=ACCENT)
         d.text((280, y + 22), k, font=sans_b(44), fill=INK)
         d.text((280, y + 76), v, font=font("sans", 30), fill=MUTED)
-    d.text((160, 810), f"Whole programme: ${u['cost']:,.2f} at list price · {u['calls']:,} ledgered calls", font=sans_b(44), fill=INK)
+    d.text((160, 810), "Every Gemini call is logged in one usage ledger", font=sans_b(44), fill=INK)
     d.text((160, 880), "TTS and the Live API only narrate.", font=font("sans", 40), fill=MUTED)
-    d.text((160, 1000), "source: results/gemini/usage_ledger.jsonl.gz (committed ledger, as in results/gemini/dashboard.html)",
+    d.text((160, 1000), "source: canary/gemini/ledger.py · results/gemini/dashboard.html (usage panel)",
            font=font("mono", 22), fill=MUTED)
     return im
 
@@ -579,6 +580,14 @@ def timeline(slots: list[Slot], shots_png: dict[str, Path], replay_lines: list[s
     total = slots[-1].t1
     segs: list[Seg] = []
 
+    words = {k: v["text"] for k, v in json.loads((NARR / "index.json").read_text()).items()}
+
+    def sent(key: str, k: int) -> float:
+        """Word fraction at the end of sentence k (1-based) of the shot's spoken text."""
+        parts = re.split(r"(?<=[.?!])\s+", words[by[key].shot.vo].strip())
+        n = lambda ss: sum(len(x.split()) for x in ss)
+        return n(parts[:k]) / n(parts)
+
     def at(key: str, frac: float) -> float:
         """Absolute time of a word fraction of the shot's clip, snapped to the nearest real pause."""
         s = by[key]
@@ -588,7 +597,7 @@ def timeline(slots: list[Slot], shots_png: dict[str, Path], replay_lines: list[s
     # 0 HoldUp (browser simulation of the glasses flow; its own yellow banner stays visible)
     s = by["holdup"]
     hsrc = "github.com/s1laswang/junction-meta-glasses · docs/demo/holdup-mock-demo.mp4 @ gemini-quote-0515"
-    t_live, t_754 = at("holdup", 8 / 43), at("holdup", 33 / 43)
+    t_live, t_754 = at("holdup", sent("holdup", 1)), at("holdup", sent("holdup", 3))
     segs.append(Seg(s.t0, s.t1, holdup_render(holdup, s.t1 - s.t0),
                     [(s.t0, s.t1, side_caption("HoldUp: browser simulation of the glasses flow", hsrc, y=110)),
                      (t_live, s.t1, side_caption("Product: Gemini Live API · camera + voice in, speech out", y=470, size=32)),
@@ -598,13 +607,13 @@ def timeline(slots: list[Slot], shots_png: dict[str, Path], replay_lines: list[s
 
     # 1 hook: the trust question, then the Canary Lab title
     s = by["hook"]
-    t_lab = at("hook", 8 / 19)
+    t_lab = at("hook", sent("hook", 1))
     segs.append(Seg(s.t0, t_lab, still(card_hook(), 1.0, 1.04), label="1 hook"))
     segs.append(Seg(t_lab, s.t1, still(card_intro(), 1.0, 1.03), label="1 title"))
 
     # 1b Gemini Live commentator over the game headline panel
     s = by["live"]
-    segs.append(Seg(s.t0, s.t1, pan(img["headline"], (150, 0, 1300), (160, 10, 1000)),
+    segs.append(Seg(s.t0, s.t1, still(card_intro(), 1.03, 1.06),          # not the headline panel: it shows usage totals
                     [(s.t0 + 0.3, s.t1, caption("Live commentary: Gemini Live API", "assets/narration/commentator-demo.wav · gemini-3.8-live"))],
                     "1 live commentary"))
 
@@ -613,10 +622,10 @@ def timeline(slots: list[Slot], shots_png: dict[str, Path], replay_lines: list[s
     L = ladder_numbers()
     src = "results/gemini/ladder.md"
     q2 = s.t0 + 2.2
-    t_hard, t_cost = at("ladder", 15 / 77), at("ladder", 44 / 77)
+    t_hard, t_cost = at("ladder", sent("ladder", 2)), at("ladder", sent("ladder", 3))
     c, fl = L["carbon"], L["flash"]
     segs.append(Seg(s.t0, q2, still(card_section("Q2", "Gemini integration", "Gemini plays: five models, up to four thinking levels, paired with a Bayesian solver."), 1.0, 1.03), label="3 card"))
-    segs.append(Seg(q2, t_cost, pan(img["ladder"], (150, 130, 1300), (195, 255, 540)),
+    segs.append(Seg(q2, t_cost, pan(img["ladder"], (150, 130, 1300), (195, 300, 540)),
                     [(q2 + 0.2, t_hard, caption(f"5 models · up to 4 thinking levels · {L['episodes']} paired episodes", src)),
                      (t_hard, t_cost, caption(f"Hard · gemini-4-carbon, high thinking: {c['ratio']} of the solver · ${c['usd']:.2f} per episode (n = {c['n']})", src))],
                     "3 heatmap"))
@@ -639,7 +648,7 @@ def timeline(slots: list[Slot], shots_png: dict[str, Path], replay_lines: list[s
     # 4 atlas (blind re-run: Gemini never saw our labels)
     s = by["atlas"]
     bn = blind_numbers()
-    t_blind, t_table = at("atlas", 13 / 42), at("atlas", 28 / 42)
+    t_blind, t_table = at("atlas", sent("atlas", 2)), at("atlas", sent("atlas", 3))
     src = "results/gemini/atlas_blind.md"
     segs.append(Seg(s.t0, t_table, still(focus(img["atlas"], (128, 128, 1432, 360), fill=0.94), 1.0, 1.06),
                     [(s.t0 + 0.2, t_blind, caption(f"All {bn['eps']} trajectories in one cached context · no labels, no regret, no solver", src)),
@@ -652,7 +661,7 @@ def timeline(slots: list[Slot], shots_png: dict[str, Path], replay_lines: list[s
     # 5 swarm (final multi-wave swarm.md)
     s = by["swarm"]
     sw = swarm_numbers(swarm_md)
-    t_pc = at("swarm", 19 / 33)
+    t_pc = at("swarm", sent("swarm", 3))
     src = "results/gemini/swarm.md (final, all waves)"
     segs.append(Seg(s.t0, t_pc, still(card_swarm(sw, src), 1.0, 1.04), label="5 swarm"))
     segs.append(Seg(t_pc, s.t1, still(card_positive_control(sw, src), 1.0, 1.035), label="5 positive control"))
@@ -666,12 +675,12 @@ def timeline(slots: list[Slot], shots_png: dict[str, Path], replay_lines: list[s
     # 7 essential
     s = by["essential"]
     q4 = s.t0 + 2.2
-    t_feat = at("essential", 19 / 43)
+    t_feat = at("essential", sent("essential", 3))
     segs.append(Seg(s.t0, q4, still(card_section("Q4", "Why Gemini is essential", "Three API features the lab cannot run without."), 1.0, 1.03), label="7 card"))
     segs.append(Seg(q4, t_feat, pan(img["usage"], (150, 120, 1300), (180, 225, 1080)),
-                    [(max(q4, at("essential", 6 / 43)), at("essential", 12 / 43), caption("thinking_level: the ladder's knob")),
-                     (at("essential", 12 / 43), t_feat, caption("thought signatures: reasoning kept across tool calls"))], "7 usage"))
-    segs.append(Seg(t_feat, s.t1, still(card_features(usage_numbers()), 1.0, 1.03), label="7 features"))
+                    [(max(q4, at("essential", sent("essential", 1))), at("essential", sent("essential", 2)), caption("thinking_level: the ladder's knob")),
+                     (at("essential", sent("essential", 2)), t_feat, caption("thought signatures: reasoning kept across tool calls"))], "7 usage"))
+    segs.append(Seg(t_feat, s.t1, still(card_features(), 1.0, 1.03), label="7 features"))
 
     # 8 close
     s = by["close"]
@@ -696,7 +705,13 @@ def replay_excerpt(path: Path | None) -> list[str]:
         keep = [re.sub(r"/\S*/(results|data)/", r"\1/", l) for l in keep]
         keep = [re.sub(r" \| clients=.*", "", l) for l in keep]
         keep = [l if len(l) <= 96 else l[:95] + "…" for l in keep]
-        return ["$ unset GEMINI_API_KEY GEMINI_GATEWAY_URL", "$ make lab-replay"] + keep[:14]
+        n_ok = sum("OK" in l for l in keep)
+        room, out = 15 - n_ok, []
+        for l in keep:                      # every REPLAY OK / ALL OK line, plus the first progress lines that fit
+            if "OK" in l or room > 0:
+                out.append(l)
+                room -= "OK" not in l
+        return ["$ unset GEMINI_API_KEY GEMINI_GATEWAY_URL", "$ make lab-replay"] + out
     return ["$ unset GEMINI_API_KEY GEMINI_GATEWAY_URL", "$ make lab-replay", "lab_replay: ALL OK"]
 
 
@@ -807,7 +822,7 @@ def main(argv=None) -> int:
     tempo, slots = plan(shots_v2(xprov_available() and not a.no_xprov), a.max_total)
     total = slots[-1].t1
     shots_dir = a.build / "shots"
-    panels = ["headline", "atlas", "swarm", "usage"]
+    panels = ["atlas", "usage"]
     if not a.no_capture and not a.plan:
         capture_panels(a.html, panels, shots_dir)
         capture_panels(a.ladder_html or a.html, ["ladder"], shots_dir)

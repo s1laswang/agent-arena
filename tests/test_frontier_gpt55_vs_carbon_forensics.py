@@ -35,6 +35,7 @@ def _load_module():
 
 
 fgc = _load_module()
+INITIAL_ALLOW_DEV = os.environ.get("CANARY_ALLOW_DEV")
 
 
 def _forbid_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -170,17 +171,15 @@ def test_tamper_detection_json_md_size_and_replay(gitless_bundle, monkeypatch, t
 
     ep_path = ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gpt-5.5" / "hard" / "episodes.jsonl"
     first_ep = json.loads(ep_path.read_text(encoding="utf-8").splitlines()[0])
-    os.environ["CANARY_ALLOW_DEV"] = "1"
-    try:
-        with pytest.raises(ValueError, match="replay mismatch"):
-            fgc._replay_and_audit_episode({**first_ep, "score": 0.25})
-        with pytest.raises(ValueError, match="replay mismatch"):
-            fgc._replay_and_audit_episode({**first_ep, "meta": {**first_ep["meta"], "rc": 124}})
-    finally:
-        os.environ.pop("CANARY_ALLOW_DEV", None)
+    monkeypatch.setenv("CANARY_ALLOW_DEV", "1")
+    with pytest.raises(ValueError, match="replay mismatch"):
+        fgc._replay_and_audit_episode({**first_ep, "score": 0.25})
+    with pytest.raises(ValueError, match="replay mismatch"):
+        fgc._replay_and_audit_episode({**first_ep, "meta": {**first_ep["meta"], "rc": 124}})
 
 
 def test_exact_justsilas_5f9b3297_numbers_and_forensics(gitless_bundle):
+    assert os.environ.get("CANARY_ALLOW_DEV") == INITIAL_ALLOW_DEV
     _, data = gitless_bundle
     assert data["schema_version"] == "v1.4-frontier-gpt55-vs-carbon-forensics-1"
     assert data["tiers_version"] == "v1.4"

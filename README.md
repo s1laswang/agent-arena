@@ -8,6 +8,8 @@ This repo holds our hackathon entries. Each one is pinned to a tag. **This `main
 | **Google DeepMind: Best Use of Gemini API** | **Canary Lab.** Gemini's thinking level used as a controlled variable on the Canary benchmark, plus a Gemini red team validated by a positive control. Every Gemini call is logged. | tag [`gemini-final-v3`](https://github.com/s1laswang/agent-arena/tree/gemini-final-v3) | [docs/gemini/SUBMISSION.md](https://github.com/s1laswang/agent-arena/blob/gemini-final-v3/docs/gemini/SUBMISSION.md) |
 | **Verda Compute Track** | Small-model training on Canary experience and open-weight runs on Verda GPUs, with every number labelled by where it ran. | tag [`afterquery-submit`](https://github.com/s1laswang/agent-arena/tree/afterquery-submit) | [VERDA.md](https://github.com/s1laswang/agent-arena/blob/afterquery-submit/VERDA.md) |
 
+> **Correction, Sun 15 Nov 09:30 (AfterQuery entry).** The judge rehearsal's third run finished after the tag was cut. Final numbers: three gemini-4-carbon runs at **93%, 116% and 131%** of the oracle (run 3: 9 valid trials, 5 of them after the 08:30 cut-off, 1 infra-excluded). The table inside tag `afterquery-submit` shows an 08:52 snapshot of run 3 (7 trials, 153%) and wrongly says it stopped at 08:30. The conclusion is the same: no gap in the judge path. Final table and all trial directories: [`s1-rehearsal-final`](https://github.com/s1laswang/agent-arena/blob/s1-rehearsal-final/results/harbor/rehearsal/TABLE.md).
+
 ## Reproduce the AfterQuery entry (one command, no API keys)
 
 ```bash

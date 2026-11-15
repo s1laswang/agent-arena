@@ -2,12 +2,12 @@
 
 - Role: `investigators`
 - Target Model ID: `gemini-4-carbon` (`tiers_version=v1.4`)
-- Verified run folders: `28` (`25` frontier + `2` thinking-ladder + `1` hint-ablation)
-- Replay-verified episodes: `41 / 41` (`33` unique frontier episodes)
-- Transcript thought-signature audit: `41` transcripts verified, `3560` redacted signature parts, `0` raw base64 leaks
-- Total Gemini API calls: `3,565`
-- Total tokens (in / out / thinking / cached): `129,967,004` / `1,502,416` / `157,797` / `120,952,167`
-- Total cost (USD, cache-adjusted est / uncached list): `$46.7270` / `$276.5361`
+- Verified run folders: `29` (`26` frontier + `2` thinking-ladder + `1` hint-ablation)
+- Replay-verified episodes: `42 / 42` (`34` unique frontier episodes)
+- Transcript thought-signature audit: `42` transcripts verified, `3644` redacted signature parts, `0` raw base64 leaks
+- Total Gemini API calls: `3,649`
+- Total tokens (in / out / thinking / cached): `132,698,927` / `1,542,560` / `157,797` / `123,477,915`
+- Total cost (USD, cache-adjusted est / uncached list): `$47.7934` / `$282.4014`
 - Hygiene & secret scan violations: `0`
 
 ## 1. In-Process `gemini-4-carbon` Investigator Paired vs `SolverPolicy` (v1.4)
@@ -16,9 +16,9 @@
 | --- | ---: | --- | --- | ---: | ---: | ---: | --- | --- | --- |
 | `easy` | 4 | +0.850 +/- 0.035 | 100.0% [51.0%, 100.0%] | 3.8 | 1.000 | +0.800 | 106.2% [100.0%, 113.2%] | +0.050 +/- 0.061 | 112.3% [100.0%, 135.5%] |
 | `medium` | 11 | +0.594 +/- 0.180 | 81.8% [52.3%, 94.9%] | 8.8 | 1.000 | +0.740 | 80.2% [52.6%, 106.2%] | -0.146 +/- 0.211 | 80.2% [52.6%, 106.2%] |
-| `hard` | 18 | +0.506 +/- 0.181 | 94.4% [74.2%, 99.0%] | 11.2 | 0.931 | +0.533 | 94.8% [53.7%, 130.2%] | -0.028 +/- 0.213 | 99.4% [84.5%, 119.4%] |
-| `medium_plus_hard` | 29 | +0.539 +/- 0.130 | 89.7% [73.6%, 96.4%] | 10.4 | 0.954 | +0.612 | 88.1% [62.7%, 110.8%] | -0.073 +/- 0.154 | 90.2% [74.7%, 106.2%] |
-| `all_tiers` | 33 | +0.577 +/- 0.120 | 90.9% [76.4%, 96.9%] | 9.5 | 0.960 | +0.635 | 90.9% [69.1%, 110.4%] | -0.058 +/- 0.136 | 93.5% [79.5%, 107.7%] |
+| `hard` | 19 | +0.519 +/- 0.173 | 94.7% [75.4%, 99.1%] | 11.0 | 0.926 | +0.542 | 95.9% [57.6%, 128.6%] | -0.022 +/- 0.202 | 98.3% [84.6%, 116.9%] |
+| `medium_plus_hard` | 30 | +0.547 +/- 0.127 | 90.0% [74.4%, 96.5%] | 10.3 | 0.950 | +0.614 | 89.0% [64.2%, 110.9%] | -0.068 +/- 0.149 | 89.9% [74.9%, 105.5%] |
+| `all_tiers` | 34 | +0.582 +/- 0.117 | 91.2% [77.0%, 97.0%] | 9.5 | 0.956 | +0.636 | 91.5% [69.8%, 110.1%] | -0.054 +/- 0.132 | 93.2% [79.8%, 106.8%] |
 
 ## 2. Thinking-Level Ablation (`low` vs `high`) Paired vs `SolverPolicy`
 
@@ -47,6 +47,7 @@
 | `hard-12` | `frontier_investigator` | 1 | 102 | 3,352,345 | 40,012 | 0 | 3,106,048 | $1.2033 | yes |
 | `hard-13` | `frontier_investigator` | 1 | 116 | 6,496,251 | 70,774 | 0 | 6,191,082 | $1.9372 | yes |
 | `hard-14` | `frontier_investigator` | 1 | 63 | 1,907,302 | 33,589 | 0 | 1,744,958 | $0.8351 | yes |
+| `hard-16` | `frontier_investigator` | 1 | 84 | 2,731,923 | 40,144 | 0 | 2,525,748 | $1.0664 | yes |
 | `hard-17` | `frontier_investigator` | 1 | 82 | 2,363,734 | 36,628 | 0 | 2,163,578 | $0.9829 | yes |
 | `hard-18` | `frontier_investigator` | 1 | 74 | 2,888,736 | 43,465 | 0 | 2,692,520 | $1.0963 | yes |
 | `hard-19` | `frontier_investigator` | 1 | 152 | 9,794,174 | 80,044 | 0 | 9,405,740 | $2.5179 | yes |

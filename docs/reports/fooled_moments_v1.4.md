@@ -10,21 +10,24 @@ uv run python -c "from replay.loader import load_committed_episodes, pair_with_s
 
 ## 1. Headline Findings Across 150 Paired Real v1.4 Episodes
 
-- **22 fooled episodes (`fooled=True`) and 2 disclosed bad-luck flips (`bad_luck=True, fooled=False`)** across the 150 paired real episodes (`126` episodes have `kind="none"`, comprising `120` justified accusations and `6` rational abstentions).
+- **Primary `gap.md` v1.4 headline (`n=30` paired seeds 0 to 29 on `hard`):** In the judges' harness (`opencode:google/gemini-4-carbon` over MCP), the frontier agent scores **65% [24%, 98%]** raw (`0.322` vs solver `0.499`) and **72% [52%, 91%]** luck-adjusted (`0.360` vs `0.499`).
+- **22 fooled episodes (`fooled=True`) and 2 disclosed bad-luck flips (`bad_luck=True, fooled=False`)** across all 150 paired real v1.4 episodes (`126` episodes have `kind="none"`, comprising `120` justified accusations and `6` rational abstentions).
 - **Separating being fooled from disclosed noise.** When `opencode:google/gemini-4-carbon` accuses an innocent on `hard` seeds 1 and 26 at solver posteriors `P=0.9878` (`EV=+0.3534`) and `P=0.9504` (`EV=+0.5872`), `detect_fooled_moment` classifies both as `fingerprint_bad_luck` (`fooled=False, bad_luck=True`), isolating the 5% canary fingerprint flip from genuine calibration failures.
-- **Why luck-adjusted scoring changes model rankings.** On `hard` (seeds 0 to 29), `opencode:google/gemini-3.5-flash` achieves a higher raw score than `opencode:google/gemini-4-carbon` (`0.3730` vs `0.3223`, or `74.75%` vs `64.60%` of solver `0.4990`). Under the Bayesian belief tracer, `gemini-3.5-flash` collapses to **22.00% luck-adjusted** (`0.1098`, 95% CI `[-21.14%, 64.44%]`) while `gemini-4-carbon` rises to **72.03% luck-adjusted** (`0.3596`, 95% CI `[51.51%, 92.41%]`). `gemini-3.5-flash` is fooled on **10/30** seeds (`7` negative-EV `subthreshold_gamble` hits, `2` `premature_wrong`, `1` `decoy_chase`), whereas `gemini-4-carbon` over MCP is fooled on **4/30** seeds (`2` `subthreshold_gamble`, `1` `premature_wrong`, `1` `wrong_accusation`).
+- **Why luck-adjusted scoring changes model rankings.** On `hard` (`n=30`, seeds 0 to 29), `opencode:google/gemini-3.5-flash` achieves a higher raw score than `opencode:google/gemini-4-carbon` (`0.373` vs `0.322`, or **75% [36%, 123%]** vs **65% [24%, 98%]** of solver `0.499`). Under the Bayesian belief tracer, `gemini-3.5-flash` collapses to **22% [-23%, 63%]** luck-adjusted (`0.110`) while `gemini-4-carbon` rises to **72% [52%, 91%]** luck-adjusted (`0.360`). `gemini-3.5-flash` is fooled on **10/30** seeds (`7` negative-EV `subthreshold_gamble` hits, `2` `premature_wrong`, `1` `decoy_chase`), whereas `gemini-4-carbon` over MCP is fooled on **4/30** seeds (`2` `subthreshold_gamble`, `1` `premature_wrong`, `1` `wrong_accusation`).
 
 ## 2. Paired Gap, Calibration, and Fooled Breakdown by Lane (v1.4)
 
-| Tier | Agent | Paired `n` | Raw Mean | Solver Mean | Raw Ratio (95% CI) | Luck-Adj Mean | Luck-Adj Ratio (95% CI) | Mean `P(accused)` | Premature Rate | `fooled` | `bad_luck` | Breakdown (`kind`) |
+Paired ratios and 95% bootstrap CIs match `docs/reports/gap.md` and `python scripts/paired_gemini.py --version v1.4 --seeds 0-29`; fooled and bad-luck classifications come from `replay.fooled.analyze_pair_fooled`:
+
+| Tier | Agent | Paired `n` | Raw Mean | Solver Mean | Frontier / Solver [95% CI] | Luck-Adj Mean | Luck-Adj / Solver [95% CI] | Mean `P(accused)` | Premature Rate | `fooled` | `bad_luck` | Breakdown (`kind`) |
 |---|---|---:|---:|---:|---|---:|---|---:|---:|---:|---:|---|
-| `hard` | `solver` (scripted ref) | 30 | 0.4990 | 0.4990 | 100.00% [100.00%, 100.00%] | 0.4993 | 100.00% [100.00%, 100.00%] | 0.9652 | 0.00% | 0 | 0 | `none`: 30 |
-| `hard` | `gemini:gemini-4-carbon` | 30 | 0.4730 | 0.4990 | 94.79% [63.43%, 142.09%] | 0.4211 | 84.34% [65.01%, 105.71%] | 0.9299 | 10.00% | 3 | 0 | `none`: 27, `subthreshold_gamble`: 2, `premature_wrong`: 1 |
-| `hard` | `opencode:google/gemini-4-carbon` | 30 | 0.3223 | 0.4990 | 64.60% [19.88%, 100.67%] | 0.3596 | 72.03% [51.51%, 92.41%] | 0.8819 | 10.00% | 4 | 2 | `none`: 24, `fingerprint_bad_luck`: 2, `subthreshold_gamble`: 2, `wrong_accusation`: 1, `premature_wrong`: 1 |
-| `hard` | `opencode:google/gemini-3.5-flash` | 30 | 0.3730 | 0.4990 | 74.75% [35.43%, 122.12%] | 0.1098 | 22.00% [-21.14%, 64.44%] | 0.7095 | 33.33% | 10 | 0 | `none`: 20, `subthreshold_gamble`: 7, `premature_wrong`: 2, `decoy_chase`: 1 |
-| `medium` | `solver` (scripted ref) | 30 | 0.6450 | 0.6450 | 100.00% [100.00%, 100.00%] | 0.6450 | 100.00% [100.00%, 100.00%] | 1.0000 | 0.00% | 0 | 0 | `none`: 30 |
-| `medium` | `opencode:google/gemini-4-carbon` | 30 | 0.7130 | 0.6450 | 110.54% [99.22%, 127.71%] | 0.6519 | 101.06% [85.18%, 119.62%] | 0.9615 | 6.67% | 2 | 0 | `none`: 28, `subthreshold_gamble`: 2 |
-| `medium` | `gemini:gemini-4-carbon` | 30 | 0.5303 | 0.6450 | 82.22% [57.02%, 106.94%] | 0.4792 | 74.30% [52.18%, 98.57%] | 0.9286 | 10.00% | 3 | 0 | `none`: 27, `subthreshold_gamble`: 2, `premature_wrong`: 1 |
+| `hard` | `solver` (scripted ref) | 30 | 0.499 | 0.499 | 100% [100%, 100%] | 0.499 | 100% [100%, 100%] | 0.9652 | 0.00% | 0 | 0 | `none`: 30 |
+| `hard` | `opencode:google/gemini-4-carbon` | 30 | 0.322 | 0.499 | **65% [24%, 98%]** | 0.360 | **72% [52%, 91%]** | 0.8819 | 10.00% | 4 | 2 | `none`: 24, `fingerprint_bad_luck`: 2, `subthreshold_gamble`: 2, `wrong_accusation`: 1, `premature_wrong`: 1 |
+| `hard` | `gemini:gemini-4-carbon` | 30 | 0.473 | 0.499 | 95% [62%, 140%] | 0.421 | 84% [65%, 106%] | 0.9299 | 10.00% | 3 | 0 | `none`: 27, `subthreshold_gamble`: 2, `premature_wrong`: 1 |
+| `hard` | `opencode:google/gemini-3.5-flash` | 30 | 0.373 | 0.499 | 75% [36%, 123%] | 0.110 | 22% [-23%, 63%] | 0.7095 | 33.33% | 10 | 0 | `none`: 20, `subthreshold_gamble`: 7, `premature_wrong`: 2, `decoy_chase`: 1 |
+| `medium` | `solver` (scripted ref) | 30 | 0.645 | 0.645 | 100% [100%, 100%] | 0.645 | 100% [100%, 100%] | 1.0000 | 0.00% | 0 | 0 | `none`: 30 |
+| `medium` | `opencode:google/gemini-4-carbon` | 30 | 0.713 | 0.645 | 111% [99%, 127%] | 0.652 | 101% [85%, 119%] | 0.9615 | 6.67% | 2 | 0 | `none`: 28, `subthreshold_gamble`: 2 |
+| `medium` | `gemini:gemini-4-carbon` | 30 | 0.530 | 0.645 | 82% [56%, 108%] | 0.479 | 74% [52%, 99%] | 0.9286 | 10.00% | 3 | 0 | `none`: 27, `subthreshold_gamble`: 2, `premature_wrong`: 1 |
 
 Step-level failure tag attribution (`aggregate_failure_tags`) confirms the structural gap on `hard`:
 - `opencode:google/gemini-3.5-flash`: total regret `13.4251` (`0.4475` per episode), led by `uninformative_canary` (`51` steps across `12/30` episodes, regret `1.4824`) and `premature_accusation` (`10` steps across `10/30` episodes, regret `8.5591`).

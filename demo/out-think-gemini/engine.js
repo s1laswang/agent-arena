@@ -221,6 +221,49 @@
     return s.length > 0 ? s : null;
   }
 
+  function nonEmptyText(val) {
+    if (typeof val === "string") {
+      var s = val.trim();
+      return s.length > 0 ? s : null;
+    }
+    if (typeof val === "number" && Number.isFinite(val)) {
+      return String(val);
+    }
+    return null;
+  }
+
+  function firstNonEmptyText(candidates) {
+    for (var i = 0; i < candidates.length; i += 1) {
+      var t = nonEmptyText(candidates[i]);
+      if (t !== null) {
+        return t;
+      }
+    }
+    return null;
+  }
+
+  function normalizeModelName(raw) {
+    var s = nonEmptyText(raw);
+    if (!s) {
+      return null;
+    }
+    var lower = s.toLowerCase();
+    if (lower.indexOf("gemini:") === 0) {
+      var stripped = lower.slice(7).trim();
+      return stripped.length > 0 ? stripped : null;
+    }
+    return lower;
+  }
+
+  function isKnownLevelToken(raw) {
+    var s = nonEmptyText(raw);
+    if (!s) {
+      return false;
+    }
+    var lower = s.toLowerCase();
+    return lower === "default" || Object.prototype.hasOwnProperty.call(LEVEL_ALIASES, lower);
+  }
+
   function firstDefined(obj, keys) {
     if (!isObject(obj)) {
       return undefined;
@@ -305,32 +348,197 @@
     return s;
   }
 
-  function extractAnnotationFields(entry) {
+  function parseCompositeAnnotationKey(rawKey) {
+    var out = { model: null, tier: null, seed: null, level: null };
+    var k = nonEmptyText(rawKey);
+    if (!k || k.indexOf(" ") !== -1) {
+      return out;
+    }
+
+    var tail = k;
+    if (k.indexOf(":") !== -1 && (k.indexOf("/") !== -1 || k.indexOf("|") !== -1)) {
+      var cSegs = k.split(":");
+      tail = cSegs[cSegs.length - 1].trim();
+    }
+
+    var sep = tail.indexOf("|") !== -1 ? "|" : tail.indexOf("/") !== -1 ? "/" : null;
+    if (sep) {
+      var parts = tail.split(sep);
+      if (parts.length === 4) {
+        if (toFiniteNumber(parts[3], null) !== null) {
+          out.model = parts[0].trim();
+          out.level = parts[1].trim();
+          out.tier = parts[2].trim().toLowerCase();
+          out.seed = parts[3].trim();
+          return out;
+        }
+        if (toFiniteNumber(parts[2], null) !== null) {
+          out.model = parts[0].trim();
+          out.tier = parts[1].trim().toLowerCase();
+          out.seed = parts[2].trim();
+          out.level = parts[3].trim();
+          return out;
+        }
+      } else if (parts.length === 3) {
+        if (toFiniteNumber(parts[1], null) !== null) {
+          out.tier = parts[0].trim().toLowerCase();
+          out.seed = parts[1].trim();
+          out.level = parts[2].trim();
+          return out;
+        }
+        if (toFiniteNumber(parts[2], null) !== null) {
+          out.level = parts[0].trim();
+          out.tier = parts[1].trim().toLowerCase();
+          out.seed = parts[2].trim();
+          return out;
+        }
+      } else if (parts.length === 2 && toFiniteNumber(parts[1], null) !== null) {
+        out.tier = parts[0].trim().toLowerCase();
+        out.seed = parts[1].trim();
+        return out;
+      }
+    }
+
+    if (k.indexOf(":") !== -1) {
+      var colonParts = k.split(":");
+      if (colonParts.length === 4 && toFiniteNumber(colonParts[2], null) !== null) {
+        out.model = colonParts[0].trim();
+        out.tier = colonParts[1].trim().toLowerCase();
+        out.seed = colonParts[2].trim();
+        out.level = colonParts[3].trim();
+        return out;
+      }
+      if (colonParts.length === 3 && toFiniteNumber(colonParts[1], null) !== null) {
+        out.tier = colonParts[0].trim().toLowerCase();
+        out.seed = colonParts[1].trim();
+        out.level = colonParts[2].trim();
+        return out;
+      }
+      if (colonParts.length === 2 && toFiniteNumber(colonParts[1], null) !== null) {
+        out.tier = colonParts[0].trim().toLowerCase();
+        out.seed = colonParts[1].trim();
+        return out;
+      }
+    }
+
+    if (k.indexOf("-") !== -1) {
+      var dashParts = k.split("-");
+      var d0 = dashParts[0].trim().toLowerCase();
+      if (
+        dashParts.length === 2 &&
+        (d0 === "easy" || d0 === "medium" || d0 === "hard") &&
+        toFiniteNumber(dashParts[1], null) !== null
+      ) {
+        out.tier = d0;
+        out.seed = dashParts[1].trim();
+      }
+    }
+    return out;
+  }
+
+  function hasDirectAnnotationFields(obj) {
+    if (!isObject(obj)) {
+      return false;
+    }
+    return Boolean(
+      obj.failure_tag !== undefined ||
+        obj.failureTag !== undefined ||
+        obj.primary_failure_tag !== undefined ||
+        obj.primaryFailureTag !== undefined ||
+        obj.tag !== undefined ||
+        obj.failure_mode !== undefined ||
+        obj.failureMode !== undefined ||
+        obj.analyst_quote !== undefined ||
+        obj.analystQuote !== undefined ||
+        obj.quote !== undefined ||
+        obj.quotes !== undefined ||
+        obj.tags !== undefined ||
+        obj.worst_regret_step !== undefined ||
+        obj.worstRegretStep !== undefined ||
+        obj.thought_quote !== undefined ||
+        obj.thoughtQuote !== undefined ||
+        obj.commentary !== undefined ||
+        obj.note !== undefined ||
+        typeof obj.summary === "string" ||
+        isObject(obj.levels) ||
+        isObject(obj.thinking_levels) ||
+        isObject(obj.by_level)
+    );
+  }
+
+  function extractAnnotationFields(entry, episodesMap) {
     if (typeof entry === "string") {
+      var trimmed = entry.trim();
+      if (episodesMap && isObject(episodesMap[trimmed])) {
+        return extractAnnotationFields(episodesMap[trimmed], null);
+      }
       return {
         failure_tag: null,
-        analyst_quote: entry.trim()
+        analyst_quote: trimmed,
+        ledger_calls: null,
+        regret_total: null,
+        levels: null
       };
     }
     if (!isObject(entry)) {
       return null;
     }
-    var tag = strOrNull(
-      firstDefined(entry, ["failure_tag", "failureTag", "tag", "failure_mode", "failureMode", "mode"])
-    );
-    var quote = strOrDefault(
-      firstDefined(entry, [
-        "analyst_quote",
-        "analystQuote",
-        "quote",
-        "thought_quote",
-        "thoughtQuote",
-        "commentary",
-        "note",
-        "summary"
-      ]),
-      ""
-    );
+    var primaryTag = firstNonEmptyText([entry.primary_failure_tag, entry.primaryFailureTag]);
+    var tag = firstNonEmptyText([
+      entry.failure_tag,
+      entry.failureTag,
+      primaryTag,
+      entry.tag,
+      entry.failure_mode,
+      entry.failureMode,
+      entry.mode
+    ]);
+
+    var q0 = Array.isArray(entry.quotes) && entry.quotes.length > 0 ? entry.quotes[0] : null;
+    var q0Quote = isObject(q0) ? q0.quote : typeof q0 === "string" ? q0 : null;
+    var q0Note = isObject(q0) ? q0.note : null;
+
+    var tagsMap = isObject(entry.tags) ? entry.tags : null;
+    var tagWhyPrimary =
+      tagsMap && primaryTag && isObject(tagsMap[primaryTag]) ? tagsMap[primaryTag].why : null;
+    var tagWhyResolved =
+      tagsMap && tag && isObject(tagsMap[tag]) ? tagsMap[tag].why : null;
+
+    var worstStep = isObject(entry.worst_regret_step)
+      ? entry.worst_regret_step
+      : isObject(entry.worstRegretStep)
+      ? entry.worstRegretStep
+      : null;
+    var worstWhy = worstStep ? worstStep.why : null;
+
+    var quote =
+      firstNonEmptyText([
+        entry.analyst_quote,
+        entry.analystQuote,
+        entry.quote,
+        q0Quote,
+        q0Note,
+        tagWhyPrimary,
+        tagWhyResolved,
+        worstWhy,
+        entry.thought_quote,
+        entry.thoughtQuote,
+        entry.commentary,
+        entry.note,
+        typeof entry.summary === "string" ? entry.summary : null
+      ]) || "";
+
+    var rawLedgerCalls = firstDefined(entry, [
+      "ledger_calls",
+      "ledgerCalls",
+      "ledger_calls_recorded",
+      "ledgerCallsRecorded"
+    ]);
+    var ledgerCalls = rawLedgerCalls !== undefined ? toFiniteNumber(rawLedgerCalls, null) : null;
+
+    var rawRegretTotal = firstDefined(entry, ["regret_total", "regretTotal"]);
+    var regretTotal = rawRegretTotal !== undefined ? toFiniteNumber(rawRegretTotal, null) : null;
+
     var levelsMap = isObject(entry.levels)
       ? entry.levels
       : isObject(entry.thinking_levels)
@@ -341,6 +549,8 @@
     return {
       failure_tag: tag,
       analyst_quote: quote,
+      ledger_calls: ledgerCalls,
+      regret_total: regretTotal,
       levels: levelsMap
     };
   }
@@ -348,100 +558,318 @@
   function buildAnnotationsIndex(rawAnnotations) {
     var index = {
       byRunId: {},
+      byKey: {},
+      byModelTierSeedLevel: {},
+      byModelTierSeed: {},
       byTierSeedLevel: {},
       byTierSeed: {},
-      byCaseId: {}
+      byCaseId: {},
+      explicitTierSeedLevel: {},
+      explicitTierSeed: {},
+      episodesMap: null
     };
     if (!rawAnnotations) {
       return index;
     }
 
-    function registerRecord(keyHint, rec) {
-      if (rec === undefined || rec === null) {
+    var episodesMap =
+      isObject(rawAnnotations) && isObject(rawAnnotations.episodes) ? rawAnnotations.episodes : null;
+    index.episodesMap = episodesMap;
+
+    function resolveEpisodeRef(val) {
+      if (typeof val === "string" && episodesMap) {
+        var refKey = val.trim();
+        if (isObject(episodesMap[refKey])) {
+          return episodesMap[refKey];
+        }
+      }
+      return val;
+    }
+
+    function registerRecord(keyHint, rawRec, ctx) {
+      if (rawRec === undefined || rawRec === null) {
         return;
       }
-      var parsed = extractAnnotationFields(rec);
+      var rec = resolveEpisodeRef(rawRec);
+      var parsed = extractAnnotationFields(rec, episodesMap);
       if (!parsed) {
         return;
       }
-      if (isObject(rec)) {
-        var runId = strOrNull(firstDefined(rec, ["run_id", "runId"]));
-        var tier = strOrNull(firstDefined(rec, ["tier", "difficulty"]));
-        var seed = firstDefined(rec, ["seed", "world_seed", "worldSeed"]);
-        var level = strOrNull(firstDefined(rec, ["thinking_level", "thinkingLevel", "level"]));
-        var caseId = strOrNull(firstDefined(rec, ["case_id", "caseId", "id"]));
 
-        if (runId) {
-          index.byRunId[runId] = parsed;
-        }
-        if (tier !== null && seed !== undefined && seed !== null) {
-          var tsKey = tier.toLowerCase() + ":" + String(seed);
-          if (level) {
-            index.byTierSeedLevel[tsKey + ":" + normalizeLevelName(level)] = parsed;
+      var hintMeta = keyHint ? parseCompositeAnnotationKey(keyHint) : {};
+      var recObj = isObject(rec) ? rec : {};
+      var recSlashKey = nonEmptyText(firstDefined(recObj, ["key"]));
+      var recPipeKey = nonEmptyText(firstDefined(recObj, ["pipe_key", "pipeKey"]));
+      var recKeyMeta = recSlashKey ? parseCompositeAnnotationKey(recSlashKey) : {};
+      var pipeKeyMeta = recPipeKey ? parseCompositeAnnotationKey(recPipeKey) : {};
+      var ctxObj = isObject(ctx) ? ctx : {};
+
+      var runId = nonEmptyText(firstDefined(recObj, ["run_id", "runId"]));
+      var model = normalizeModelName(
+        firstNonEmptyText([
+          firstDefined(recObj, ["model", "served_model", "servedModel"]),
+          ctxObj.model,
+          hintMeta.model,
+          recKeyMeta.model,
+          pipeKeyMeta.model
+        ])
+      );
+      var tierRaw = firstNonEmptyText([
+        firstDefined(recObj, ["tier", "difficulty"]),
+        ctxObj.tier,
+        hintMeta.tier,
+        recKeyMeta.tier,
+        pipeKeyMeta.tier
+      ]);
+      var tier = tierRaw ? tierRaw.toLowerCase() : null;
+
+      var seedCandidate = firstDefined(recObj, ["seed", "world_seed", "worldSeed"]);
+      if (seedCandidate === undefined || seedCandidate === null) {
+        seedCandidate =
+          ctxObj.seed !== undefined && ctxObj.seed !== null
+            ? ctxObj.seed
+            : hintMeta.seed !== null && hintMeta.seed !== undefined
+            ? hintMeta.seed
+            : recKeyMeta.seed !== null && recKeyMeta.seed !== undefined
+            ? recKeyMeta.seed
+            : pipeKeyMeta.seed;
+      }
+      var seedStr =
+        seedCandidate !== undefined && seedCandidate !== null ? String(seedCandidate).trim() : "";
+
+      var levelRaw = firstNonEmptyText([
+        firstDefined(recObj, ["thinking_level", "thinkingLevel", "level"]),
+        ctxObj.level,
+        hintMeta.level,
+        recKeyMeta.level,
+        pipeKeyMeta.level
+      ]);
+      var level = levelRaw ? normalizeLevelName(levelRaw) : null;
+      var caseId = firstNonEmptyText([firstDefined(recObj, ["case_id", "caseId", "id"]), ctxObj.caseId]);
+
+      if (runId) {
+        index.byRunId[runId] = parsed;
+      }
+      if (recSlashKey) {
+        index.byKey[recSlashKey] = parsed;
+        index.byRunId[recSlashKey] = index.byRunId[recSlashKey] || parsed;
+      }
+      if (recPipeKey) {
+        index.byKey[recPipeKey] = parsed;
+        index.byRunId[recPipeKey] = index.byRunId[recPipeKey] || parsed;
+      }
+
+      if (tier !== null && seedStr.length > 0) {
+        var tsKey = tier + ":" + seedStr;
+        if (level) {
+          var tslKey = tsKey + ":" + level;
+          if (model) {
+            var slashKey = model + "/" + level + "/" + tier + "/" + seedStr;
+            var pipeKey = model + "|" + level + "|" + tier + "|" + seedStr;
+            index.byKey[slashKey] = parsed;
+            index.byKey[pipeKey] = parsed;
+            index.byRunId[slashKey] = index.byRunId[slashKey] || parsed;
+            index.byRunId[pipeKey] = index.byRunId[pipeKey] || parsed;
+            index.byModelTierSeedLevel[model + ":" + tslKey] = parsed;
+            if (!index.explicitTierSeedLevel[tslKey]) {
+              if (!index.byTierSeedLevel[tslKey] || model === "gemini-4-carbon") {
+                index.byTierSeedLevel[tslKey] = parsed;
+              }
+            }
           } else {
-            index.byTierSeed[tsKey] = parsed;
+            index.byTierSeedLevel[tslKey] = parsed;
+            index.explicitTierSeedLevel[tslKey] = true;
           }
-        }
-        if (caseId) {
-          index.byCaseId[caseId] = parsed;
+        } else if (model) {
+          index.byModelTierSeed[model + ":" + tsKey] = parsed;
+          if (!index.explicitTierSeed[tsKey]) {
+            if (!index.byTierSeed[tsKey] || model === "gemini-4-carbon") {
+              index.byTierSeed[tsKey] = parsed;
+            }
+          }
+        } else {
+          index.byTierSeed[tsKey] = parsed;
+          index.explicitTierSeed[tsKey] = true;
         }
       }
+
+      if (caseId) {
+        index.byCaseId[caseId] = parsed;
+      }
+
       if (keyHint) {
         var k = String(keyHint).trim();
-        var colonParts = k.split(":");
-        if (colonParts.length === 3) {
-          var norm3 =
-            colonParts[0].trim().toLowerCase() +
-            ":" +
-            colonParts[1].trim() +
-            ":" +
-            normalizeLevelName(colonParts[2]);
-          index.byTierSeedLevel[norm3] = parsed;
-        } else if (colonParts.length === 2) {
-          var norm2 = colonParts[0].trim().toLowerCase() + ":" + colonParts[1].trim();
-          index.byTierSeed[norm2] = parsed;
-        }
+        index.byKey[k] = index.byKey[k] || parsed;
         index.byRunId[k] = index.byRunId[k] || parsed;
         index.byCaseId[k] = index.byCaseId[k] || parsed;
       }
     }
 
+    function registerScenarioBucket(scenKey, scenVal, extraCaseId) {
+      var scenMeta = parseCompositeAnnotationKey(scenKey);
+      var baseCtx = {
+        tier: scenMeta.tier,
+        seed: scenMeta.seed,
+        caseId: extraCaseId || null
+      };
+      if (Array.isArray(scenVal)) {
+        for (var i = 0; i < scenVal.length; i += 1) {
+          registerRecord(null, scenVal[i], baseCtx);
+        }
+        return;
+      }
+      if (typeof scenVal === "string") {
+        registerRecord(scenKey, scenVal, baseCtx);
+        return;
+      }
+      if (!isObject(scenVal)) {
+        return;
+      }
+      if (hasDirectAnnotationFields(scenVal)) {
+        registerRecord(scenKey, scenVal, baseCtx);
+        return;
+      }
+      var outerKeys = Object.keys(scenVal);
+      for (var m = 0; m < outerKeys.length; m += 1) {
+        var k1 = outerKeys[m];
+        var v1 = scenVal[k1];
+        if (isKnownLevelToken(k1)) {
+          registerRecord(null, v1, {
+            tier: baseCtx.tier,
+            seed: baseCtx.seed,
+            level: k1,
+            caseId: baseCtx.caseId
+          });
+        } else if (Array.isArray(v1)) {
+          for (var a = 0; a < v1.length; a += 1) {
+            registerRecord(null, v1[a], {
+              model: k1,
+              tier: baseCtx.tier,
+              seed: baseCtx.seed,
+              caseId: baseCtx.caseId
+            });
+          }
+        } else if (isObject(v1)) {
+          if (hasDirectAnnotationFields(v1)) {
+            registerRecord(null, v1, {
+              model: k1,
+              tier: baseCtx.tier,
+              seed: baseCtx.seed,
+              caseId: baseCtx.caseId
+            });
+          } else {
+            var lvKeys = Object.keys(v1);
+            for (var lk = 0; lk < lvKeys.length; lk += 1) {
+              registerRecord(null, v1[lvKeys[lk]], {
+                model: k1,
+                tier: baseCtx.tier,
+                seed: baseCtx.seed,
+                level: lvKeys[lk],
+                caseId: baseCtx.caseId
+              });
+            }
+          }
+        } else if (typeof v1 === "string") {
+          registerRecord(null, v1, {
+            model: k1,
+            tier: baseCtx.tier,
+            seed: baseCtx.seed,
+            caseId: baseCtx.caseId
+          });
+        }
+      }
+    }
+
     if (Array.isArray(rawAnnotations)) {
       for (var i = 0; i < rawAnnotations.length; i += 1) {
-        registerRecord(null, rawAnnotations[i]);
+        registerRecord(null, rawAnnotations[i], null);
       }
       return index;
     }
 
     if (isObject(rawAnnotations)) {
+      if (Array.isArray(rawAnnotations.episodes)) {
+        for (var epIdx = 0; epIdx < rawAnnotations.episodes.length; epIdx += 1) {
+          registerRecord(null, rawAnnotations.episodes[epIdx], null);
+        }
+      } else if (episodesMap) {
+        var epKeys = Object.keys(episodesMap);
+        for (var e = 0; e < epKeys.length; e += 1) {
+          registerRecord(epKeys[e], episodesMap[epKeys[e]], null);
+        }
+      }
+
+      var scenMap = isObject(rawAnnotations.by_scenario)
+        ? rawAnnotations.by_scenario
+        : isObject(rawAnnotations.byScenario)
+        ? rawAnnotations.byScenario
+        : null;
+      if (scenMap) {
+        var scenKeys = Object.keys(scenMap);
+        for (var s = 0; s < scenKeys.length; s += 1) {
+          registerScenarioBucket(scenKeys[s], scenMap[scenKeys[s]], null);
+        }
+      }
+
       var listField = firstDefined(rawAnnotations, ["annotations", "items", "rows", "entries"]);
       if (Array.isArray(listField)) {
         for (var j = 0; j < listField.length; j += 1) {
-          registerRecord(null, listField[j]);
+          registerRecord(null, listField[j], null);
         }
       }
+
       if (isObject(rawAnnotations.by_run_id || rawAnnotations.byRunId)) {
         var runMap = rawAnnotations.by_run_id || rawAnnotations.byRunId;
         var runKeys = Object.keys(runMap);
         for (var r = 0; r < runKeys.length; r += 1) {
           var rk = runKeys[r];
-          var parsedRun = extractAnnotationFields(runMap[rk]);
+          var parsedRun = extractAnnotationFields(resolveEpisodeRef(runMap[rk]), episodesMap);
           if (parsedRun) {
             index.byRunId[rk] = parsedRun;
           }
         }
       }
+
       if (isObject(rawAnnotations.by_case || rawAnnotations.byCase)) {
         var caseMap = rawAnnotations.by_case || rawAnnotations.byCase;
         var caseKeys = Object.keys(caseMap);
         for (var c = 0; c < caseKeys.length; c += 1) {
-          registerRecord(caseKeys[c], caseMap[caseKeys[c]]);
+          var ck = caseKeys[c];
+          var cv = caseMap[ck];
+          if (isObject(cv) && !hasDirectAnnotationFields(cv)) {
+            registerScenarioBucket(ck, cv, ck);
+            var levelMapForCase = {};
+            var cvKeys = Object.keys(cv);
+            for (var cvIdx = 0; cvIdx < cvKeys.length; cvIdx += 1) {
+              var subK = cvKeys[cvIdx];
+              if (isKnownLevelToken(subK)) {
+                levelMapForCase[normalizeLevelName(subK)] = resolveEpisodeRef(cv[subK]);
+              }
+            }
+            if (Object.keys(levelMapForCase).length > 0) {
+              index.byCaseId[ck] = {
+                failure_tag: null,
+                analyst_quote: "",
+                ledger_calls: null,
+                regret_total: null,
+                levels: levelMapForCase
+              };
+            }
+          } else if (Array.isArray(cv)) {
+            registerScenarioBucket(ck, cv, ck);
+          } else {
+            registerRecord(ck, cv, { caseId: ck });
+          }
         }
       }
+
       var topKeys = Object.keys(rawAnnotations);
       for (var t = 0; t < topKeys.length; t += 1) {
         var tk = topKeys[t];
         if (
+          tk === "episodes" ||
+          tk === "by_scenario" ||
+          tk === "byScenario" ||
           tk === "annotations" ||
           tk === "items" ||
           tk === "rows" ||
@@ -449,44 +877,90 @@
           tk === "by_run_id" ||
           tk === "byRunId" ||
           tk === "by_case" ||
-          tk === "byCase"
+          tk === "byCase" ||
+          tk === "summary" ||
+          tk === "meta" ||
+          tk === "prices_usd_per_1m" ||
+          tk === "generated_from_git_sha" ||
+          tk === "schema_version" ||
+          tk === "version"
         ) {
           continue;
         }
-        registerRecord(tk, rawAnnotations[tk]);
+        registerRecord(tk, rawAnnotations[tk], null);
       }
     }
     return index;
   }
 
-  function lookupAnnotation(annIndex, runId, tier, seed, levelKey, caseId) {
+  function lookupAnnotation(annIndex, runId, model, tier, seed, levelKey, caseId) {
     if (!annIndex) {
-      return { failure_tag: null, analyst_quote: "" };
+      return { failure_tag: null, analyst_quote: "", ledger_calls: null, regret_total: null };
     }
-    var tsKey = String(tier).toLowerCase() + ":" + String(seed);
-    var tslKey = tsKey + ":" + normalizeLevelName(levelKey);
+    var normTier = String(tier).toLowerCase();
+    var seedStr = String(seed);
+    var normLevel = normalizeLevelName(levelKey);
+    var normModel = normalizeModelName(model);
+    var tsKey = normTier + ":" + seedStr;
+    var tslKey = tsKey + ":" + normLevel;
+    var epMap = annIndex.episodesMap || null;
     var candidates = [];
 
-    if (runId && annIndex.byRunId[runId]) {
+    if (runId && annIndex.byRunId && annIndex.byRunId[runId]) {
       candidates.push(annIndex.byRunId[runId]);
     }
-    if (annIndex.byTierSeedLevel[tslKey]) {
+    if (runId && annIndex.byKey && annIndex.byKey[runId]) {
+      candidates.push(annIndex.byKey[runId]);
+    }
+    if (normModel) {
+      var slashLookup = normModel + "/" + normLevel + "/" + normTier + "/" + seedStr;
+      var pipeLookup = normModel + "|" + normLevel + "|" + normTier + "|" + seedStr;
+      if (annIndex.byKey && annIndex.byKey[slashLookup]) {
+        candidates.push(annIndex.byKey[slashLookup]);
+      }
+      if (annIndex.byKey && annIndex.byKey[pipeLookup]) {
+        candidates.push(annIndex.byKey[pipeLookup]);
+      }
+      if (annIndex.byModelTierSeedLevel && annIndex.byModelTierSeedLevel[normModel + ":" + tslKey]) {
+        candidates.push(annIndex.byModelTierSeedLevel[normModel + ":" + tslKey]);
+      }
+    }
+    if (annIndex.byTierSeedLevel && annIndex.byTierSeedLevel[tslKey]) {
       candidates.push(annIndex.byTierSeedLevel[tslKey]);
     }
-    var tsEntry = annIndex.byTierSeed[tsKey];
+    if (normModel && annIndex.byModelTierSeed && annIndex.byModelTierSeed[normModel + ":" + tsKey]) {
+      var mtsEntry = annIndex.byModelTierSeed[normModel + ":" + tsKey];
+      if (mtsEntry.levels && (mtsEntry.levels[normLevel] || mtsEntry.levels[levelKey])) {
+        var subMts = extractAnnotationFields(
+          mtsEntry.levels[normLevel] || mtsEntry.levels[levelKey],
+          epMap
+        );
+        if (subMts) {
+          candidates.push(subMts);
+        }
+      }
+      candidates.push(mtsEntry);
+    }
+    var tsEntry = annIndex.byTierSeed ? annIndex.byTierSeed[tsKey] : null;
     if (tsEntry) {
-      if (tsEntry.levels && tsEntry.levels[levelKey]) {
-        var subTs = extractAnnotationFields(tsEntry.levels[levelKey]);
+      if (tsEntry.levels && (tsEntry.levels[normLevel] || tsEntry.levels[levelKey])) {
+        var subTs = extractAnnotationFields(
+          tsEntry.levels[normLevel] || tsEntry.levels[levelKey],
+          epMap
+        );
         if (subTs) {
           candidates.push(subTs);
         }
       }
       candidates.push(tsEntry);
     }
-    var caseEntry = caseId ? annIndex.byCaseId[caseId] : null;
+    var caseEntry = caseId && annIndex.byCaseId ? annIndex.byCaseId[caseId] : null;
     if (caseEntry) {
-      if (caseEntry.levels && caseEntry.levels[levelKey]) {
-        var subCase = extractAnnotationFields(caseEntry.levels[levelKey]);
+      if (caseEntry.levels && (caseEntry.levels[normLevel] || caseEntry.levels[levelKey])) {
+        var subCase = extractAnnotationFields(
+          caseEntry.levels[normLevel] || caseEntry.levels[levelKey],
+          epMap
+        );
         if (subCase) {
           candidates.push(subCase);
         }
@@ -496,6 +970,8 @@
 
     var tag = null;
     var quote = "";
+    var ledgerCalls = null;
+    var regretTotal = null;
     for (var i = 0; i < candidates.length; i += 1) {
       var cand = candidates[i];
       if (!tag && cand.failure_tag) {
@@ -504,8 +980,19 @@
       if (!quote && cand.analyst_quote) {
         quote = cand.analyst_quote;
       }
+      if (ledgerCalls === null && cand.ledger_calls !== null && cand.ledger_calls !== undefined) {
+        ledgerCalls = cand.ledger_calls;
+      }
+      if (regretTotal === null && cand.regret_total !== null && cand.regret_total !== undefined) {
+        regretTotal = cand.regret_total;
+      }
     }
-    return { failure_tag: tag, analyst_quote: quote };
+    return {
+      failure_tag: tag,
+      analyst_quote: quote,
+      ledger_calls: ledgerCalls,
+      regret_total: regretTotal
+    };
   }
 
   function extractPersonaRecord(val) {
@@ -693,7 +1180,7 @@
       var k = keys[i];
       var prob = toFiniteNumber(rawPosterior[k], null);
       if (prob !== null) {
-        clean[k] = round4(prob);
+        clean[k] = round6(prob);
       }
     }
     return clean;
@@ -1126,18 +1613,33 @@
         )
       );
       var runId = strOrDefault(firstDefined(item, ["run_id", "runId"]), "");
-      var mergedAnn = lookupAnnotation(annIndex, runId, tier, seed, normLevel, id);
-      var inlineTag = strOrNull(
-        firstDefined(item, ["failure_tag", "failureTag", "tag", "failure_mode", "failureMode"])
+      var lvModel = strOrDefault(
+        firstDefined(item, ["model"]),
+        strOrDefault(firstDefined(raw, ["model", "anchor_model", "anchorModel"]), "gemini-4-carbon")
       );
-      var inlineQuote = strOrDefault(
-        firstDefined(item, ["analyst_quote", "analystQuote", "quote", "thought_quote", "thoughtQuote", "commentary"]),
-        ""
-      );
+      var mergedAnn = lookupAnnotation(annIndex, runId, lvModel, tier, seed, normLevel, id);
+      var inlineParsed = extractAnnotationFields(item, null) || {
+        failure_tag: null,
+        analyst_quote: "",
+        ledger_calls: null,
+        regret_total: null
+      };
+      var resolvedLedgerCalls =
+        inlineParsed.ledger_calls !== null && inlineParsed.ledger_calls !== undefined
+          ? inlineParsed.ledger_calls
+          : mergedAnn.ledger_calls !== null && mergedAnn.ledger_calls !== undefined
+          ? mergedAnn.ledger_calls
+          : null;
+      var resolvedRegretTotal =
+        inlineParsed.regret_total !== null && inlineParsed.regret_total !== undefined
+          ? inlineParsed.regret_total
+          : mergedAnn.regret_total !== null && mergedAnn.regret_total !== undefined
+          ? mergedAnn.regret_total
+          : null;
 
       return {
         key: key,
-        model: strOrDefault(firstDefined(item, ["model"]), strOrDefault(raw.model, "gemini-4-carbon")),
+        model: lvModel,
         thinking_level: normLevel,
         call_at_t: callAtT,
         accused: accused,
@@ -1166,9 +1668,11 @@
           firstDefined(item, ["calls", "api_calls", "apiCalls", "tool_calls", "toolCalls", "n_calls"]),
           0
         ),
+        ledger_calls: resolvedLedgerCalls,
+        regret_total: resolvedRegretTotal,
         run_id: runId,
-        failure_tag: mergedAnn.failure_tag || inlineTag || null,
-        analyst_quote: mergedAnn.analyst_quote || inlineQuote || ""
+        failure_tag: inlineParsed.failure_tag || mergedAnn.failure_tag || null,
+        analyst_quote: inlineParsed.analyst_quote || mergedAnn.analyst_quote || ""
       };
     });
 
@@ -1180,7 +1684,7 @@
       return ra - rb;
     });
 
-    return {
+    var normalizedCase = {
       id: id,
       title: title,
       tier: tier,
@@ -1199,6 +1703,25 @@
       solver: solver,
       thinking_levels: thinkingLevels
     };
+
+    var rawCaseModel = firstNonEmptyText([firstDefined(raw, ["model", "anchor_model", "anchorModel"])]);
+    if (rawCaseModel !== null) {
+      normalizedCase.model = rawCaseModel;
+    }
+    var rawAnchorLevel = firstNonEmptyText([firstDefined(raw, ["anchor_level", "anchorLevel"])]);
+    if (rawAnchorLevel !== null) {
+      normalizedCase.anchor_level = normalizeLevelName(rawAnchorLevel);
+    }
+    var rawCrossModelCarbon = firstDefined(raw, ["cross_model_carbon", "crossModelCarbon"]);
+    if (Array.isArray(rawCrossModelCarbon) || isObject(rawCrossModelCarbon)) {
+      normalizedCase.cross_model_carbon = rawCrossModelCarbon;
+    }
+    var rawLadderMatrix = firstDefined(raw, ["ladder_matrix", "ladderMatrix"]);
+    if (isObject(rawLadderMatrix) || Array.isArray(rawLadderMatrix)) {
+      normalizedCase.ladder_matrix = rawLadderMatrix;
+    }
+
+    return normalizedCase;
   }
 
   function extractRawCaseArray(payload) {
@@ -1631,6 +2154,8 @@
     round4: round4,
     computeBreakEvenProb: computeBreakEvenProb,
     computeAccusationEv: computeAccusationEv,
+    extractAnnotationFields: extractAnnotationFields,
+    buildAnnotationsIndex: buildAnnotationsIndex,
     normalizeCase: normalizeCase,
     loadDataset: loadDataset,
     evaluateCall: evaluateCall,

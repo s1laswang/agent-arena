@@ -68,10 +68,11 @@ def _run_engine_js(js_body: str, payload: dict | list | None = None) -> dict:
     cmd_prefix, env = _resolve_js_cmd()
     run_env = dict(env)
     run_env["OUTTHINK_ENGINE_PATH"] = str(ENGINE_PATH)
-    run_env["OUTTHINK_TEST_PAYLOAD"] = json.dumps(payload if payload is not None else {})
+    stdin_json = json.dumps(payload if payload is not None else {})
     wrapper = (
+        'const fs = require("fs");\n'
         "const Engine = require(process.env.OUTTHINK_ENGINE_PATH);\n"
-        "const PAYLOAD = JSON.parse(process.env.OUTTHINK_TEST_PAYLOAD);\n"
+        'const PAYLOAD = JSON.parse(fs.readFileSync(0, "utf8"));\n'
         "const out = (() => {\n"
         + js_body
         + "\n})();\n"
@@ -81,6 +82,7 @@ def _run_engine_js(js_body: str, payload: dict | list | None = None) -> dict:
         [*cmd_prefix, wrapper],
         cwd=ROOT,
         env=run_env,
+        input=stdin_json,
         capture_output=True,
         text=True,
         timeout=30,
@@ -756,6 +758,590 @@ def test_scoreboard_aggregation_across_cases_and_cost_totals():
     assert res["missingLookup"] is None
     assert res["afterReset"]["casesPlayed"] == 0
     assert res["afterReset"]["judge"]["scoreSum"] == 0
+
+
+def test_extract_annotation_fields_quote_fallback_chain_and_episodes_index():
+    payload = {
+        "chain": [
+            {
+                "primary_failure_tag": "ignored_delay",
+                "analyst_quote": "Direct analyst quote wins.",
+                "quote": "Secondary quote.",
+                "quotes": [{"quote": "Q0 quote", "note": "Q0 note"}],
+                "tags": {"ignored_delay": {"why": "Tag why"}},
+                "worst_regret_step": {"why": "Worst step why"},
+            },
+            {
+                "failure_tag": "premature_accusation",
+                "quote": "Plain quote wins second.",
+                "quotes": [{"quote": "Q0 quote", "note": "Q0 note"}],
+                "tags": {"premature_accusation": {"why": "Tag why"}},
+                "worst_regret_step": {"why": "Worst step why"},
+            },
+            {
+                "primary_failure_tag": "premature_accusation",
+                "quotes": [{"quote": "t76 d9 accuse(employee=e02) | REGRET 1.419", "note": "Q0 note"}],
+                "tags": {"premature_accusation": {"why": "Tag why"}},
+                "worst_regret_step": {"why": "Worst step why"},
+            },
+            {
+                "primary_failure_tag": "uninformative_canary",
+                "quotes": [{"quote": "", "note": "Single variant contained all remaining suspects."}],
+                "tags": {"uninformative_canary": {"why": "Tag why"}},
+                "worst_regret_step": {"why": "Worst step why"},
+            },
+            {
+                "primary_failure_tag": "premature_accusation",
+                "quotes": [],
+                "tags": {
+                    "premature_accusation": {
+                        "count": 1,
+                        "regret": 1.419383,
+                        "why": "accused before the evidence was decisive (solver top-suspect belief 0.15 < 0.6)",
+                    }
+                },
+                "worst_regret_step": {"why": "Worst step why"},
+            },
+            {
+                "primary_failure_tag": None,
+                "quotes": [],
+                "tags": {},
+                "worst_regret_step": {
+                    "t": 40,
+                    "day": 8,
+                    "action": "plant_canary",
+                    "regret": 0.034917,
+                    "why": "planted duplicate canary after suspect pool already narrowed",
+                },
+            },
+        ],
+        "annotations": {
+            "generated_from_git_sha": "587167429aabe85fdf53786cb78c47b272ea0325",
+            "summary": {"total_episodes": 3, "episodes_with_quotes": 3},
+            "episodes": {
+                "gemini-4-carbon/low/hard/1": {
+                    "key": "gemini-4-carbon/low/hard/1",
+                    "pipe_key": "gemini-4-carbon|low|hard|1",
+                    "model": "gemini-4-carbon",
+                    "level": "low",
+                    "tier": "hard",
+                    "seed": 1,
+                    "run_id": "ladder:ladder-v14:gemini-4-carbon/low/hard/1",
+                    "ledger_calls_recorded": 153,
+                    "regret_total": 0.17008,
+                    "primary_failure_tag": "ignored_delay",
+                    "quotes": [
+                        {
+                            "quote": "Day 9 posterior 97.7% already cleared break-even; held fire until day 17.",
+                            "source_kind": "episode_step",
+                        }
+                    ],
+                },
+                "gemini-3.1-flash-lite/minimal/medium/0": {
+                    "key": "gemini-3.1-flash-lite/minimal/medium/0",
+                    "pipe_key": "gemini-3.1-flash-lite|minimal|medium|0",
+                    "model": "gemini-3.1-flash-lite",
+                    "level": "minimal",
+                    "tier": "medium",
+                    "seed": 0,
+                    "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/medium/0",
+                    "ledger_calls_recorded": 77,
+                    "regret_total": 1.463591,
+                    "primary_failure_tag": "premature_accusation",
+                    "quotes": [],
+                    "tags": {},
+                    "worst_regret_step": {
+                        "t": 76,
+                        "day": 9,
+                        "action": "accuse",
+                        "why": "accused before the evidence was decisive (solver top-suspect belief 0.15 < 0.6)",
+                    },
+                },
+            },
+            "by_scenario": {
+                "hard/1": {
+                    "gemini-4-carbon": {
+                        "low": "gemini-4-carbon/low/hard/1",
+                        "high": {
+                            "primary_failure_tag": None,
+                            "ledger_calls_recorded": 99,
+                            "regret_total": 0.0,
+                            "quotes": [{"note": "Pinned e33 on day 9 right above break-even."}],
+                        },
+                    }
+                },
+                "medium/5": [
+                    {
+                        "model": "gemini-4-argon",
+                        "level": "low",
+                        "primary_failure_tag": "over_restriction",
+                        "quotes": [{"quote": "Restricted canary to 2 suspects too early."}],
+                    }
+                ],
+            },
+            "by_run_id": {
+                "alias-run-carbon-low": "gemini-4-carbon/low/hard/1",
+                "alias-run-inline": {
+                    "primary_failure_tag": "no_accusation",
+                    "worst_regret_step": {"why": "ran out of horizon without accusing"},
+                },
+            },
+            "by_case": {
+                "alias-case-0": {
+                    "minimal": "gemini-3.1-flash-lite/minimal/medium/0",
+                }
+            },
+        },
+    }
+
+    res = _run_engine_js(
+        """
+        const chainOut = PAYLOAD.chain.map(item => Engine.extractAnnotationFields(item));
+        const idx = Engine.buildAnnotationsIndex(PAYLOAD.annotations);
+        const byRun = idx.byRunId["ladder:ladder-v14:gemini-4-carbon/low/hard/1"];
+        const bySlash = idx.byKey["gemini-4-carbon/low/hard/1"];
+        const byPipe = idx.byKey["gemini-4-carbon|low|hard|1"];
+        const byModelTSL = idx.byModelTierSeedLevel["gemini-4-carbon:hard:1:low"];
+        const byTSL = idx.byTierSeedLevel["hard:1:low"];
+        const byScenInline = idx.byModelTierSeedLevel["gemini-4-carbon:hard:1:high"];
+        const byScenArr = idx.byModelTierSeedLevel["gemini-4-argon:medium:5:low"];
+        const byAliasRun = idx.byRunId["alias-run-carbon-low"];
+        const byAliasInline = idx.byRunId["alias-run-inline"];
+
+        const caseViaAliases = Engine.normalizeCase(
+          {
+            id: "alias-case-0",
+            model: "gemini-3.1-flash-lite",
+            tier: "medium",
+            seed: 999,
+            true_mole: "e05",
+            thinking_levels: [
+              { thinking_level: "minimal", run_id: "unmatched-id", accused: "e02", score: -1.0 },
+              { thinking_level: "low", run_id: "alias-run-carbon-low", accused: "e33", score: 0.29 },
+              { thinking_level: "high", run_id: "alias-run-inline", accused: null, score: 0.0 }
+            ]
+          },
+          idx
+        );
+        return {
+          chainOut,
+          byRun,
+          bySlash,
+          byPipe,
+          byModelTSL,
+          byTSL,
+          byScenInline,
+          byScenArr,
+          byAliasRun,
+          byAliasInline,
+          caseViaAliases
+        };
+        """,
+        payload,
+    )
+
+    chain_out = res["chainOut"]
+    assert [x["analyst_quote"] for x in chain_out] == [
+        "Direct analyst quote wins.",
+        "Plain quote wins second.",
+        "t76 d9 accuse(employee=e02) | REGRET 1.419",
+        "Single variant contained all remaining suspects.",
+        "accused before the evidence was decisive (solver top-suspect belief 0.15 < 0.6)",
+        "planted duplicate canary after suspect pool already narrowed",
+    ]
+    assert chain_out[0]["failure_tag"] == "ignored_delay"
+    assert chain_out[1]["failure_tag"] == "premature_accusation"
+    assert chain_out[5]["failure_tag"] is None
+
+    for resolved in (res["byRun"], res["bySlash"], res["byPipe"], res["byModelTSL"], res["byTSL"], res["byAliasRun"]):
+        assert resolved["failure_tag"] == "ignored_delay"
+        assert resolved["analyst_quote"] == "Day 9 posterior 97.7% already cleared break-even; held fire until day 17."
+        assert resolved["ledger_calls"] == 153
+        assert resolved["regret_total"] == pytest.approx(0.17008)
+
+    assert res["byScenInline"]["analyst_quote"] == "Pinned e33 on day 9 right above break-even."
+    assert res["byScenInline"]["ledger_calls"] == 99
+    assert res["byScenArr"]["failure_tag"] == "over_restriction"
+    assert res["byAliasInline"]["failure_tag"] == "no_accusation"
+    assert res["byAliasInline"]["analyst_quote"] == "ran out of horizon without accusing"
+
+    by_lv = {lv["thinking_level"]: lv for lv in res["caseViaAliases"]["thinking_levels"]}
+    assert by_lv["minimal"]["failure_tag"] == "premature_accusation"
+    assert by_lv["minimal"]["analyst_quote"].startswith("accused before the evidence was decisive")
+    assert by_lv["minimal"]["ledger_calls"] == 77
+    assert by_lv["low"]["failure_tag"] == "ignored_delay"
+    assert by_lv["high"]["failure_tag"] == "no_accusation"
+
+
+def test_lossless_afac6bbd_cases_and_0b565235_annotations_resolution():
+    afac_case_array_levels = {
+        "id": "carbon-hard-1",
+        "title": "Hard Seed 1: Carbon Ladder Split",
+        "model": "gemini-4-carbon",
+        "anchor_level": "high",
+        "tier": "hard",
+        "seed": 1,
+        "company": "Northstar Bio",
+        "decision_day": 9,
+        "decision_step": 44,
+        "value_at_decision": 0.71,
+        "suspects": [
+            {"id": "e10", "name": "Aino Salmi", "dept": "Legal", "role": "Counsel", "eliminated": True, "canary_hits": 0, "after_hours_count": 1, "persona_note": "Tracks external counsel redlines."},
+            {"id": "e33", "name": "Mikko Lahti", "dept": "Ops", "role": "Lead", "eliminated": False, "canary_hits": 2, "after_hours_count": 3, "persona_note": "Exports late status packs."},
+        ],
+        "canaries": [{"canary_id": "c1", "doc_id": "doc_1", "day_planted": 6, "variants": [{"variant": "A", "recipients": ["e33"]}], "leaked_variant": "A"}],
+        "leaks": [{"day": 8, "doc_id": "doc_1", "canary_id": "c1", "leaked_variant": "A", "channel": "press", "summary": "Variant A leaked."}],
+        "access_logs": [{"day": 8, "employee": "e33", "doc_id": "doc_1", "after_hours": True, "action": "export"}],
+        "comms": [{"day": 8, "kind": "chat", "speaker": "e33", "target": "all", "topic": "sync", "text": "Uploading deck."}],
+        "tool_steps": [{"t": 1, "day": 6, "tool": "plant_canary", "args": {"doc_id": "doc_1"}, "summary": "Planted c1."}],
+        "true_mole": "e33",
+        "solver": {
+            "posterior": {"e10": 0.023129, "e33": 0.976871},
+            "top_suspect": "e33",
+            "top_prob": 0.9769,
+            "break_even_prob": 0.5848,
+            "ev_accuse_top": 0.6705,
+            "ev_hold_fire": 0.69,
+            "recommended_call": "accuse",
+            "final_accused": "e33",
+            "final_day": 9,
+            "final_score": 0.71,
+            "correct": True,
+        },
+        "thinking_levels": [
+            {
+                "key": "low",
+                "model": "gemini-4-carbon",
+                "thinking_level": "low",
+                "level": "low",
+                "tier": "hard",
+                "seed": 1,
+                "call_at_t": "hold_fire",
+                "accused": "e33",
+                "accused_day": 17,
+                "end_reason": "accused",
+                "correct": True,
+                "score": 0.29,
+                "cost_usd": 1.050836,
+                "thinking_tokens": 467,
+                "input_tokens": 2252359,
+                "output_tokens": 4227,
+                "cached_tokens": 2011033,
+                "calls": 103,
+                "ledger_calls": 153,
+                "run_id": "ladder:ladder-v14:gemini-4-carbon/low/hard/1",
+                "failure_tag": "ignored_delay",
+                "analyst_quote": "gemini-4-carbon (low) held fire past day 9 despite posterior 97.7% exceeding break-even 58.5%, accusing e33 on day 17 for +0.29.",
+                "regret_total": 0.4,
+            },
+            {
+                "key": "high",
+                "model": "gemini-4-carbon",
+                "thinking_level": "high",
+                "level": "high",
+                "tier": "hard",
+                "seed": 1,
+                "call_at_t": "accuse",
+                "accused": "e33",
+                "accused_day": 9,
+                "end_reason": "accused",
+                "correct": True,
+                "score": 0.71,
+                "cost_usd": 1.596177,
+                "thinking_tokens": 40681,
+                "input_tokens": 1120400,
+                "output_tokens": 3190,
+                "cached_tokens": 980100,
+                "calls": 64,
+                "ledger_calls": 99,
+                "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/1",
+                "failure_tag": None,
+                "analyst_quote": "gemini-4-carbon (high) accused e33 on day 9 at 97.7% posterior for +0.71.",
+                "regret_total": 0.0,
+            },
+        ],
+        "cross_model_carbon": [
+            {
+                "model": "gemini-4-carbon",
+                "thinking_level": "low",
+                "accused": "e33",
+                "accused_day": 17,
+                "cost_usd": 1.050836,
+                "thinking_tokens": 467,
+                "score": 0.29,
+                "correct": True,
+                "run_id": "ladder:ladder-v14:gemini-4-carbon/low/hard/1",
+            },
+            {
+                "model": "gemini-4-carbon",
+                "thinking_level": "high",
+                "accused": "e33",
+                "accused_day": 9,
+                "cost_usd": 1.596177,
+                "thinking_tokens": 40681,
+                "score": 0.71,
+                "correct": True,
+                "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/1",
+            },
+        ],
+        "ladder_matrix": {
+            "gemini-3.1-flash-lite": {
+                "high": {
+                    "score": -1.0,
+                    "correct": False,
+                    "accused": "e10",
+                    "final_day": 6,
+                    "end_reason": "accused",
+                    "thinking_tokens": 4467,
+                    "cost_usd": 0.071437,
+                    "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/high/hard/1",
+                }
+            },
+            "gemini-4-carbon": {
+                "low": {
+                    "score": 0.29,
+                    "correct": True,
+                    "accused": "e33",
+                    "final_day": 17,
+                    "end_reason": "accused",
+                    "thinking_tokens": 467,
+                    "cost_usd": 1.050836,
+                    "run_id": "ladder:ladder-v14:gemini-4-carbon/low/hard/1",
+                },
+                "high": {
+                    "score": 0.71,
+                    "correct": True,
+                    "accused": "e33",
+                    "final_day": 9,
+                    "end_reason": "accused",
+                    "thinking_tokens": 40681,
+                    "cost_usd": 1.596177,
+                    "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/1",
+                },
+            },
+        },
+    }
+
+    afac_case_map_levels_unannotated = {
+        "id": "flash-lite-hard-4",
+        "title": "Hard Seed 4: Flash-Lite Ladder",
+        "model": "gemini-3.1-flash-lite",
+        "anchor_level": "minimal",
+        "tier": "hard",
+        "seed": 4,
+        "company": "Helios Bio",
+        "decision_day": 6,
+        "decision_step": 22,
+        "value_at_decision": 0.73,
+        "true_mole": "e38",
+        "thinking_levels": {
+            "minimal": {
+                "model": "gemini-3.1-flash-lite",
+                "call_at_t": "accuse",
+                "accused": "e29",
+                "accused_day": 6,
+                "correct": False,
+                "score": -1.0,
+                "cost_usd": 0.0412,
+                "thinking_tokens": 0,
+                "calls": 34,
+                "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/4",
+            },
+            "high": {
+                "model": "gemini-3.1-flash-lite",
+                "call_at_t": "hold_fire",
+                "accused": "e38",
+                "accused_day": 11,
+                "correct": True,
+                "score": 0.73,
+                "cost_usd": 0.0891,
+                "thinking_tokens": 5120,
+                "calls": 39,
+                "run_id": "missing-run-id-uses-model-tier-seed-level",
+            },
+        },
+        "cross_model_carbon": [
+            {
+                "model": "gemini-4-carbon",
+                "thinking_level": "high",
+                "accused": "e38",
+                "accused_day": 9,
+                "cost_usd": 1.42,
+                "thinking_tokens": 38900,
+                "score": 0.73,
+                "correct": True,
+                "run_id": "ladder:ladder-v14:gemini-4-carbon/high/hard/4",
+            }
+        ],
+        "ladder_matrix": {
+            "gemini-3.1-flash-lite": {
+                "minimal": {"score": -1.0, "correct": False, "accused": "e29", "final_day": 6}
+            }
+        },
+    }
+
+    real_shaped_annotations = {
+        "generated_from_git_sha": "587167429aabe85fdf53786cb78c47b272ea0325",
+        "episodes": {
+            "gemini-3.1-flash-lite/minimal/hard/4": {
+                "key": "gemini-3.1-flash-lite/minimal/hard/4",
+                "pipe_key": "gemini-3.1-flash-lite|minimal|hard/4",
+                "model": "gemini-3.1-flash-lite",
+                "level": "minimal",
+                "tier": "hard",
+                "seed": 4,
+                "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/minimal/hard/4",
+                "ledger_calls_recorded": 50,
+                "regret_total": 1.73,
+                "primary_failure_tag": "premature_accusation",
+                "quotes": [
+                    {
+                        "quote": "t33 d6 accuse(employee=e29) -> accused e29 | REGRET 1.730 [premature_accusation]",
+                        "source_kind": "atlas_v2",
+                        "note": "Accused e29 at 15.2% posterior.",
+                    }
+                ],
+            },
+            "gemini-3.1-flash-lite/high/hard/4": {
+                "key": "gemini-3.1-flash-lite/high/hard/4",
+                "pipe_key": "gemini-3.1-flash-lite|high|hard|4",
+                "model": "gemini-3.1-flash-lite",
+                "level": "high",
+                "tier": "hard",
+                "seed": 4,
+                "run_id": "ladder:ladder-v14:gemini-3.1-flash-lite/high/hard/4",
+                "ledger_calls_recorded": 42,
+                "regret_total": 0.0,
+                "primary_failure_tag": "uninformative_canary",
+                "quotes": [],
+                "tags": {},
+                "worst_regret_step": {
+                    "t": 18,
+                    "day": 4,
+                    "action": "plant_canary",
+                    "why": "canary split overlapped prior variant recipients",
+                },
+            },
+            "gemini-4-carbon/low/hard/1": {
+                "key": "gemini-4-carbon/low/hard/1",
+                "pipe_key": "gemini-4-carbon|low|hard|1",
+                "model": "gemini-4-carbon",
+                "level": "low",
+                "tier": "hard",
+                "seed": 1,
+                "run_id": "ladder:ladder-v14:gemini-4-carbon/low/hard/1",
+                "ledger_calls_recorded": 153,
+                "regret_total": 0.17008,
+                "primary_failure_tag": None,
+                "quotes": [{"quote": "Fallback episode quote for carbon low."}],
+            },
+        },
+        "by_scenario": {
+            "hard/4": {
+                "gemini-3.1-flash-lite": {
+                    "minimal": "gemini-3.1-flash-lite/minimal/hard/4",
+                    "high": "gemini-3.1-flash-lite/high/hard/4",
+                }
+            },
+            "hard/1": {
+                "gemini-4-carbon": {
+                    "low": "gemini-4-carbon/low/hard/1",
+                }
+            },
+        },
+    }
+
+    res = _run_engine_js(
+        """
+        const ds = Engine.loadDataset({
+          data: { cases: [PAYLOAD.cArr, PAYLOAD.cMap] },
+          annotations: PAYLOAD.ann
+        });
+        return { cases: ds.cases };
+        """,
+        {
+            "cArr": afac_case_array_levels,
+            "cMap": afac_case_map_levels_unannotated,
+            "ann": real_shaped_annotations,
+        },
+    )
+
+    c0, c1 = res["cases"]
+    assert c0["model"] == "gemini-4-carbon"
+    assert c0["anchor_level"] == "high"
+    assert c0["cross_model_carbon"] == afac_case_array_levels["cross_model_carbon"]
+    assert c0["ladder_matrix"] == afac_case_array_levels["ladder_matrix"]
+    assert c0["solver"]["posterior"]["e33"] == pytest.approx(0.976871)
+
+    c0_lvs = {lv["thinking_level"]: lv for lv in c0["thinking_levels"]}
+    assert c0_lvs["low"]["model"] == "gemini-4-carbon"
+    assert c0_lvs["low"]["call_at_t"] == "hold_fire"
+    assert c0_lvs["low"]["accused_day"] == 17
+    assert c0_lvs["low"]["ledger_calls"] == 153
+    assert c0_lvs["low"]["regret_total"] == pytest.approx(0.4)
+    assert c0_lvs["low"]["failure_tag"] == "ignored_delay"
+    assert c0_lvs["low"]["analyst_quote"].startswith("gemini-4-carbon (low) held fire past day 9")
+
+    assert c0_lvs["high"]["call_at_t"] == "accuse"
+    assert c0_lvs["high"]["accused_day"] == 9
+    assert c0_lvs["high"]["ledger_calls"] == 99
+    assert c0_lvs["high"]["regret_total"] == pytest.approx(0.0)
+    assert c0_lvs["high"]["failure_tag"] is None
+
+    assert c1["model"] == "gemini-3.1-flash-lite"
+    assert c1["anchor_level"] == "minimal"
+    assert c1["cross_model_carbon"] == afac_case_map_levels_unannotated["cross_model_carbon"]
+    assert c1["ladder_matrix"] == afac_case_map_levels_unannotated["ladder_matrix"]
+
+    c1_lvs = {lv["thinking_level"]: lv for lv in c1["thinking_levels"]}
+    assert [lv["thinking_level"] for lv in c1["thinking_levels"]] == ["minimal", "high"]
+    assert c1_lvs["minimal"]["model"] == "gemini-3.1-flash-lite"
+    assert c1_lvs["minimal"]["call_at_t"] == "accuse"
+    assert c1_lvs["minimal"]["accused_day"] == 6
+    assert c1_lvs["minimal"]["ledger_calls"] == 50
+    assert c1_lvs["minimal"]["regret_total"] == pytest.approx(1.73)
+    assert c1_lvs["minimal"]["failure_tag"] == "premature_accusation"
+    assert c1_lvs["minimal"]["analyst_quote"].startswith("t33 d6 accuse(employee=e29)")
+
+    assert c1_lvs["high"]["model"] == "gemini-3.1-flash-lite"
+    assert c1_lvs["high"]["call_at_t"] == "hold_fire"
+    assert c1_lvs["high"]["accused_day"] == 11
+    assert c1_lvs["high"]["ledger_calls"] == 42
+    assert c1_lvs["high"]["regret_total"] == pytest.approx(0.0)
+    assert c1_lvs["high"]["failure_tag"] == "uninformative_canary"
+    assert c1_lvs["high"]["analyst_quote"] == "canary split overlapped prior variant recipients"
+
+    live_cases_json = ROOT / "results" / "gemini" / "out_think_gemini.json"
+    live_ann_json = ROOT / "results" / "gemini" / "outthink_annotations.json"
+    if live_cases_json.is_file():
+        raw_live_data = json.loads(live_cases_json.read_text(encoding="utf-8"))
+        raw_live_ann = json.loads(live_ann_json.read_text(encoding="utf-8")) if live_ann_json.is_file() else None
+        live_res = _run_engine_js(
+            """
+            const ds = Engine.loadDataset({ data: PAYLOAD.data, annotations: PAYLOAD.ann });
+            return { count: ds.count, cases: ds.cases };
+            """,
+            {"data": raw_live_data, "ann": raw_live_ann},
+        )
+        assert live_res["count"] == len(raw_live_data["cases"])
+        for orig_c, norm_c in zip(raw_live_data["cases"], live_res["cases"]):
+            assert norm_c["model"] == orig_c["model"]
+            assert norm_c["anchor_level"] == orig_c["anchor_level"]
+            assert norm_c["cross_model_carbon"] == orig_c["cross_model_carbon"]
+            assert norm_c["ladder_matrix"] == orig_c["ladder_matrix"]
+            orig_by_lv = {x["thinking_level"]: x for x in orig_c["thinking_levels"]}
+            norm_by_lv = {x["thinking_level"]: x for x in norm_c["thinking_levels"]}
+            assert set(orig_by_lv.keys()) == set(norm_by_lv.keys())
+            for k, orig_lv in orig_by_lv.items():
+                norm_lv = norm_by_lv[k]
+                assert norm_lv["model"] == orig_lv["model"]
+                assert norm_lv["call_at_t"] == orig_lv["call_at_t"]
+                assert norm_lv["accused_day"] == orig_lv["accused_day"]
+                assert norm_lv["ledger_calls"] == orig_lv["ledger_calls"]
+                assert norm_lv["regret_total"] == pytest.approx(orig_lv["regret_total"])
+                if orig_lv.get("failure_tag") is not None:
+                    assert norm_lv["failure_tag"] == orig_lv["failure_tag"]
+                assert norm_lv["analyst_quote"] == orig_lv["analyst_quote"]
 
 
 def test_js_comment_scanner_catches_line_and_block_comments():

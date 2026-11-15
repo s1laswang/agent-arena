@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import concurrent.futures as cf
 import contextlib
+import hashlib
+import hmac
+import http.client
 import json
 import os
 import re
@@ -24,9 +28,8 @@ from canary.baselines import _params_from_instruction, employee_ids
 from canary.env import ERRORS
 from canary.eval import make_env, run_episode
 from canary.llm.base import LLMClient, LLMResponse, ToolCall
-from canary.mcp_server import clean_launch_env, verify_ledger, write_secret_files
 from canary.redteam.fuzz import _mole_named, score_invariants
-from canary.redteam.mcp_client import MCPClient, MCPError, http_get
+from canary.redteam.mcp_client import MCPClient, MCPError
 from canary.redteam.swarm_probes import W2b008Elimination
 from canary.rules import HELDOUT_SEEDS, JUDGE_SEEDS, TIERS_VERSION, tier_params
 from canary.solver.policy import SolverPolicy
@@ -438,11 +441,142 @@ def scrub_text(text: str, extra_secrets: list[str] | None = None) -> str:
     return out
 
 
+SIG_ALG = "HMAC-SHA256"
+SECRET_FILE_VARS = (
+    "CANARY_EPISODE_FILE",
+    "CANARY_WORLD_SECRET_FILE",
+    "CANARY_LEDGER_TOKEN_FILE",
+    "CANARY_ADMIN_TOKEN_FILE",
+    "CANARY_LEDGER_KEY_FILE",
+)
+PLAIN_SECRET_VARS = (
+    "CANARY_TIER",
+    "CANARY_SEED",
+    "CANARY_LEDGER_TOKEN",
+    "CANARY_ADMIN_TOKEN",
+    "CANARY_WORLD_SECRET",
+    "CANARY_LEDGER_KEY",
+)
+BOOT_FD = 73
+_BOOT_FD_LOCK = threading.Lock()
+_ORACLE_CACHE: dict[tuple[str, str, int, str], dict[str, Any]] = {}
+
+
 def _write_0600_secret(path: Path, value: str) -> str:
     fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         fh.write(value)
     return str(path)
+
+
+def ledger_canonical(payload: dict[str, Any]) -> bytes:
+    body = {k: v for k, v in payload.items() if k != "sig"}
+    return json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+
+
+def sign_ledger(payload: dict[str, Any], key: str | bytes) -> dict[str, Any]:
+    k = key.encode("utf-8") if isinstance(key, str) else key
+    mac = hmac.new(k, ledger_canonical(payload), hashlib.sha256).hexdigest()
+    return {**{k2: v for k2, v in payload.items() if k2 != "sig"}, "sig": {"alg": SIG_ALG, "mac": mac}}
+
+
+def verify_ledger(payload: Any, key: str | bytes) -> bool:
+    if not isinstance(payload, dict) or not key:
+        return False
+    sig = payload.get("sig")
+    if not isinstance(sig, dict) or sig.get("alg") != SIG_ALG or not isinstance(sig.get("mac"), str):
+        return False
+    return hmac.compare_digest(sign_ledger(payload, key)["sig"]["mac"], sig["mac"])
+
+
+def clean_launch_env(base: dict[str, str] | None = None) -> dict[str, str]:
+    out = dict(os.environ if base is None else base)
+    for k in PLAIN_SECRET_VARS:
+        out.pop(k, None)
+    return out
+
+
+def write_secret_files(
+    tier: str,
+    seed: int,
+    ledger_token: str | None = None,
+    directory: str | None = None,
+) -> dict[str, str]:
+    d = directory or tempfile.mkdtemp(prefix="canary-ep-")
+    os.chmod(d, 0o700)
+    out: dict[str, str] = {}
+    specs = (
+        ("episode.json", "CANARY_EPISODE_FILE", json.dumps({"tier": tier, "seed": int(seed)})),
+        ("ledger_token", "CANARY_LEDGER_TOKEN_FILE", ledger_token),
+    )
+    for name, var, text in specs:
+        if text is None:
+            continue
+        out[var] = _write_0600_secret(Path(d) / name, text)
+    return out
+
+
+def _open_boot_memfd(boot_bytes: bytes) -> int:
+    if hasattr(os, "memfd_create"):
+        fd = os.memfd_create("canary-cfg", 0)
+    else:
+        tmp_fd, tmp_path = tempfile.mkstemp(prefix="canary-cfg-")
+        os.unlink(tmp_path)
+        fd = tmp_fd
+    os.write(fd, boot_bytes)
+    os.lseek(fd, 0, os.SEEK_SET)
+    return fd
+
+
+class _FastLocalHTTP:
+    def __init__(self, port: int, timeout: float = 10.0) -> None:
+        self.port = int(port)
+        self.timeout = timeout
+        self._conn: http.client.HTTPConnection | None = None
+
+    def close(self) -> None:
+        if self._conn is not None:
+            try:
+                self._conn.close()
+            except OSError:
+                pass
+            self._conn = None
+
+    def request(
+        self,
+        method: str,
+        path: str,
+        body: bytes | None = None,
+        headers: dict[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> tuple[int, str, dict[str, str]]:
+        use_timeout = self.timeout if timeout is None else timeout
+        hdrs = dict(headers or {})
+        for attempt in range(2):
+            conn = self._conn
+            if conn is None:
+                sock = socket.create_connection(("127.0.0.1", self.port), timeout=use_timeout)
+                with contextlib.suppress(OSError):
+                    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=use_timeout)
+                conn.sock = sock
+                self._conn = conn
+            try:
+                conn.timeout = use_timeout
+                if conn.sock is not None:
+                    conn.sock.settimeout(use_timeout)
+                conn.request(method, path, body=body, headers=hdrs)
+                resp = conn.getresponse()
+                raw = resp.read().decode("utf-8", errors="replace")
+                resp_headers = {k.lower(): v for k, v in resp.getheaders()}
+                if resp_headers.get("connection", "").lower() == "close":
+                    self.close()
+                return int(resp.status), raw, resp_headers
+            except (http.client.HTTPException, OSError):
+                self.close()
+                if attempt == 1:
+                    raise
+        raise RuntimeError("unreachable")
 
 
 class RealMCPServer:
@@ -457,6 +591,7 @@ class RealMCPServer:
         admin_token: str | None = None,
         extra_env: dict[str, str] | None = None,
         startup_timeout: float = 30.0,
+        wait_ready: bool = True,
     ):
         self.tier = tier
         self.seed = int(seed)
@@ -467,21 +602,38 @@ class RealMCPServer:
         self.log_path = log_path
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         self._log_fh = open(self.log_path, "w", encoding="utf-8")
+        self._extra_env = dict(extra_env or {})
+        self._startup_timeout = float(startup_timeout)
+        self._allow_dev = "" if (self.seed in JUDGE_SEEDS or self.seed in HELDOUT_SEEDS) else "1"
         self.secret_files_consumed = False
-        allow_dev = "" if (self.seed in JUDGE_SEEDS or self.seed in HELDOUT_SEEDS) else "1"
-        last_err: Exception | None = None
-        for _ in range(5):
-            sec_dir = Path(tempfile.mkdtemp(prefix="canary-gmcp-ep-", dir=str(self.log_path.parent)))
-            os.chmod(sec_dir, 0o700)
-            file_vars = write_secret_files(self.tier, self.seed, self.token, directory=str(sec_dir))
-            file_vars["CANARY_WORLD_SECRET_FILE"] = _write_0600_secret(sec_dir / "world_secret", self.world_secret)
-            file_vars["CANARY_LEDGER_KEY_FILE"] = _write_0600_secret(sec_dir / "ledger_key", self.ledger_key)
-            if self.admin_token:
-                file_vars["CANARY_ADMIN_TOKEN_FILE"] = _write_0600_secret(sec_dir / "admin_token", self.admin_token)
-            port = free_port()
-            base_env = clean_launch_env()
-            for key_var in STRIPPED_API_KEY_VARS:
-                base_env.pop(key_var, None)
+        self._ready = False
+        self._pending_sec_dir: Path | None = None
+        self._pending_file_vars: dict[str, str] = {}
+        self._http: _FastLocalHTTP | None = None
+        self.port = 0
+        self.base = ""
+        self.url = ""
+        self._spawn_attempt()
+        if wait_ready:
+            self.ensure_ready()
+
+    def _spawn_attempt(self) -> None:
+        if self._http is not None:
+            self._http.close()
+            self._http = None
+        sec_dir = Path(tempfile.mkdtemp(prefix="canary-gmcp-ep-", dir=str(self.log_path.parent)))
+        os.chmod(sec_dir, 0o700)
+        file_vars = write_secret_files(self.tier, self.seed, self.token, directory=str(sec_dir))
+        file_vars["CANARY_WORLD_SECRET_FILE"] = _write_0600_secret(sec_dir / "world_secret", self.world_secret)
+        file_vars["CANARY_LEDGER_KEY_FILE"] = _write_0600_secret(sec_dir / "ledger_key", self.ledger_key)
+        if self.admin_token:
+            file_vars["CANARY_ADMIN_TOKEN_FILE"] = _write_0600_secret(sec_dir / "admin_token", self.admin_token)
+        port = free_port()
+        base_env = clean_launch_env()
+        for key_var in STRIPPED_API_KEY_VARS:
+            base_env.pop(key_var, None)
+        use_legacy_reexec = "CANARY_CONSUME_SECRET_FILES" in self._extra_env
+        if use_legacy_reexec:
             env = {
                 **base_env,
                 "TMPDIR": str(self.log_path.parent),
@@ -489,9 +641,9 @@ class RealMCPServer:
                 "CANARY_PORT": str(port),
                 "CANARY_PROVIDER": "template",
                 "CANARY_CONSUME_SECRET_FILES": "1",
-                "CANARY_ALLOW_DEV": allow_dev,
+                "CANARY_ALLOW_DEV": self._allow_dev,
                 **file_vars,
-                **(extra_env or {}),
+                **self._extra_env,
             }
             self.proc = subprocess.Popen(
                 [sys.executable, "-m", "canary.mcp_server"],
@@ -500,97 +652,208 @@ class RealMCPServer:
                 stdout=self._log_fh,
                 stderr=subprocess.STDOUT,
             )
+            self._pending_sec_dir = sec_dir
+            self._pending_file_vars = file_vars
+        else:
+            ep_obj = json.loads(Path(file_vars["CANARY_EPISODE_FILE"]).read_text(encoding="utf-8").strip())
+            ws_val = Path(file_vars["CANARY_WORLD_SECRET_FILE"]).read_text(encoding="utf-8").strip()
+            lt_val = Path(file_vars["CANARY_LEDGER_TOKEN_FILE"]).read_text(encoding="utf-8").strip()
+            lk_val = Path(file_vars["CANARY_LEDGER_KEY_FILE"]).read_text(encoding="utf-8").strip()
+            at_val = (
+                Path(file_vars["CANARY_ADMIN_TOKEN_FILE"]).read_text(encoding="utf-8").strip()
+                if "CANARY_ADMIN_TOKEN_FILE" in file_vars
+                else None
+            )
+            for p_str in file_vars.values():
+                with contextlib.suppress(OSError):
+                    os.unlink(p_str)
+            self.secret_files_consumed = not any(Path(p).exists() for p in file_vars.values())
+            shutil.rmtree(sec_dir, ignore_errors=True)
+            self._pending_sec_dir = None
+            self._pending_file_vars = {}
+            for drop_var in (*SECRET_FILE_VARS, "CANARY_CONSUME_SECRET_FILES"):
+                base_env.pop(drop_var, None)
+            env = {
+                **base_env,
+                "TMPDIR": str(self.log_path.parent),
+                "CANARY_HOST": "127.0.0.1",
+                "CANARY_PORT": str(port),
+                "CANARY_PROVIDER": "template",
+                "CANARY_ALLOW_DEV": self._allow_dev,
+                "CANARY_BOOTSTRAPPED": "1",
+                **self._extra_env,
+            }
+            boot_bytes = json.dumps(
+                {
+                    "tier": str(ep_obj["tier"]),
+                    "seed": int(ep_obj["seed"]),
+                    "world_secret_b64": base64.b64encode(ws_val.encode("utf-8")).decode("ascii"),
+                    "ledger_token": lt_val,
+                    "admin_token": at_val,
+                    "ledger_key": lk_val,
+                }
+            ).encode("utf-8")
+            with _BOOT_FD_LOCK:
+                memfd = _open_boot_memfd(boot_bytes)
+                saved_fd: int | None = None
+                try:
+                    if memfd != BOOT_FD:
+                        try:
+                            saved_fd = os.dup(BOOT_FD)
+                        except OSError:
+                            saved_fd = None
+                        os.dup2(memfd, BOOT_FD)
+                        os.close(memfd)
+                    os.set_inheritable(BOOT_FD, True)
+                    self.proc = subprocess.Popen(
+                        [sys.executable, "-m", "canary.mcp_server"],
+                        cwd=str(REPO),
+                        env=env,
+                        pass_fds=(BOOT_FD,),
+                        stdout=self._log_fh,
+                        stderr=subprocess.STDOUT,
+                    )
+                finally:
+                    with contextlib.suppress(OSError):
+                        os.close(BOOT_FD)
+                    if saved_fd is not None:
+                        with contextlib.suppress(OSError):
+                            os.dup2(saved_fd, BOOT_FD)
+                        with contextlib.suppress(OSError):
+                            os.close(saved_fd)
+        self.port = port
+        self.base = f"http://127.0.0.1:{self.port}"
+        self.url = f"{self.base}/mcp"
+        self._http = _FastLocalHTTP(self.port, timeout=10.0)
+
+    def ensure_ready(self) -> None:
+        if self._ready:
+            return
+        last_err: Exception | None = None
+        for attempt in range(5):
+            if attempt > 0:
+                self._spawn_attempt()
             try:
-                self._wait_ready(port, startup_timeout)
-                self.port = port
-                self.secret_files_consumed = not any(Path(p).exists() for p in file_vars.values())
-                shutil.rmtree(sec_dir, ignore_errors=True)
-                break
+                self._wait_ready(self.port, self._startup_timeout)
+                if self._pending_sec_dir is not None:
+                    self.secret_files_consumed = not any(Path(p).exists() for p in self._pending_file_vars.values())
+                    shutil.rmtree(self._pending_sec_dir, ignore_errors=True)
+                    self._pending_sec_dir = None
+                    self._pending_file_vars = {}
+                self._ready = True
+                return
             except RuntimeError as exc:
                 last_err = exc
+                if self._http is not None:
+                    self._http.close()
+                    self._http = None
                 if self.proc.poll() is None:
                     self.proc.kill()
                     self.proc.wait(timeout=5)
-                shutil.rmtree(sec_dir, ignore_errors=True)
+                if self._pending_sec_dir is not None:
+                    shutil.rmtree(self._pending_sec_dir, ignore_errors=True)
+                    self._pending_sec_dir = None
+                    self._pending_file_vars = {}
                 if self.proc.returncode == 2:
                     self._log_fh.close()
                     raise RuntimeError(f"canary.mcp_server refused configuration (exit 2): see {self.log_path}") from exc
-        else:
-            self._log_fh.close()
-            raise RuntimeError(f"canary.mcp_server failed to start after 5 attempts: {last_err}")
-        self.base = f"http://127.0.0.1:{self.port}"
-        self.url = f"{self.base}/mcp"
+        self._log_fh.close()
+        raise RuntimeError(f"canary.mcp_server failed to start after 5 attempts: {last_err}")
+
+    def _http_call(
+        self,
+        method: str,
+        path: str,
+        headers: dict[str, str] | None = None,
+        body: bytes | None = None,
+        timeout: float = 5.0,
+    ) -> tuple[int, str]:
+        if self._http is None:
+            self._http = _FastLocalHTTP(self.port, timeout=timeout)
+        try:
+            code, text, _ = self._http.request(method, path, body=body, headers=headers, timeout=timeout)
+            return code, text
+        except (http.client.HTTPException, OSError) as exc:
+            if isinstance(exc, ExternalNetworkBlockedError):
+                raise
+            return 0, str(exc)
 
     def _wait_ready(self, port: int, timeout: float) -> None:
-        deadline = time.time() + timeout
-        while time.time() < deadline:
+        deadline = time.perf_counter() + timeout
+        tcp_ready = False
+        while time.perf_counter() < deadline:
             if self.proc.poll() is not None:
                 raise RuntimeError(f"server exited early with code {self.proc.returncode}")
-            code, _ = http_get(f"http://127.0.0.1:{port}/healthz", timeout=1.0)
-            if code == 200 and self.proc.poll() is None:
-                return
-            time.sleep(0.05)
+            if not tcp_ready:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe_sock:
+                    probe_sock.settimeout(0.2)
+                    if probe_sock.connect_ex(("127.0.0.1", port)) == 0:
+                        tcp_ready = True
+            if tcp_ready:
+                code, _ = self._http_call("GET", "/healthz", timeout=1.0)
+                if code == 200 and self.proc.poll() is None:
+                    return
+            time.sleep(0.005)
         raise RuntimeError("server healthz timed out")
 
     def healthy(self) -> bool:
+        self.ensure_ready()
         if self.proc.poll() is not None:
             return False
-        code, _ = http_get(f"{self.base}/healthz", timeout=2.0)
+        code, _ = self._http_call("GET", "/healthz", timeout=2.0)
         return code == 200
 
     def fetch_ledger(self) -> tuple[int, Any]:
-        code, body = http_get(f"{self.base}/ledger?token={self.token}", timeout=10.0)
+        self.ensure_ready()
+        code, body = self._http_call("GET", f"/ledger?token={self.token}", timeout=10.0)
         try:
             return code, json.loads(body)
         except json.JSONDecodeError:
             return code, body
 
     def _http_status_with_headers(self, path: str, headers: dict[str, str], method: str = "GET", body: bytes | None = None) -> int:
-        req = urllib.request.Request(f"{self.base}{path}", data=body, headers=headers, method=method)
-        try:
-            with urllib.request.urlopen(req, timeout=5.0) as resp:
-                return int(resp.status)
-        except urllib.error.HTTPError as exc:
-            return int(exc.code)
-        except OSError:
-            return 0
+        self.ensure_ready()
+        return self._http_call(method, path, headers=headers, body=body, timeout=5.0)[0]
 
     def probe_unauthenticated(self) -> dict[str, int]:
+        self.ensure_ready()
         return {
-            "ledger_no_token": http_get(f"{self.base}/ledger", timeout=5.0)[0],
-            "ledger_empty_token": http_get(f"{self.base}/ledger?token=", timeout=5.0)[0],
-            "ledger_wrong_token": http_get(f"{self.base}/ledger?token=wrong", timeout=5.0)[0],
-            "ledger_prefix_token": http_get(f"{self.base}/ledger?token={self.token[:4]}", timeout=5.0)[0],
+            "ledger_no_token": self._http_call("GET", "/ledger", timeout=5.0)[0],
+            "ledger_empty_token": self._http_call("GET", "/ledger?token=", timeout=5.0)[0],
+            "ledger_wrong_token": self._http_call("GET", "/ledger?token=wrong", timeout=5.0)[0],
+            "ledger_prefix_token": self._http_call("GET", f"/ledger?token={self.token[:4]}", timeout=5.0)[0],
             "ledger_bearer_header": self._http_status_with_headers(
                 "/ledger", {"Authorization": f"Bearer {self.token}"}
             ),
             "ledger_cookie_header": self._http_status_with_headers(
                 "/ledger", {"Cookie": f"token={self.token}"}
             ),
-            "admin_reset_get": http_get(f"{self.base}/admin/reset", timeout=5.0)[0],
+            "admin_reset_get": self._http_call("GET", "/admin/reset", timeout=5.0)[0],
             "admin_reset_post_no_token": self._http_status_with_headers(
                 "/admin/reset", {"Content-Type": "application/json"}, method="POST", body=b"{}"
             ),
         }
 
     def reset_episode(self, tier: str, seed: int) -> None:
+        self.ensure_ready()
         if not self.admin_token:
             raise RuntimeError("admin_token not configured on RealMCPServer")
         body = json.dumps({"tier": tier, "seed": int(seed)}).encode("utf-8")
-        req = urllib.request.Request(
-            f"{self.base}/admin/reset?token={self.admin_token}",
-            data=body,
+        code, raw = self._http_call(
+            "POST",
+            f"/admin/reset?token={self.admin_token}",
             headers={"Content-Type": "application/json"},
-            method="POST",
+            body=body,
+            timeout=10.0,
         )
-        with urllib.request.urlopen(req, timeout=10.0) as resp:
-            payload = json.loads(resp.read().decode("utf-8", errors="replace"))
-            if resp.status != 200 or not payload.get("ok"):
-                raise RuntimeError(f"admin/reset failed: status={resp.status} payload={payload!r}")
+        payload = json.loads(raw) if raw.strip().startswith("{") else {}
+        if code != 200 or not payload.get("ok"):
+            raise RuntimeError(f"admin/reset failed: status={code} payload={payload!r}")
         self.tier = tier
         self.seed = int(seed)
 
     def server_environ_clean(self) -> bool:
+        self.ensure_ready()
         if self.proc.poll() is not None:
             return True
         proc_env = Path(f"/proc/{self.proc.pid}/environ")
@@ -615,15 +878,18 @@ class RealMCPServer:
         return not any(item in raw for item in forbidden)
 
     def stop(self) -> bool:
-        crashed = self.proc.poll() is not None
-        if not crashed:
-            self.proc.terminate()
-            try:
-                self.proc.wait(timeout=0.3)
-            except subprocess.TimeoutExpired:
-                self.proc.kill()
-                self.proc.wait(timeout=2)
-        self._log_fh.close()
+        if self._http is not None:
+            self._http.close()
+            self._http = None
+        if self._pending_sec_dir is not None:
+            shutil.rmtree(self._pending_sec_dir, ignore_errors=True)
+            self._pending_sec_dir = None
+        crashed = (self.proc.poll() is not None) if self._ready else False
+        if self.proc.poll() is None:
+            self.proc.kill()
+            self.proc.wait(timeout=2)
+        if not self._log_fh.closed:
+            self._log_fh.close()
         return crashed
 
 
@@ -1296,9 +1562,12 @@ class WireRunCapture:
 
 class MCPSessionRunner:
     def __init__(self, server: RealMCPServer, persona: PersonaSpec):
+        server.ensure_ready()
         self.server = server
         self.persona = persona
+        self._http = _FastLocalHTTP(server.port, timeout=30.0)
         self.client = MCPClient(server.url, timeout=30.0)
+        self.client._post = self._fast_mcp_post
         init_res = self.client.initialize()
         raw_tools = self.client.list_tools()
         spec = []
@@ -1306,6 +1575,51 @@ class MCPSessionRunner:
             schema = item.get("inputSchema") or item.get("input_schema") or {"type": "object", "properties": {}}
             spec.append({"name": item["name"], "description": item.get("description", ""), "input_schema": schema})
         self.capture = WireRunCapture(instruction=str(init_res.get("instructions") or ""), mcp_tools_spec=spec)
+
+    def close(self) -> None:
+        self._http.close()
+
+    @staticmethod
+    def _post_with_transport(client: MCPClient, transport: _FastLocalHTTP, payload: dict[str, Any]) -> dict[str, Any] | None:
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "MCP-Protocol-Version": "2025-06-18",
+        }
+        if client.session:
+            headers["Mcp-Session-Id"] = client.session
+        code, body, resp_headers = transport.request(
+            "POST",
+            "/mcp",
+            body=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            timeout=client.timeout,
+        )
+        if code >= 400:
+            raise MCPError(f"HTTP {code}: {body[:300]!r}")
+        sid = resp_headers.get("mcp-session-id")
+        if sid:
+            client.session = sid
+        if "id" not in payload or not body.strip():
+            return None
+        ctype = resp_headers.get("content-type", "")
+        if "text/event-stream" in ctype:
+            for line in body.splitlines():
+                if line.startswith("data:"):
+                    msg = json.loads(line[5:].strip())
+                    if msg.get("id") == payload["id"]:
+                        return msg
+            raise MCPError("no matching SSE response")
+        return json.loads(body)
+
+    def _fast_mcp_post(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+        return self._post_with_transport(self.client, self._http, payload)
+
+    def _new_sub_client(self, timeout: float = 20.0) -> tuple[MCPClient, _FastLocalHTTP]:
+        sub = MCPClient(self.server.url, timeout=timeout)
+        sub_http = _FastLocalHTTP(self.server.port, timeout=timeout)
+        sub._post = lambda payload: self._post_with_transport(sub, sub_http, payload)
+        return sub, sub_http
 
     def llm_tools(self) -> list[dict[str, Any]]:
         tools = [
@@ -1450,15 +1764,11 @@ class MCPSessionRunner:
             req_body = b"{}" if method == "POST" else None
             if method == "POST":
                 headers.setdefault("Content-Type", "application/json")
-            req = urllib.request.Request(self.server.base + raw_path, data=req_body, headers=headers, method=method)
             try:
-                with urllib.request.urlopen(req, timeout=5.0) as resp:
-                    code = int(resp.status)
-                    body = resp.read().decode("utf-8", errors="replace")
-            except urllib.error.HTTPError as exc:
-                code = int(exc.code)
-                body = exc.read().decode("utf-8", errors="replace")
-            except OSError as exc:
+                code, body, _ = self._http.request(method, raw_path, body=req_body, headers=headers, timeout=5.0)
+            except (http.client.HTTPException, OSError) as exc:
+                if isinstance(exc, ExternalNetworkBlockedError):
+                    raise
                 code = 0
                 body = str(exc)
             elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 3)
@@ -1494,15 +1804,17 @@ class MCPSessionRunner:
             if sess:
                 headers["Mcp-Session-Id"] = str(sess)
             t0 = time.perf_counter()
-            req = urllib.request.Request(self.server.url, raw_body.encode("utf-8"), headers, method="POST")
             try:
-                with urllib.request.urlopen(req, timeout=10.0) as resp:
-                    code = int(resp.status)
-                    body = resp.read().decode("utf-8", errors="replace")
-            except urllib.error.HTTPError as exc:
-                code = int(exc.code)
-                body = exc.read().decode("utf-8", errors="replace")
-            except OSError as exc:
+                code, body, _ = self._http.request(
+                    "POST",
+                    "/mcp",
+                    body=raw_body.encode("utf-8"),
+                    headers=headers,
+                    timeout=10.0,
+                )
+            except (http.client.HTTPException, OSError) as exc:
+                if isinstance(exc, ExternalNetworkBlockedError):
+                    raise
                 code = 0
                 body = str(exc)
             elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 3)
@@ -1551,7 +1863,7 @@ class MCPSessionRunner:
             target_tool = str(args.get("tool") or "status")
             target_args = args.get("args") if isinstance(args.get("args"), dict) else {}
             t0 = time.perf_counter()
-            sub = MCPClient(self.server.url, timeout=20.0)
+            sub, sub_http = self._new_sub_client(timeout=20.0)
             try:
                 sub.initialize()
                 raw_res = sub.call_raw(target_tool, target_args)
@@ -1559,6 +1871,8 @@ class MCPSessionRunner:
             except Exception as exc:
                 payload = {"ok": False, "data": None, "error": f"transport: {str(exc)[:160]}", "transport": True}
                 rbytes = 0
+            finally:
+                sub_http.close()
             elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 3)
             self._record_game_step(target_tool, target_args, payload, via="second_session", elapsed_ms=elapsed_ms, resp_bytes=rbytes)
             return {**payload, "elapsed_ms": elapsed_ms, "response_bytes": rbytes}
@@ -1571,7 +1885,7 @@ class MCPSessionRunner:
             results: list[tuple[dict[str, Any], float, int]] = [({}, 0.0, 0) for _ in emps]
 
             def worker(idx: int, emp_id: str) -> None:
-                sub = MCPClient(self.server.url, timeout=20.0)
+                sub, sub_http = self._new_sub_client(timeout=20.0)
                 t0 = time.perf_counter()
                 try:
                     sub.initialize()
@@ -1583,6 +1897,8 @@ class MCPSessionRunner:
                     payload, rbytes = self._decode_call_raw(raw_res)
                 except Exception as exc:
                     payload, rbytes = {"ok": False, "data": None, "error": f"transport: {str(exc)[:160]}", "transport": True}, 0
+                finally:
+                    sub_http.close()
                 results[idx] = (payload, round((time.perf_counter() - t0) * 1000.0, 3), rbytes)
 
             with cf.ThreadPoolExecutor(max_workers=len(emps)) as pool:
@@ -1953,14 +2269,25 @@ def oracle_truth_and_solver(
     world_secret: str,
     replay_steps: list[Step] | None = None,
 ) -> dict[str, Any]:
+    cache_key = (TIERS_VERSION, tier, int(seed), world_secret)
+    cached = _ORACLE_CACHE.get(cache_key)
     set_world_secret(world_secret.encode("utf-8"))
     try:
-        oracle_env = make_env(tier, seed)
-        true_mole = oracle_env._world.mole
-        true_decoy = oracle_env._world.decoy
-        world_seed = int(oracle_env._world.world_seed)
-        solver_ep = run_episode(make_env(tier, seed), SolverPolicy())
-        paired_solver = float(solver_ep.score)
+        if cached is None:
+            oracle_env = make_env(tier, seed)
+            true_mole = oracle_env._world.mole
+            true_decoy = oracle_env._world.decoy
+            world_seed = int(oracle_env._world.world_seed)
+            solver_ep = run_episode(make_env(tier, seed), SolverPolicy())
+            cached = {
+                "true_mole": true_mole,
+                "true_decoy": true_decoy,
+                "world_seed": world_seed,
+                "paired_solver_score": round(float(solver_ep.score), 4),
+                "paired_solver_correct": bool(solver_ep.correct),
+                "paired_solver_day": int(solver_ep.final_day),
+            }
+            _ORACLE_CACHE[cache_key] = cached
         replay_score: float | None = None
         if replay_steps is not None:
             rep_env = make_env(tier, seed)
@@ -1975,12 +2302,7 @@ def oracle_truth_and_solver(
     finally:
         set_world_secret(None)
     return {
-        "true_mole": true_mole,
-        "true_decoy": true_decoy,
-        "world_seed": world_seed,
-        "paired_solver_score": round(paired_solver, 4),
-        "paired_solver_correct": bool(solver_ep.correct),
-        "paired_solver_day": int(solver_ep.final_day),
+        **cached,
         "replay_score": replay_score,
     }
 
@@ -2272,6 +2594,7 @@ def run_hunter_episode(
             healthy = active_server.healthy()
             ledger_http, ledger_payload = active_server.fetch_ledger()
         finally:
+            runner.close()
             crashed = active_server.stop() if owns_server else (active_server.proc.poll() is not None)
 
     oracle = oracle_truth_and_solver(

@@ -601,8 +601,8 @@ def timeline(slots: list[Slot], shots_png: dict[str, Path], replay_lines: list[s
     segs.append(Seg(s.t0, s.t1, holdup_render(holdup, s.t1 - s.t0),
                     [(s.t0, s.t1, side_caption("HoldUp: browser simulation of the glasses flow", hsrc, y=110)),
                      (t_live, s.t1, side_caption("Product: Gemini Live API · camera + voice in, speech out", y=470, size=32)),
-                     (t_754, s.t1, caption("0 of 754 confident strength reads were wrong (1,740 images, 95% upper bound 0.4%)",
-                                           "junction-meta-glasses GEMINI.md @ gemini-quote-0515 (offline eval, not this simulation)"))],
+                     (t_754, s.t1, caption("0 of 754 confident strength reads were wrong · 95% upper bound 0.4%",
+                                           "junction-meta-glasses GEMINI.md @ gemini-quote-0515 · offline eval, 1,740 images (not this simulation)"))],
                     "0 holdup"))
 
     # 1 hook: the trust question, then the Canary Lab title

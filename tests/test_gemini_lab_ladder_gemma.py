@@ -61,6 +61,14 @@ def test_frontier_chart_and_json(tmp_path, monkeypatch):
     assert "](frontier.png)" in (tmp_path / "a" / "ladder.md").read_text()
 
 
+def test_headline_verb_is_ci_gated():
+    r = lambda v, lo, hi: {"ratio": v, "ratio_lo": lo, "ratio_hi": hi}  # noqa: E731
+    assert ladder_report.headline_verb(r(.98, .82, 1.19), r(1.09, .90, 1.39)).startswith("matches")
+    assert "CIs are wide" in ladder_report.headline_verb(r(.78, .28, 1.51), r(.71, .11, 1.58))
+    assert ladder_report.headline_verb(r(.85, .81, .95), r(.9, .82, .97)).startswith("comes close")
+    assert ladder_report.headline_verb(r(.5, .3, .7), r(.6, .4, .8)).startswith("reaches part")
+
+
 def test_no_gemma_section_without_gemma_runs(tmp_path, monkeypatch):
     _grid(tmp_path / "gem", ["gemini-3.8-flash"], "low", monkeypatch)
     assert ladder_report.main(["--runs", str(tmp_path / "gem"), "--out", str(tmp_path / "a"), "--bootstrap", "100",

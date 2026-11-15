@@ -14,14 +14,26 @@ The solver is paired on all 30 seeds per tier (solver means: hard 0.499, medium 
 
 Honest reading: a gap on hard in the judges' harness (both the raw and the luck-adjusted CI exclude parity); parity in-process on hard and in OpenCode on medium. Infra-invalid attempts (CLI error events, empty model replies, provider unavailable) were excluded and retried; the table's "alternative" rows count them as 0 instead.
 
-**Pre-registered extension (written Sun 15 Nov ~02:05 Helsinki, before any run):** gemini-4-carbon via OpenCode on v1.4 hard seeds 30-59 will be run as an EXTENSION and reported (a) on its own and (b) pooled with seeds 0-29, in a separate directory (`opencode-gemini-4-carbon-ext`). The primary n=30 row above is never replaced. Valid episodes are never re-run; infra-invalid attempts are retried and excluded.
+**Pre-registered extension (committed Sun 15 Nov 02:00 Helsinki in f9fb7a4a, before any run):** gemini-4-carbon via OpenCode on v1.4 hard seeds 30-59 will be run as an EXTENSION and reported (a) on its own and (b) pooled with seeds 0-29, in a separate directory (`opencode-gemini-4-carbon-ext`). The primary n=30 row above is never replaced. Valid episodes are never re-run; infra-invalid attempts are retried and excluded.
+
+**Pre-registered causal hint test (committed Sun 15 Nov 02:58 Helsinki in fd8c1cb0; first run launched 03:08):** gemini-4-carbon via OpenCode on v1.4 hard seeds 0-29 with one added prompt line (`--hint gather`, which restates rules already in the instruction: plant canaries daily; accuse only when exactly one employee is consistent with every leak, else abstain). It is paired against the unhinted primary set on the same seeds, reported either way, and never part of the judged instruction. Amendment (committed 02:59 in a54f4223, before any run; the carbon quota is saturated): seeds are run in fixed order 0→29 at ≤ 3 parallel and stop at 06:00. Every seed completed by then is reported, with n stated. Second amendment (see this commit's time): the run moved to a second API key with its own quota, and its stop time is extended from 06:00 to 07:30. The seed order and reporting rule are unchanged. Third amendment (see this commit's time): the second key turned out to share the first key's project quota, so the stop time is moved back to 05:40 (the judge rehearsal needs the quota); still ≤ 3 parallel. The n=60 extension (G1) was stopped early for the same reason; its completed valid seeds are reported as a partial extension. Fourth amendment (see this commit's time): the same second key was re-probed and is most likely a separate Google project with low per-minute request limits (the earlier 'shared quota' reading coincided with its low request cap). Once the causal-hint runner is restarted on it, it no longer shares the rehearsal's quota, and its stop time is 06:00 (the runner session keeps its original brief; corrected before the restart; still ≤ 3 parallel, same seed order, same reporting rule). Fifth amendment (see this commit's time): key 2 turned out to have its own low limit, while key 1's carbon bucket became idle (all other carbon users stopped). So the runner moves back to key 1, and its stop time becomes 05:40 so it never overlaps the judge rehearsal. Same seed order, same reporting rule. G1 stays stopped.
+
+**Extension (seeds 30-59; partial set stopped at 03:22 Helsinki to preserve the shared 2M token/min carbon quota for the judge rehearsal; tables: `data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_{ext30to59,pooled0to59}.md`):**
+2 valid OpenCode episodes completed before the stop (`seeds=[34, 37]`, scores +0.790 and +0.700, both replay-verified; 31 attempts on other seeds hit `infra:provider_quota` and were excluded; reference solver on all 30 extension seeds 30-59: 0.498 ± 0.156, n=30, in `data/runs/committed/v1.4/reference/solver-hard-seeds30to59/`):
+
+| set (OpenCode over MCP, gemini-4-carbon, hard) | seeds | n | score ± 95% CI | solver, same seeds | frontier / solver [95% CI] | paired diff ± CI | luck-adjusted / solver [95% CI] |
+|---|---|---|---|---|---|---|---|
+| (a) extension alone | 34, 37 | 2 | 0.745 ± 0.088 | 0.735 | 101% [91%, 113%] | +0.010 ± 0.157 | 109% [105%, 114%] |
+| (b) pooled (primary 0-29 + extension) | 0-29, 34, 37 | 32 | 0.349 ± 0.190 | 0.514 | **68% [32%, 100%]** | −0.165 ± 0.182 | **75% [56%, 93%]** |
+
+Caveat: n=2 is not an estimate. Under quota pressure, episodes that complete may be the shorter ones, so the extension rows are listed for completeness under the pre-registered rule. The headline stays the primary n=30 row.
 
 **What we tried that did NOT widen the gap (all reported, none shipped):**
 - **v1.5 biased employees** (rumours, grudges, authority, misforwards): gemini-4-carbon went from 61% to 108% of the solver on the same hard seeds 0-9, because it treats rumours as evidence against the person rumoured. Dropped at Gate B; data in data/runs/committed/v1.5-candidate/.
 - **A stronger reference (solver_v2):** +0.012 ± 0.029 on fresh hard seeds 9000-9399 (n=400), below the +0.08 bar. The v1 solver is calibrated and near the information limit (docs/reports/reference_optimality.md).
 - **An "expert" tier** (hard with canary fingerprint accuracy 0.70): scripted heuristics collapse (grok_tactics 0.36 → 0.01 on fresh seeds), but gemini-4-carbon stays at 84% [52%, 128%] luck-adjusted (n=13, OpenCode; results/expert_verdict.json on justSilas-expert 29ca3bc5). Gemini does not over-trust single canary hits. Not shipped; code on branch justSilas-expert.
 
-**Pre-registered seed rule (written Sat 14 Nov ~22:45 Helsinki (commit 671ed96), before any rerun landed):** the set above (seeds 0-29, staged by the measurement engineer) is the PRIMARY result. Any later OpenCode reruns on the same seeds (e.g. the fleet's `--timeout 3600` reruns) are reported separately as a REPLICATION, never swapped in or cherry-picked. Fleet PR #3 episodes that timed out at 900 s were never part of this set.
+**Seed lock (committed Sat 14 Nov 22:41 Helsinki in 671ed96, 28 s AFTER the primary episodes were committed in 8fd4dec, so this is a post-hoc lock against later reruns and cherry-picking, not a pre-registration of the primary set):** the set above (seeds 0-29, staged by the measurement engineer) is the PRIMARY result. Any later OpenCode reruns on the same seeds (e.g. the fleet's `--timeout 3600` reruns) are reported separately as a REPLICATION, never swapped in or cherry-picked. Fleet PR #3 episodes that timed out at 900 s were never part of this set.
 
 
 ## Official v1.3 measurement (approved, 2026-11-14 10:30–11:21)
@@ -42,11 +54,11 @@ Reproduce (no keys): `python scripts/paired_v13.py --seeds 0-19` (table below), 
 | medium | **Codex gpt-5.5 over MCP** (judges' shape) | 11 | 0.401 ± 0.417 | 0.82 | 1.00 | 0.72 | 0.726 | **55% [−8%, 104%]** | −0.325 ± 0.420 | 0.249 | 34% |
 | medium | **in-process gpt-5.5, fixed loop** | 9 | 0.668 ± 0.103 | 1.00 | 1.00 | 0.92 | 0.722 | **92% [80%, 106%]** | −0.054 ± 0.101 | 0.542 | 75% |
 | medium | in-process gpt-5.5, handicapped scaffold, superseded (40-turn window, 0933805) | 9 | 0.319 ± 0.497 | 0.78 | 1.00 | 0.80 | 0.670 | 48% [−38%, 100%] | −0.351 ± 0.415 | 0.358 | 53% |
-| medium | Codex gpt-5.5 over MCP, earlier sample (0933805, history) | 1 | 0.530 | 1.00 | 1.00 | 0.55 | 0.740 | 72% | −0.210 | −0.160 | – |
+| medium | Codex gpt-5.5 over MCP, earlier sample (0933805, history) | 1 | 0.530 | 1.00 | 1.00 | 0.55 | 0.740 | 72% | −0.210 | −0.160 | −22% |
 | medium | reference solver | 20 | 0.717 ± 0.052 | 1.00 | 1.00 | 1.00 | 0.717 | – | – | 0.717 | – |
 | medium | heuristic | 20 | −0.116 ± 0.361 | 0.55 | 1.00 | 0.60 | 0.717 | −16% [−66%, 30%] | −0.832 ± 0.353 | −0.035 | −5% |
 | medium | do_nothing | 20 | 0.000 | 0.00 | 0.00 | – | 0.717 | 0% | −0.717 ± 0.052 | 0.000 | 0% |
-| medium | stop_early | 20 | −1.000 | 0.00 | 1.00 | 0.05 | 0.717 | −139% | −1.717 ± 0.052 | −0.900 | – |
+| medium | stop_early | 20 | −1.000 | 0.00 | 1.00 | 0.05 | 0.717 | −139% [−151%, −131%] | −1.717 ± 0.052 | −0.900 | −126% |
 | hard | **Codex gpt-5.5 over MCP** (judges' shape) | 11 | 0.655 ± 0.041 | 1.00 | 1.00 | 0.82 | 0.616 | **106% [91%, 136%]** | +0.038 ± 0.131 | 0.343 | 82% |
 | hard | **in-process gpt-5.5, fixed loop** | 8 | 0.264 ± 0.541 | 0.75 | 1.00 | 0.75 | 0.701 | **38% [−51%, 99%]** | −0.437 ± 0.534 | 0.250 | 58% |
 | hard | in-process gpt-5.5, handicapped scaffold, superseded (40-turn window, 0933805) | 5 | −0.003 ± 0.799 | 0.60 | 1.00 | 0.61 | 0.553 | −1% [−121%, 166%] | −0.556 ± 0.944 | 0.004 | 1% |
@@ -54,7 +66,7 @@ Reproduce (no keys): `python scripts/paired_v13.py --seeds 0-19` (table below), 
 | hard | reference solver | 20 | 0.592 ± 0.114 | 0.85 | 0.85 | 0.91 | 0.592 | – | – | 0.468 | – |
 | hard | heuristic | 20 | −0.322 ± 0.374 | 0.40 | 1.00 | 0.40 | 0.592 | −54% [−113%, 6%] | −0.914 ± 0.403 | −0.333 | −71% |
 | hard | do_nothing | 20 | 0.000 | 0.00 | 0.00 | – | 0.592 | 0% | −0.592 ± 0.114 | 0.000 | 0% |
-| hard | stop_early | 20 | −0.900 ± 0.196 | 0.05 | 1.00 | 0.03 | 0.592 | −152% | −1.492 ± 0.222 | −0.934 | – |
+| hard | stop_early | 20 | −0.900 ± 0.196 | 0.05 | 1.00 | 0.03 | 0.592 | −152% [−203%, −110%] | −1.492 ± 0.222 | −0.934 | −200% |
 
 **Planned seeds 0–9 only:** Codex medium n=10: 0.364 ± 0.454, **50% [−19%, 103%]**. Codex hard n=10: 0.657 ± 0.045, **97% [89%, 107%]**. The in-process rows are unchanged (they ran no seeds beyond 9). On hard seed 10 the solver abstained (score 0) while Codex reached P=1.0 and accused correctly, so the reference is not an upper bound there.
 
@@ -200,6 +212,8 @@ Notes:
 - `/ solver` is the per-seed ratio, defined only for agents run on the same seeds as the solver; it's blank for Grok, which ran on judge seeds.
 
 ## v1.3: table (0933805, dev seeds; gpt-5.5 stopped at the spend cap)
+(These small-n 0933805 runs now sit in `data/runs/committed/superseded/`; `data/runs/committed/v1.3/gap_table.md` holds the full n=11/9/8 runs.)
+
 | tier | agent | n | score ± 95% CI | accuracy | accuse day | / solver | pass^3 |
 |---|---|---|---|---|---|---|---|
 | hard | codex:gpt-5.5 | 2 | 0.588 ± 0.132 | 1.00 | 12.5 | 0.83 | – |

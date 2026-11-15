@@ -1,0 +1,645 @@
+{
+  "model_id": "gemini-4-carbon",
+  "tier": "medium",
+  "dev_seeds": [
+    4000,
+    4001,
+    4002,
+    4003,
+    4004,
+    4005,
+    4006,
+    4007,
+    4008,
+    4009,
+    4010,
+    4011,
+    4012,
+    4013,
+    4014,
+    4015,
+    4016,
+    4017,
+    4018,
+    4019
+  ],
+  "fitness_mode": "mean",
+  "min_solver_acc": 0.85,
+  "baseline_solver": {
+    "score": 0.6174999999999999,
+    "acc": 0.9
+  },
+  "default_mole_dev": {
+    "fitness": 0.6315000000000001,
+    "solver_score": 0.6174999999999999,
+    "solver_acc": 0.9,
+    "per_investigator": {
+      "grok_tactics": {
+        "score": 0.54,
+        "acc": 0.85,
+        "regret": 0.07749999999999999
+      },
+      "heuristic": {
+        "score": -0.17650000000000002,
+        "acc": 0.5,
+        "regret": 0.794
+      },
+      "hinted_heuristic": {
+        "score": 0.5805,
+        "acc": 0.9,
+        "regret": 0.03699999999999999
+      },
+      "obvious_heuristic": {
+        "score": -1.0,
+        "acc": 0.0,
+        "regret": 1.6175000000000002
+      }
+    }
+  },
+  "generations": [
+    {
+      "gen": 0,
+      "best_fitness": 0.6315000000000001,
+      "hof_best_fitness": 0.6315000000000001,
+      "mean_fitness": 0.6315000000000001,
+      "feasible_share": 0.125,
+      "feasible_count": 1,
+      "pop_size": 8,
+      "best_solver_score": 0.6174999999999999,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.54,
+          "acc": 0.85,
+          "regret": 0.07749999999999999
+        },
+        "heuristic": {
+          "score": -0.17650000000000002,
+          "acc": 0.5,
+          "regret": 0.794
+        },
+        "hinted_heuristic": {
+          "score": 0.5805,
+          "acc": 0.9,
+          "regret": 0.03699999999999999
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.6175000000000002
+        }
+      },
+      "best_strategy": {
+        "rules": [],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "none"
+        }
+      },
+      "seconds": 0.0
+    },
+    {
+      "gen": 1,
+      "best_fitness": 0.6315000000000001,
+      "hof_best_fitness": 0.6315000000000001,
+      "mean_fitness": 0.6315000000000001,
+      "feasible_share": 0.125,
+      "feasible_count": 1,
+      "pop_size": 8,
+      "best_solver_score": 0.6174999999999999,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.54,
+          "acc": 0.85,
+          "regret": 0.07749999999999999
+        },
+        "heuristic": {
+          "score": -0.17650000000000002,
+          "acc": 0.5,
+          "regret": 0.794
+        },
+        "hinted_heuristic": {
+          "score": 0.5805,
+          "acc": 0.9,
+          "regret": 0.03699999999999999
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.6175000000000002
+        }
+      },
+      "best_strategy": {
+        "rules": [],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "none"
+        }
+      },
+      "seconds": 261.973
+    },
+    {
+      "gen": 2,
+      "best_fitness": 0.6677500000000001,
+      "hof_best_fitness": 0.6677500000000001,
+      "mean_fitness": 0.6496250000000001,
+      "feasible_share": 0.25,
+      "feasible_count": 2,
+      "pop_size": 8,
+      "best_solver_score": 0.6174999999999999,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.395,
+          "acc": 0.7,
+          "regret": 0.22249999999999998
+        },
+        "heuristic": {
+          "score": -0.17650000000000002,
+          "acc": 0.5,
+          "regret": 0.794
+        },
+        "hinted_heuristic": {
+          "score": 0.5805,
+          "acc": 0.9,
+          "regret": 0.03699999999999999
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.6175000000000002
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<=",
+                1
+              ],
+              [
+                "day",
+                "<=",
+                10
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "none"
+        }
+      },
+      "seconds": 37.617
+    },
+    {
+      "gen": 3,
+      "best_fitness": 0.7222500000000001,
+      "hof_best_fitness": 0.7222500000000001,
+      "mean_fitness": 0.62440625,
+      "feasible_share": 0.5,
+      "feasible_count": 4,
+      "pop_size": 8,
+      "best_solver_score": 0.7065,
+      "best_solver_acc": 1.0,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.5025000000000001,
+          "acc": 0.75,
+          "regret": 0.20400000000000001
+        },
+        "heuristic": {
+          "score": -0.11499999999999999,
+          "acc": 0.55,
+          "regret": 0.8215
+        },
+        "hinted_heuristic": {
+          "score": 0.5495,
+          "acc": 0.8,
+          "regret": 0.15700000000000003
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.7065000000000001
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 27.765
+    },
+    {
+      "gen": 4,
+      "best_fitness": 0.738125,
+      "hof_best_fitness": 0.738125,
+      "mean_fitness": 0.71065625,
+      "feasible_share": 0.5,
+      "feasible_count": 4,
+      "pop_size": 8,
+      "best_solver_score": 0.7065,
+      "best_solver_acc": 1.0,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.43900000000000006,
+          "acc": 0.65,
+          "regret": 0.26749999999999996
+        },
+        "heuristic": {
+          "score": -0.11499999999999999,
+          "acc": 0.55,
+          "regret": 0.8215
+        },
+        "hinted_heuristic": {
+          "score": 0.5495,
+          "acc": 0.8,
+          "regret": 0.15700000000000003
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.7065000000000001
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 18.717
+    },
+    {
+      "gen": 5,
+      "best_fitness": 0.738125,
+      "hof_best_fitness": 0.738125,
+      "mean_fitness": 0.72903125,
+      "feasible_share": 0.5,
+      "feasible_count": 4,
+      "pop_size": 8,
+      "best_solver_score": 0.7065,
+      "best_solver_acc": 1.0,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.43900000000000006,
+          "acc": 0.65,
+          "regret": 0.26749999999999996
+        },
+        "heuristic": {
+          "score": -0.11499999999999999,
+          "acc": 0.55,
+          "regret": 0.8215
+        },
+        "hinted_heuristic": {
+          "score": 0.5495,
+          "acc": 0.8,
+          "regret": 0.15700000000000003
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.7065000000000001
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 37.709
+    },
+    {
+      "gen": 6,
+      "best_fitness": 0.738125,
+      "hof_best_fitness": 0.738125,
+      "mean_fitness": 0.686275,
+      "feasible_share": 0.625,
+      "feasible_count": 5,
+      "pop_size": 8,
+      "best_solver_score": 0.7065,
+      "best_solver_acc": 1.0,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.43900000000000006,
+          "acc": 0.65,
+          "regret": 0.26749999999999996
+        },
+        "heuristic": {
+          "score": -0.11499999999999999,
+          "acc": 0.55,
+          "regret": 0.8215
+        },
+        "hinted_heuristic": {
+          "score": 0.5495,
+          "acc": 0.8,
+          "regret": 0.15700000000000003
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.7065000000000001
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 30.53
+    },
+    {
+      "gen": 7,
+      "best_fitness": 0.738125,
+      "hof_best_fitness": 0.738125,
+      "mean_fitness": 0.68775,
+      "feasible_share": 0.5,
+      "feasible_count": 4,
+      "pop_size": 8,
+      "best_solver_score": 0.7065,
+      "best_solver_acc": 1.0,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.43900000000000006,
+          "acc": 0.65,
+          "regret": 0.26749999999999996
+        },
+        "heuristic": {
+          "score": -0.11499999999999999,
+          "acc": 0.55,
+          "regret": 0.8215
+        },
+        "hinted_heuristic": {
+          "score": 0.5495,
+          "acc": 0.8,
+          "regret": 0.15700000000000003
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.7065000000000001
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 35.282
+    }
+  ]
+}

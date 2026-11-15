@@ -1,0 +1,957 @@
+{
+  "schema_version": "1.0",
+  "source_run_dir": "results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-easy-deep",
+  "source_hof": "results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-easy-deep/hall_of_fame.jsonl",
+  "source_model_id": "gemini-4-carbon",
+  "source_commit": "785d21a1cb79edd061e1e34031bb04284e38c110",
+  "eval_commit": "785d21a1cb79edd061e1e34031bb04284e38c110",
+  "timestamp": "2026-11-14T23:54:38Z",
+  "command": "scripts/eval_forge_holdout.py --run-dir results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-easy-deep --top-k 3 --tier easy --unseen-seeds 40-49 --confirm-seeds 5020-5059 --workers 8",
+  "fake_env": false,
+  "tier": "easy",
+  "tiers_version": "v1.4",
+  "fitness_mode": "mean",
+  "min_solver_acc": 0.85,
+  "investigators": [
+    "solver",
+    "grok_tactics",
+    "heuristic",
+    "hinted_heuristic",
+    "obvious_heuristic"
+  ],
+  "splits": {
+    "unseen_seeds": [
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49
+    ],
+    "confirm_seeds": [
+      5020,
+      5021,
+      5022,
+      5023,
+      5024,
+      5025,
+      5026,
+      5027,
+      5028,
+      5029,
+      5030,
+      5031,
+      5032,
+      5033,
+      5034,
+      5035,
+      5036,
+      5037,
+      5038,
+      5039,
+      5040,
+      5041,
+      5042,
+      5043,
+      5044,
+      5045,
+      5046,
+      5047,
+      5048,
+      5049,
+      5050,
+      5051,
+      5052,
+      5053,
+      5054,
+      5055,
+      5056,
+      5057,
+      5058,
+      5059
+    ],
+    "combined_seeds": [
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      5020,
+      5021,
+      5022,
+      5023,
+      5024,
+      5025,
+      5026,
+      5027,
+      5028,
+      5029,
+      5030,
+      5031,
+      5032,
+      5033,
+      5034,
+      5035,
+      5036,
+      5037,
+      5038,
+      5039,
+      5040,
+      5041,
+      5042,
+      5043,
+      5044,
+      5045,
+      5046,
+      5047,
+      5048,
+      5049,
+      5050,
+      5051,
+      5052,
+      5053,
+      5054,
+      5055,
+      5056,
+      5057,
+      5058,
+      5059
+    ]
+  },
+  "baseline_solver": {
+    "unseen": {
+      "score": 0.79,
+      "acc": 1.0
+    },
+    "confirm": {
+      "score": 0.7795,
+      "acc": 1.0
+    },
+    "combined": {
+      "score": 0.7816,
+      "acc": 1.0
+    }
+  },
+  "default_mole": {
+    "strategy_id": "default_mole",
+    "label": "DefaultMole",
+    "is_default": true,
+    "dev_fitness": 0.34125,
+    "strategy_json": {
+      "rules": [],
+      "default": {
+        "leak": "random_seeded",
+        "frame": "none"
+      }
+    },
+    "unseen": {
+      "fitness": 0.38575,
+      "regret": 0.38575,
+      "min_regret": 0.04900000000000001,
+      "fitness_mode": "mean",
+      "min_solver_acc": 0.85,
+      "solver_score": 0.79,
+      "solver_acc": 1.0,
+      "per_investigator": {
+        "grok_tactics": {
+          "score": 0.6990000000000001,
+          "acc": 1.0,
+          "regret": 0.09100000000000001
+        },
+        "heuristic": {
+          "score": 0.6799999999999999,
+          "acc": 1.0,
+          "regret": 0.11000000000000001
+        },
+        "hinted_heuristic": {
+          "score": 0.741,
+          "acc": 1.0,
+          "regret": 0.04900000000000001
+        },
+        "obvious_heuristic": {
+          "score": -0.503,
+          "acc": 0.3,
+          "regret": 1.293
+        }
+      },
+      "feasible": true,
+      "baseline_solver_score": 0.79,
+      "beaten": [
+        "grok_tactics",
+        "heuristic",
+        "hinted_heuristic",
+        "obvious_heuristic"
+      ]
+    },
+    "confirm": {
+      "fitness": 0.3343125,
+      "regret": 0.3343125,
+      "min_regret": 0.09425,
+      "fitness_mode": "mean",
+      "min_solver_acc": 0.85,
+      "solver_score": 0.7795,
+      "solver_acc": 1.0,
+      "per_investigator": {
+        "grok_tactics": {
+          "score": 0.68525,
+          "acc": 0.95,
+          "regret": 0.09425
+        },
+        "heuristic": {
+          "score": 0.56975,
+          "acc": 0.925,
+          "regret": 0.20975000000000002
+        },
+        "hinted_heuristic": {
+          "score": 0.68275,
+          "acc": 0.875,
+          "regret": 0.09675
+        },
+        "obvious_heuristic": {
+          "score": -0.157,
+          "acc": 0.45,
+          "regret": 0.9365
+        }
+      },
+      "feasible": true,
+      "baseline_solver_score": 0.7795,
+      "beaten": [
+        "grok_tactics",
+        "heuristic",
+        "hinted_heuristic",
+        "obvious_heuristic"
+      ]
+    },
+    "combined": {
+      "fitness": 0.3446,
+      "regret": 0.3446,
+      "min_regret": 0.0872,
+      "fitness_mode": "mean",
+      "min_solver_acc": 0.85,
+      "solver_score": 0.7816,
+      "solver_acc": 1.0,
+      "per_investigator": {
+        "grok_tactics": {
+          "score": 0.688,
+          "acc": 0.96,
+          "regret": 0.09359999999999999
+        },
+        "heuristic": {
+          "score": 0.5917999999999999,
+          "acc": 0.94,
+          "regret": 0.1898
+        },
+        "hinted_heuristic": {
+          "score": 0.6944,
+          "acc": 0.9,
+          "regret": 0.0872
+        },
+        "obvious_heuristic": {
+          "score": -0.2262,
+          "acc": 0.42,
+          "regret": 1.0078
+        }
+      },
+      "feasible": true,
+      "baseline_solver_score": 0.7816,
+      "beaten": [
+        "grok_tactics",
+        "heuristic",
+        "hinted_heuristic",
+        "obvious_heuristic"
+      ]
+    }
+  },
+  "evolved_strategies": [
+    {
+      "strategy_id": "hof_rank_1",
+      "label": "HoF#1",
+      "hof_rank": 1,
+      "dev_fitness": 0.56125,
+      "dev_solver_score": 0.649,
+      "dev_solver_acc": 0.9,
+      "strategy_json": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "days_since_last_leak",
+                "<",
+                2
+              ],
+              [
+                "day",
+                ">",
+                2
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                5
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "random_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "random_peer"
+        }
+      },
+      "is_default": false,
+      "unseen": {
+        "fitness": null,
+        "regret": 0.18425,
+        "min_regret": -0.023,
+        "fitness_mode": "mean",
+        "min_solver_acc": 0.85,
+        "solver_score": 0.24,
+        "solver_acc": 0.5,
+        "per_investigator": {
+          "grok_tactics": {
+            "score": 0.16899999999999998,
+            "acc": 0.2,
+            "regret": 0.071
+          },
+          "heuristic": {
+            "score": -0.179,
+            "acc": 0.5,
+            "regret": 0.41900000000000004
+          },
+          "hinted_heuristic": {
+            "score": 0.263,
+            "acc": 0.3,
+            "regret": -0.023
+          },
+          "obvious_heuristic": {
+            "score": -0.030000000000000027,
+            "acc": 0.5,
+            "regret": 0.27
+          }
+        },
+        "feasible": false,
+        "baseline_solver_score": 0.79,
+        "beaten": [
+          "grok_tactics",
+          "heuristic",
+          "obvious_heuristic"
+        ]
+      },
+      "confirm": {
+        "fitness": null,
+        "regret": 0.4490625,
+        "min_regret": 0.24700000000000003,
+        "fitness_mode": "mean",
+        "min_solver_acc": 0.85,
+        "solver_score": 0.44175000000000003,
+        "solver_acc": 0.65,
+        "per_investigator": {
+          "grok_tactics": {
+            "score": 0.19475,
+            "acc": 0.275,
+            "regret": 0.24700000000000003
+          },
+          "heuristic": {
+            "score": -0.08725000000000001,
+            "acc": 0.55,
+            "regret": 0.529
+          },
+          "hinted_heuristic": {
+            "score": 0.18425,
+            "acc": 0.225,
+            "regret": 0.2575
+          },
+          "obvious_heuristic": {
+            "score": -0.321,
+            "acc": 0.35,
+            "regret": 0.76275
+          }
+        },
+        "feasible": false,
+        "baseline_solver_score": 0.7795,
+        "beaten": [
+          "grok_tactics",
+          "heuristic",
+          "hinted_heuristic",
+          "obvious_heuristic"
+        ]
+      },
+      "combined": {
+        "fitness": null,
+        "regret": 0.3961,
+        "min_regret": 0.2014,
+        "fitness_mode": "mean",
+        "min_solver_acc": 0.85,
+        "solver_score": 0.4014,
+        "solver_acc": 0.62,
+        "per_investigator": {
+          "grok_tactics": {
+            "score": 0.18960000000000002,
+            "acc": 0.26,
+            "regret": 0.2118
+          },
+          "heuristic": {
+            "score": -0.1056,
+            "acc": 0.54,
+            "regret": 0.507
+          },
+          "hinted_heuristic": {
+            "score": 0.2,
+            "acc": 0.24,
+            "regret": 0.2014
+          },
+          "obvious_heuristic": {
+            "score": -0.26280000000000003,
+            "acc": 0.38,
+            "regret": 0.6642
+          }
+        },
+        "feasible": false,
+        "baseline_solver_score": 0.7816,
+        "beaten": [
+          "grok_tactics",
+          "heuristic",
+          "hinted_heuristic",
+          "obvious_heuristic"
+        ]
+      }
+    },
+    {
+      "strategy_id": "hof_rank_2",
+      "label": "HoF#2",
+      "hof_rank": 2,
+      "dev_fitness": 0.56125,
+      "dev_solver_score": 0.649,
+      "dev_solver_acc": 0.9,
+      "strategy_json": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "days_since_last_leak",
+                "<",
+                2
+              ],
+              [
+                "day",
+                ">",
+                2
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                5
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "random_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "random_peer"
+        }
+      },
+      "is_default": false,
+      "unseen": {
+        "fitness": null,
+        "regret": 0.18425,
+        "min_regret": -0.023,
+        "fitness_mode": "mean",
+        "min_solver_acc": 0.85,
+        "solver_score": 0.24,
+        "solver_acc": 0.5,
+        "per_investigator": {
+          "grok_tactics": {
+            "score": 0.16899999999999998,
+            "acc": 0.2,
+            "regret": 0.071
+          },
+          "heuristic": {
+            "score": -0.179,
+            "acc": 0.5,
+            "regret": 0.41900000000000004
+          },
+          "hinted_heuristic": {
+            "score": 0.263,
+            "acc": 0.3,
+            "regret": -0.023
+          },
+          "obvious_heuristic": {
+            "score": -0.030000000000000027,
+            "acc": 0.5,
+            "regret": 0.27
+          }
+        },
+        "feasible": false,
+        "baseline_solver_score": 0.79,
+        "beaten": [
+          "grok_tactics",
+          "heuristic",
+          "obvious_heuristic"
+        ]
+      },
+      "confirm": {
+        "fitness": null,
+        "regret": 0.4490625,
+        "min_regret": 0.24700000000000003,
+        "fitness_mode": "mean",
+        "min_solver_acc": 0.85,
+        "solver_score": 0.44175000000000003,
+        "solver_acc": 0.65,
+        "per_investigator": {
+          "grok_tactics": {
+            "score": 0.19475,
+            "acc": 0.275,
+            "regret": 0.24700000000000003
+          },
+          "heuristic": {
+            "score": -0.08725000000000001,
+            "acc": 0.55,
+            "regret": 0.529
+          },
+          "hinted_heuristic": {
+            "score": 0.18425,
+            "acc": 0.225,
+            "regret": 0.2575
+          },
+          "obvious_heuristic": {
+            "score": -0.321,
+            "acc": 0.35,
+            "regret": 0.76275
+          }
+        },
+        "feasible": false,
+        "baseline_solver_score": 0.7795,
+        "beaten": [
+          "grok_tactics",
+          "heuristic",
+          "hinted_heuristic",
+          "obvious_heuristic"
+        ]
+      },
+      "combined": {
+        "fitness": null,
+        "regret": 0.3961,
+        "min_regret": 0.2014,
+        "fitness_mode": "mean",
+        "min_solver_acc": 0.85,
+        "solver_score": 0.4014,
+        "solver_acc": 0.62,
+        "per_investigator": {
+          "grok_tactics": {
+            "score": 0.18960000000000002,
+            "acc": 0.26,
+            "regret": 0.2118
+          },
+          "heuristic": {
+            "score": -0.1056,
+            "acc": 0.54,
+            "regret": 0.507
+          },
+          "hinted_heuristic": {
+            "score": 0.2,
+            "acc": 0.24,
+            "regret": 0.2014
+          },
+          "obvious_heuristic": {
+            "score": -0.26280000000000003,
+            "acc": 0.38,
+            "regret": 0.6642
+          }
+        },
+        "feasible": false,
+        "baseline_solver_score": 0.7816,
+        "beaten": [
+          "grok_tactics",
+          "heuristic",
+          "hinted_heuristic",
+          "obvious_heuristic"
+        ]
+      }
+    },
+    {
+      "strategy_id": "hof_rank_3",
+      "label": "HoF#3",
+      "hof_rank": 3,
+      "dev_fitness": 0.56125,
+      "dev_solver_score": 0.649,
+      "dev_solver_acc": 0.9,
+      "strategy_json": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "days_since_last_leak",
+                "<",
+                2
+              ],
+              [
+                "day",
+                ">",
+                2
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                5
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "random_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "random_peer"
+        }
+      },
+      "is_default": false,
+      "unseen": {
+        "fitness": null,
+        "regret": 0.18425,
+        "min_regret": -0.023,
+        "fitness_mode": "mean",
+        "min_solver_acc": 0.85,
+        "solver_score": 0.24,
+        "solver_acc": 0.5,
+        "per_investigator": {
+          "grok_tactics": {
+            "score": 0.16899999999999998,
+            "acc": 0.2,
+            "regret": 0.071
+          },
+          "heuristic": {
+            "score": -0.179,
+            "acc": 0.5,
+            "regret": 0.41900000000000004
+          },
+          "hinted_heuristic": {
+            "score": 0.263,
+            "acc": 0.3,
+            "regret": -0.023
+          },
+          "obvious_heuristic": {
+            "score": -0.030000000000000027,
+            "acc": 0.5,
+            "regret": 0.27
+          }
+        },
+        "feasible": false,
+        "baseline_solver_score": 0.79,
+        "beaten": [
+          "grok_tactics",
+          "heuristic",
+          "obvious_heuristic"
+        ]
+      },
+      "confirm": {
+        "fitness": null,
+        "regret": 0.4490625,
+        "min_regret": 0.24700000000000003,
+        "fitness_mode": "mean",
+        "min_solver_acc": 0.85,
+        "solver_score": 0.44175000000000003,
+        "solver_acc": 0.65,
+        "per_investigator": {
+          "grok_tactics": {
+            "score": 0.19475,
+            "acc": 0.275,
+            "regret": 0.24700000000000003
+          },
+          "heuristic": {
+            "score": -0.08725000000000001,
+            "acc": 0.55,
+            "regret": 0.529
+          },
+          "hinted_heuristic": {
+            "score": 0.18425,
+            "acc": 0.225,
+            "regret": 0.2575
+          },
+          "obvious_heuristic": {
+            "score": -0.321,
+            "acc": 0.35,
+            "regret": 0.76275
+          }
+        },
+        "feasible": false,
+        "baseline_solver_score": 0.7795,
+        "beaten": [
+          "grok_tactics",
+          "heuristic",
+          "hinted_heuristic",
+          "obvious_heuristic"
+        ]
+      },
+      "combined": {
+        "fitness": null,
+        "regret": 0.3961,
+        "min_regret": 0.2014,
+        "fitness_mode": "mean",
+        "min_solver_acc": 0.85,
+        "solver_score": 0.4014,
+        "solver_acc": 0.62,
+        "per_investigator": {
+          "grok_tactics": {
+            "score": 0.18960000000000002,
+            "acc": 0.26,
+            "regret": 0.2118
+          },
+          "heuristic": {
+            "score": -0.1056,
+            "acc": 0.54,
+            "regret": 0.507
+          },
+          "hinted_heuristic": {
+            "score": 0.2,
+            "acc": 0.24,
+            "regret": 0.2014
+          },
+          "obvious_heuristic": {
+            "score": -0.26280000000000003,
+            "acc": 0.38,
+            "regret": 0.6642
+          }
+        },
+        "feasible": false,
+        "baseline_solver_score": 0.7816,
+        "beaten": [
+          "grok_tactics",
+          "heuristic",
+          "hinted_heuristic",
+          "obvious_heuristic"
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "n_evolved_evaluated": 3,
+    "best_unseen_strategy_id": "hof_rank_1",
+    "best_unseen_min_regret": -0.023,
+    "best_confirm_strategy_id": "hof_rank_1",
+    "best_confirm_min_regret": 0.24700000000000003,
+    "best_combined_strategy_id": "hof_rank_1",
+    "best_combined_min_regret": 0.2014,
+    "top1_strategy_id": "hof_rank_1",
+    "top1_unseen_solver_acc": 0.5,
+    "top1_unseen_min_regret": -0.023,
+    "default_unseen_min_regret": 0.04900000000000001,
+    "top1_unseen_delta_vs_default": -0.07200000000000001,
+    "top1_confirm_solver_acc": 0.65,
+    "top1_confirm_min_regret": 0.24700000000000003,
+    "default_confirm_min_regret": 0.09425,
+    "top1_confirm_delta_vs_default": 0.15275000000000002,
+    "top1_combined_solver_acc": 0.62,
+    "top1_combined_min_regret": 0.2014,
+    "default_combined_min_regret": 0.0872,
+    "top1_combined_delta_vs_default": 0.1142,
+    "all_evolved_solvable_unseen": false,
+    "all_evolved_solvable_confirm": false,
+    "all_evolved_solvable_combined": false
+  }
+}

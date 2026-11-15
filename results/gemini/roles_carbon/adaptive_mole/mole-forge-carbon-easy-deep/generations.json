@@ -1,0 +1,735 @@
+{
+  "model_id": "gemini-4-carbon",
+  "tier": "easy",
+  "dev_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "fitness_mode": "mean",
+  "min_solver_acc": 0.85,
+  "baseline_solver": {
+    "score": 0.834,
+    "acc": 1.0
+  },
+  "default_mole_dev": {
+    "fitness": 0.34125,
+    "solver_score": 0.834,
+    "solver_acc": 1.0,
+    "per_investigator": {
+      "grok_tactics": {
+        "score": 0.755,
+        "acc": 1.0,
+        "regret": 0.079
+      },
+      "heuristic": {
+        "score": 0.7190000000000001,
+        "acc": 1.0,
+        "regret": 0.11499999999999999
+      },
+      "hinted_heuristic": {
+        "score": 0.7609999999999999,
+        "acc": 1.0,
+        "regret": 0.07300000000000004
+      },
+      "obvious_heuristic": {
+        "score": -0.264,
+        "acc": 0.4,
+        "regret": 1.098
+      }
+    }
+  },
+  "generations": [
+    {
+      "gen": 0,
+      "best_fitness": 0.5605,
+      "hof_best_fitness": 0.5605,
+      "mean_fitness": 0.39625000000000005,
+      "feasible_share": 0.875,
+      "feasible_count": 7,
+      "pop_size": 8,
+      "best_solver_score": 0.649,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.365,
+          "acc": 0.5,
+          "regret": 0.284
+        },
+        "heuristic": {
+          "score": -0.008000000000000007,
+          "acc": 0.6,
+          "regret": 0.657
+        },
+        "hinted_heuristic": {
+          "score": 0.221,
+          "acc": 0.3,
+          "regret": 0.42800000000000005
+        },
+        "obvious_heuristic": {
+          "score": -0.22400000000000003,
+          "acc": 0.4,
+          "regret": 0.873
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "days_since_last_leak",
+                "<",
+                2
+              ],
+              [
+                "day",
+                "<",
+                12
+              ],
+              [
+                "day",
+                ">",
+                2
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                5
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "random_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "random_peer"
+        }
+      },
+      "seconds": 0.0
+    },
+    {
+      "gen": 1,
+      "best_fitness": 0.5605,
+      "hof_best_fitness": 0.5605,
+      "mean_fitness": 0.4833928571428571,
+      "feasible_share": 0.875,
+      "feasible_count": 7,
+      "pop_size": 8,
+      "best_solver_score": 0.649,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.365,
+          "acc": 0.5,
+          "regret": 0.284
+        },
+        "heuristic": {
+          "score": -0.008000000000000007,
+          "acc": 0.6,
+          "regret": 0.657
+        },
+        "hinted_heuristic": {
+          "score": 0.221,
+          "acc": 0.3,
+          "regret": 0.42800000000000005
+        },
+        "obvious_heuristic": {
+          "score": -0.22400000000000003,
+          "acc": 0.4,
+          "regret": 0.873
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "days_since_last_leak",
+                "<",
+                2
+              ],
+              [
+                "day",
+                "<",
+                12
+              ],
+              [
+                "day",
+                ">",
+                2
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                5
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "random_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "random_peer"
+        }
+      },
+      "seconds": 49.824
+    },
+    {
+      "gen": 2,
+      "best_fitness": 0.56125,
+      "hof_best_fitness": 0.56125,
+      "mean_fitness": 0.5453125,
+      "feasible_share": 0.5,
+      "feasible_count": 4,
+      "pop_size": 8,
+      "best_solver_score": 0.649,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.362,
+          "acc": 0.5,
+          "regret": 0.28700000000000003
+        },
+        "heuristic": {
+          "score": -0.008000000000000007,
+          "acc": 0.6,
+          "regret": 0.657
+        },
+        "hinted_heuristic": {
+          "score": 0.221,
+          "acc": 0.3,
+          "regret": 0.42800000000000005
+        },
+        "obvious_heuristic": {
+          "score": -0.22400000000000003,
+          "acc": 0.4,
+          "regret": 0.873
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "days_since_last_leak",
+                "<",
+                2
+              ],
+              [
+                "day",
+                ">",
+                2
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                5
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "random_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "random_peer"
+        }
+      },
+      "seconds": 60.919
+    },
+    {
+      "gen": 3,
+      "best_fitness": 0.56125,
+      "hof_best_fitness": 0.56125,
+      "mean_fitness": 0.46075,
+      "feasible_share": 0.5,
+      "feasible_count": 4,
+      "pop_size": 8,
+      "best_solver_score": 0.649,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.362,
+          "acc": 0.5,
+          "regret": 0.28700000000000003
+        },
+        "heuristic": {
+          "score": -0.008000000000000007,
+          "acc": 0.6,
+          "regret": 0.657
+        },
+        "hinted_heuristic": {
+          "score": 0.221,
+          "acc": 0.3,
+          "regret": 0.42800000000000005
+        },
+        "obvious_heuristic": {
+          "score": -0.22400000000000003,
+          "acc": 0.4,
+          "regret": 0.873
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "days_since_last_leak",
+                "<",
+                2
+              ],
+              [
+                "day",
+                ">",
+                2
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                5
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "random_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "random_peer"
+        }
+      },
+      "seconds": 57.539
+    },
+    {
+      "gen": 4,
+      "best_fitness": 0.56125,
+      "hof_best_fitness": 0.56125,
+      "mean_fitness": 0.53090625,
+      "feasible_share": 1.0,
+      "feasible_count": 8,
+      "pop_size": 8,
+      "best_solver_score": 0.649,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.362,
+          "acc": 0.5,
+          "regret": 0.28700000000000003
+        },
+        "heuristic": {
+          "score": -0.008000000000000007,
+          "acc": 0.6,
+          "regret": 0.657
+        },
+        "hinted_heuristic": {
+          "score": 0.221,
+          "acc": 0.3,
+          "regret": 0.42800000000000005
+        },
+        "obvious_heuristic": {
+          "score": -0.22400000000000003,
+          "acc": 0.4,
+          "regret": 0.873
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "days_since_last_leak",
+                "<",
+                2
+              ],
+              [
+                "day",
+                ">",
+                2
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                5
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "random_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "random_peer"
+        }
+      },
+      "seconds": 476.146
+    },
+    {
+      "gen": 5,
+      "best_fitness": 0.56125,
+      "hof_best_fitness": 0.56125,
+      "mean_fitness": 0.5437083333333333,
+      "feasible_share": 0.75,
+      "feasible_count": 6,
+      "pop_size": 8,
+      "best_solver_score": 0.649,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.362,
+          "acc": 0.5,
+          "regret": 0.28700000000000003
+        },
+        "heuristic": {
+          "score": -0.008000000000000007,
+          "acc": 0.6,
+          "regret": 0.657
+        },
+        "hinted_heuristic": {
+          "score": 0.221,
+          "acc": 0.3,
+          "regret": 0.42800000000000005
+        },
+        "obvious_heuristic": {
+          "score": -0.22400000000000003,
+          "acc": 0.4,
+          "regret": 0.873
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                3
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "days_since_last_leak",
+                "<",
+                2
+              ],
+              [
+                "day",
+                ">",
+                2
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "random_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                5
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "random_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "random_seeded",
+          "frame": "random_peer"
+        }
+      },
+      "seconds": 1060.431
+    }
+  ]
+}

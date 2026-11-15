@@ -23,7 +23,7 @@ Owner: demo producer (S5). Follows the minute-to-rubric map in [PLAN.md](PLAN.md
 | `uv run python scripts/demo_replay.py --seed 4 --verify` | 0.5 s | both episodes MATCH a fresh-Env replay |
 | `uv run python scripts/demo_replay.py --seed 26` | 0.5 s | see minute 4 |
 | `uv run python scripts/paired_gemini.py --version v1.4 --seeds 0-29` | 14 s | hard OpenCode row byte-identical to the committed `paired_table_gemini.md` |
-| `make anticheat-verify` | 2 min 08 s | exit 0, "96 rows rerun on 40 seeds x 3 tiers under the public secret; 0 differences" |
+| `make anticheat-verify` | 2 min 08 s | exit 0, "99 rows rerun on 40 seeds x 3 tiers under the public secret; 0 differences" |
 | `make lab-replay` | 11.5 s | "ladder: REPLAY OK, 4 episodes reproduced step for step … ALL OK" |
 | `make game` / `make game-serve` | < 1 s build, then serves :8000 | HTTP 200; seed 3000 in headless Chrome: score 0.79, identical to CPython |
 
@@ -112,11 +112,11 @@ P: "Day 10 on seed 26. One canary readout comes back with copy S1. On hard, one 
 
 ## 6:30–8:00 · Integrity (R1–R3)
 **O:** tab 2, scroll `docs/EXPLOITS.md`.
-- **43 attacks logged** (#0–#42), each with the score before the fix, the fix commit and a regression test (`docs/EXPLOITS.md`).
+- **52 attacks logged** (#0–#51), each with the score before the fix, the fix commit and a regression test (`docs/EXPLOITS.md`).
 - **The cheat run at −1:** the Harbor agent that accuses everyone scores **−1.0 on 6/6 trials** (3 judge seeds × medium/hard, separate verifier, HMAC-signed ledger; `results/harbor/signed-cheat/result.json`). The probe that never accuses and hunts for holes instead scores **0.0 on 6/6**, 0 holes in 149 attempts each (`docs/EXPLOITS.md` #41).
-- **The Gemini swarm:** **35 whitebox attackers** (the whole repo in context, ~183k tokens per planner call) **+ 18 blackbox** = **53 attackers, 0 verified exploits** (`results/gemini/swarm.md`, `results/gemini/swarm_blackbox.md`). PLAN.md says "0/51" (35 + 16 valid blackbox, per `docs/gemini/SUBMISSION.md`). Say "fifty-odd" or quote the files.
+- **The Gemini swarm:** **100 attacks** across 4 waves (75 whitebox attackers with the whole repo in context + 16 blackbox, plus 9 re-runs through the real MCP server), **0 verified exploits**; the one flagged attack (w2b-008) was refuted at n=40 judge seeds per tier (EXPLOITS #50). Source: `results/gemini/swarm.md`.
 - **Positive control:** with one closed exploit reopened on purpose (EXPLOITS #23, public dev seeds), **4 of 4** attackers re-find it and the pipeline confirms it (`results/gemini/swarm_control.md`).
-- Live option (only if ahead of time): `make anticheat-verify` (2 min 08 s; expect "96 rows rerun … 0 differences") reruns the committed 40-seed battery and diffs it with `results/anticheat/exploits.json`.
+- Live option (only if ahead of time): `make anticheat-verify` (2 min 08 s; expect "99 rows rerun … 0 differences") reruns the committed 40-seed battery and diffs it with `results/anticheat/exploits.json`.
 
 ## 8:00–9:00 · Tiebreak: the small model, honest (T)
 **⟨PLACEHOLDER until FR8 reports ~07:00 Sun: the v2/v3 small-investigator result. Fill from the committed FR8 file only: model, n held-out episodes per tier, mean score ± CI vs base, `/ solver`.⟩**
@@ -130,12 +130,12 @@ lab_replay: ladder: REPLAY OK, 4 episodes reproduced step for step (scores [-1.0
 lab_replay: ALL OK
 ```
 **P, the Gemini roles (`docs/gemini/SUBMISSION.md` §2; the PLAN's "4 roles"):**
-1. **Player:** the Gemini ladder, 6 models × thinking levels; gemini-3.6-flash at medium thinking on hard is within the solver's CI, 97% [76%, 126%], n=6 (`results/gemini/ladder.md`).
+1. **Player:** the Gemini ladder, 5 models × thinking levels; gemini-3.6-flash at medium thinking on hard is within the solver's CI, 98% [82%, 119%], n=10 (`results/gemini/ladder.md`).
 2. **Analyst:** the Failure Atlas, 1M-token context over the whole corpus (the 61% above).
 3. **Attacker:** the red-team swarm (the 0 exploits and the 4/4 control above).
 4. **Builder:** the evolved moles and the company text, kept solvable by the solver.
 
-Plus the gateway that records and replays every Gemini call, so judges rerun our Gemini tables with no key (what `make lab-replay` just did). Usage as of Sat 18:23: 11,187 calls, $88.75 at list price (`docs/gemini/SUBMISSION.md`; refresh from the dashboard before the demo).
+Plus the gateway that records and replays every Gemini call, so judges rerun our Gemini tables with no key (what `make lab-replay` just did). Usage as of Sat 18:23: 24,855 calls, $226.34 at list price (`docs/gemini/SUBMISSION.md`; refresh from the dashboard before the demo).
 
 **Close (P):** "It's the real environment, compiled to your browser. Play a case and when it closes, see how the solver did on the same world: ⟨game URL⟩." O switches to tab 1, opens a case (seed 3000 → "Open case"), shows the case file for 10 s.
 

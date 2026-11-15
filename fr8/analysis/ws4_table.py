@@ -64,6 +64,9 @@ def main(argv=None):
     ap.add_argument("--out", default=None)
     ap.add_argument("--pair", default="base", help="comma list of reference labels for paired Δ columns")
     ap.add_argument("--info", action="append", default=[], help="label=TEXT (GPU, steps) shown per row")
+    ap.add_argument("--paired", action="store_true",
+                    help="seed-paired Δ. ONLY valid when every run shared one CANARY_WORLD_SECRET; without it each "
+                         "eval process draws its own held-out worlds, so the default is a two-sample Δ over all n")
     a = ap.parse_args(argv)
     models = {}
     for spec in a.runs:
@@ -73,8 +76,9 @@ def main(argv=None):
     refs = [r for r in a.pair.split(",") if r in models]
     ref_scores = {r: {(e["tier"], e["seed"]): e["score"] for e in models[r]} for r in refs}
     tiers = sorted({e["tier"] for eps in models.values() for e in eps}, key=["easy", "medium", "hard"].index)
-    lines = ["| model | run (GPU · steps) | held-out seeds | tier | n | score ± 95% CI | accused | correct | abstain | valid calls | "
-             + " | ".join(f"Δ vs {r} (paired n)" for r in refs) + " |",
+    dname = "paired n" if a.paired else "two-sample, n vs n"
+    lines = ["| model | run (GPU · steps) | held-out seed idx | tier | n | score ± 95% CI | accused | correct | abstain | valid calls | "
+             + " | ".join(f"Δ vs {r} ({dname})" for r in refs) + " |",
              "|---|---|---|---|---|---|---|---|---|---|" + "---|" * len(refs)]
     for label, eps in models.items():
         for tier in tiers + ["all"]:
@@ -84,10 +88,23 @@ def main(argv=None):
             r = row(sub)
             deltas = []
             for ref in refs:
-                rs = ref_scores[ref]
-                d = [e["score"] - rs[(e["tier"], e["seed"])] for e in sub if (e["tier"], e["seed"]) in rs]
-                dm, dh = mci(d)
-                deltas.append("–" if label == ref or not d else f"{dm:+.3f} ± {fmt(dh)} ({len(d)})")
+                if label == ref:
+                    deltas.append("–")
+                    continue
+                if a.paired:
+                    rs = ref_scores[ref]
+                    d = [e["score"] - rs[(e["tier"], e["seed"])] for e in sub if (e["tier"], e["seed"]) in rs]
+                    dm, dh = mci(d)
+                    deltas.append("–" if not d else f"{dm:+.3f} ± {fmt(dh)} ({len(d)})")
+                    continue
+                rsub = [e for e in models[ref] if tier == "all" or e["tier"] == tier]
+                ma, ha = mci([e["score"] for e in sub])
+                mr, hr = mci([e["score"] for e in rsub])
+                if not rsub:
+                    deltas.append("–")
+                    continue
+                ha, hr = (0.0 if h != h else h for h in (ha, hr))   # n<2 → treat as no spread
+                deltas.append(f"{ma - mr:+.3f} ± {math.sqrt(ha * ha + hr * hr):.3f} ({len(sub)} vs {len(rsub)})")
             sd = sorted({e["seed"] for e in sub})
             seeds = f"{sd[0]}–{sd[-1]} ({len(sd)})"
             lines.append(f"| {label} | {info.get(label, '–')} | {seeds} | {tier} | {r['n']} | {fmt(r['score'])} ± {fmt(r['ci'])} | {fmt(r['accused'], 2)} | "
@@ -95,7 +112,13 @@ def main(argv=None):
                          + " | ".join(deltas) + " |")
     txt = "\n".join(lines) + ("\n\nEval: each model plays full held-out episodes alone (train.eval_hf, greedy, "
                               "KV reuse, call cap 120). v3 TRAINING used solver rollouts for credit assignment "
-                              "(decision-point GRPO); evaluation never does.\n")
+                              "(decision-point GRPO); evaluation never does.\n"
+                              + ("" if a.paired else
+                                 "\nΔ columns are TWO-SAMPLE (difference of means, CI = 1.96·√(se₁²+se₂²)). Held-out "
+                                 "worlds are keyed by a secret; these evals ran without CANARY_WORLD_SECRET, so each "
+                                 "process drew its own worlds and the same seed number is a different world in each "
+                                 "run (checked: all 115 world-dependent step-0 list_employees results differ across "
+                                 "runs). Seed-paired Δ would be invalid.\n"))
     print(txt)
     if a.out:
         Path(a.out).write_text(txt)

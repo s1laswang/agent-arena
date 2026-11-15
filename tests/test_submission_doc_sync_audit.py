@@ -77,6 +77,12 @@ REQUIRED_AUDIT_TOKENS = (
     "6c771968",
     "9225f2ad",
     "afterquery-submit",
+    "afterquery-submit-2",
+    "aa1c679e",
+    "5f9b3297",
+    "131%",
+    "PR #98",
+    "511807a4",
     "e578da72",
 )
 

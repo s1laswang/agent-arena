@@ -1,15 +1,15 @@
 # Empirical Transcript Mining: Frontier Investigator Failure Modes and Fair Mole Levers
 
-Generated offline from committed JSONL transcripts (`data/runs/committed/v1.4/` and `data/runs/committed/v1.3/`) via `python -m canary.mole.transcript_miner --out docs/reports/mole_transcript_mining.md`. All posteriors are replayed from public tool observations through `canary.solver.policy.SolverPolicy` (`canary.solver.belief.posterior`) and cross-verified against committed `accuse.md` tables.
+Generated offline from committed Known-V JSONL transcripts (`data/runs/committed/v1.4/` and `data/runs/committed/v1.3/`; legacy pre-Known-V `v1.2` runs excluded because `status` exposed unsurfaced `true V`) via `python -m canary.mole.transcript_miner --out docs/reports/mole_transcript_mining.md` (verified offline via `python -m canary.mole.transcript_miner --check docs/reports/mole_transcript_mining.md`). All posteriors are replayed from public tool observations through `canary.solver.policy.SolverPolicy` (`canary.solver.belief.posterior`) and cross-verified against committed `accuse.md` tables.
 
 ## 1. Headline Empirical Findings
 
-- **Frontier corpus audited**: 159 valid frontier episodes (60 `opencode:google/gemini-4-carbon` on v1.4, 60 `gemini:gemini-4-carbon` in-proc on v1.4, 22 `codex:gpt-5.5` on v1.3, 17 `openai:gpt-5.5` in-proc on v1.3) paired against 100 reference `solver` episodes (60 on v1.4 seeds 0-29, 40 on v1.3 seeds 0-19).
-- **100% angry-decoy dismissal vs non-decoy framing susceptibility**: Across 159 decoy-enabled frontier episodes, the angry decoy was accused **0** times and restricted **0** times (100.0% dismissal rate; angry decoy messages were retrieved in 150/159 episodes). In contrast, non-decoy framed after-hours logs broke 0-separation canary ties into -1.0 wrong accusations in **5/10** total frontier wrong accusations.
+- **Frontier corpus audited**: 159 valid primary frontier episodes (60 `opencode:google/gemini-4-carbon` on v1.4 seeds 0-29, 60 `gemini:gemini-4-carbon` in-proc on v1.4 seeds 0-29, 22 `codex:gpt-5.5` on v1.3, 17 `openai:gpt-5.5` in-proc on v1.3) paired against 100 reference `solver` episodes (60 on v1.4 seeds 0-29, 40 on v1.3 seeds 0-19).
+- **Angry-decoy dismissal (100.0%) vs non-decoy framing susceptibility**: Across 159 decoy-enabled frontier episodes, the angry decoy was accused **0** times and restricted **0** times (100.0% overall dismissal; 100.0% across all 150/159 episodes where angry decoy messages were retrieved). In contrast, non-decoy framed after-hours logs broke <=1-separation canary ties into -1.0 wrong accusations in **5/10** total frontier wrong accusations.
 - **Single-separating-canary fragility under `fingerprint_accuracy=0.95`**: All **10/10** frontier wrong accusations occurred with `<=1` separating canary hit (`8/10` with 0 separating canaries), including **7** Hard-tier wrong accusations where a 5% fingerprint flip or single unconfirmed canary was treated as proof.
-- **Sharp architectural split in canary sizing**: Codex/GPT-5.5 favor surgical `<=3`-recipient traps (30.6%-75.3% of planted canaries), whereas Gemini-4-carbon almost never uses `<=3` recipients (0.0%-0.6%), putting 98.6%-100.0% of canaries into 3 variants across 4-8 (43.6%-73.6%) or >=9 (26.4%-56.4%) recipients.
-- **Gemini interview budget sink and delayed Day-1 canary start**: On v1.4 Hard (`canaries_per_day=2`), Gemini spends 57.27-68.03 calls/episode on low-LR interviews (`interview_lr=1.2`), delays its first canary until mean day 3.03 (OpenCode) and 3.40 (in-proc) vs Solver day 1.00, plants 0.64-0.69 canaries/day vs Solver 1.37/day, and accuses +1.97 to +2.52 days later than Solver (+0.063 V to +0.065 V extra pure leak drain on correct Hard episodes).
-- **Below-breakeven horizon gambling**: Frontier agents made **22** accusations below the exact break-even bar `P(accused) < 1 / (1 + E[true V])`, including **13** final-day horizon gambles where abstaining (0.0) had higher EV.
+- **Sharp architectural split in canary sizing**: Codex and GPT-5.5 favor surgical `<=3`-recipient traps (30.6%-75.3% of planted canaries), whereas Gemini-4-carbon almost never uses `<=3` recipients (0.0%-0.6%), putting 98.6%-100.0% of canaries into 3 variants across 4-8 (43.6%-73.6%) or >=9 (26.4%-56.4%) recipients.
+- **Gemini-4-carbon interview budget sink and delayed Day-1 canary start**: On v1.4 Hard (`canaries_per_day=2`), Gemini-4-carbon spends 57.27-68.03 calls/episode on low-LR interviews (`interview_lr=1.2`), delays its first canary until mean day 3.03 (OpenCode) and 3.40 (in-proc) vs Solver day 1.00, plants 0.64-0.69 canaries/day vs Solver 1.37/day, and accuses +1.97 to +2.52 days later than Solver (+0.063 V to +0.065 V extra pure leak drain on correct Hard episodes).
+- **Below-breakeven midgame and horizon gambling**: Frontier agents made **22** accusations below the exact break-even bar `P(accused) < 1 / (1 + E[true V])`, including **13** final-day horizon gambles and **9** premature midgame gambles where waiting or abstaining had higher EV.
 
 ## 2. Canary Planting Rate, Recipient Distribution, and Variant Count
 
@@ -181,7 +181,7 @@ Every lever below uses only public-free, non-omniscient `MoleView` features from
 ### 5.3 Lever `reactive_canary_lag_oldest`
 - **`MoleView` features**: `day`, `newest_doc_age_days`, `n_leakable`
 - **`MoleStrategy` selectors**: `leak=oldest`, `frame=random_peer`
-- **Empirical target**: Gemini delays first canary on Hard to day 3.03-3.40 (vs Solver day 1.00), plants reactive age-0 canaries after leaks surface, and accuses with <=1 separating canary under 0.95 fingerprint noise.
+- **Empirical target**: Gemini-4-carbon delays first canary on Hard to day 3.03-3.40 (vs Solver day 1.00), plants reactive age-0 canaries after leaks surface, and accuses with <=1 separating canary under 0.95 fingerprint noise.
 - **Measured transcript anchors**: `gemini_opencode_hard_first_canary_day=3.03`, `gemini_inproc_hard_first_canary_day=3.4`, `solver_hard_first_canary_day=1.0`, `gemini_opencode_hard_fp95_single_sep_wrong=4`, `gemini_inproc_hard_fp95_single_sep_wrong=1`
 - **Why `SolverPolicy` stays unbeaten**: Solver plants 2 canaries/day starting day 1.00 (14.13 canaries/episode on Hard), so its day d-2 canaries already occupy the oldest leak-window slot.
 - **Validated Mole DSL rule snippet**:
@@ -223,8 +223,8 @@ Every lever below uses only public-free, non-omniscient `MoleView` features from
 ### 5.4 Lever `non_decoy_peer_framing`
 - **`MoleView` features**: `n_restricted_colleagues`, `i_am_restricted`
 - **`MoleStrategy` selectors**: `leak=random_seeded`, `frame=most_restricted_peer`
-- **Empirical target**: Frontier models dismissed the angry decoy in 100.0% of 159 episodes (0 decoy accusations), but non-decoy framed after-hours logs broke 0-separation canary ties into -1.0 wrong accusations (5/10 wrong accusations).
-- **Measured transcript anchors**: `frontier_decoy_dismissal_rate=1.0`, `frontier_decoy_accused_total=0`, `wrong_non_decoy_framed_tiebreak=5`, `wrong_with_zero_separating_canary=8`, `gemini_opencode_hard_log_calls=12.27`
+- **Empirical target**: Frontier models dismissed the angry decoy in 100.0% of 159 episodes (0 decoy accusations), while non-decoy framed after-hours logs broke <=1-separation canary ties into -1.0 wrong accusations (5/10 wrong accusations).
+- **Measured transcript anchors**: `frontier_decoy_dismissal_rate=1.0`, `frontier_decoy_dismissal_when_detected_rate=1.0`, `frontier_decoy_accused_total=0`, `wrong_non_decoy_framed_tiebreak=5`, `wrong_with_zero_separating_canary=8`, `gemini_opencode_hard_log_calls=12.27`
 - **Why `SolverPolicy` stays unbeaten**: Solver marginalises Poisson framing across peers with behaviour_temper=0.6, preventing single-employee after-hours spikes from overriding primary leak/canary likelihoods.
 - **Validated Mole DSL rule snippet**:
 ```json
@@ -255,7 +255,7 @@ Every lever below uses only public-free, non-omniscient `MoleView` features from
 ### 5.5 Lever `early_burst_midgame_quiet_pacing`
 - **`MoleView` features**: `day`, `days_since_last_leak`
 - **`MoleStrategy` selectors**: `leak=none`, `frame=random_peer`
-- **Empirical target**: Gemini spends 64.4%-68.0% of Hard investigative calls on low-LR interviews (57.27-68.03/episode), starts canaries late, lags Solver by +1.97 to +2.52 days, and makes 13 horizon gambles below 1/(1+V).
+- **Empirical target**: Gemini-4-carbon spends 64.4%-68.0% of Hard investigative calls on low-LR interviews (57.27-68.03/episode), lags Solver by +1.97 to +2.52 days, and frontier models make 22 gambles below 1/(1+V) (13 at the horizon).
 - **Measured transcript anchors**: `gemini_opencode_hard_interviews=68.03`, `gemini_inproc_hard_interviews=57.27`, `gemini_opencode_hard_day_lag=2.52`, `gemini_opencode_hard_leak_v_drain=0.37`, `frontier_below_breakeven_gambles_total=22`, `frontier_horizon_gambles_total=13`
 - **Why `SolverPolicy` stays unbeaten**: Leaks on days 1-3 hit Solver's day-1 pipelined canaries immediately, and bounded midgame pacing preserves leak volume over 21 days so Solver exceeds the 0.85 catchability bar.
 - **Validated Mole DSL rule snippet**:

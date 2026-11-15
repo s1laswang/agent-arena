@@ -1,0 +1,867 @@
+{
+  "schema": "canary.tiebreak.viewer_manifest.v1",
+  "tiers_version": "v1.4",
+  "source_artifacts": {
+    "experiment_ledger": {
+      "path": "results/tiebreak/experiment_ledger.json",
+      "sha256_16": "fec806356897a4e6",
+      "bytes": 61436
+    },
+    "addendum_readiness": {
+      "path": "results/tiebreak/addendum_readiness.json",
+      "sha256_16": "a755f7db0347bacb",
+      "bytes": 16336
+    },
+    "verda_multiseed": {
+      "path": "results/tiebreak/verda_multiseed/multiseed_summary.json",
+      "sha256_16": "bb2b7ff2845add74",
+      "bytes": 81135
+    },
+    "context_confound": {
+      "path": "results/tiebreak/context_confound/audit_summary.json",
+      "sha256_16": "6cf467fe66e43c30",
+      "bytes": 154094
+    },
+    "frontier_comparison": {
+      "path": "results/tiebreak/frontier_comparison/comparison_summary.json",
+      "sha256_16": "9370a33422da5108",
+      "bytes": 110575
+    },
+    "scaling": {
+      "path": "results/tiebreak/scaling/scaling_summary.json",
+      "sha256_16": "f06b483857acf1c9",
+      "bytes": 50304
+    },
+    "empirical_bayes": {
+      "path": "results/tiebreak/empirical_bayes/summary.json",
+      "sha256_16": "ded6922e3a90e194",
+      "bytes": 131495
+    },
+    "dagger_ablation": {
+      "path": "results/tiebreak/dagger_ablation/summary.json",
+      "sha256_16": "22597e6b8b873e05",
+      "bytes": 56047
+    },
+    "neural_mlp_dagger": {
+      "path": "results/tiebreak/neural_mlp_dagger/mlp_summary.json",
+      "sha256_16": "d6a77d649868fa0d",
+      "bytes": 15354
+    }
+  },
+  "seed_hygiene_disclosure": {
+    "train_seed_range": "100000..199999",
+    "heldout_seed_range": "800000..800199",
+    "dev_eval_seed_range": "0..29",
+    "judge_episodes_touched": 0,
+    "judge_partition_rule": "JUDGE_SEEDS 900000+ strictly untouched (0 episodes)",
+    "dev_protocol_disclosure": "DEV_SEEDS 0..29 post-hoc locked after v1.4 commitment, never pre-registered"
+  },
+  "track_separation": {
+    "readme_qwen_addendum_eligible": false,
+    "readme_addendum_action": "HOLD_README_QWEN_ADDENDUM_UNTIL_V100",
+    "open_weight_llm_above_base_count": 0,
+    "open_weight_llm_total_runs": 19,
+    "open_weight_llm_n0_failure_count": 5,
+    "compact_non_llm_passing_count": 4,
+    "compact_non_llm_total_count": 4
+  },
+  "track1_open_weight_llm": {
+    "n0_failure_run_ids": [
+      "J4-pilot-44200",
+      "WS4-v3-44548-44550",
+      "WS4-v3-44553",
+      "WS4-v3-4k-s1-714d-spot",
+      "Verda-base-backup-18ac"
+    ],
+    "highlights": {
+      "v3_4k_s0": {
+        "mean_score": -0.147,
+        "ci95": 0.063,
+        "n": 180
+      },
+      "v3_4k_s1": {
+        "mean_score": -0.209,
+        "ci95": 0.094,
+        "n": 82
+      },
+      "v3_8k_s0": {
+        "mean_score": -0.06,
+        "ci95": 0.054,
+        "n": 90
+      },
+      "v3_8k_s2": {
+        "mean_score": -0.05,
+        "ci95": 0.049,
+        "n": 90
+      },
+      "v3_8k_s1": {
+        "mean_score": -0.777,
+        "ci95": 0.118,
+        "n": 90
+      },
+      "v3_8k_s3": {
+        "mean_score": -0.788,
+        "ci95": 0.117,
+        "n": 90
+      },
+      "paired_s0_minus_s3": {
+        "mean_delta": 0.728,
+        "ci95": 0.134,
+        "n": 90
+      },
+      "confound_4k_at_8k": {
+        "mean_score": -0.716,
+        "ci95": 0.105,
+        "n": 90,
+        "paired_s3_delta": -0.073
+      },
+      "dagger_r1_8k": {
+        "mean_score": -0.542,
+        "ci95": 0.214,
+        "n": 50
+      },
+      "dagger_r1_4k": {
+        "mean_score": -0.101,
+        "ci95": 0.112,
+        "n": 41
+      }
+    },
+    "confound_diagnostics": {
+      "audited_verda_episodes": 450,
+      "multiseed_replayed": 712,
+      "header_tokens": 2842,
+      "evicted_4k_pct": 97.98,
+      "evicted_8k_pct": 84.65,
+      "compact_max_tokens": 1679,
+      "compact_evicted_pct": 0.0
+    },
+    "published_cohorts": [
+      {
+        "id": "base",
+        "mean_score": 0.0,
+        "ci95": 0.0,
+        "n": 36
+      },
+      {
+        "id": "v1",
+        "mean_score": -0.25,
+        "ci95": 0.256,
+        "n": 12
+      },
+      {
+        "id": "v2",
+        "mean_score": -0.457,
+        "ci95": 0.086,
+        "n": 172
+      },
+      {
+        "id": "v3_4k_s0",
+        "mean_score": -0.147,
+        "ci95": 0.063,
+        "n": 180
+      },
+      {
+        "id": "v3_4k_s1",
+        "mean_score": -0.209,
+        "ci95": 0.094,
+        "n": 82
+      },
+      {
+        "id": "v3_8k_s0",
+        "mean_score": -0.06,
+        "ci95": 0.054,
+        "n": 90
+      },
+      {
+        "id": "v3_8k_s1",
+        "mean_score": -0.777,
+        "ci95": 0.118,
+        "n": 90
+      },
+      {
+        "id": "v3_8k_s2",
+        "mean_score": -0.05,
+        "ci95": 0.049,
+        "n": 90
+      },
+      {
+        "id": "v3_8k_s3",
+        "mean_score": -0.788,
+        "ci95": 0.117,
+        "n": 90
+      },
+      {
+        "id": "dagger_r1_8k",
+        "mean_score": -0.542,
+        "ci95": 0.214,
+        "n": 50
+      },
+      {
+        "id": "dagger_r1_4k",
+        "mean_score": -0.101,
+        "ci95": 0.112,
+        "n": 41
+      }
+    ],
+    "historical_runs": [
+      {
+        "run_id": "J4-pilot-44200",
+        "model": "Qwen2.5-1.5B-Instruct LoRA r=16 (pilot)",
+        "method": "SFT prefix 4k pilot tokenization on 20k J3 episodes",
+        "ctx": 4096,
+        "n": 0,
+        "score": null,
+        "ci95": null,
+        "secret_pairing": "none (n=0)",
+        "status": "FAILED_OOM",
+        "category": "n0_failure",
+        "note": "28G Slurm cgroup OOM during single-core pilot tokenization of 20k J3 prefix episodes (~102"
+      },
+      {
+        "run_id": "J4-v1-44397",
+        "model": "Qwen2.5-1.5B-Instruct LoRA r=16",
+        "method": "SFT prefix 4k windows (450 steps, 14.3M tokens on J3v2 v1.3)",
+        "ctx": 4096,
+        "n": 12,
+        "score": -0.25,
+        "ci95": 0.256,
+        "secret_pairing": "per-process (unpaired)",
+        "status": "NEGATIVE_REWARD_PROTOCOL_GAIN",
+        "category": "evaluated_4k",
+        "note": "Protocol syntax jumped from 0.08 to 0.99 valid calls (~0.85 solver action-type agreement),",
+        "valid_before": 0.08,
+        "valid_after": 0.99
+      },
+      {
+        "run_id": "WS4-base-44411",
+        "model": "Qwen2.5-1.5B-Instruct (base)",
+        "method": "Zero-shot base evaluation at 4k context (max_calls=120)",
+        "ctx": 4096,
+        "n": 16,
+        "score": 0.0,
+        "ci95": 0.0,
+        "secret_pairing": "per-process (unpaired)",
+        "status": "BASELINE_CAVEATED",
+        "category": "evaluated_4k",
+        "note": "Qwen2.5-1.5B base v1.4 held-out n=16 scored 0.000 (valid call rate 0.03, never leaves Day ",
+        "valid_before": 0.03
+      },
+      {
+        "run_id": "WS4-base-pooled",
+        "model": "Qwen2.5-1.5B-Instruct (base, pooled)",
+        "method": "Zero-shot base evaluation at 4k context (44411 n=16 + 44584 off6",
+        "ctx": 4096,
+        "n": 36,
+        "score": 0.0,
+        "ci95": 0.0,
+        "secret_pairing": "per-process (unpaired)",
+        "status": "BASELINE_CAVEATED",
+        "category": "evaluated_4k",
+        "note": "Published pooled untrained Qwen2.5-1.5B base reference (n=36: job 44411 n=16 on 800000..80",
+        "valid_before": 0.03
+      },
+      {
+        "run_id": "WS4-v2-44412",
+        "model": "Qwen2.5-1.5B-Instruct LoRA r=16 (dense v2)",
+        "method": "SFT dense 4k windows + oversample-endings 3 (887 steps on J3v14)",
+        "ctx": 4096,
+        "n": 82,
+        "score": -0.395,
+        "ci95": 0.128,
+        "secret_pairing": "per-process (unpaired)",
+        "status": "NEGATIVE_BLIND_ACCUSE",
+        "category": "evaluated_4k",
+        "note": "Dense 4k + oversample-endings 3 on 100% accuse-only SFT caused blind accusations: held-out",
+        "valid_before": 0.03,
+        "valid_after": 0.92
+      },
+      {
+        "run_id": "WS4-v2-off30-68bb",
+        "model": "Qwen2.5-1.5B-Instruct LoRA r=16 (dense v2, off30)",
+        "method": "SFT dense 4k + oversample-endings 3 evaluated on held-out seeds ",
+        "ctx": 4096,
+        "n": 90,
+        "score": -0.514,
+        "ci95": 0.115,
+        "secret_pairing": "per-process (unpaired)",
+        "status": "NEGATIVE_BLIND_ACCUSE",
+        "category": "evaluated_4k",
+        "note": "Verda A100 extra held-out n=90 (800030..800059) confirmed v2 blind-accusation collapse: -0",
+        "valid_before": 0.03,
+        "valid_after": 0.92
+      },
+      {
+        "run_id": "WS4-v3-44548-44550",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3 GRPO init from 44410)",
+        "method": "Decision-point GRPO on 2,000 TRAIN states (150000+/151000+)",
+        "ctx": 4096,
+        "n": 0,
+        "score": null,
+        "ci95": null,
+        "secret_pairing": "none (n=0)",
+        "status": "FAILED_CUDA_OOM",
+        "category": "n0_failure",
+        "note": "Decision-point GRPO OOMed V100-32GB (tried to allocate 5.49-5.52 GiB above ~26.5 GiB reser"
+      },
+      {
+        "run_id": "WS4-v3-44553",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3 GRPO unguided)",
+        "method": "Decision-point GRPO with gradient checkpointing, unguided sampli",
+        "ctx": 4096,
+        "n": 0,
+        "score": null,
+        "ci95": null,
+        "secret_pairing": "none (n=0)",
+        "status": "FAILED_ZERO_VARIANCE",
+        "category": "n0_failure",
+        "note": "Unguided GRPO collapsed to continue_frac=1.0 (8/10 groups zero variance in first 5 steps; "
+      },
+      {
+        "run_id": "WS4-v3-4k-s1-714d-spot",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s1 spot replicate)",
+        "method": "Guided decision-point GRPO at 4k context on Verda A100-80GB spot",
+        "ctx": 4096,
+        "n": 0,
+        "score": null,
+        "ci95": null,
+        "secret_pairing": "none (n=0)",
+        "status": "FAILED_SPOT_PREEMPTED",
+        "category": "n0_failure",
+        "note": "Verda A100-80GB spot instance 714d8144 (4k GRPO s1 replicate) was preempted ~30m into trai"
+      },
+      {
+        "run_id": "WS4-v3-4k-s1-44572",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s1, 192 GRPO steps, FR8 V100 n=82)",
+        "method": "Guided decision-point GRPO on FR8 V100 job 44572 (4.0h, ~191-192",
+        "ctx": 4096,
+        "n": 82,
+        "score": -0.209,
+        "ci95": 0.094,
+        "secret_pairing": "per-process (unpaired)",
+        "status": "NEGATIVE_FLAT_V100_REPLICATE",
+        "category": "evaluated_4k",
+        "note": "Finalized FR8 V100 ~191-192-step 4k GRPO s1 replicate (job 44572/44573) scored -0.209 +/- ",
+        "valid_before": 0.03,
+        "valid_after": 0.97
+      },
+      {
+        "run_id": "WS4-v3-verda-s0-eval",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s0, 609 GRPO steps, pooled n=180)",
+        "method": "Guided decision-point GRPO on Verda H100 3bb74f5a (2.0h, 609 ste",
+        "ctx": 4096,
+        "n": 180,
+        "score": -0.147,
+        "ci95": 0.063,
+        "secret_pairing": "per-process (unpaired)",
+        "status": "NEGATIVE_4K_TRUNCATION_PERSISTS",
+        "category": "evaluated_4k",
+        "note": "Pooled v3-4k-s0 across held-out 800000..800059 (n=180: s0 n=90 -0.103 +/- 0.081 + off30 n=",
+        "valid_before": 0.03,
+        "valid_after": 1.0
+      },
+      {
+        "run_id": "WS4-v3-4k-s0-ctx8k",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s0 evaluated at max_ctx=8192)",
+        "method": "Same 609-step 4k GRPO adapter (3d0cd43b8037) evaluated at 8k con",
+        "ctx": 8192,
+        "n": 90,
+        "score": -0.716,
+        "ci95": 0.105,
+        "secret_pairing": "shared (1ca0c2a64d)",
+        "status": "NEGATIVE_INFERENCE_CTX_CONFOUND",
+        "category": "shared_or_8k",
+        "note": "Evaluating the exact same 609-step 4k adapter (3d0cd43b8037) at max_ctx=8192 under shared ",
+        "valid_before": 0.03,
+        "valid_after": 0.99
+      },
+      {
+        "run_id": "WS4-v3-8k-s0-3bb7",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-8k s0, 637 GRPO steps, shared secret)",
+        "method": "Guided decision-point GRPO at 8k context on Verda H100 3bb74f5a ",
+        "ctx": 8192,
+        "n": 90,
+        "score": -0.06,
+        "ci95": 0.054,
+        "secret_pairing": "shared (1ca0c2a64d)",
+        "status": "NEGATIVE_ABSTAIN_COLLAPSE",
+        "category": "shared_or_8k",
+        "note": "Verda H100 637-step 8k GRPO s0 under shared secret 1ca0c2a64d collapsed to conservative ab",
+        "valid_before": 0.03,
+        "valid_after": 0.98
+      },
+      {
+        "run_id": "WS4-v3-8k-s1-ac58",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-8k s1, 371 GRPO steps)",
+        "method": "Guided decision-point GRPO at 8k context on Verda A100-80GB spot",
+        "ctx": 8192,
+        "n": 90,
+        "score": -0.777,
+        "ci95": 0.118,
+        "secret_pairing": "per-process (unpaired)",
+        "status": "NEGATIVE_OFFPOLICY_OVERACCUSE",
+        "category": "shared_or_8k",
+        "note": "Verda A100-80GB spot 371-step 8k GRPO s1 scored -0.777 +/- 0.118 on held-out n=90 (valid 0",
+        "valid_before": 0.03,
+        "valid_after": 0.92
+      },
+      {
+        "run_id": "WS4-v3-8k-s2-dbd0",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-8k s2, 693 GRPO steps)",
+        "method": "Guided decision-point GRPO at 8k context on Verda H100 spot dbd0",
+        "ctx": 8192,
+        "n": 90,
+        "score": -0.05,
+        "ci95": 0.049,
+        "secret_pairing": "per-process (unpaired)",
+        "status": "NEGATIVE_ABSTAIN_COLLAPSE",
+        "category": "shared_or_8k",
+        "note": "Verda H100 spot 693-step 8k GRPO s2 collapsed to conservative abstention on held-out n=90:",
+        "valid_before": 0.03,
+        "valid_after": 0.96
+      },
+      {
+        "run_id": "WS4-v3-8k-s3-f437",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-8k s3, 344 GRPO steps, shared secret)",
+        "method": "Guided decision-point GRPO at 8k context on Verda A100-80GB f437",
+        "ctx": 8192,
+        "n": 90,
+        "score": -0.788,
+        "ci95": 0.117,
+        "secret_pairing": "shared (1ca0c2a64d)",
+        "status": "NEGATIVE_PAIRED_8K_NULL",
+        "category": "shared_or_8k",
+        "note": "Verda A100-80GB 344-step 8k GRPO s3 under shared secret 1ca0c2a64d scored -0.788 +/- 0.117",
+        "valid_before": 0.03,
+        "valid_after": 0.94
+      },
+      {
+        "run_id": "WS4-dagger-r1-8k-verda",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (DAgger r1, 250 SFT steps, inf 8k cap 256, shared secret)",
+        "method": "On-policy DAgger round 1 evaluated at max_ctx=8192, max_new_toke",
+        "ctx": 8192,
+        "n": 50,
+        "score": -0.542,
+        "ci95": 0.214,
+        "secret_pairing": "shared (1ca0c2a64d)",
+        "status": "NEGATIVE_DAGGER_HONEST_NULL",
+        "category": "dagger_null",
+        "note": "Verda A100-40 e9ea8b2e DAgger round 1 at 8k inference (250 SFT steps on 4,000 solver-label",
+        "valid_before": 0.03,
+        "valid_after": 1.0
+      },
+      {
+        "run_id": "WS4-dagger-r1-4k-verda",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (DAgger r1 same adapter, inf 4k cap 256, shared secret)",
+        "method": "Same 250-step DAgger round 1 adapter evaluated at max_ctx=4096, ",
+        "ctx": 4096,
+        "n": 41,
+        "score": -0.101,
+        "ci95": 0.112,
+        "secret_pairing": "shared (1ca0c2a64d)",
+        "status": "NEGATIVE_DAGGER_HONEST_NULL",
+        "category": "dagger_null",
+        "note": "Same DAgger r1 adapter evaluated at 4k context (max_new_tokens=256) on Verda A100-80 68bbe",
+        "valid_before": 0.03,
+        "valid_after": 1.0
+      },
+      {
+        "run_id": "Verda-base-backup-18ac",
+        "model": "Qwen2.5-1.5B-Instruct (backup base eval on Verda A100 18acfa5d)",
+        "method": "Zero-shot backup base evaluation on held-out seeds 800006..80003",
+        "ctx": 4096,
+        "n": 0,
+        "score": null,
+        "ci95": null,
+        "secret_pairing": "none (n=0)",
+        "status": "FAILED_REAPER_DELETED",
+        "category": "n0_failure",
+        "note": "Verda A100-80GB 18acfa5d backup base eval (launched 02:17 when FR8 SSH was down) was delet"
+      }
+    ]
+  },
+  "compact_non_llm_policies": [
+    {
+      "run_id": "compact-linear-dagger-v14",
+      "policy_class": "CompactLinearDAggerPolicy",
+      "architecture": "Linear softmax + stopping head (4-stage DAgger r2)",
+      "is_open_weight_llm": false,
+      "param_count": 785,
+      "n": 180,
+      "train_seed_range": "109000..109509",
+      "eval_seed_range": "800000..800059",
+      "world_secret_tag": "sha256:ebf2f09716cf76d3",
+      "before_mean_score": 0.0,
+      "after_mean_score": 0.6267,
+      "after_ci95_low": 0.5753,
+      "after_ci95_high": 0.6716,
+      "paired_mean_delta": 0.6267,
+      "paired_ci95_low": 0.5775,
+      "paired_ci95_high": 0.6759,
+      "gates_passed": 5,
+      "gates_total": 5,
+      "replay_verified": true,
+      "inference_module": "train/compact_dagger_ablation.py",
+      "verdict": "PASS_NON_LLM_CONTROL",
+      "highlight": "+0.150 over calibrated BC (+0.476), +0.109 over survivorship SFT (+0.518)"
+    },
+    {
+      "run_id": "tiny-mlp-dagger-v14",
+      "policy_class": "TinyMLPPolicy",
+      "architecture": "2-layer NumPy MLP 28->128->64->5 (on-policy DAgger r2)",
+      "is_open_weight_llm": false,
+      "param_count": 12293,
+      "n": 180,
+      "train_seed_range": "107000..107599",
+      "eval_seed_range": "800000..800059",
+      "world_secret_tag": "sha256:ebf2f09716cf76d3",
+      "before_mean_score": -0.8556,
+      "after_mean_score": 0.6141,
+      "after_ci95_low": 0.5651,
+      "after_ci95_high": 0.663,
+      "paired_mean_delta": 1.4696,
+      "paired_ci95_low": 1.385,
+      "paired_ci95_high": 1.5542,
+      "gates_passed": 5,
+      "gates_total": 5,
+      "replay_verified": true,
+      "inference_module": "train/neural_mlp_tiebreak.py",
+      "verdict": "PROMOTED_TRACK1_NEURAL",
+      "highlight": "+0.892 [+0.756, +1.029] over uncalibrated SFT (-0.278); 93.3% accuracy"
+    },
+    {
+      "run_id": "scaling-logistic-v14",
+      "policy_class": "ScalingLogisticPolicy",
+      "architecture": "CompactLinearPolicy 82-param logistic softmax (N_train=900)",
+      "is_open_weight_llm": false,
+      "param_count": 82,
+      "n": 90,
+      "train_seed_range": "107000..108999",
+      "eval_seed_range": "800000..800029",
+      "world_secret_tag": "sha256:ebf2f09716cf",
+      "before_mean_score": 0.0,
+      "after_mean_score": 0.6107,
+      "after_ci95_low": 0.542,
+      "after_ci95_high": 0.6794,
+      "paired_mean_delta": 0.6107,
+      "paired_ci95_low": 0.542,
+      "paired_ci95_high": 0.6794,
+      "gates_passed": 5,
+      "gates_total": 5,
+      "replay_verified": true,
+      "inference_module": "scripts/tiebreak_scaling_calibration.py",
+      "verdict": "PASS_NON_LLM_CONTROL",
+      "highlight": "89.6% of SolverPolicy (+0.682); monotonic luck-adjusted EV across N=0..900"
+    },
+    {
+      "run_id": "empirical-bayes-v14",
+      "policy_class": "EmpiricalBayesPolicy",
+      "architecture": "Learned log-likelihood ratios + optimal stopping threshold",
+      "is_open_weight_llm": false,
+      "param_count": 6,
+      "n": 180,
+      "train_seed_range": "102000..102779",
+      "eval_seed_range": "800000..800059",
+      "world_secret_tag": "sha256:ebf2f09716cf76d3",
+      "before_mean_score": -0.4209,
+      "after_mean_score": 0.6073,
+      "after_ci95_low": 0.5593,
+      "after_ci95_high": 0.6481,
+      "paired_mean_delta": 1.0282,
+      "paired_ci95_low": 0.9152,
+      "paired_ci95_high": 1.1411,
+      "gates_passed": 5,
+      "gates_total": 5,
+      "replay_verified": true,
+      "inference_module": "train/empirical_bayes_policy.py",
+      "verdict": "PASS_NON_LLM_CONTROL",
+      "highlight": "Luck-adjusted EV delta +1.000; +0.550 vs gemini-4-carbon +0.322 on hard dev"
+    }
+  ],
+  "criteria_names": [
+    "heldout_mean_gt_zero",
+    "paired_delta_ci95_gt_zero",
+    "train_eval_disjoint",
+    "replay_and_zero_errors",
+    "autonomous_inference"
+  ],
+  "ablations_and_scaling": {
+    "scaling_curve": [
+      {
+        "label": "N=0",
+        "n_train": 0,
+        "n_eval": 90,
+        "mean_score": 0.0,
+        "ci95": 0.0,
+        "luck_adjusted_ev": 0.0,
+        "accuracy": 0.0
+      },
+      {
+        "label": "N=15",
+        "n_train": 15,
+        "n_eval": 90,
+        "mean_score": 0.3288,
+        "ci95": 0.0617,
+        "luck_adjusted_ev": 0.3288,
+        "accuracy": 0.5778
+      },
+      {
+        "label": "N=60",
+        "n_train": 60,
+        "n_eval": 90,
+        "mean_score": 0.5977,
+        "ci95": 0.0552,
+        "luck_adjusted_ev": 0.5743,
+        "accuracy": 0.9556
+      },
+      {
+        "label": "N=240",
+        "n_train": 240,
+        "n_eval": 90,
+        "mean_score": 0.5947,
+        "ci95": 0.058,
+        "luck_adjusted_ev": 0.585,
+        "accuracy": 0.9333
+      },
+      {
+        "label": "N=900",
+        "n_train": 900,
+        "n_eval": 90,
+        "mean_score": 0.6107,
+        "ci95": 0.0687,
+        "luck_adjusted_ev": 0.6155,
+        "accuracy": 0.9222
+      }
+    ],
+    "solver_scaling_ref": {
+      "n_eval": 90,
+      "mean_score": 0.6816,
+      "ci95": 0.0535
+    },
+    "linear_stages": [
+      {
+        "id": "stage0_untrained",
+        "label": "Stage 0: Untrained (abstain)",
+        "n": 180,
+        "mean_score": 0.0,
+        "accuracy": 0.0,
+        "abstain_rate": 1.0
+      },
+      {
+        "id": "stage1_survivorship_sft",
+        "label": "Stage 1: Survivorship SFT",
+        "n": 180,
+        "mean_score": 0.5175,
+        "accuracy": 0.8722,
+        "abstain_rate": 0.1056
+      },
+      {
+        "id": "stage2_calibrated_bc",
+        "label": "Stage 2: Calibrated Offline BC",
+        "n": 180,
+        "mean_score": 0.4762,
+        "accuracy": 0.7944,
+        "abstain_rate": 0.1833
+      },
+      {
+        "id": "stage3a_onpolicy_dagger_r1",
+        "label": "Stage 3a: On-Policy DAgger r1",
+        "n": 180,
+        "mean_score": 0.4988,
+        "accuracy": 0.7556,
+        "abstain_rate": 0.2111
+      },
+      {
+        "id": "stage3_onpolicy_dagger_r2",
+        "label": "Stage 3: On-Policy DAgger r2",
+        "n": 180,
+        "mean_score": 0.6267,
+        "accuracy": 0.9444,
+        "abstain_rate": 0.0278
+      },
+      {
+        "id": "solver",
+        "label": "SolverPolicy Reference",
+        "n": 180,
+        "mean_score": 0.6706,
+        "accuracy": 0.9444,
+        "abstain_rate": 0.05
+      }
+    ],
+    "mlp_stages": [
+      {
+        "id": "stage0_untrained",
+        "label": "Stage 0: Random Init",
+        "n": 180,
+        "mean_score": -0.8556,
+        "accuracy": 0.0722,
+        "abstain_rate": 0.0
+      },
+      {
+        "id": "stage1_uncalibrated_sft",
+        "label": "Stage 1: Uncalibrated SFT",
+        "n": 180,
+        "mean_score": -0.2781,
+        "accuracy": 0.3889,
+        "abstain_rate": 0.0
+      },
+      {
+        "id": "stage2_calibrated_bc",
+        "label": "Stage 2: Calibrated BC",
+        "n": 180,
+        "mean_score": 0.6106,
+        "accuracy": 0.9167,
+        "abstain_rate": 0.0611
+      },
+      {
+        "id": "stage3_onpolicy_dagger_r2",
+        "label": "Stage 3: On-Policy DAgger r2",
+        "n": 180,
+        "mean_score": 0.6141,
+        "accuracy": 0.9333,
+        "abstain_rate": 0.0389
+      },
+      {
+        "id": "solver",
+        "label": "SolverPolicy Reference",
+        "n": 180,
+        "mean_score": 0.6596,
+        "accuracy": 0.9333,
+        "abstain_rate": 0.0389
+      }
+    ],
+    "eb_components": [
+      {
+        "id": "eb_naive_prior",
+        "label": "Uncalibrated Naive Prior (before)",
+        "n": 180,
+        "mean_score": -0.4209,
+        "accuracy": 0.3278,
+        "abstain_rate": 0.0111
+      },
+      {
+        "id": "eb_ev_stop_only",
+        "label": "Stopping Rule Only",
+        "n": 180,
+        "mean_score": -0.4206,
+        "accuracy": 0.3333,
+        "abstain_rate": 0.0111
+      },
+      {
+        "id": "eb_no_canary_planting",
+        "label": "Learned Likelihoods (No Traps)",
+        "n": 180,
+        "mean_score": 0.0287,
+        "accuracy": 0.0889,
+        "abstain_rate": 0.8889
+      },
+      {
+        "id": "eb_likelihood_only",
+        "label": "Learned Likelihoods Only",
+        "n": 180,
+        "mean_score": 0.3582,
+        "accuracy": 0.7833,
+        "abstain_rate": 0.0278
+      },
+      {
+        "id": "eb_experience_opt",
+        "label": "Full EmpiricalBayesPolicy (after)",
+        "n": 180,
+        "mean_score": 0.6073,
+        "accuracy": 0.9222,
+        "abstain_rate": 0.0611
+      },
+      {
+        "id": "solver",
+        "label": "SolverPolicy Reference",
+        "n": 180,
+        "mean_score": 0.6706,
+        "accuracy": 0.9444,
+        "abstain_rate": 0.05
+      }
+    ]
+  },
+  "frontier_convergence": {
+    "total_trajectories": 990,
+    "fresh_env_episodes": 540,
+    "verda_belief_episodes": 450,
+    "dev_hard_cohorts": [
+      {
+        "label": "gemini-4-carbon (OpenCode over MCP, judges' harness)",
+        "family": "Frontier LLM (MCP)",
+        "n": 30,
+        "mean_score": 0.3223,
+        "ci95": 0.1989,
+        "luck_adjusted_ev": 0.3596,
+        "accuracy": 0.8333,
+        "canaries": 8.47,
+        "sub_be_rate": 0.1034
+      },
+      {
+        "label": "gpt-5.5 (OpenCode over MCP)",
+        "family": "Frontier LLM (MCP)",
+        "n": 30,
+        "mean_score": 0.5037,
+        "ci95": 0.0638,
+        "luck_adjusted_ev": 0.4176,
+        "accuracy": 0.9333,
+        "canaries": 17.13,
+        "sub_be_rate": 0.0
+      },
+      {
+        "label": "gemini-4-carbon (in-process full history)",
+        "family": "Frontier LLM (in-process)",
+        "n": 30,
+        "mean_score": 0.473,
+        "ci95": 0.1178,
+        "luck_adjusted_ev": 0.4211,
+        "accuracy": 0.9333,
+        "canaries": 8.57,
+        "sub_be_rate": 0.1034
+      },
+      {
+        "label": "gemini-3.5-flash (OpenCode over MCP)",
+        "family": "Frontier LLM (MCP)",
+        "n": 30,
+        "mean_score": 0.373,
+        "ci95": 0.1766,
+        "luck_adjusted_ev": 0.1098,
+        "accuracy": 0.9,
+        "canaries": 12.43,
+        "sub_be_rate": 0.3
+      },
+      {
+        "label": "EmpiricalBayesPolicy (uncalibrated naive prior)",
+        "family": "Compact Policy (Untrained)",
+        "n": 30,
+        "mean_score": -0.846,
+        "ci95": 0.1687,
+        "luck_adjusted_ev": -0.8352,
+        "accuracy": 0.1,
+        "canaries": 5.93,
+        "sub_be_rate": 0.9
+      },
+      {
+        "label": "EmpiricalBayesPolicy (trained on TRAIN_SEEDS 102000..102779)",
+        "family": "Compact Policy (Trained)",
+        "n": 30,
+        "mean_score": 0.5503,
+        "ci95": 0.0482,
+        "luck_adjusted_ev": 0.4804,
+        "accuracy": 1.0,
+        "canaries": 17.13,
+        "sub_be_rate": 0.0
+      },
+      {
+        "label": "SolverPolicy (Bayesian canary-trap reference)",
+        "family": "Reference Solver",
+        "n": 30,
+        "mean_score": 0.499,
+        "ci95": 0.1193,
+        "luck_adjusted_ev": 0.4993,
+        "accuracy": 0.9667,
+        "canaries": 14.13,
+        "sub_be_rate": 0.0
+      }
+    ]
+  }
+}

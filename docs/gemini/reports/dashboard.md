@@ -1,5 +1,14 @@
 # G5 Dashboard + demo assets: report
 
+## Sun 04:00: rebuilt on the n=40 canonical ladder (pr2 d165e3ec)
+- Merged origin/gemini-pr2 d165e3ec into gemini-dashboard-final (checked: no PR #9). Ladder: 587 episodes, 42 cells.
+- Usage re-exported: **42,233 calls, 1.26B input, 87.9% cached, 16.2M thinking, $377.35 list**. The growth is real (about 16.6k
+  `ladder30` calls Sun 01–03); no row is duplicated across hosts or processes.
+- ROLES Frontier row: carbon-high **106% [94, 126], n=10, $1.93/episode**; 3.6-flash (requested 3.5-flash) high **88% [51, 138],
+  n=40, $0.45/episode**, "not distinguishable from the solver, CIs wide". The VIDEO.md VO[02-frontier] dry run speaks the same.
+- All 7 screenshots re-shot. 121 lab tests pass. Leaderboard is still the gap.md fallback (b08d23c, numbers unchanged).
+- Cosmetic, left as is: the heatmap's "medium" header is cut off now that there's an xhigh column, and two frontier labels overlap slightly.
+
 ## Sun 02:50: final builds move to branch gemini-dashboard-final (cut from gemini-pr2, no PR #9)
 - **Why:** per COMMON.md I merged origin/gemini-track into gemini-dashboard (23:08, 00:00), so that branch contains PR #9 (1bcf1ee7),
   which pr2 must not. Nothing was force-pushed or reverted. gemini-dashboard-final is cut from origin/gemini-pr2 55a8e077; pr2

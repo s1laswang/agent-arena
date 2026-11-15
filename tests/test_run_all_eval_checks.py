@@ -89,6 +89,8 @@ def test_list_mode_and_name_normalization(capsys):
     assert "version_evolution_audit" in suite.OPTIONAL_VERIFIER_NAMES
     assert "paired_seed_diagnostics_v14" in suite.OPTIONAL_VERIFIER_NAMES
     assert "canary_information_efficiency_v14" in suite.OPTIONAL_VERIFIER_NAMES
+    assert "cross_family_behaviour_v14" in suite.OPTIONAL_VERIFIER_NAMES
+    assert "skill_ladder_frontier_alignment_v14" in suite.OPTIONAL_VERIFIER_NAMES
 
 
 def test_committed_suite_index_and_overview_invariants():

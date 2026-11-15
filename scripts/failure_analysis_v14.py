@@ -49,7 +49,7 @@ RUNS = {
 }
 # Causal hint test (gap.md, pre-registered): same harness + model with `--hint gather`; analysed on the seeds it
 # completed (fixed order 0->29, stopped at 06:00), paired with the solver and the unhinted run on those seeds.
-HINT_RUN = V14 / "opencode-gemini-4-carbon-hint-gather/hard/episodes.jsonl"
+HINT_RUN = ROOT / "results/causal_hint/opencode-gemini-4-carbon-hint-gather/hard/episodes.jsonl"
 TIER = "hard"
 SEEDS = list(range(30))
 OUT_JSON = ROOT / "results/failure_analysis_v1.4.json"

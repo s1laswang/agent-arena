@@ -296,7 +296,9 @@ def test_committed_report_and_script_hygiene() -> None:
     assert "671ed96" in text and "8fd4dec" in text and "28 s" in text
     assert "f9fb7a4a" in text
     assert "opencode-gemini-4-carbon-ext" in text and "seeds 34, 37" in text
-    assert "Tracked `v1.4` `episodes.jsonl` shards audited | `36` | PASS" in text
+    shard_count = sum(1 for base in (ROOT / "data/runs/committed/v1.4", ROOT / DEFAULT_REPLICATION_ROOT)
+                      for path in base.rglob("episodes.jsonl") if "superseded" not in path.relative_to(base).parts)
+    assert f"Tracked `v1.4` `episodes.jsonl` shards audited | `{shard_count}` | PASS" in text
     assert "+0.322 +/- 0.199" in text
     assert "65% [24%, 98%]" in text
     assert "72% [52%, 91%]" in text

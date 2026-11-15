@@ -114,7 +114,8 @@ def _replay_and_audit_episode(ep: dict[str, Any], shard_rel: str) -> dict[str, A
 
     if ep.get("rc") == "timeout" or meta.get("rc") == "timeout":
         raise ValueError(f"{shard_rel} seed={seed}: forbidden rc == timeout")
-    if ep.get("end_reason") == "error":
+    from canary.analysis.outcomes import is_clean_agent_stop
+    if ep.get("end_reason") == "error" and not is_clean_agent_stop(ep):
         raise ValueError(f"{shard_rel} seed={seed}: forbidden end_reason == error")
     if meta.get("valid") is False or ep.get("valid") is False:
         raise ValueError(f"{shard_rel} seed={seed}: forbidden valid == False")

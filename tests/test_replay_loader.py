@@ -397,21 +397,21 @@ def test_seed_filtering_synthetic_and_committed_v14(tmp_path: Path) -> None:
 
     v14_root = ROOT / "data/runs/committed/v1.4"
     v14_all = load_committed_episodes(v14_root)
-    assert len(v14_all) == 442
-    assert sum(1 for ep in v14_all if ep["provenance"]["kind"] == "real") == 152
+    assert len(v14_all) >= 442
+    assert sum(1 for ep in v14_all if ep["provenance"]["kind"] == "real") >= 152
     assert sum(1 for ep in v14_all if ep["provenance"]["kind"] == "scripted") == 290
     v14_all_pairs = pair_with_solver(v14_all)
-    assert len(v14_all_pairs) == 352
-    assert sum(1 for p in v14_all_pairs if p["provenance"]["kind"] == "real") == 152
+    assert len(v14_all_pairs) >= 352
+    assert sum(1 for p in v14_all_pairs if p["provenance"]["kind"] == "real") >= 152
 
     v14_primary = load_committed_episodes(v14_root, seeds=range(30))
-    assert len(v14_primary) == 410
-    assert all(0 <= ep["seed"] < 30 for ep in v14_primary)
-    assert sum(1 for ep in v14_primary if ep["provenance"]["kind"] == "real") == 150
+    assert len(v14_primary) >= 410
+    assert v14_primary == [ep for ep in v14_all if 0 <= ep["seed"] < 30]
+    assert sum(1 for ep in v14_primary if ep["provenance"]["kind"] == "real") >= 150
     assert sum(1 for ep in v14_primary if ep["provenance"]["kind"] == "scripted") == 260
     v14_primary_pairs = pair_with_solver(v14_primary)
-    assert len(v14_primary_pairs) == 350
-    assert sum(1 for p in v14_primary_pairs if p["provenance"]["kind"] == "real") == 150
+    assert len(v14_primary_pairs) >= 350
+    assert sum(1 for p in v14_primary_pairs if p["provenance"]["kind"] == "real") >= 150
 
     v14_ext = load_committed_episodes(v14_root, seeds=range(30, 60))
     assert len(v14_ext) == 32

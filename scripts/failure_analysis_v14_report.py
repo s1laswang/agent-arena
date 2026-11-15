@@ -477,7 +477,7 @@ def _hint_section(H: dict) -> list[str]:
               + ". The luck-adjusted row prices every accusation at the solver posterior instead, so it is the fairer comparison."]
     L += ["", _hint_infra(H)]
     L += ["", f"Reproduce: `uv run python scripts/failure_analysis_v14.py` (the hinted episodes are in "
-          f"`data/runs/committed/v1.4/opencode-gemini-4-carbon-hint-gather/hard/`, replay-verified). "
+          f"`results/causal_hint/opencode-gemini-4-carbon-hint-gather/hard/`, replay-verified). "
           + (f"n = {n} is far too small to test the hint. It is reported because the pre-registration requires reporting every "
              f"completed seed. A rerun on the full 30 seeds needs an API quota not shared with other runs." if small else
              f"n = {n} is small: read the CIs, not the point estimates."), ""]

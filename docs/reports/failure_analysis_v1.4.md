@@ -238,4 +238,4 @@ Wrong accusations (score −1) dominate the raw means at this n: the no-hint run
 
 Infra-invalid attempts excluded and retried (never scored): 69 (cli_error_event 1, provider_quota 65, stopped_at_key_switch 3); per seed: seed 0: 24, seed 1: 19, seed 2: 23, seed 3: 3. *stopped_at_key_switch* = attempts we stopped, before any result existed, when the run moved between API keys to escape a saturated quota.
 
-Reproduce: `uv run python scripts/failure_analysis_v14.py` (the hinted episodes are in `data/runs/committed/v1.4/opencode-gemini-4-carbon-hint-gather/hard/`, replay-verified). n = 2 is far too small to test the hint. It is reported because the pre-registration requires reporting every completed seed. A rerun on the full 30 seeds needs an API quota not shared with other runs.
+Reproduce: `uv run python scripts/failure_analysis_v14.py` (the hinted episodes are in `results/causal_hint/opencode-gemini-4-carbon-hint-gather/hard/`, replay-verified). n = 2 is far too small to test the hint. It is reported because the pre-registration requires reporting every completed seed. A rerun on the full 30 seeds needs an API quota not shared with other runs.

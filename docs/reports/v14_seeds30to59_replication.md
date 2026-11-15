@@ -118,8 +118,8 @@ Columns match `scripts/paired_gemini.py`: `score +/- 95% CI` uses normal-approxi
 
 | check | result | status |
 |---|---:|---|
-| Tracked `v1.4` `episodes.jsonl` shards audited | `36` | PASS |
-| Episodes replay-verified in fresh `canary.env.Env` (`v1.4`) | `719 / 719` | PASS |
+| Tracked `v1.4` `episodes.jsonl` shards audited | `39` | PASS |
+| Episodes replay-verified in fresh `canary.env.Env` (`v1.4`) | `809 / 809` | PASS |
 | Score, accusation, or step-level replay mismatches | `0` | PASS |
 | Episodes with `rc == timeout`, `end_reason == error`, or `valid == False` | `0` | PASS |
 | Duplicate `(agent, tier, seed)` tuples within cohort (`0-29` primary, `30-59` G1 ext, `30-59` fleet repl) | `0` | PASS |

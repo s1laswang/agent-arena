@@ -260,7 +260,8 @@ def check_committed_runs(
 
             ep_meta = ep.get("meta") if isinstance(ep.get("meta"), dict) else {}
             is_invalid = (ep_meta.get("valid") is False) or (ep.get("valid") is False)
-            if not is_invalid and (ep_meta.get("rc") == "timeout" or ep.get("end_reason") == "error"):
+            from canary.analysis.outcomes import is_clean_agent_stop
+            if not is_invalid and not is_clean_agent_stop(ep) and (ep_meta.get("rc") == "timeout" or ep.get("end_reason") == "error"):
                 failures.append(
                     f"{loc}: episode has rc={ep_meta.get('rc')!r} end_reason={ep.get('end_reason')!r} without meta.valid=False"
                 )

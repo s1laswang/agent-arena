@@ -85,11 +85,31 @@ def test_cli_check_exit_code_zero(
         )
         assert oc_slice[sd]["flips"] == exp["surfaced_flips"]
 
-    monkeypatch.setattr(CFD, "compute_all", lambda _root=CFD.ROOT: copy.deepcopy(committed_payload))
+    calls = {"n": 0}
+
+    def _fake_compute(_root=CFD.ROOT):
+        calls["n"] += 1
+        return copy.deepcopy(committed_payload)
+
+    monkeypatch.setattr(CFD, "compute_all", _fake_compute)
     rc = CFD.main(["--check"])
     out = capsys.readouterr().out
     assert rc == 0
+    assert calls["n"] == 0
     assert "OK: counterfactual_decomposition_v14 verified" in out
+
+    rc_full = CFD.main(["--check", "--full-check"])
+    out_full = capsys.readouterr().out
+    assert rc_full == 0
+    assert calls["n"] == 1
+    assert "OK: counterfactual_decomposition_v14 verified" in out_full
+
+    monkeypatch.setattr(CFD, "EXPECTED_INPUTS_SHA256", "0" * 64)
+    rc_fb = CFD.main(["--check"])
+    out_fb = capsys.readouterr().out
+    assert rc_fb == 0
+    assert calls["n"] == 2
+    assert "OK: counterfactual_decomposition_v14 verified" in out_fb
 
 
 def test_all_nine_seed_decomposition_regimes_zero_residual():

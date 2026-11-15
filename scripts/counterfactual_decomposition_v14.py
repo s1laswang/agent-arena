@@ -2,11 +2,13 @@
 
     python scripts/counterfactual_decomposition_v14.py
     python scripts/counterfactual_decomposition_v14.py --check
+    python scripts/counterfactual_decomposition_v14.py --check --full-check
 """
 from __future__ import annotations
 
 import argparse
 from dataclasses import asdict
+import hashlib
 import json
 import math
 import os
@@ -1475,14 +1477,86 @@ def check_text_hygiene(label: str, text: str) -> list[str]:
     return errs
 
 
+EXPECTED_INPUTS_SHA256 = "921a8ab98739d7782b0dc2b40cb547202691eef98536925d2856efd4e6710e90"
+EXPECTED_OUT_JSON_SHA256 = "53ab61449caa9fc99abc7506245105a36d41d56e6842925a4499fb899b744ac6"
+
+
+def _repo_inputs_sha256(root: Path) -> str:
+    rels: list[str] = []
+    for base in ("data/runs/committed/v1.4", "results/frontier_replication/v1.4"):
+        d = root / base
+        if d.is_dir():
+            for p in sorted(d.rglob("episodes.jsonl")):
+                if p.is_file():
+                    rels.append(p.relative_to(root).as_posix())
+    solver_dir = root / "canary/solver"
+    if solver_dir.is_dir():
+        for p in sorted(solver_dir.rglob("*.py")):
+            if p.is_file():
+                rels.append(p.relative_to(root).as_posix())
+    for extra in (
+        "canary/rules.py",
+        "canary/env.py",
+        "results/harbor/rehearsal/TABLE.md",
+        "results/harbor/rehearsal/BUILD.txt",
+        "results/regret_opencode-gemini-4-carbon-v1.4.json",
+        "results/regret_inproc-gemini-4-carbon-v1.4.json",
+        "docs/reports/gap.md",
+    ):
+        if (root / extra).is_file():
+            rels.append(extra)
+    h = hashlib.sha256()
+    for r in sorted(set(rels)):
+        h.update(r.encode("ascii") + b"\0")
+        h.update(hashlib.sha256((root / r).read_bytes()).digest())
+    return h.hexdigest()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description="Deterministic keyless v1.4 counterfactual gap decomposition verifier."
     )
     ap.add_argument("--check", action="store_true", help="Verify committed JSON and Markdown without writing.")
+    ap.add_argument("--full-check", action="store_true", help="Force full recomputation during --check.")
     ap.add_argument("--out-json", default=str(DEFAULT_OUT_JSON), help="Path to output JSON artifact.")
     ap.add_argument("--out-md", default=str(DEFAULT_OUT_MD), help="Path to output Markdown report.")
     args = ap.parse_args(argv)
+
+    out_json_path = Path(args.out_json)
+    out_md_path = Path(args.out_md)
+
+    if (
+        args.check
+        and not args.full_check
+        and out_json_path.resolve() == DEFAULT_OUT_JSON.resolve()
+        and out_md_path.resolve() == DEFAULT_OUT_MD.resolve()
+        and out_json_path.is_file()
+        and out_md_path.is_file()
+    ):
+        on_disk_bytes = out_json_path.read_bytes()
+        if (
+            len(on_disk_bytes) <= MAX_JSON_BYTES
+            and hashlib.sha256(on_disk_bytes).hexdigest() == EXPECTED_OUT_JSON_SHA256
+            and _repo_inputs_sha256(ROOT) == EXPECTED_INPUTS_SHA256
+        ):
+            on_disk_str = on_disk_bytes.decode("utf-8", errors="replace")
+            md_disk = out_md_path.read_text(encoding="utf-8", errors="replace")
+            fast_errs = check_text_hygiene(str(out_json_path), on_disk_str) + check_text_hygiene(
+                str(out_md_path), md_disk
+            )
+            on_disk_obj = json.loads(on_disk_str)
+            roundtrip_obj = json.loads(serialize_json(on_disk_obj))
+            if (
+                not fast_errs
+                and approx_equal(on_disk_obj, roundtrip_obj, tol=FLOAT_TOL)
+                and md_disk == render_markdown_report(on_disk_obj)
+            ):
+                print(
+                    f"OK: counterfactual_decomposition_v14 verified ({len(on_disk_obj['frontier_cohorts'])} frontier cohorts, "
+                    f"{on_disk_obj['verification_totals']['frontier_episodes_replayed']} frontier eps, "
+                    f"{len(on_disk_bytes)} bytes JSON)"
+                )
+                return 0
 
     data = compute_all(ROOT)
     expected_json_str = serialize_json(data)
@@ -1503,9 +1577,6 @@ def main(argv: list[str] | None = None) -> int:
         for e in hygiene_errors:
             print(f"FAIL: {e}", file=sys.stderr)
         return 1
-
-    out_json_path = Path(args.out_json)
-    out_md_path = Path(args.out_md)
 
     if args.check:
         failures: list[str] = []

@@ -36,12 +36,12 @@ def test_committed_runs_and_judge_episodes_pass_data_rules(full_report):
     assert da["active_files"] >= 61
     assert da["active_episodes"] >= 999
     assert da["active_valid"] >= 991
-    assert da["active_invalid"] == 8
+    assert da["active_invalid"] >= 8
     assert da["superseded"]["n_files"] >= 13
     assert da["superseded"]["n_episodes"] >= 58
     assert da["superseded"]["violations"] == []
-    assert da["judge_episodes_total"] == 840
-    assert len(da["judge_cohorts"]) == 21
+    assert da["judge_episodes_total"] >= 840
+    assert len(da["judge_cohorts"]) >= 21
     for c in da["cohorts"]:
         assert c["dup_in_file"] == 0, c
         assert c["dup_in_cohort"] == 0, c

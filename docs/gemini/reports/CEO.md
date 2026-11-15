@@ -1,5 +1,21 @@
 # Gemini CEO log (newest first)
 
+## Sun 03:29: blind-atlas check: unchanged (origin/gemini-atlas still 89294e0e, already merged; SUBMISSION numbers already from atlas_blind.json)
+
+## Sun 03:01: ablations merged (PR #55); §4 is now measured
+- Merged origin/gemini-ablations (b4dc1e68): no PR #9; code changes are an opt-in --no-thought-signatures flag (default off). Every §4 number verified in results/gemini/ablations.md/json: signatures OFF → 10/10 episodes rejected (Wilson [72.2, 100]), ON → 0/628 errors; caching $58.56 → $21.72 on 464 atlas calls (62.9%), 75.9% ($678.19 of $893.08) over 29,150 calls (storage cost not ledgered); thinking sweep −32% → 78% for 3.6-flash on hard, 17/34 cells exclude parity. One-pager §4 = 3 compact sentences; LONG §4 = full sentences + caveat.
+
+## Sun 02:41: SUBMISSION.md is now one page
+- Bake-off (80/100) clarity fix: SUBMISSION.md rewritten as a one-pager (~610 words body): 4 required questions, frontier.png headline chart, results table (ladder, red team, blind atlas, usage; jury row if WS2 merges), honesty notes in 5 bullets, reproduce. The previous full text moved verbatim to SUBMISSION-LONG.md. No new numbers; all re-verified (swarm hard best_unjustified 0.38, review solver mean 0.55, in-run 0.49). Did NOT adopt the grader's '3.6-flash matches the solver' headline (false at n=20).
+
+## Sun 02:35: n=20 ladder weakens the 3.6-flash headline; text rewritten
+- Merged gemini-ladder (815de818/d35d778e): 417 eps. Hard: 3.6-flash 78% [28,151] medium / 71% [11,158] high, n=20, $0.42–0.43, 35/40 correct; gate now "not distinguishable … CIs are wide". Carbon high unchanged 106% [94,126], n=10, $1.93 (extension blocked by key saturation). Took the ladder's stricter headline_verb gate in ladder_report.py (kept justSilas's display helpers).
+- SUBMISSION short version/§1/§2/§3.1/§3.4 now lead with carbon-high ≈ solver; 3.6-flash = 4.5× cheaper, far less certain. All "matches/within the CI" claims for 3.6-flash removed. frontier.png added as headline chart. Gemma: n=4, exploratory only.
+- VIDEO-2MIN VO[03-ladder] still narrated the old n=8 claim; script rewritten to the n=20 numbers. The 05:50 freeze must re-narrate 03-ladder too (or caption the video as superseded).
+
+## Sun 01:50: gap re-check: unchanged
+- gap.md headline rows on justSilas fad43d07 match SUBMISSION.md (OpenCode hard 65% [24%, 98%], LA 72% [52%, 91%], n=30; in-process hard 95%; OpenCode medium 111%). The new expert-tier verdict (244434fc, 84% [52, 128] LA, n=13) is in the "did not widen the gap" section; expert tier dropped at the gate, so no SUBMISSION change. PR #41 was merged by the Arena CEO (8cd20d9e).
+
 ## Sun 01:10: PR 2 built on clean gemini-pr2
 - Base 5ca3ea3 (gemini-track before PR #9). PR #9 (fr8/gemini/main, 662 out-of-scope files) excluded per Arena CEO; gemini-track left untouched.
 - PR #21's c334815 + 21abd88 cherry-picked (GitHub merge was permission-denied). Merged gemini-ladder, -atlas, -swarm. gemini-dashboard contained PR #9 (via be10a124), so only its own diff 1bcf1ee..40e1cc7b was applied (51 in-scope files; key files byte-identical).

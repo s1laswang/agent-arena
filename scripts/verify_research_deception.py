@@ -91,6 +91,8 @@ STALE_CLAIM_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("superseded_60_ci", re.compile(r"60%\s*\[\s*1%?\s*,\s*103%?\s*\]")),
     ("superseded_68_ci", re.compile(r"68%\s*\[\s*43%?\s*,\s*91%?\s*\]")),
     ("unapproved_flash_gap_row", re.compile(r"gemini-3\.[56]-flash", re.IGNORECASE)),
+    ("preregistered_seeds_0_29", re.compile(r"pre-regist\w*[^.\n]{0,40}\b0\s*-\s*29\b|\b0\s*-\s*29\b[^.\n]{0,40}pre-regist", re.IGNORECASE)),
+    ("false_tiebreak_win", re.compile(r"tiebreak\w*[^.\n]{0,40}beats?\s+(?:the\s+)?base", re.IGNORECASE)),
 )
 
 CANARY_GROUNDING_MARKERS: tuple[str, ...] = (

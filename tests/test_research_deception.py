@@ -331,6 +331,12 @@ def test_repo_numbers_catches_mismatches_and_stale_claims(tmp_path):
     assert res_flash.status == "FAIL"
     assert any("unapproved_flash_gap_row" in d for d in res_flash.details)
 
+    prereg_doc = tmp_path / "prereg.md"
+    prereg_doc.write_text(_valid_research_markdown() + "\nPre-registered dev seeds 0-29.\n", encoding="utf-8")
+    res_prereg = V.check_repo_numbers(ROOT, [prereg_doc])
+    assert res_prereg.status == "FAIL"
+    assert any("preregistered_seeds_0_29" in d for d in res_prereg.details)
+
 
 def test_proposals_and_protected_paths_guard(tmp_path):
     no_prop = tmp_path / "no_prop.md"

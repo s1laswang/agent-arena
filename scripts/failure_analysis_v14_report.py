@@ -442,7 +442,9 @@ def _hint_section(H: dict) -> list[str]:
     per = ", ".join(f"seed {k}: {v}" for k, v in inv["per_seed"].items()) or "none"
     why = ", ".join(f"{k} {v}" for k, v in inv["by_reason"].items())
     L += ["", f"Infra-invalid attempts excluded and retried (never scored): {inv['total']}"
-          + (f" ({why}); per seed: {per}." if inv["total"] else ".")]
+          + (f" ({why}); per seed: {per}." if inv["total"] else ".")
+          + (" *stopped_at_key_switch* = attempts we stopped, before any result existed, when the run moved between API "
+             "keys to escape a saturated quota." if "stopped_at_key_switch" in inv["by_reason"] else "")]
     L += ["", f"Reproduce: `uv run python scripts/failure_analysis_v14.py` (the hinted episodes are in "
           f"`data/runs/committed/v1.4/opencode-gemini-4-carbon-hint-gather/hard/`, replay-verified). n = {n} is small: read the "
           f"CIs, not the point estimates.", ""]

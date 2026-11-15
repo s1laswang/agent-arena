@@ -328,7 +328,8 @@ def compute() -> dict:
             sd = x.split(":", 1)[0].split("-")[2]
             per[sd] = per.get(sd, 0) + 1
             r = "provider_quota" if "quota" in x else "empty_model_response" if "empty_model" in x else \
-                "cli_error_event" if "cli_error" in x else "provider_unavailable" if "unavailable" in x else "other"
+                "cli_error_event" if "cli_error" in x else "provider_unavailable" if "unavailable" in x else \
+                "stopped_at_key_switch" if "no episode written" in x else "other"
             reasons[r] = reasons.get(r, 0) + 1
         data["summary"]["hint"]["infra_invalid"] = {"total": len(exc), "per_seed": dict(sorted(per.items(), key=lambda kv: int(kv[0]))),
                                                     "by_reason": dict(sorted(reasons.items()))}

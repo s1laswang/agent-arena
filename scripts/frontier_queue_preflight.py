@@ -44,11 +44,14 @@ EXPECTED_CARBON_HARD_MISSING = [
 ]
 EXPECTED_G1_COMMITTED_EXT_LANDED = [34, 37]
 EXPECTED_G1_COMMITTED_EXT_QUOTA_EXCLUDED = 31
+EXPECTED_GPT55_COMMITTED_LANDED = list(range(30))
+EXPECTED_GPT55_CLEAN_UNENDED_SEEDS = [0, 17]
+EXPECTED_GPT55_INFRA_EXCLUDED = 0
 EXPECTED_COMBINED_CARBON_HARD_EXT_LANDED = [30, 34, 37, 42, 45, 57]
 EXPECTED_COMBINED_CARBON_HARD_EXT_REMAINING_COUNT = 24
-EXPECTED_COMMITTED_V14_EPISODES = 442
+EXPECTED_COMMITTED_V14_EPISODES = 472
 EXPECTED_REPLICATION_V14_EPISODES = 305
-EXPECTED_COMBINED_V14_EPISODES = 747
+EXPECTED_COMBINED_V14_EPISODES = 777
 EXPECTED_FLASH_MEDIUM_LANDED = list(range(30))
 EXPECTED_FLASH_MEDIUM_MISSING: list[int] = []
 EXPECTED_FLASH_HARD_LANDED: list[int] = []
@@ -61,7 +64,9 @@ PANEL_STATUS_COMMIT = "8b9afa61"
 PANEL_FIX_A_COMMIT = "92708834"
 PANEL_FIX_D_COMMIT = "1bc3e281"
 GPT55_PREREG_COMMIT = "cf394894"
-UPSTREAM_RECONCILED_COMMIT = "58716742"
+GPT55_COMMITTED_COMMIT = "ca0a0dc0"
+GPT55_COMMITTED_DIR = "data/runs/committed/v1.4/opencode-gpt-5.5/hard"
+UPSTREAM_RECONCILED_COMMIT = "5f9b3297"
 PRIMARY_EPISODES_COMMIT = "8fd4dec"
 PRIMARY_POST_HOC_LOCK_COMMIT = "671ed96"
 PRIMARY_POST_HOC_LOCK_DELAY_S = 28
@@ -176,7 +181,9 @@ GPT55_TEMPLATE_COHORTS: tuple[dict[str, Any], ...] = (
         "stop_launch_at": "08:15",
         "hard_drop_at": "08:45",
         "pre_registered_commit": GPT55_PREREG_COMMIT,
-        "execution_owner": "silas_cf394894_panel_fix_c_no_key",
+        "committed_commit": GPT55_COMMITTED_COMMIT,
+        "committed_dir": GPT55_COMMITTED_DIR,
+        "execution_owner": "silas_ca0a0dc0_committed_complete",
         "fr8_dispatch_enabled": False,
     },
 )
@@ -253,11 +260,20 @@ def verify_episode_replay(ep: dict[str, Any]) -> bool:
         finally:
             _restore_dev_seeds(prev)
         _REPLAY_OUTCOME_CACHE[cache_key] = r
+    ep_final_day = int(ep.get("final_day") or 0)
+    ep_rc = (ep.get("meta") or {}).get("rc", -1)
+    clean_unended_exit = (
+        ep.get("accused") is None
+        and float(ep["score"]) == 0.0
+        and ep_final_day == 0
+        and not isinstance(ep_rc, bool)
+        and ep_rc == 0
+    )
     return (
         abs(float(r["score"]) - float(ep["score"])) < 1e-9
         and r["accused"] == ep.get("accused")
         and bool(r["correct"]) == bool(ep.get("correct"))
-        and int(r["final_day"]) == int(ep.get("final_day") or 0)
+        and (int(r["final_day"]) == ep_final_day or clean_unended_exit)
     )
 
 
@@ -538,6 +554,7 @@ def scan_committed_v14_tree(
 ) -> dict[str, Any]:
     committed_root = root / "data" / "runs" / "committed" / "v1.4"
     g1_ext_rel = "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard"
+    gpt55_rel = GPT55_COMMITTED_DIR
     errors: list[str] = []
     if not committed_root.is_dir():
         if enforce_expected_baseline:
@@ -547,23 +564,36 @@ def scan_committed_v14_tree(
             "present": False,
             "total_episodes": 0,
             "replay_verified_episodes": 0,
+            "landed_by_agent_tier": {},
             "g1_ext_dir": g1_ext_rel,
             "g1_ext_landed_seeds": [],
             "g1_ext_landed_count": 0,
             "g1_ext_provider_quota_excluded": 0,
             "g1_ext_records": {},
+            "gpt55_dir": gpt55_rel,
+            "gpt55_landed_seeds": [],
+            "gpt55_landed_count": 0,
+            "gpt55_clean_unended_seeds": [],
+            "gpt55_infra_excluded": 0,
+            "gpt55_records": {},
             "errors": errors,
         }
 
     ep_files = sorted(committed_root.rglob("episodes.jsonl"))
     total_valid = 0
     total_replay_ok = 0
+    landed_sets: dict[tuple[str, str], set[int]] = {}
     g1_ext_records: dict[int, dict[str, Any]] = {}
+    gpt55_records: dict[int, dict[str, Any]] = {}
+    gpt55_clean_unended_seeds: list[int] = []
     g1_ext_ep_file = root / g1_ext_rel / "episodes.jsonl"
+    gpt55_ep_file = root / gpt55_rel / "episodes.jsonl"
 
     for ep_file in ep_files:
         rel_file = ep_file.relative_to(root).as_posix()
-        is_g1_ext = ep_file.resolve() == g1_ext_ep_file.resolve()
+        ep_resolved = ep_file.resolve()
+        is_g1_ext = ep_resolved == g1_ext_ep_file.resolve()
+        is_gpt55 = ep_resolved == gpt55_ep_file.resolve()
         for line_no, raw_line in enumerate(ep_file.read_text(encoding="utf-8").splitlines(), start=1):
             if not raw_line.strip():
                 continue
@@ -578,6 +608,7 @@ def scan_committed_v14_tree(
                 errors.append(f"committed replay mismatch in {rel_file}:{line_no} ({agent} {tier} seed={seed})")
                 continue
             total_replay_ok += 1
+            landed_sets.setdefault((agent, tier), set()).add(seed)
             if is_g1_ext:
                 tr_path = ep_file.parent / "transcripts" / f"{seed}.txt"
                 g1_ext_records[seed] = {
@@ -585,6 +616,22 @@ def scan_committed_v14_tree(
                     "episode_file": rel_file,
                     "transcript_file": tr_path.relative_to(root).as_posix() if tr_path.is_file() else None,
                 }
+            if is_gpt55:
+                tr_path = ep_file.parent / "transcripts" / f"{seed}.txt"
+                gpt55_records[seed] = {
+                    "episode": ep,
+                    "episode_file": rel_file,
+                    "transcript_file": tr_path.relative_to(root).as_posix() if tr_path.is_file() else None,
+                }
+                ep_rc = (ep.get("meta") or {}).get("rc", -1)
+                if (
+                    ep.get("accused") is None
+                    and float(ep["score"]) == 0.0
+                    and int(ep.get("final_day") or 0) == 0
+                    and not isinstance(ep_rc, bool)
+                    and ep_rc == 0
+                ):
+                    gpt55_clean_unended_seeds.append(seed)
 
     g1_landed_seeds = sorted(g1_ext_records.keys())
     g1_meta_path = root / g1_ext_rel / "meta.json"
@@ -593,6 +640,14 @@ def scan_committed_v14_tree(
         g1_meta = json.loads(g1_meta_path.read_text(encoding="utf-8"))
         excl = list(g1_meta.get("infra_invalid_attempts_excluded") or [])
         quota_excluded = sum(1 for item in excl if "infra:provider_quota" in str(item))
+
+    gpt55_landed_seeds = sorted(gpt55_records.keys())
+    gpt55_clean_unended_seeds = sorted(gpt55_clean_unended_seeds)
+    gpt55_meta_path = root / gpt55_rel / "meta.json"
+    gpt55_infra_excluded = 0
+    if gpt55_meta_path.is_file():
+        gpt55_meta = json.loads(gpt55_meta_path.read_text(encoding="utf-8"))
+        gpt55_infra_excluded = len(list(gpt55_meta.get("infra_invalid_attempts_excluded") or []))
 
     if enforce_expected_baseline:
         if total_valid != EXPECTED_COMMITTED_V14_EPISODES or total_replay_ok != EXPECTED_COMMITTED_V14_EPISODES:
@@ -612,23 +667,82 @@ def scan_committed_v14_tree(
         for s in g1_landed_seeds:
             if g1_ext_records[s]["transcript_file"] is None:
                 errors.append(f"committed G1 ext seed {s} missing transcript file")
+        if gpt55_landed_seeds != EXPECTED_GPT55_COMMITTED_LANDED:
+            errors.append(
+                f"expected committed gpt-5.5 hard landed seeds {EXPECTED_GPT55_COMMITTED_LANDED}, got {gpt55_landed_seeds}"
+            )
+        if gpt55_clean_unended_seeds != EXPECTED_GPT55_CLEAN_UNENDED_SEEDS:
+            errors.append(
+                f"expected committed gpt-5.5 clean unended seeds {EXPECTED_GPT55_CLEAN_UNENDED_SEEDS}, "
+                f"got {gpt55_clean_unended_seeds}"
+            )
+        if gpt55_infra_excluded != EXPECTED_GPT55_INFRA_EXCLUDED:
+            errors.append(
+                f"expected {EXPECTED_GPT55_INFRA_EXCLUDED} infra excluded attempts in gpt-5.5 hard, "
+                f"got {gpt55_infra_excluded}"
+            )
+        for s in gpt55_landed_seeds:
+            if gpt55_records[s]["transcript_file"] is None:
+                errors.append(f"committed gpt-5.5 hard seed {s} missing transcript file")
 
     return {
         "committed_root": "data/runs/committed/v1.4",
         "present": True,
         "total_episodes": total_valid,
         "replay_verified_episodes": total_replay_ok,
+        "landed_by_agent_tier": {k: sorted(v) for k, v in landed_sets.items()},
         "g1_ext_dir": g1_ext_rel,
         "g1_ext_landed_seeds": g1_landed_seeds,
         "g1_ext_landed_count": len(g1_landed_seeds),
         "g1_ext_provider_quota_excluded": quota_excluded,
         "g1_ext_records": g1_ext_records,
+        "gpt55_dir": gpt55_rel,
+        "gpt55_landed_seeds": gpt55_landed_seeds,
+        "gpt55_landed_count": len(gpt55_landed_seeds),
+        "gpt55_clean_unended_seeds": gpt55_clean_unended_seeds,
+        "gpt55_infra_excluded": gpt55_infra_excluded,
+        "gpt55_records": gpt55_records,
         "errors": errors,
     }
 
 
+def _committed_landed_lookup_from_files(root: Path) -> dict[tuple[str, str], list[int]]:
+    committed_root = root / "data" / "runs" / "committed" / "v1.4"
+    if not committed_root.is_dir():
+        return {}
+    by_key: dict[tuple[str, str], set[int]] = {}
+    for ep_file in sorted(committed_root.rglob("episodes.jsonl")):
+        for raw_line in ep_file.read_text(encoding="utf-8").splitlines():
+            if not raw_line.strip():
+                continue
+            ep = json.loads(raw_line)
+            if (ep.get("meta") or {}).get("valid") is False:
+                continue
+            by_key.setdefault((str(ep.get("agent", "")), str(ep.get("tier", ""))), set()).add(int(ep["seed"]))
+    return {k: sorted(v) for k, v in by_key.items()}
+
+
+def reconcile_template_cohorts(
+    template_cohorts: tuple[dict[str, Any], ...] | list[dict[str, Any]] = TEMPLATE_COHORTS,
+    committed_landed_by_agent_tier: dict[tuple[str, str], list[int]] | None = None,
+) -> list[dict[str, Any]]:
+    lookup = committed_landed_by_agent_tier or {}
+    reconciled: list[dict[str, Any]] = []
+    for spec in template_cohorts:
+        lo, hi = int(spec["seed_range"][0]), int(spec["seed_range"][1])
+        target_seeds = list(range(lo, hi + 1))
+        committed_set = set(lookup.get((str(spec["agent"]), str(spec["tier"])), []))
+        landed_seeds = sorted(s for s in target_seeds if s in committed_set)
+        missing_seeds = sorted(s for s in target_seeds if s not in committed_set)
+        item = dict(spec)
+        item["landed_seeds"] = landed_seeds
+        item["missing_seeds"] = missing_seeds
+        reconciled.append(item)
+    return reconciled
+
+
 def serialize_template_cohorts(
-    template_cohorts: tuple[dict[str, Any], ...] = TEMPLATE_COHORTS,
+    template_cohorts: tuple[dict[str, Any], ...] | list[dict[str, Any]] = TEMPLATE_COHORTS,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for spec in template_cohorts:
@@ -652,7 +766,7 @@ def serialize_template_cohorts(
             "execution_owner": spec["execution_owner"],
             "fr8_dispatch_enabled": bool(spec.get("fr8_dispatch_enabled", False)),
         }
-        for opt_key in ("max_spend_usd", "stop_launch_at", "hard_drop_at"):
+        for opt_key in ("committed_commit", "committed_dir", "max_spend_usd", "stop_launch_at", "hard_drop_at"):
             if opt_key in spec:
                 row[opt_key] = spec[opt_key]
         rows.append(row)
@@ -748,9 +862,21 @@ def build_g2_template_waves(
 
 def build_gpt55_template_waves(
     max_workers_per_wave: int = MAX_WORKERS_PER_WAVE,
+    root: Path | None = ROOT,
+    committed_landed_by_agent_tier: dict[tuple[str, str], list[int]] | None = None,
+    include_committed: bool = False,
 ) -> list[dict[str, Any]]:
+    if include_committed:
+        cohorts = [dict(c) for c in GPT55_TEMPLATE_COHORTS]
+    else:
+        lookup = (
+            committed_landed_by_agent_tier
+            if committed_landed_by_agent_tier is not None
+            else (_committed_landed_lookup_from_files(root) if root is not None else {})
+        )
+        cohorts = reconcile_template_cohorts(GPT55_TEMPLATE_COHORTS, lookup)
     return partition_into_waves(
-        [dict(c) for c in GPT55_TEMPLATE_COHORTS],
+        cohorts,
         max_workers_per_wave=max_workers_per_wave,
         include_disabled=True,
     )
@@ -758,9 +884,21 @@ def build_gpt55_template_waves(
 
 def build_cross_family_template_waves(
     max_workers_per_wave: int = MAX_WORKERS_PER_WAVE,
+    root: Path | None = ROOT,
+    committed_landed_by_agent_tier: dict[tuple[str, str], list[int]] | None = None,
+    include_committed: bool = False,
 ) -> list[dict[str, Any]]:
+    if include_committed:
+        cohorts = [dict(c) for c in TEMPLATE_COHORTS]
+    else:
+        lookup = (
+            committed_landed_by_agent_tier
+            if committed_landed_by_agent_tier is not None
+            else (_committed_landed_lookup_from_files(root) if root is not None else {})
+        )
+        cohorts = reconcile_template_cohorts(TEMPLATE_COHORTS, lookup)
     return partition_into_waves(
-        [dict(c) for c in TEMPLATE_COHORTS],
+        cohorts,
         max_workers_per_wave=max_workers_per_wave,
         include_disabled=True,
     )
@@ -1295,6 +1433,7 @@ def check_transcript_redaction_and_infra(
     root: Path,
     records_by_agent_tier: dict[tuple[str, str], dict[int, dict[str, Any]]],
     committed_g1_ext_records: dict[int, dict[str, Any]] | None = None,
+    committed_gpt55_records: dict[int, dict[str, Any]] | None = None,
     enforce_expected_baseline: bool = True,
 ) -> dict[str, Any]:
     errors: list[str] = []
@@ -1417,11 +1556,24 @@ def check_transcript_redaction_and_infra(
             root, tr_rel, rec["episode"], unredacted_rx, errors
         )
 
+    committed_gpt55_checked = 0
+    committed_gpt55_total_steps = 0
+    for seed, rec in sorted((committed_gpt55_records or {}).items()):
+        tr_rel = rec.get("transcript_file")
+        if not tr_rel:
+            continue
+        committed_gpt55_checked += 1
+        committed_gpt55_total_steps += _audit_single_transcript(
+            root, tr_rel, rec["episode"], unredacted_rx, errors
+        )
+
     return {
         "passed": not errors,
         "synthetic_cases_verified": 9,
         "real_transcripts_checked": real_transcripts_checked,
         "committed_g1_ext_transcripts_checked": committed_g1_ext_checked,
+        "committed_gpt55_transcripts_checked": committed_gpt55_checked,
+        "committed_gpt55_total_steps": committed_gpt55_total_steps,
         "carbon_hard_step_counts": carbon_step_counts,
         "committed_g1_ext_step_counts": committed_g1_ext_step_counts,
         "flash_medium_s28_steps": flash_medium_s28_steps,
@@ -1434,6 +1586,9 @@ def build_provenance_honesty(
     committed_g1_quota_excluded: int,
     fr8_carbon_seeds: list[int],
     combined_carbon_ext_seeds: list[int],
+    committed_gpt55_seeds: list[int],
+    committed_gpt55_clean_unended_seeds: list[int],
+    committed_gpt55_infra_excluded: int,
 ) -> dict[str, Any]:
     return {
         "panel_doc": PANEL_DOC,
@@ -1491,9 +1646,12 @@ def build_provenance_honesty(
                 "stop_launch_at": "08:15",
                 "hard_drop_at": "08:45",
                 "pre_registered_commit": GPT55_PREREG_COMMIT,
-                "execution_owner": "silas_cf394894_panel_fix_c_no_key",
-                "panel_fix_c_status": "no_openai_or_anthropic_api_key",
-                "committed_n": 0,
+                "committed_commit": GPT55_COMMITTED_COMMIT,
+                "committed_dir": GPT55_COMMITTED_DIR,
+                "execution_owner": "silas_ca0a0dc0_committed_complete",
+                "committed_n": len(committed_gpt55_seeds),
+                "committed_infra_excluded": committed_gpt55_infra_excluded,
+                "clean_unended_rc0_seeds": committed_gpt55_clean_unended_seeds,
             },
         },
     }
@@ -1506,6 +1664,8 @@ def build_manifest(
 ) -> dict[str, Any]:
     scan = scan_replication_tree(root, TARGET_COHORTS, enforce_expected_baseline=enforce_expected_baseline)
     committed_scan = scan_committed_v14_tree(root, enforce_expected_baseline=enforce_expected_baseline)
+    committed_lookup = committed_scan.get("landed_by_agent_tier", {})
+    reconciled_templates = reconcile_template_cohorts(TEMPLATE_COHORTS, committed_lookup)
     waves = partition_into_waves(
         scan["cohorts"],
         max_workers_per_wave=max_workers_per_wave,
@@ -1513,8 +1673,20 @@ def build_manifest(
     )
     template_waves = build_template_waves(scan["cohorts"], max_workers_per_wave=max_workers_per_wave)
     g2_template_waves = build_g2_template_waves(max_workers_per_wave=max_workers_per_wave)
-    gpt55_template_waves = build_gpt55_template_waves(max_workers_per_wave=max_workers_per_wave)
-    cross_family_waves = build_cross_family_template_waves(max_workers_per_wave=max_workers_per_wave)
+    gpt55_template_waves = build_gpt55_template_waves(
+        max_workers_per_wave=max_workers_per_wave,
+        root=root,
+        committed_landed_by_agent_tier=committed_lookup,
+    )
+    gpt55_synthetic_waves = build_gpt55_template_waves(
+        max_workers_per_wave=max_workers_per_wave,
+        include_committed=True,
+    )
+    cross_family_waves = build_cross_family_template_waves(
+        max_workers_per_wave=max_workers_per_wave,
+        root=root,
+        committed_landed_by_agent_tier=committed_lookup,
+    )
 
     tiers_check = check_tiers_gate()
     config_check = check_opencode_config_isolation()
@@ -1525,23 +1697,35 @@ def build_manifest(
         root,
         scan.get("records_by_agent_tier", {}),
         committed_g1_ext_records=committed_scan.get("g1_ext_records", {}),
+        committed_gpt55_records=committed_scan.get("gpt55_records", {}),
         enforce_expected_baseline=enforce_expected_baseline,
     )
     active_cmd_check = validate_wave_commands(waves)
     template_cmd_check = validate_wave_commands(template_waves)
     g2_cmd_check = validate_wave_commands(g2_template_waves)
     gpt55_cmd_check = validate_wave_commands(gpt55_template_waves)
+    gpt55_syn_cmd_check = validate_wave_commands(gpt55_synthetic_waves)
     cmd_errors = (
         list(active_cmd_check["errors"])
         + list(template_cmd_check["errors"])
         + list(g2_cmd_check["errors"])
         + list(gpt55_cmd_check["errors"])
+        + list(gpt55_syn_cmd_check["errors"])
     )
     cohorts_by_id = {c["cohort_id"]: c for c in scan["cohorts"]}
     for w in waves:
         cohort_obj = cohorts_by_id.get(w["cohort_id"])
         if cohort_obj is not None and not cohort_obj.get("fr8_dispatch_enabled", False):
             cmd_errors.append(f"active wave {w['wave_id']} dispatches disabled cohort {w['cohort_id']}")
+    tmpl_by_id = {c["cohort_id"]: c for c in reconciled_templates}
+    for w in cross_family_waves:
+        t_obj = tmpl_by_id.get(w["cohort_id"])
+        if t_obj is not None:
+            overlap = sorted(set(w["seeds"]) & set(t_obj.get("landed_seeds", [])))
+            if overlap:
+                cmd_errors.append(
+                    f"cross-family template wave {w['wave_id']} queues committed seeds {overlap} for {w['cohort_id']}"
+                )
     cmd_check = {
         "passed": not cmd_errors,
         "active_waves_validated": len(waves),
@@ -1552,6 +1736,8 @@ def build_manifest(
         "g2_family_commands_validated": g2_cmd_check["commands_validated"],
         "gpt55_waves_validated": len(gpt55_template_waves),
         "gpt55_commands_validated": gpt55_cmd_check["commands_validated"],
+        "gpt55_synthetic_waves_validated": len(gpt55_synthetic_waves),
+        "gpt55_synthetic_commands_validated": gpt55_syn_cmd_check["commands_validated"],
         "cross_family_waves_validated": len(cross_family_waves),
         "cross_family_commands_validated": g2_cmd_check["commands_validated"] + gpt55_cmd_check["commands_validated"],
         "max_workers_per_wave": max_workers_per_wave,
@@ -1565,6 +1751,9 @@ def build_manifest(
     carbon_cohort = cohorts_by_id.get("opencode-gemini-4-carbon-hard-30-59", {})
     fr8_carbon_seeds = list(carbon_cohort.get("landed_seeds", []))
     committed_g1_seeds = list(committed_scan["g1_ext_landed_seeds"])
+    committed_gpt55_seeds = list(committed_scan["gpt55_landed_seeds"])
+    committed_gpt55_clean_unended = list(committed_scan["gpt55_clean_unended_seeds"])
+    committed_gpt55_infra_excluded = int(committed_scan["gpt55_infra_excluded"])
     combined_ext_seeds = sorted(set(committed_g1_seeds) | set(fr8_carbon_seeds))
     shared_ext_seeds = sorted(set(committed_g1_seeds) & set(fr8_carbon_seeds))
     combined_ext_remaining = sorted(set(range(30, 60)) - set(combined_ext_seeds))
@@ -1588,6 +1777,10 @@ def build_manifest(
                 f"expected {EXPECTED_COMBINED_CARBON_HARD_EXT_REMAINING_COUNT} remaining carbon hard 30-59 seeds, "
                 f"got {len(combined_ext_remaining)}"
             )
+        if len(gpt55_template_waves) != 0:
+            reconcile_errors.append(
+                f"expected 0 remaining gpt-5.5 template waves after ca0a0dc0 reconciliation, got {len(gpt55_template_waves)}"
+            )
 
     reconcile_check = {
         "passed": not reconcile_errors,
@@ -1602,6 +1795,9 @@ def build_manifest(
         "g1_fr8_landed_seeds": fr8_carbon_seeds,
         "g1_combined_distinct_seeds": combined_ext_seeds,
         "g1_combined_remaining_count": len(combined_ext_remaining),
+        "gpt55_committed_landed_count": len(committed_gpt55_seeds),
+        "gpt55_committed_clean_unended_seeds": committed_gpt55_clean_unended,
+        "gpt55_committed_infra_excluded": committed_gpt55_infra_excluded,
         "errors": reconcile_errors,
     }
 
@@ -1623,12 +1819,15 @@ def build_manifest(
     total_target = sum(c["target_count"] for c in scan["cohorts"])
     total_landed = sum(c["landed_count"] for c in scan["cohorts"])
     total_missing = sum(c["missing_count"] for c in scan["cohorts"])
-    template_cohort_rows = serialize_template_cohorts(TEMPLATE_COHORTS)
+    template_cohort_rows = serialize_template_cohorts(reconciled_templates)
     provenance_honesty = build_provenance_honesty(
         committed_g1_seeds=committed_g1_seeds,
         committed_g1_quota_excluded=committed_scan["g1_ext_provider_quota_excluded"],
         fr8_carbon_seeds=fr8_carbon_seeds,
         combined_carbon_ext_seeds=combined_ext_seeds,
+        committed_gpt55_seeds=committed_gpt55_seeds,
+        committed_gpt55_clean_unended_seeds=committed_gpt55_clean_unended,
+        committed_gpt55_infra_excluded=committed_gpt55_infra_excluded,
     )
 
     return {
@@ -1673,6 +1872,17 @@ def build_manifest(
                 "shared_overlap_count": len(shared_ext_seeds),
                 "combined_remaining_seeds": combined_ext_remaining,
                 "combined_remaining_count": len(combined_ext_remaining),
+            },
+            "gpt55_hard_0_29_committed": {
+                "run_dir": committed_scan["gpt55_dir"],
+                "seed_range": [0, 29],
+                "target_count": 30,
+                "landed_count": len(committed_gpt55_seeds),
+                "remaining_count": 30 - len(committed_gpt55_seeds),
+                "clean_unended_rc0_seeds": committed_gpt55_clean_unended,
+                "infra_excluded": committed_gpt55_infra_excluded,
+                "pre_registered_commit": GPT55_PREREG_COMMIT,
+                "committed_commit": GPT55_COMMITTED_COMMIT,
             },
         },
         "provenance_honesty": provenance_honesty,
@@ -1721,7 +1931,12 @@ def build_manifest(
                 "stop_launch_at": "08:15",
                 "hard_drop_at": "08:45",
                 "pre_registered_commit": GPT55_PREREG_COMMIT,
-                "execution_owner": "silas_cf394894_panel_fix_c_no_key",
+                "committed_commit": GPT55_COMMITTED_COMMIT,
+                "committed_dir": GPT55_COMMITTED_DIR,
+                "committed_landed_count": len(committed_gpt55_seeds),
+                "remaining_count": 30 - len(committed_gpt55_seeds),
+                "clean_unended_rc0_seeds": committed_gpt55_clean_unended,
+                "execution_owner": "silas_ca0a0dc0_committed_complete",
                 "fr8_dispatch_enabled": False,
                 "allowed_during_carbon_blackout": True,
             },
@@ -1760,6 +1975,7 @@ def build_manifest(
             "g1_fr8_replication_episodes": len(fr8_carbon_seeds),
             "g1_combined_distinct_hard_ext_episodes": len(combined_ext_seeds),
             "g1_combined_remaining_hard_ext_episodes": len(combined_ext_remaining),
+            "gpt55_committed_hard_episodes": len(committed_gpt55_seeds),
             "fr8_dispatch_active_episodes": sum(w["worker_count"] for w in waves),
             "wave_count": len(waves),
             "max_workers_in_any_wave": max((w["worker_count"] for w in waves), default=0),
@@ -1769,6 +1985,7 @@ def build_manifest(
             "cross_family_template_commands_validated": (
                 g2_cmd_check["commands_validated"] + gpt55_cmd_check["commands_validated"]
             ),
+            "gpt55_synthetic_template_commands_validated": gpt55_syn_cmd_check["commands_validated"],
         },
         "cohorts": scan["cohorts"],
         "template_cohorts": template_cohort_rows,
@@ -1830,11 +2047,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.validate_template_waves:
         template_waves = build_template_waves(manifest["cohorts"])
-        cross_waves = build_cross_family_template_waves()
+        cross_waves = build_cross_family_template_waves(root=root)
+        gpt55_syn_waves = build_gpt55_template_waves(include_committed=True)
         val_t = validate_wave_commands(template_waves)
         val_cross = validate_wave_commands(cross_waves)
-        if not val_t["passed"] or not val_cross["passed"] or manifest["waves"] != []:
-            for err in val_t["errors"] + val_cross["errors"]:
+        val_gpt55_syn = validate_wave_commands(gpt55_syn_waves)
+        if not val_t["passed"] or not val_cross["passed"] or not val_gpt55_syn["passed"] or manifest["waves"] != []:
+            for err in val_t["errors"] + val_cross["errors"] + val_gpt55_syn["errors"]:
                 print(f"FAIL: {err}", file=sys.stderr)
             if manifest["waves"] != []:
                 print("FAIL: active waves must be empty in pure-CPU mode", file=sys.stderr)

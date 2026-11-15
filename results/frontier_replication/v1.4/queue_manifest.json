@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "tiers_version": "v1.4",
-  "upstream_reconciled_commit": "58716742",
+  "upstream_reconciled_commit": "5f9b3297",
   "replication_root": "results/frontier_replication/v1.4",
   "corpus_reconciliation": {
     "committed_v14": {
       "root": "data/runs/committed/v1.4",
-      "total_episodes": 442,
-      "replay_verified_episodes": 442
+      "total_episodes": 472,
+      "replay_verified_episodes": 472
     },
     "fr8_replication_v14": {
       "root": "results/frontier_replication/v1.4",
@@ -17,8 +17,8 @@
       "frontier_landed_episodes": 35,
       "frontier_missing_episodes": 55
     },
-    "combined_v14_total_episodes": 747,
-    "combined_v14_replay_verified_episodes": 747,
+    "combined_v14_total_episodes": 777,
+    "combined_v14_replay_verified_episodes": 777,
     "carbon_hard_30_59_extension": {
       "seed_range": [
         30,
@@ -86,6 +86,23 @@
         59
       ],
       "combined_remaining_count": 24
+    },
+    "gpt55_hard_0_29_committed": {
+      "run_dir": "data/runs/committed/v1.4/opencode-gpt-5.5/hard",
+      "seed_range": [
+        0,
+        29
+      ],
+      "target_count": 30,
+      "landed_count": 30,
+      "remaining_count": 0,
+      "clean_unended_rc0_seeds": [
+        0,
+        17
+      ],
+      "infra_excluded": 0,
+      "pre_registered_commit": "cf394894",
+      "committed_commit": "ca0a0dc0"
     }
   },
   "provenance_honesty": {
@@ -93,7 +110,7 @@
     "panel_status_commit": "8b9afa61",
     "panel_fix_a_commit": "92708834",
     "panel_fix_d_commit": "1bc3e281",
-    "upstream_reconciled_commit": "58716742",
+    "upstream_reconciled_commit": "5f9b3297",
     "cohorts": {
       "primary_carbon_0_29": {
         "classification": "post_hoc_lock",
@@ -172,9 +189,15 @@
         "stop_launch_at": "08:15",
         "hard_drop_at": "08:45",
         "pre_registered_commit": "cf394894",
-        "execution_owner": "silas_cf394894_panel_fix_c_no_key",
-        "panel_fix_c_status": "no_openai_or_anthropic_api_key",
-        "committed_n": 0
+        "committed_commit": "ca0a0dc0",
+        "committed_dir": "data/runs/committed/v1.4/opencode-gpt-5.5/hard",
+        "execution_owner": "silas_ca0a0dc0_committed_complete",
+        "committed_n": 30,
+        "committed_infra_excluded": 0,
+        "clean_unended_rc0_seeds": [
+          0,
+          17
+        ]
       }
     }
   },
@@ -249,7 +272,15 @@
       "stop_launch_at": "08:15",
       "hard_drop_at": "08:45",
       "pre_registered_commit": "cf394894",
-      "execution_owner": "silas_cf394894_panel_fix_c_no_key",
+      "committed_commit": "ca0a0dc0",
+      "committed_dir": "data/runs/committed/v1.4/opencode-gpt-5.5/hard",
+      "committed_landed_count": 30,
+      "remaining_count": 0,
+      "clean_unended_rc0_seeds": [
+        0,
+        17
+      ],
+      "execution_owner": "silas_ca0a0dc0_committed_complete",
       "fr8_dispatch_enabled": false,
       "allowed_during_carbon_blackout": true
     },
@@ -280,12 +311,12 @@
   "summary": {
     "passed": true,
     "pure_cpu_mode": true,
-    "committed_v14_total_episodes": 442,
-    "committed_v14_replay_verified_episodes": 442,
+    "committed_v14_total_episodes": 472,
+    "committed_v14_replay_verified_episodes": 472,
     "replication_total_episodes": 305,
     "replication_replay_verified_episodes": 305,
-    "combined_v14_total_episodes": 747,
-    "combined_v14_replay_verified_episodes": 747,
+    "combined_v14_total_episodes": 777,
+    "combined_v14_replay_verified_episodes": 777,
     "target_frontier_episodes": 90,
     "landed_frontier_episodes": 35,
     "missing_frontier_episodes": 55,
@@ -294,13 +325,15 @@
     "g1_fr8_replication_episodes": 5,
     "g1_combined_distinct_hard_ext_episodes": 6,
     "g1_combined_remaining_hard_ext_episodes": 24,
+    "gpt55_committed_hard_episodes": 30,
     "fr8_dispatch_active_episodes": 0,
     "wave_count": 0,
     "max_workers_in_any_wave": 0,
     "template_wave_count": 19,
     "template_commands_validated": 55,
-    "cross_family_template_wave_count": 30,
-    "cross_family_template_commands_validated": 90
+    "cross_family_template_wave_count": 20,
+    "cross_family_template_commands_validated": 60,
+    "gpt55_synthetic_template_commands_validated": 30
   },
   "cohorts": [
     {
@@ -516,12 +549,14 @@
         29
       ],
       "target_count": 30,
-      "landed_count": 0,
-      "missing_count": 30,
+      "landed_count": 30,
+      "missing_count": 0,
       "timeout_s": 7200,
       "pre_registered_commit": "cf394894",
-      "execution_owner": "silas_cf394894_panel_fix_c_no_key",
+      "execution_owner": "silas_ca0a0dc0_committed_complete",
       "fr8_dispatch_enabled": false,
+      "committed_commit": "ca0a0dc0",
+      "committed_dir": "data/runs/committed/v1.4/opencode-gpt-5.5/hard",
       "max_spend_usd": 200.0,
       "stop_launch_at": "08:15",
       "hard_drop_at": "08:45"
@@ -607,6 +642,8 @@
         "synthetic_cases_verified": 9,
         "real_transcripts_checked": 35,
         "committed_g1_ext_transcripts_checked": 2,
+        "committed_gpt55_transcripts_checked": 30,
+        "committed_gpt55_total_steps": 2075,
         "carbon_hard_step_counts": {
           "30": 112,
           "34": 83,
@@ -629,10 +666,12 @@
         "commands_validated": 55,
         "g2_family_waves_validated": 20,
         "g2_family_commands_validated": 60,
-        "gpt55_waves_validated": 10,
-        "gpt55_commands_validated": 30,
-        "cross_family_waves_validated": 30,
-        "cross_family_commands_validated": 90,
+        "gpt55_waves_validated": 0,
+        "gpt55_commands_validated": 0,
+        "gpt55_synthetic_waves_validated": 10,
+        "gpt55_synthetic_commands_validated": 30,
+        "cross_family_waves_validated": 20,
+        "cross_family_commands_validated": 60,
         "max_workers_per_wave": 3,
         "timeout_s": 3600,
         "gpt55_timeout_s": 7200,
@@ -657,12 +696,12 @@
       },
       "v14_corpus_reconciliation": {
         "passed": true,
-        "committed_v14_episodes": 442,
-        "committed_v14_replay_verified": 442,
+        "committed_v14_episodes": 472,
+        "committed_v14_replay_verified": 472,
         "replication_v14_episodes": 305,
         "replication_v14_replay_verified": 305,
-        "combined_v14_episodes": 747,
-        "combined_v14_replay_verified": 747,
+        "combined_v14_episodes": 777,
+        "combined_v14_replay_verified": 777,
         "g1_committed_landed_seeds": [
           34,
           37
@@ -684,6 +723,12 @@
           57
         ],
         "g1_combined_remaining_count": 24,
+        "gpt55_committed_landed_count": 30,
+        "gpt55_committed_clean_unended_seeds": [
+          0,
+          17
+        ],
+        "gpt55_committed_infra_excluded": 0,
         "errors": []
       }
     },

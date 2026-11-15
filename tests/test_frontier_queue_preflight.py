@@ -17,6 +17,7 @@ SCRIPT_PATH = ROOT / "scripts" / "frontier_queue_preflight.py"
 MANIFEST_PATH = ROOT / "results" / "frontier_replication" / "v1.4" / "queue_manifest.json"
 HASH_CHAR = chr(35)
 EM_DASH = "\u2014"
+EN_DASH = "\u2013"
 
 
 def _load_preflight():
@@ -42,19 +43,19 @@ def test_real_repo_manifest_reconciliation_and_provenance(repo_manifest):
     manifest = repo_manifest
     assert manifest["schema_version"] == 1
     assert manifest["tiers_version"] == "v1.4"
-    assert manifest["upstream_reconciled_commit"] == "58716742"
+    assert manifest["upstream_reconciled_commit"] == "5f9b3297"
 
     s = manifest["summary"]
     assert s["passed"] is True
     assert s["pure_cpu_mode"] is True
     assert manifest["preflight"]["passed"] is True
     assert manifest["preflight"]["zero_live_llm_calls"] is True
-    assert s["committed_v14_total_episodes"] == 442
-    assert s["committed_v14_replay_verified_episodes"] == 442
+    assert s["committed_v14_total_episodes"] == 472
+    assert s["committed_v14_replay_verified_episodes"] == 472
     assert s["replication_total_episodes"] == 305
     assert s["replication_replay_verified_episodes"] == 305
-    assert s["combined_v14_total_episodes"] == 747
-    assert s["combined_v14_replay_verified_episodes"] == 747
+    assert s["combined_v14_total_episodes"] == 777
+    assert s["combined_v14_replay_verified_episodes"] == 777
     assert s["target_frontier_episodes"] == 90
     assert s["landed_frontier_episodes"] == 35
     assert s["missing_frontier_episodes"] == 55
@@ -63,22 +64,35 @@ def test_real_repo_manifest_reconciliation_and_provenance(repo_manifest):
     assert s["g1_fr8_replication_episodes"] == 5
     assert s["g1_combined_distinct_hard_ext_episodes"] == 6
     assert s["g1_combined_remaining_hard_ext_episodes"] == 24
+    assert s["gpt55_committed_hard_episodes"] == 30
     assert s["fr8_dispatch_active_episodes"] == 0
     assert s["wave_count"] == 0
     assert s["max_workers_in_any_wave"] == 0
     assert s["template_wave_count"] == 19
     assert s["template_commands_validated"] == 55
-    assert s["cross_family_template_wave_count"] == 30
-    assert s["cross_family_template_commands_validated"] == 90
+    assert s["cross_family_template_wave_count"] == 20
+    assert s["cross_family_template_commands_validated"] == 60
+    assert s["gpt55_synthetic_template_commands_validated"] == 30
     assert manifest["waves"] == []
 
     rec = manifest["corpus_reconciliation"]
-    assert rec["committed_v14"]["total_episodes"] == 442
-    assert rec["committed_v14"]["replay_verified_episodes"] == 442
+    assert rec["committed_v14"]["total_episodes"] == 472
+    assert rec["committed_v14"]["replay_verified_episodes"] == 472
     assert rec["fr8_replication_v14"]["total_episodes"] == 305
     assert rec["fr8_replication_v14"]["replay_verified_episodes"] == 305
-    assert rec["combined_v14_total_episodes"] == 747
-    assert rec["combined_v14_replay_verified_episodes"] == 747
+    assert rec["combined_v14_total_episodes"] == 777
+    assert rec["combined_v14_replay_verified_episodes"] == 777
+    assert rec["gpt55_hard_0_29_committed"] == {
+        "run_dir": "data/runs/committed/v1.4/opencode-gpt-5.5/hard",
+        "seed_range": [0, 29],
+        "target_count": 30,
+        "landed_count": 30,
+        "remaining_count": 0,
+        "clean_unended_rc0_seeds": [0, 17],
+        "infra_excluded": 0,
+        "pre_registered_commit": "cf394894",
+        "committed_commit": "ca0a0dc0",
+    }
 
     ext = rec["carbon_hard_30_59_extension"]
     assert ext["committed_g1_partial"] == {
@@ -110,6 +124,11 @@ def test_real_repo_manifest_reconciliation_and_provenance(repo_manifest):
     assert p_cohorts["g2_argon_hydrogen_hard_0_29"]["pre_registered_commit"] == "f9fb7a4a"
     assert p_cohorts["gpt_5_5_hard_0_29"]["classification"] == "pre_registered"
     assert p_cohorts["gpt_5_5_hard_0_29"]["pre_registered_commit"] == "cf394894"
+    assert p_cohorts["gpt_5_5_hard_0_29"]["committed_commit"] == "ca0a0dc0"
+    assert p_cohorts["gpt_5_5_hard_0_29"]["committed_dir"] == "data/runs/committed/v1.4/opencode-gpt-5.5/hard"
+    assert p_cohorts["gpt_5_5_hard_0_29"]["committed_n"] == 30
+    assert p_cohorts["gpt_5_5_hard_0_29"]["committed_infra_excluded"] == 0
+    assert p_cohorts["gpt_5_5_hard_0_29"]["clean_unended_rc0_seeds"] == [0, 17]
 
     sessions = manifest["gemini_sessions"]
     assert sessions["source_doc"] == "docs/agents/GEMINI-SESSIONS.md"
@@ -126,6 +145,9 @@ def test_real_repo_manifest_reconciliation_and_provenance(repo_manifest):
         "google/gemini-4-argon",
         "google/gemini-4-hydrogen",
     ]
+    assert sessions["gpt55_hard_0_29"]["committed_landed_count"] == 30
+    assert sessions["gpt55_hard_0_29"]["remaining_count"] == 0
+    assert sessions["gpt55_hard_0_29"]["clean_unended_rc0_seeds"] == [0, 17]
 
     by_id = {c["cohort_id"]: c for c in manifest["cohorts"]}
     c_carbon = by_id["opencode-gemini-4-carbon-hard-30-59"]
@@ -156,12 +178,17 @@ def test_real_repo_manifest_reconciliation_and_provenance(repo_manifest):
     assert gpt55["model"] == "openai/gpt-5.5"
     assert gpt55["tier"] == "hard"
     assert gpt55["seed_range"] == [0, 29]
+    assert gpt55["target_count"] == 30
+    assert gpt55["landed_count"] == 30
+    assert gpt55["missing_count"] == 0
     assert gpt55["timeout_s"] == 7200
     assert gpt55["max_spend_usd"] == 200.0
     assert gpt55["stop_launch_at"] == "08:15"
     assert gpt55["hard_drop_at"] == "08:45"
     assert gpt55["pre_registered_commit"] == "cf394894"
-    assert gpt55["execution_owner"] == "silas_cf394894_panel_fix_c_no_key"
+    assert gpt55["committed_commit"] == "ca0a0dc0"
+    assert gpt55["committed_dir"] == "data/runs/committed/v1.4/opencode-gpt-5.5/hard"
+    assert gpt55["execution_owner"] == "silas_ca0a0dc0_committed_complete"
     assert gpt55["fr8_dispatch_enabled"] is False
 
 
@@ -196,7 +223,11 @@ def test_template_wave_validation_and_dispatch_gating(repo_manifest):
     assert val_g2["passed"] is True
     assert val_g2["commands_validated"] == 60
 
-    gpt55_waves = preflight.build_gpt55_template_waves()
+    gpt55_reconciled_waves = preflight.build_gpt55_template_waves()
+    assert gpt55_reconciled_waves == []
+    assert preflight.validate_wave_commands(gpt55_reconciled_waves)["commands_validated"] == 0
+
+    gpt55_waves = preflight.build_gpt55_template_waves(include_committed=True)
     assert len(gpt55_waves) == 10
     val_gpt55 = preflight.validate_wave_commands(gpt55_waves)
     assert val_gpt55["passed"] is True
@@ -210,8 +241,13 @@ def test_template_wave_validation_and_dispatch_gating(repo_manifest):
             assert "--timeout 7200" in j["command"]
 
     cross_waves = preflight.build_cross_family_template_waves()
-    assert len(cross_waves) == 30
-    assert preflight.validate_wave_commands(cross_waves)["commands_validated"] == 90
+    assert len(cross_waves) == 20
+    assert preflight.validate_wave_commands(cross_waves)["commands_validated"] == 60
+    assert all(w["cohort_id"] != "opencode-openai-gpt-5.5-hard-0-29" for w in cross_waves)
+
+    cross_syn_waves = preflight.build_cross_family_template_waves(include_committed=True)
+    assert len(cross_syn_waves) == 30
+    assert preflight.validate_wave_commands(cross_syn_waves)["commands_validated"] == 90
 
     enabled_copy = copy.deepcopy(manifest["cohorts"])
     for c in enabled_copy:
@@ -415,6 +451,8 @@ def test_all_transcripts_g1_ext_and_zip_export_safety(repo_manifest, tmp_path):
     assert tr_check["passed"] is True
     assert tr_check["real_transcripts_checked"] == 35
     assert tr_check["committed_g1_ext_transcripts_checked"] == 2
+    assert tr_check["committed_gpt55_transcripts_checked"] == 30
+    assert tr_check["committed_gpt55_total_steps"] > 0
     assert tr_check["committed_g1_ext_step_counts"] == {"34": 51, "37": 64}
     assert tr_check["real_transcripts_checked"] == manifest["summary"]["landed_frontier_episodes"]
     assert isinstance(tr_check["flash_medium_s28_steps"], int) and tr_check["flash_medium_s28_steps"] > 0
@@ -505,9 +543,44 @@ def test_write_check_roundtrip_and_replay_filtering(tmp_path):
     assert any("replay mismatch" in e for e in scan_bad["errors"])
 
 
+def test_gpt55_clean_unended_replay_verification():
+    gpt55_ep_path = ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gpt-5.5" / "hard" / "episodes.jsonl"
+    eps = [json.loads(line) for line in gpt55_ep_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert len(eps) == 30
+    by_seed = {int(e["seed"]): e for e in eps}
+    for s in (0, 17):
+        ep = by_seed[s]
+        assert ep["accused"] is None
+        assert float(ep["score"]) == 0.0
+        assert int(ep["final_day"]) == 0
+        assert ep["meta"]["rc"] == 0
+        assert preflight.verify_episode_replay(ep) is True
+
+        bad_timeout = copy.deepcopy(ep)
+        bad_timeout["meta"]["rc"] = "timeout"
+        assert preflight.verify_episode_replay(bad_timeout) is False
+
+        bad_rc = copy.deepcopy(ep)
+        bad_rc["meta"]["rc"] = 1
+        assert preflight.verify_episode_replay(bad_rc) is False
+
+        bad_bool = copy.deepcopy(ep)
+        bad_bool["meta"]["rc"] = False
+        assert preflight.verify_episode_replay(bad_bool) is False
+
+        bad_day = copy.deepcopy(ep)
+        bad_day["final_day"] = 1
+        assert preflight.verify_episode_replay(bad_day) is False
+
+        bad_score = copy.deepcopy(ep)
+        bad_score["score"] = 0.25
+        assert preflight.verify_episode_replay(bad_score) is False
+
+
 def test_task_w3_files_have_zero_comments_zero_em_dashes_and_size_cap():
     assert MANIFEST_PATH.stat().st_size <= 50 * 1024
     for path in (SCRIPT_PATH, Path(__file__).resolve(), MANIFEST_PATH):
         txt = path.read_text(encoding="utf-8")
         assert HASH_CHAR not in txt, f"found hash comment char in {path}"
         assert EM_DASH not in txt, f"found em dash in {path}"
+        assert EN_DASH not in txt, f"found en dash in {path}"

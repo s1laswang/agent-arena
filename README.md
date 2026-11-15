@@ -8,6 +8,8 @@
 
 A simulated company has one **mole** who leaks documents to a rival. Every leak costs company value V, which starts at 1.0. The agent is the head of security: it reads access logs and messages, interviews staff, restricts access and sets **canary traps**, sending different variants of a document to different groups and watching which variant leaks. It must accuse exactly once. A correct accusation scores the V that is left, a wrong one scores −1 and no accusation scores 0. The reference is a Bayesian canary-trap solver that uses the same public tools.
 
+**Tags.** `afterquery-final` (1bc3e281) is the code freeze: the judge rehearsal ran on exactly that commit. `afterquery-submit` (what you are reading) adds results and docs, plus fixes to measurement tooling only (the OpenCode runner, the replay check, the submission audit, two table scripts). `git diff afterquery-final..afterquery-submit -- canary/env.py canary/rules.py canary/solver canary/mcp_server.py canary/world.py canary/mole canary/text harbor` is empty.
+
 ## Result (rules v1.4, hard tier)
 
 | agent | score ± 95% CI | % of solver [95% CI] | n |

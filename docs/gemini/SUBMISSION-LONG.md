@@ -53,7 +53,7 @@ Every Gemini call goes through one client that writes one log row per call (`can
 - **The Failure Gallery is an exact code decomposition.** "0 unexplained" holds by construction. Gemini only names and explains the categories.
 - **The multimodal chart check is a consistency check, not independent discovery.** The charts plot code-computed solver beliefs. Gemini placed the divergence within 3 steps of the code's estimate in 8/8 episodes (`results/gemini/v2/atlas.json` `localisation`).
 - **No human-agreement number is claimed.**
-- **The AfterQuery gap depends on the harness.** Per the headline table in `docs/reports/gap.md` (justSilas 1bfb77d), gemini-4-carbon on v1.4 hard via OpenCode over MCP (the judges' harness) scores 65% [24%, 98%] of the reference solver at n=30 (luck-adjusted 72% [52%, 91%]); in-process on hard it scores 95% [62%, 140%] and via OpenCode on medium 111% [99%, 127%]. This submission makes no further frontier-gap claim.
+- **The AfterQuery gap depends on the harness.** Per the headline table in `docs/reports/gap.md` (justSilas 1bfb77d), gemini-4-carbon on v1.4 hard via OpenCode over MCP (the judges' harness) scores 65% [24%, 98%] of the reference solver at n=30, and 72% [52%, 91%] luck-adjusted (graded by the solver's own posterior); in-process on hard it scores 95% [62%, 140%] and via OpenCode on medium 111% [99%, 127%]. This submission makes no further frontier-gap claim.
 
 ## 4. Why Gemini is essential (measured, `results/gemini/ablations.md`)
 - **Thought signatures are load-bearing:** with signature replay stripped, the API rejected the first function-call replay on 10/10 hard-tier episodes of gemini-3.8-flash (400 INVALID_ARGUMENT, "Function call is missing a thought_signature"; Wilson 95% CI [72.2, 100.0]), so 0 episodes were playable, versus 10/10 played with replay on (0/628 API errors, accuracy 70.0% [39.7, 89.2]).
@@ -64,9 +64,9 @@ Every Gemini call goes through one client that writes one log row per call (`can
 ## Gemini across the team (breadth)
 Gemini is used in all three of our Junction challenges, most heavily here.
 - **Valio Aimo** (github.com/s1laswang/junction-aimo-agents, [`docs/GEMINI.md`](https://github.com/s1laswang/junction-aimo-agents/blob/main/docs/GEMINI.md)):
-  - The buyer agent uses function calling on gemini-3.8-flash and escalates 19% of steps to gemini-4-hydrogen at high thinking.
+  - The buyer agent uses function calling on gemini-3.8-flash and escalates 5/34 agent steps (15%) to gemini-4-hydrogen at high thinking (final code, Sun 02:54 re-record).
   - gemini-embedding-2 drives catalog substitution.
-  - Compacting the tool results the agent re-sends with each call cut cost per order by 59%.
+  - Compacting the tool results the agent re-sends with each call cut cost per order from $0.0822 to $0.0352 (−57%).
   - All 6 of 6 scenarios in the live demo montage pass.
 - **Meta glasses: HoldUp** (github.com/s1laswang/junction-meta-glasses, [`GEMINI.md`](https://github.com/s1laswang/junction-meta-glasses/blob/main/GEMINI.md)), a hands-free label checker for blind and low-vision users:
   - the Live API with function calling mid-stream;

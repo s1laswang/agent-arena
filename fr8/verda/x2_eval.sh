@@ -10,6 +10,6 @@ export CANARY_WORLD_SECRET="$(cat /root/x2/world_secret)"
 cd /root/x2/agent-arena
 python -c "import json,sys; p='$ADAPTER/adapter_config.json'; c=json.load(open(p)); c['base_model_name_or_path']='/root/models/Qwen2.5-1.5B-Instruct'; json.dump(c,open(p,'w'),indent=1)"
 python -m train.eval_hf --model "$ADAPTER" --tiers easy,medium,hard --seeds heldout --n "$N" --seed-offset "$OFFSET" \
-  --max-calls 120 --max-new-tokens 96 --max-ctx ${CTX:-8192} --max-minutes ${EVAL_MIN:-130} --out /root/x2/evals --run-id "$RUN" \
+  --max-calls 120 --max-new-tokens ${NEW:-96} --max-ctx ${CTX:-8192} --max-minutes ${EVAL_MIN:-130} --out /root/x2/evals --run-id "$RUN" \
   > /root/x2/eval-$RUN.log 2>&1
 touch /root/x2/evals/DONE-$RUN

@@ -16,7 +16,7 @@ Each instance runs an on-instance reaper that deletes it at its deadline; ask FR
 | f4378173-9608-4361-bc6c-8f2b9e482819 | 1A100.22V (80 GB) on-demand | FIN-03 | 2.1589 | 15 Nov 01:08 | reaper 07:30 | FR8: v3-8k s3 (4th replicate; no other job ready: HF_TOKEN missing, 8k adapters not yet trained) | running |
 | 18acfa5d-b5f9-4e64-a652-0de05a9f4c15 | 1A100.22V (80 GB) on-demand | FIN-01 | 2.1589 | 15 Nov 02:17 | reaper 07:30 | FR8: backup base eval, held-out seeds 6-35/tier, 150 min (FR8 44584 unreachable: FR8 SSH down) | running |
 | 714d8144-c036-4814-999d-a38ed192a48f | 1A100.22V (80 GB) spot | FIN-01 | 1.0794 | 15 Nov 02:39 | reaper 07:30 | FR8: v3-4k s1 (replicate of the 4k row; 2 h train + 60 min eval → ~05:50) | running |
-| e9ea8b2e-ed28-4325-b2c7-0345f6af3bd1 | 1A100.40S.22V (40 GB) on-demand | FIN-02 | 1.5373 | 15 Nov 03:02 | reaper 08:00 | X2 DAgger box 2 (pre-staged: v3 stack, base 1.5B, v3-4k s0 adapter in /root/x2); waits for x2's spec | prepping |
+| e9ea8b2e-ed28-4325-b2c7-0345f6af3bd1 | 1A100.40S.22V (40 GB) on-demand | FIN-02 | 1.5373 | 15 Nov 03:02 | reaper 08:00 | X2 DAgger box 2: x2-dagger-a6 (vLLM rollouts of v3-4k s0 → solver relabel → LoRA SFT 8k → held-out eval) | running |
 
 Balance: €200.00 at start → €191.71 at 00:20 (account shows €200 of credit; Silas mentions €400 total, so a teammate's credit is in another account).
 Capacity: Verda A100/A6000/L40S on-demand and spot have been near zero all night; FR8 polls and launches queued workloads as capacity appears.

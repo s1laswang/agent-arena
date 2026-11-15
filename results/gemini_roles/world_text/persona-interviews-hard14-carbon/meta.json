@@ -1,0 +1,75 @@
+{
+  "command": "PYTHONPATH=. python -m canary.gemini.interview_interrogator --llm gemini:gemini-4-carbon --specs hard:1,hard:2,hard:3,hard:4 --worlds-dir /tmp/opencode/w1-worlds --jobs 6 --out results/gemini_roles/world_text/persona-interviews-hard14-carbon",
+  "commit": "e742ebe31e5a03cb2bf10faccae93e5989b8a1d6",
+  "count": 32,
+  "counterfactual_prompt_invariance_rate": 1.0,
+  "fake_env": false,
+  "fallback_count": 0,
+  "key_metric": "32 live interviews (4 worlds), 0 leaks, signal acc 100%, solver +0.605 vs +0.570",
+  "ledger_run_id": "persona-interviews-20261114T235627Z",
+  "lint_violations": 0,
+  "llm_ok_count": 32,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "n_interviews_generated": 32,
+  "n_samples": 32,
+  "n_worlds": 4,
+  "pairwise_signal_ordering_rate": 1.0,
+  "prompt_truth_leak_violations": 0,
+  "raw_llm_violations": 0,
+  "role": "world_text",
+  "sample_count": 32,
+  "signal_calibration_accuracy": 1.0,
+  "signal_calibration_ok": true,
+  "signals_covered": [
+    "evasive",
+    "cooperative"
+  ],
+  "smoke": false,
+  "solver_accuracy": 1.0,
+  "solver_mean_score": 0.605,
+  "solver_parity_ok": true,
+  "solver_score_delta": 0.035,
+  "stego_leak_violations": 0,
+  "stub": false,
+  "subrole": "persona_interviews",
+  "template_baseline_accuracy": 1.0,
+  "template_baseline_mean_score": 0.57,
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T23:58:37+00:00",
+  "topics_covered": [
+    "recent_documents",
+    "contacts_outside",
+    "workload",
+    "access_needs"
+  ],
+  "truth_leak_violations": 0,
+  "usage": {
+    "cached": 0,
+    "calls": 32,
+    "cost_usd": 0.176076,
+    "in": 31608,
+    "latency_s": 130.217,
+    "out": 2376,
+    "thinking": 8910,
+    "total_tokens": 42894
+  },
+  "world_specs": [
+    {
+      "seed": 1,
+      "tier": "hard"
+    },
+    {
+      "seed": 2,
+      "tier": "hard"
+    },
+    {
+      "seed": 3,
+      "tier": "hard"
+    },
+    {
+      "seed": 4,
+      "tier": "hard"
+    }
+  ]
+}

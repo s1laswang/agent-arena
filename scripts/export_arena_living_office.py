@@ -55,10 +55,9 @@ SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 MULTI_SPACE_RE = re.compile(r"\s+")
 
 BANNER_TEXT = (
-    "OFF-BY-DEFAULT v1.6 PREVIEW: Did NOT pass Gate B gap gate "
-    "(v1.5 biased employees moved gemini-4-carbon 61% -> 108% of SolverPolicy on hard seeds 0-9; "
-    "relayed v1.6 0.617 vs 0.523 v1.4 control); "
-    "100% offline cached gemini-4-carbon chatter, 0 API calls, 0 solver score drift (0.576 == 0.576)."
+    "OFF-BY-DEFAULT v1.6 PREVIEW: Did NOT pass Gate B gap gate (LA 0.452 vs 0.493 control); "
+    "100% offline cached gemini-4-carbon chatter, 0 score drift; "
+    "v1.5 biased employees moved gemini-4-carbon 61% -> 108% of SolverPolicy on hard seeds 0-9."
 )
 
 PRE_END_FORBIDDEN_KEYS: frozenset[str] = frozenset({
@@ -476,6 +475,7 @@ def build_pack_dict(
                         "dept": g_entry["dept"],
                         "reason": f"doc review {noun} ({inc}x through D{last_d:02d})",
                         "incidents": inc,
+                        "since_day": int(g_entry["first_day"]),
                         "first_day": int(g_entry["first_day"]),
                         "last_day": last_d,
                     })

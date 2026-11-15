@@ -21,7 +21,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
   ],
   "max_day": 21,
   "active_social_days": 18,
-  "banner": "OFF-BY-DEFAULT v1.6 PREVIEW: Did NOT pass Gate B gap gate (v1.5 biased employees moved gemini-4-carbon 61% -> 108% of SolverPolicy on hard seeds 0-9; relayed v1.6 0.617 vs 0.523 v1.4 control); 100% offline cached gemini-4-carbon chatter, 0 API calls, 0 solver score drift (0.576 == 0.576).",
+  "banner": "OFF-BY-DEFAULT v1.6 PREVIEW: Did NOT pass Gate B gap gate (LA 0.452 vs 0.493 control); 100% offline cached gemini-4-carbon chatter, 0 score drift; v1.5 biased employees moved gemini-4-carbon 61% -> 108% of SolverPolicy on hard seeds 0-9.",
   "gate_b_disclosure": {
     "gateBPassed": false,
     "gate_b_passed": false,
@@ -599,6 +599,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clash (1x through D01)",
               "incidents": 1,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 1
             }
@@ -856,6 +857,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clash (1x through D01)",
               "incidents": 1,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 1
             },
@@ -867,6 +869,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -1046,6 +1049,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clash (1x through D01)",
               "incidents": 1,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 1
             },
@@ -1057,6 +1061,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -1281,6 +1286,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -1292,6 +1298,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -1441,6 +1448,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -1452,6 +1460,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -1709,6 +1718,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -1720,6 +1730,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -1899,6 +1910,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -1910,6 +1922,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -2167,6 +2180,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -2178,6 +2192,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -2357,6 +2372,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -2368,6 +2384,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -2625,6 +2642,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -2636,6 +2654,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -2893,6 +2912,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -2904,6 +2924,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -3128,6 +3149,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -3139,6 +3161,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -3288,6 +3311,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -3299,6 +3323,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -3556,6 +3581,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -3567,6 +3593,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -3746,6 +3773,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -3757,6 +3785,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -3873,6 +3902,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -3884,6 +3914,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -3999,6 +4030,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -4010,6 +4042,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -4189,6 +4222,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -4200,6 +4234,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -4220,6 +4255,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -4231,6 +4267,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -4251,6 +4288,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -4262,6 +4300,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -4282,6 +4321,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Engineering",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -4293,6 +4333,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -4869,6 +4910,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clash (1x through D01)",
               "incidents": 1,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 1
             }
@@ -5064,6 +5106,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clash (1x through D01)",
               "incidents": 1,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 1
             },
@@ -5075,6 +5118,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -5254,6 +5298,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clash (1x through D01)",
               "incidents": 1,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 1
             },
@@ -5265,6 +5310,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -5431,6 +5477,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -5442,6 +5489,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -5559,6 +5607,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -5570,6 +5619,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -5827,6 +5877,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -5838,6 +5889,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -6017,6 +6069,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -6028,6 +6081,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -6254,6 +6308,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -6265,6 +6320,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -6444,6 +6500,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -6455,6 +6512,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -6712,6 +6770,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -6723,6 +6782,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -6980,6 +7040,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -6991,6 +7052,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -7186,6 +7248,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -7197,6 +7260,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -7376,6 +7440,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -7387,6 +7452,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -7644,6 +7710,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -7655,6 +7722,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -7834,6 +7902,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -7845,6 +7914,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -7989,6 +8059,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -8000,6 +8071,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -8179,6 +8251,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -8190,6 +8263,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -8369,6 +8443,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -8380,6 +8455,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -8400,6 +8476,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -8411,6 +8488,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -8431,6 +8509,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -8442,6 +8521,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -8462,6 +8542,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Finance",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -8473,6 +8554,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Research",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -9080,6 +9162,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clash (1x through D01)",
               "incidents": 1,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 1
             }
@@ -9337,6 +9420,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clash (1x through D01)",
               "incidents": 1,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 1
             },
@@ -9348,6 +9432,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -9527,6 +9612,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clash (1x through D01)",
               "incidents": 1,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 1
             },
@@ -9538,6 +9624,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -9795,6 +9882,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -9806,6 +9894,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -9925,6 +10014,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -9936,6 +10026,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clash (1x through D02)",
               "incidents": 1,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 2
             }
@@ -10193,6 +10284,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -10204,6 +10296,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -10383,6 +10476,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D04)",
               "incidents": 2,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 4
             },
@@ -10394,6 +10488,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -10651,6 +10746,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -10662,6 +10758,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -10841,6 +10938,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -10852,6 +10950,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -11109,6 +11208,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -11120,6 +11220,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -11377,6 +11478,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (3x through D08)",
               "incidents": 3,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 8
             },
@@ -11388,6 +11490,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -11616,6 +11719,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -11627,6 +11731,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -11775,6 +11880,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -11786,6 +11892,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -12043,6 +12150,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -12054,6 +12162,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -12233,6 +12342,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (4x through D12)",
               "incidents": 4,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 12
             },
@@ -12244,6 +12354,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -12423,6 +12534,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -12434,6 +12546,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -12613,6 +12726,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -12624,6 +12738,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -12803,6 +12918,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -12814,6 +12930,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -12834,6 +12951,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -12845,6 +12963,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -12865,6 +12984,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -12876,6 +12996,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }
@@ -12896,6 +13017,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (5x through D16)",
               "incidents": 5,
+              "since_day": 1,
               "first_day": 1,
               "last_day": 16
             },
@@ -12907,6 +13029,7 @@ export const CANARY_LIVING_OFFICE_PACK = {
               "dept": "Legal",
               "reason": "doc review clashes (2x through D06)",
               "incidents": 2,
+              "since_day": 2,
               "first_day": 2,
               "last_day": 6
             }

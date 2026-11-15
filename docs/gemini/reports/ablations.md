@@ -1,5 +1,7 @@
 # gemini-ablations report
 
+DONE 02:59 — PR #55, §4 text sent to ceo lite
+
 ## Sun Nov 15 02:46:56 EET 2026
 - Added opt-in `LedgeredClient(drop_signatures=True)` / `lab_client(..., drop_signatures=True)` and `ladder --no-thought-signatures` (recorded in meta.json as `thought_signatures: false`, provider_settings `thought_signature_replay: false`). Off by default; tests/test_gemini_lab_ablations.py.
 - Sig-OFF arm (gemini-3.8-flash medium hard seeds 0-9, run ablation-sig-off): 10/10 episodes infra-invalid. Every first call OK, every second call (first function-call replay) 400 INVALID_ARGUMENT "Function call is missing a thought_signature in functionCall parts". Concurrency 8 launched all 10 seeds before the stop; stopped after attempt 1 (20 calls total, own PID only). Evidence: results/gemini/ablations_sig_off/.

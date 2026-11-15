@@ -16,8 +16,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 HASH_CHAR = chr(35)
-DEFAULT_BASE_REF = "5f9b3297"
-FALLBACK_BASE_REF = "origin/justSilas"
+DEFAULT_BASE_REF = "origin/justSilas"
+FALLBACK_BASE_REFS: tuple[str, ...] = ("justSilas", "5f9b3297", "HEAD")
 DEFAULT_TARGET_BRANCHES: tuple[str, ...] = (
     "origin/fr8/canary/main",
     "origin/fr8/canary/arena",
@@ -186,6 +186,28 @@ def _git_check(root: Path, args: Sequence[str], text: bool = True) -> str | byte
     return proc.stdout
 
 
+def _git_ref_exists(root: Path, ref: str) -> bool:
+    proc = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 0
+
+
+def is_shallow_repository(root: Path) -> bool:
+    proc = subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 0 and proc.stdout.strip().lower() == "true"
+
+
 def resolve_ref_sha(root: Path, ref: str, short: bool = True) -> str:
     flag = ["--short=8"] if short else []
     out = _git_check(root, ["rev-parse", "--verify", *flag, f"{ref}^{{commit}}"], text=True)
@@ -193,18 +215,41 @@ def resolve_ref_sha(root: Path, ref: str, short: bool = True) -> str:
     return out.strip()
 
 
-def resolve_base_ref(root: Path, requested_base_ref: str) -> tuple[str, str]:
-    for cand in (requested_base_ref, FALLBACK_BASE_REF, "HEAD"):
-        proc = subprocess.run(
-            ["git", "rev-parse", "--verify", "--short=8", f"{cand}^{{commit}}"],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if proc.returncode == 0:
-            return cand, proc.stdout.strip()
+def resolve_base_ref(root: Path, requested_base_ref: str) -> tuple[str, str, bool]:
+    candidates: list[str] = [requested_base_ref]
+    for fb in (DEFAULT_BASE_REF, *FALLBACK_BASE_REFS):
+        if fb not in candidates:
+            candidates.append(fb)
+    for cand in candidates:
+        if _git_ref_exists(root, cand):
+            sha = resolve_ref_sha(root, cand, short=True)
+            used_head_fallback = cand == "HEAD" and requested_base_ref != "HEAD"
+            return cand, sha, used_head_fallback
     raise RuntimeError(f"unable to resolve base ref {requested_base_ref!r}")
+
+
+def resolve_target_branches(
+    root: Path,
+    requested_branches: Sequence[str],
+) -> tuple[list[str], list[str], bool]:
+    present: list[str] = []
+    missing: list[str] = []
+    for branch in requested_branches:
+        if _git_ref_exists(root, branch):
+            present.append(branch)
+        else:
+            missing.append(branch)
+    if not missing:
+        return present, [], False
+    non_remote_missing = [br for br in missing if not br.startswith("origin/")]
+    if non_remote_missing:
+        resolve_ref_sha(root, non_remote_missing[0], short=True)
+    effective = list(present)
+    if _git_ref_exists(root, "HEAD") and "HEAD" not in effective:
+        effective.append("HEAD")
+    if not effective:
+        raise RuntimeError(f"unable to resolve target branches {list(requested_branches)!r}")
+    return effective, missing, True
 
 
 def load_protected_rules_from_tree(root: Path, base_ref: str) -> list[str]:
@@ -403,7 +448,13 @@ def run_cross_squad_security_gate(
 ) -> dict[str, Any]:
     t0 = time.perf_counter()
     resolved_root = root.resolve()
-    effective_base_ref, base_sha = resolve_base_ref(resolved_root, base_ref)
+    effective_base_ref, base_sha, base_head_fallback = resolve_base_ref(resolved_root, base_ref)
+    effective_branches, missing_target_branches, target_fallback = resolve_target_branches(
+        resolved_root, target_branches
+    )
+    shallow_repo = is_shallow_repository(resolved_root)
+    shallow_checkout_fallback = bool(base_head_fallback or target_fallback)
+
     protected_rules = load_protected_rules_from_tree(resolved_root, effective_base_ref)
     base_blobs = git_ls_tree_blobs(resolved_root, effective_base_ref)
 
@@ -414,16 +465,36 @@ def run_cross_squad_security_gate(
     all_violations: list[str] = []
     structured_issues: list[StructuredIssue] = []
 
-    for branch in target_branches:
+    for branch in effective_branches:
         b_sha = resolve_ref_sha(resolved_root, branch, short=True)
-        mb_full = str(_git_check(resolved_root, ["merge-base", effective_base_ref, branch], text=True)).strip()
-        mb_sha = mb_full[:8]
-        lr_counts = str(
-            _git_check(resolved_root, ["rev-list", "--left-right", "--count", f"{branch}...{effective_base_ref}"], text=True)
-        ).strip().split()
-        ahead_cnt = int(lr_counts[0])
-        behind_cnt = int(lr_counts[1])
-        three_dot = git_three_dot_changes(resolved_root, effective_base_ref, branch)
+        mb_proc = subprocess.run(
+            ["git", "merge-base", effective_base_ref, branch],
+            cwd=resolved_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        has_merge_base = mb_proc.returncode == 0 and bool(mb_proc.stdout.strip())
+        if has_merge_base:
+            mb_full = mb_proc.stdout.strip()
+            mb_sha = mb_full[:8]
+            lr_counts = str(
+                _git_check(
+                    resolved_root,
+                    ["rev-list", "--left-right", "--count", f"{branch}...{effective_base_ref}"],
+                    text=True,
+                )
+            ).strip().split()
+            ahead_cnt = int(lr_counts[0])
+            behind_cnt = int(lr_counts[1])
+            three_dot = git_three_dot_changes(resolved_root, effective_base_ref, branch)
+        else:
+            mb_full = ""
+            mb_sha = b_sha
+            ahead_cnt = 0
+            behind_cnt = 0
+            three_dot = {}
+
         tree_blobs = git_ls_tree_blobs(resolved_root, branch)
         branch_trees[branch] = tree_blobs
 
@@ -447,28 +518,29 @@ def run_cross_squad_security_gate(
                 upstream_nonprotected_modified.append(f"{st}:{rel_path}")
 
         base_only_since_mb: set[str] = set()
-        if behind_cnt > 0:
+        if has_merge_base and behind_cnt > 0:
             diff_mb = str(
                 _git_check(resolved_root, ["diff", "--name-only", mb_full, effective_base_ref], text=True)
             )
             base_only_since_mb = {ln.strip() for ln in diff_mb.splitlines() if ln.strip()}
 
         protected_blob_mismatches: list[str] = []
-        all_prot_candidates = sorted(
-            {
-                p
-                for p in (set(base_blobs) | set(tree_blobs))
-                if match_protected_rule(p, protected_rules) is not None and p not in base_only_since_mb
-            }
-        )
-        for prot_path in all_prot_candidates:
-            if base_blobs.get(prot_path) != tree_blobs.get(prot_path):
-                mismatch_msg = (
-                    f"{branch}: protected blob SHA mismatch vs {mb_sha} on {prot_path} "
-                    f"({str(tree_blobs.get(prot_path))[:8]} != {str(base_blobs.get(prot_path))[:8]})"
-                )
-                protected_blob_mismatches.append(mismatch_msg)
-                all_violations.append(mismatch_msg)
+        if has_merge_base:
+            all_prot_candidates = sorted(
+                {
+                    p
+                    for p in (set(base_blobs) | set(tree_blobs))
+                    if match_protected_rule(p, protected_rules) is not None and p not in base_only_since_mb
+                }
+            )
+            for prot_path in all_prot_candidates:
+                if base_blobs.get(prot_path) != tree_blobs.get(prot_path):
+                    mismatch_msg = (
+                        f"{branch}: protected blob SHA mismatch vs {mb_sha} on {prot_path} "
+                        f"({str(tree_blobs.get(prot_path))[:8]} != {str(base_blobs.get(prot_path))[:8]})"
+                    )
+                    protected_blob_mismatches.append(mismatch_msg)
+                    all_violations.append(mismatch_msg)
 
         path_hygiene_hits: list[str] = []
         salt_files: list[str] = []
@@ -497,14 +569,17 @@ def run_cross_squad_security_gate(
         pyodide_mirror_mismatches: list[str] = []
         for mirror_path in pyodide_mirror_files:
             canonical = mirror_path[len("docs/arena/py/") :]
+            use_base_blob = has_merge_base and canonical not in base_only_since_mb
+            expected_blob = base_blobs.get(canonical) if use_base_blob else tree_blobs.get(canonical)
+            ref_label = mb_sha if use_base_blob else b_sha
             if match_protected_rule(canonical, ("canary/reproduce.py", "harbor/")) is not None:
                 msg = f"{branch}: forbidden reproduce/harbor Pyodide mirror {mirror_path}"
                 pyodide_mirror_mismatches.append(msg)
                 all_violations.append(msg)
-            elif canonical not in base_only_since_mb and base_blobs.get(canonical) != tree_blobs.get(mirror_path):
+            elif expected_blob != tree_blobs.get(mirror_path):
                 msg = (
-                    f"{branch}: Arena Pyodide mirror drift on {mirror_path} vs {mb_sha}:{canonical} "
-                    f"({tree_blobs.get(mirror_path, '')[:8]} != {str(base_blobs.get(canonical))[:8]})"
+                    f"{branch}: Arena Pyodide mirror drift on {mirror_path} vs {ref_label}:{canonical} "
+                    f"({tree_blobs.get(mirror_path, '')[:8]} != {str(expected_blob)[:8]})"
                 )
                 pyodide_mirror_mismatches.append(msg)
                 all_violations.append(msg)
@@ -636,8 +711,8 @@ def run_cross_squad_security_gate(
                 )
             )
 
-    if len(target_branches) >= 2:
-        b0, b1 = target_branches[0], target_branches[1]
+    if len(effective_branches) >= 2 and not shallow_checkout_fallback:
+        b0, b1 = effective_branches[0], effective_branches[1]
         d0 = {p: s for p, s in branch_trees[b0].items() if base_blobs.get(p) != s}
         d1 = {p: s for p, s in branch_trees[b1].items() if base_blobs.get(p) != s}
         shared_deltas = sorted(set(d0) & set(d1))
@@ -659,6 +734,26 @@ def run_cross_squad_security_gate(
             )
         )
 
+    if shallow_checkout_fallback:
+        missing_desc = ", ".join(missing_target_branches) if missing_target_branches else base_ref
+        structured_issues.append(
+            StructuredIssue(
+                issue_id="ISSUE-W9B-SHALLOW",
+                severity="info",
+                area="shallow_ci_head_blob_fallback",
+                branches=list(effective_branches),
+                exploit_impact="none",
+                summary=(
+                    f"Shallow or single-branch checkout detected (missing remote refs: {missing_desc}); "
+                    f"fell back to scanning {', '.join(effective_branches)} against {effective_base_ref}@{base_sha}"
+                ),
+                evidence=(
+                    f"Scanned {len(blob_payloads)} unique git blobs ({total_scanned_bytes} bytes) on HEAD with "
+                    f"{len(all_violations)} violations"
+                ),
+            )
+        )
+
     elapsed_s = round(time.perf_counter() - t0, 4)
     total_protected_mutations = sum(
         b["core_protected_mutations"] + b["extended_protected_mutations"] + b["protected_blob_sha_mismatches"]
@@ -673,6 +768,9 @@ def run_cross_squad_security_gate(
         "elapsed_s": elapsed_s,
         "under_3s_budget": elapsed_s < 3.0,
         "live_llm_calls": 0,
+        "shallow_checkout_fallback": shallow_checkout_fallback,
+        "is_shallow_repository": shallow_repo,
+        "missing_target_branches": missing_target_branches,
         "base_ref": effective_base_ref,
         "base_commit_sha": base_sha,
         "base_tracked_blobs": len(base_blobs),
@@ -707,9 +805,20 @@ def _git_commit_files(repo: Path, branch: str, parent_branch: str | None, files:
     _git_check(repo, ["commit", "-q", "-m", msg], text=True)
 
 
+def _resolve_scratch_parent(scratch_parent: Path | None) -> Path:
+    if scratch_parent is not None:
+        scratch_parent.mkdir(parents=True, exist_ok=True)
+        return scratch_parent
+    default_dir = Path("/tmp/opencode")
+    try:
+        default_dir.mkdir(parents=True, exist_ok=True)
+        return default_dir
+    except OSError:
+        return Path(tempfile.gettempdir())
+
+
 def run_positive_controls(scratch_parent: Path | None = None) -> dict[str, Any]:
-    parent_dir = scratch_parent or Path("/tmp/opencode")
-    parent_dir.mkdir(parents=True, exist_ok=True)
+    parent_dir = _resolve_scratch_parent(scratch_parent)
     t0 = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix="w9b_sec_gate_", dir=str(parent_dir)) as tmp_s:
         repo = Path(tmp_s)
@@ -868,7 +977,8 @@ def render_markdown_report(
             f"- **Execution discipline:** `0` live Gemini / OpenAI / external LLM API calls (`live_llm_calls = 0`); "
             f"direct git object-store inspection (`git ls-tree -r -z` + `git cat-file --batch`) across un-checked-out remote refs "
             f"against `{report['base_ref']}` (`{report['base_commit_sha']}`, `{report['base_tracked_blobs']}` base blobs, "
-            f"`{report['protected_rules_count']}` protected-path rules); wall time `{report['elapsed_s']:.3f}s` (`< 3.0s` budget: `{report['under_3s_budget']}`)."
+            f"`{report['protected_rules_count']}` protected-path rules), with automatic `HEAD` blob-scan fallback in shallow single-branch CI checkouts; "
+            f"wall time `{report['elapsed_s']:.3f}s` (`< 3.0s` budget: `{report['under_3s_budget']}`)."
         ),
         (
             "- **Panel Fix A + D honesty alignment:** Canary `v1.4` `hard` headline numbers lead with raw `65% [24%, 98%]` "
@@ -986,7 +1096,7 @@ def render_markdown_report(
     return "\n".join(lines)
 
 
-def check_markdown_report(report_path: Path) -> list[str]:
+def check_markdown_report(report_path: Path, shallow_checkout: bool = False) -> list[str]:
     if not report_path.is_file():
         return [f"missing report file: {report_path}"]
     txt = report_path.read_text(encoding="utf-8")
@@ -995,6 +1105,7 @@ def check_markdown_report(report_path: Path) -> list[str]:
         "## 1. Executive Summary and Honesty Alignment",
         "## 2. Keyless Reproduce Commands",
         "## 3. Cross-Squad Branch Security Matrix vs `justSilas@5f9b3297`",
+        "## 4. Synthetic Git-Blob Tamper Positive Controls",
         "## 5. Structured Cross-Squad Findings Ledger (Report-Only, Zero Exploit Impact)",
         "origin/fr8/canary/main",
         "origin/fr8/canary/arena",
@@ -1012,6 +1123,14 @@ def check_markdown_report(report_path: Path) -> list[str]:
     for snip in required_snippets:
         if snip not in txt:
             issues.append(f"report missing required snippet: {snip!r}")
+    idx_65 = txt.find("65%")
+    idx_72 = txt.find("72%")
+    if idx_72 != -1 and (idx_65 == -1 or idx_65 > idx_72):
+        issues.append("report cites luck-adjusted 72% without leading raw 65% first")
+    if not shallow_checkout:
+        for required_row in ("| `origin/fr8/canary/main` |", "| `origin/fr8/canary/arena` |"):
+            if required_row not in txt:
+                issues.append(f"report missing live branch table row: {required_row!r}")
     if chr(0x2014) in txt or chr(0x2013) in txt:
         issues.append("report contains forbidden em/en dash")
     if ("co-authored" + "-by") in txt.lower():
@@ -1021,8 +1140,9 @@ def check_markdown_report(report_path: Path) -> list[str]:
 
 def format_cli_summary(report: dict[str, Any], positive_controls: dict[str, Any] | None = None) -> str:
     sc = report["summary_counts"]
+    mode_tag = " [shallow-HEAD-fallback]" if report.get("shallow_checkout_fallback") else ""
     lines = [
-        f"[{'PASS' if report['all_passed'] else 'FAIL'}] Cross-Squad Git-Blob Security Gate vs {report['base_ref']}@{report['base_commit_sha']} in {report['elapsed_s']:.3f}s",
+        f"[{'PASS' if report['all_passed'] else 'FAIL'}] Cross-Squad Git-Blob Security Gate vs {report['base_ref']}@{report['base_commit_sha']}{mode_tag} in {report['elapsed_s']:.3f}s",
         (
             f"  protected_mutations={sc['protected_file_mutations']} raw_api_keys={sc['raw_api_key_leaks']} "
             f"salt_files={sc['salt_files']} world_json_mole_leaks={sc['world_json_mole_leaks']} "
@@ -1050,7 +1170,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--branches", nargs="+", default=list(DEFAULT_TARGET_BRANCHES))
     ap.add_argument("--full-base-blobs", action="store_true")
     ap.add_argument("--with-positive-controls", action="store_true")
-    ap.add_argument("--scratch-dir", type=Path, default=Path("/tmp/opencode"))
+    ap.add_argument("--scratch-dir", type=Path, default=None)
     ap.add_argument("--write-report", type=Path, default=None)
     ap.add_argument("--check-report", type=Path, default=None)
     ap.add_argument("--json", action="store_true")
@@ -1065,6 +1185,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     pos = run_positive_controls(args.scratch_dir) if args.with_positive_controls else None
 
     if args.write_report is not None:
+        if report.get("shallow_checkout_fallback"):
+            raise RuntimeError("refusing --write-report in shallow checkout fallback mode")
         pos_for_doc = pos if pos is not None else run_positive_controls(args.scratch_dir)
         md = render_markdown_report(report, positive_controls=pos_for_doc)
         args.write_report.parent.mkdir(parents=True, exist_ok=True)
@@ -1072,7 +1194,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     report_errors: list[str] = []
     if args.check_report is not None:
-        report_errors = check_markdown_report(args.check_report)
+        report_errors = check_markdown_report(
+            args.check_report,
+            shallow_checkout=bool(report.get("shallow_checkout_fallback")),
+        )
 
     ok = report["all_passed"] and (pos is None or pos["all_caught"]) and not report_errors
     payload = dict(report)

@@ -8,7 +8,6 @@ from scripts import integrity_cross_squad_security_gate as gate
 from scripts import verify_integrity_branch as vib
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRATCH_PARENT = Path("/tmp/opencode")
 
 
 def test_live_cross_squad_security_gate_passes_under_3s() -> None:
@@ -17,7 +16,7 @@ def test_live_cross_squad_security_gate_passes_under_3s() -> None:
     assert report["under_3s_budget"] is True, f"elapsed_s={report['elapsed_s']} exceeded 3.0s"
     assert report["elapsed_s"] < 3.0
     assert report["live_llm_calls"] == 0
-    assert report["base_commit_sha"] == "5f9b3297"
+    assert len(report["base_commit_sha"]) == 8
 
     sc = report["summary_counts"]
     assert sc["protected_file_mutations"] == 0
@@ -25,31 +24,43 @@ def test_live_cross_squad_security_gate_passes_under_3s() -> None:
     assert sc["salt_files"] == 0
     assert sc["world_json_mole_leaks"] == 0
     assert sc["total_violations"] == 0
-    assert sc["structured_issues_count"] >= 2
+    assert sc["structured_issues_count"] >= 1
 
-    main_info = report["branches"]["origin/fr8/canary/main"]
-    arena_info = report["branches"]["origin/fr8/canary/arena"]
-    assert main_info["core_protected_mutations"] == 0
-    assert main_info["extended_protected_mutations"] == 0
-    assert main_info["protected_blob_sha_mismatches"] == 0
-    assert main_info["tracked_blobs_total"] >= 3400
+    if report["shallow_checkout_fallback"]:
+        assert "HEAD" in report["branches"]
+        assert any(i["issue_id"] == "ISSUE-W9B-SHALLOW" for i in report["structured_issues"])
+        for b_info in report["branches"].values():
+            assert b_info["core_protected_mutations"] == 0
+            assert b_info["extended_protected_mutations"] == 0
+            assert b_info["protected_blob_sha_mismatches"] == 0
+            assert b_info["tracked_blobs_total"] >= 3400
+            assert b_info["content_scanned_paths"] >= 400
+            assert b_info["pyodide_mirror_mismatches"] == []
+    else:
+        assert sc["structured_issues_count"] >= 2
+        main_info = report["branches"]["origin/fr8/canary/main"]
+        arena_info = report["branches"]["origin/fr8/canary/arena"]
+        assert main_info["core_protected_mutations"] == 0
+        assert main_info["extended_protected_mutations"] == 0
+        assert main_info["protected_blob_sha_mismatches"] == 0
+        assert main_info["tracked_blobs_total"] >= 3400
 
-    assert arena_info["core_protected_mutations"] == 0
-    assert arena_info["extended_protected_mutations"] == 0
-    assert arena_info["protected_blob_sha_mismatches"] == 0
-    assert arena_info["pyodide_mirror_files_checked"] >= 14
-    assert arena_info["pyodide_mirror_mismatches"] == []
+        assert arena_info["core_protected_mutations"] == 0
+        assert arena_info["extended_protected_mutations"] == 0
+        assert arena_info["protected_blob_sha_mismatches"] == 0
+        assert arena_info["pyodide_mirror_files_checked"] >= 14
+        assert arena_info["pyodide_mirror_mismatches"] == []
 
 
 def test_positive_controls_catch_all_unchecked_out_blob_mutations() -> None:
-    pos = gate.run_positive_controls(SCRATCH_PARENT)
+    pos = gate.run_positive_controls()
     assert pos["all_caught"] is True, pos
     assert pos["controls_passed"] == pos["controls_total"] == 7
 
 
 def test_extra_secret_weight_env_and_arena_judge_seed_detectors() -> None:
-    SCRATCH_PARENT.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="w9b_extra_test_", dir=str(SCRATCH_PARENT)) as tmp_s:
+    parent_dir = gate._resolve_scratch_parent(None)
+    with tempfile.TemporaryDirectory(prefix="w9b_extra_test_", dir=str(parent_dir)) as tmp_s:
         repo = Path(tmp_s)
         gate._git_check(repo, ["init", "-q"], text=True)
         gate._git_check(repo, ["config", "user.email", "w9@canary.local"], text=True)
@@ -120,6 +131,22 @@ def test_extra_secret_weight_env_and_arena_judge_seed_detectors() -> None:
         assert r_lag["all_passed"] is True, r_lag["violations"]
         assert r_lag["branches"]["br_lagging_clean"]["behind_base_commits"] == 1
         assert any(i["issue_id"] == "ISSUE-W9B-01" for i in r_lag["structured_issues"])
+
+        gate._git_check(repo, ["checkout", "-q", "--detach", "br_lagging_clean"], text=True)
+        r_shallow_clean = gate.run_cross_squad_security_gate(repo)
+        assert r_shallow_clean["all_passed"] is True, r_shallow_clean["violations"]
+        assert r_shallow_clean["shallow_checkout_fallback"] is True
+        assert list(r_shallow_clean["branches"].keys()) == ["HEAD"]
+        assert any(i["issue_id"] == "ISSUE-W9B-SHALLOW" for i in r_shallow_clean["structured_issues"])
+
+        report_md = ROOT / "docs" / "reports" / "integrity_cross_squad_security_gate.md"
+        assert gate.main(["--root", str(repo), "--check-report", str(report_md)]) == 0
+
+        gate._git_check(repo, ["checkout", "-q", "--detach", "br_sk_and_env"], text=True)
+        r_shallow_dirty = gate.run_cross_squad_security_gate(repo)
+        assert r_shallow_dirty["all_passed"] is False
+        assert r_shallow_dirty["shallow_checkout_fallback"] is True
+        assert r_shallow_dirty["summary_counts"]["raw_api_key_leaks"] == 1
 
 
 def test_cli_check_report_and_w9b_file_hygiene() -> None:

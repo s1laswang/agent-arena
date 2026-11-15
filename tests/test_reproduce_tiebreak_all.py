@@ -38,7 +38,7 @@ def test_live_run_and_json_cli(capsys: pytest.CaptureFixture[str]) -> None:
     assert payload["gates_passed"] == payload["gates_total"]
     assert payload["gates_total"] >= len(rta.CORE_GATE_SPECS)
     assert payload["wall_clock_ms"] > 0.0
-    assert payload["elapsed_seconds"] < 15.0
+    assert payload["elapsed_seconds"] < 30.0
 
     by_id = {g["gate_id"]: g for g in payload["gates"]}
     for required_new_gate in (

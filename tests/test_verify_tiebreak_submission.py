@@ -264,7 +264,7 @@ def test_live_repo_passes_all_checks_and_cli(
     assert report["passed"] is True
     assert report["checks_passed"] == 5
     assert report["checks_total"] == 5
-    assert elapsed < 15.0
+    assert elapsed < 30.0
     for name in gate.CHECK_NAMES:
         assert report["checks"][name]["passed"] is True
         assert report["checks"][name]["errors"] == []

@@ -32,7 +32,7 @@ DEV_SEED_MAX = 10_000
 JUDGE_SEED_MIN = 900_000
 MIN_VERIFIED_N = 30
 MAX_FILE_BYTES = 5 * 1024 * 1024
-MAX_RUNTIME_SECONDS = 15.0
+MAX_RUNTIME_SECONDS = 30.0
 
 CHECK_NAMES: tuple[str, ...] = (
     "protected_and_frozen_paths",

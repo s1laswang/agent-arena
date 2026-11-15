@@ -11,6 +11,8 @@ import tokenize
 
 import pytest
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 from canary.env import Env
 from canary.eval import run_episode
 from canary.solver.policy import SolverPolicy
@@ -26,6 +28,10 @@ from train.eval_compact_hf import (
     main,
     run_compact_eval,
     verify_episode_file,
+)
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -87,8 +93,7 @@ def test_source_and_ast_hygiene() -> None:
             elif isinstance(node, ast.ImportFrom) and node.module:
                 assert node.module.split(".")[0] not in banned_roots
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
 
 def test_seed_hygiene_catches_all_leaks_and_unpaired_secrets() -> None:
@@ -261,6 +266,7 @@ def test_compact_eval_paired_comparison_and_cli(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     compact_mod = load_compact_render_module()
     assert hasattr(compact_mod, "CompactHFPolicy")
 
@@ -384,11 +390,11 @@ def test_compact_eval_paired_comparison_and_cli(
     assert ver_cli["valid_count"] == 4
     assert ver_cli["excluded_count"] == 1
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
 
 def test_wrong_accusations_hard_tier_and_tamper_rejection(tmp_path: Path) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     def blind_accuser(_turn: dict) -> str:
         return '{"name": "accuse", "arguments": {"employee": "e00"}}'
 
@@ -462,5 +468,4 @@ def test_wrong_accusations_hard_tier_and_tamper_rejection(tmp_path: Path) -> Non
             bootstrap_n=100,
         )
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()

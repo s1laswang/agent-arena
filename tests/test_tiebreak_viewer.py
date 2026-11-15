@@ -11,9 +11,15 @@ from pathlib import Path
 
 import pytest
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 import scripts.build_tiebreak_viewer as btv
 import scripts.reproduce_tiebreak_all as rta
 import scripts.verify_tiebreak_submission as vts
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "build_tiebreak_viewer.py"
@@ -72,8 +78,7 @@ def test_viewer_source_and_artifact_hygiene() -> None:
     total_bytes = sum(p.stat().st_size for p in (SCRIPT_PATH, SELF_PATH, HTML_PATH, MANIFEST_PATH))
     assert total_bytes < 150_000
     assert total_bytes < btv.MAX_TOTAL_BYTES
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
 
 def test_check_cli_and_reproduce_discovery(capsys: pytest.CaptureFixture[str]) -> None:

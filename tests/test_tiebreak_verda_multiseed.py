@@ -14,10 +14,14 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_PRELOADED_HEAVY = {m for m in ("torch", "transformers") if m in sys.modules}
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
 
 import scripts.tiebreak_verda_multiseed_audit as audit
 import scripts.verify_tiebreak_submission as sub_gate
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_verda_multiseed_audit.py"
 SELF_PATH = Path(__file__).resolve()
@@ -61,7 +65,7 @@ def test_source_and_artifact_hygiene() -> None:
         assert en_dash not in txt
         assert txt.isascii()
 
-    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
 
 def test_committed_summary_exact_seed_metrics(committed_summary: dict[str, Any]) -> None:

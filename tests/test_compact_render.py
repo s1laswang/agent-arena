@@ -11,6 +11,8 @@ from typing import Any
 
 import pytest
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 from canary.env import Env
 from canary.eval import run_episode
 from canary.rules import TRAIN_SEEDS
@@ -32,6 +34,10 @@ from train.compact_render import (
     render_compact_turn,
 )
 from train.render import KICKOFF, to_openai_tools
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 COMPACT_RENDER_PATH = REPO_ROOT / "train" / "compact_render.py"
@@ -140,8 +146,7 @@ def test_source_and_ast_hygiene() -> None:
                 elif isinstance(node, ast.ImportFrom) and node.module:
                     assert node.module.split(".")[0] not in ("torch", "transformers")
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
 
 def test_parse_instruction_params_and_compact_tools() -> None:

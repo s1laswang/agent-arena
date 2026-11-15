@@ -11,6 +11,8 @@ import tokenize
 from pathlib import Path
 from typing import Any
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_experiment_ledger.py"
 EXPORT_PATH = REPO_ROOT / "train" / "export_calibrated_sft.py"
@@ -24,6 +26,10 @@ _SPEC = importlib.util.spec_from_file_location("tiebreak_experiment_ledger", SCR
 assert _SPEC is not None and _SPEC.loader is not None
 ledger_mod = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(ledger_mod)
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 
 def _valid_summary_fixture() -> dict[str, Any]:
@@ -91,8 +97,7 @@ def test_ast_and_source_hygiene() -> None:
         assert em_dash not in txt, f"em dash found in {doc_path}"
         assert en_dash not in txt, f"en dash found in {doc_path}"
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
 
 def test_historical_runs_and_clean_clone_determinism(tmp_path: Path) -> None:

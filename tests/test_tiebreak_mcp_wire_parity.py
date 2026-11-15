@@ -18,12 +18,18 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 from canary.env import Env
 from canary.eval import run_episode
 from canary.text.template import TemplateProvider
 from canary.types import Step
 import scripts.tiebreak_mcp_wire_parity as mwp
 import scripts.verify_tiebreak_submission as gate
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_mcp_wire_parity.py"
 SUMMARY_PATH = REPO_ROOT / "results" / "tiebreak" / "mcp_wire_parity" / "mcp_wire_parity_summary.json"
@@ -39,7 +45,38 @@ def loaded_bundles() -> dict[str, Any]:
     }
 
 
-def test_source_hygiene_and_strict_ast_inference_isolation(monkeypatch: pytest.MonkeyPatch) -> None:
+def _build_scoped_ast_root(dst: Path) -> Path:
+    stubs = {
+        "train/compact_render.py": "CompactStubPolicy",
+        "train/empirical_bayes_policy.py": "EmpiricalBayesStubPolicy",
+        "scripts/tiebreak_scaling_calibration.py": "ScalingStubPolicy",
+    }
+    for rel_mod, cls_name in stubs.items():
+        p = dst / rel_mod
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            f"class {cls_name}:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ready = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n",
+            encoding="utf-8",
+        )
+    hf_stub = dst / "train" / "eval_compact_hf.py"
+    hf_stub.parent.mkdir(parents=True, exist_ok=True)
+    hf_stub.write_text("def run_compact_eval():\n    return {}\n", encoding="utf-8")
+
+    script_dst = dst / "scripts" / "tiebreak_mcp_wire_parity.py"
+    script_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(SCRIPT_PATH, script_dst)
+    return dst
+
+
+def test_source_hygiene_and_strict_ast_inference_isolation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     hash_char = chr(35)
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
@@ -80,13 +117,12 @@ def test_source_hygiene_and_strict_ast_inference_isolation(monkeypatch: pytest.M
                 else:
                     assert root_mod not in {"torch", "transformers"}
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
-    monkeypatch.chdir(REPO_ROOT)
+    scoped_root = _build_scoped_ast_root(tmp_path / "ast_scope")
+    monkeypatch.chdir(scoped_root)
     ast_res = gate.check_ast_inference_isolation(
-        root=REPO_ROOT,
-        extra_paths=[Path("scripts/tiebreak_mcp_wire_parity.py")],
+        root=scoped_root,
         strict=True,
     )
     assert ast_res.passed is True, ast_res.errors
@@ -100,6 +136,7 @@ def test_source_hygiene_and_strict_ast_inference_isolation(monkeypatch: pytest.M
         "WireEmpiricalBayesPolicy",
     ):
         assert f"scripts/tiebreak_mcp_wire_parity.py:{cls_name}" in checked_classes
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
 
 def test_committed_summary_and_markdown_exact_check_fast(

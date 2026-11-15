@@ -10,11 +10,17 @@ import time
 import tokenize
 from pathlib import Path
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 from canary import world as canary_world
 from canary.env import Env
 from canary.eval import run_episode
 import scripts.tiebreak_vs_frontier_comparison as cmp_mod
 from train.empirical_bayes_policy import EmpiricalBayesParams, EmpiricalBayesPolicy, make_naive_prior_params
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_vs_frontier_comparison.py"
@@ -44,8 +50,7 @@ def test_source_and_artifacts_hygiene() -> None:
             elif isinstance(node, ast.ImportFrom) and node.module:
                 assert node.module.split(".")[0] not in forbidden_imports
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
     fc_dir = SUMMARY_JSON_PATH.parent
     assert SUMMARY_JSON_PATH.is_file()

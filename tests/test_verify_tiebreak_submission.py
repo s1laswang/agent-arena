@@ -14,9 +14,13 @@ from pathlib import Path
 
 import pytest
 
-_PRELOADED_HEAVY = {m for m in ("torch", "transformers") if m in sys.modules}
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
 
 import scripts.verify_tiebreak_submission as gate
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 VERIFIER_PATH = REPO_ROOT / "scripts" / "verify_tiebreak_submission.py"
@@ -65,8 +69,12 @@ def base_surface(tmp_path_factory: pytest.TempPathFactory) -> Path:
         src = REPO_ROOT / rel
         target = base_root / rel
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, target)
-    shutil.copytree(REPO_ROOT / "results" / "tiebreak", base_root / "results" / "tiebreak")
+        _link_or_copy(src, target)
+    shutil.copytree(
+        REPO_ROOT / "results" / "tiebreak",
+        base_root / "results" / "tiebreak",
+        copy_function=_link_or_copy,
+    )
     return base_root
 
 
@@ -242,7 +250,7 @@ def test_verifier_and_test_source_hygiene() -> None:
             elif isinstance(node, ast.ImportFrom) and node.module:
                 assert node.module.split(".")[0] not in forbidden_roots
 
-    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
 
 def test_live_repo_passes_all_checks_and_cli(

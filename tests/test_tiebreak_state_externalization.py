@@ -16,9 +16,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 import scripts.reproduce_tiebreak_all as rta
 import scripts.tiebreak_state_externalization_audit as tsea
 import scripts.verify_tiebreak_submission as vts
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_state_externalization_audit.py"
 SUMMARY_PATH = REPO_ROOT / "results" / "tiebreak" / "state_externalization" / "externalization_summary.json"
@@ -237,8 +243,7 @@ def test_hygiene_zero_judge_seeds_and_submission_provenance() -> None:
     for m in re.finditer(r"\b\d+\b", raw_json):
         assert int(m.group(0)) < 900_000
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
     seed_chk = vts.check_seed_and_secret_provenance(root=REPO_ROOT, strict=True)
     assert seed_chk.passed is True, seed_chk.errors

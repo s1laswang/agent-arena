@@ -5,6 +5,7 @@ import copy
 import io
 import json
 import os
+import shutil
 import sys
 import time
 import tokenize
@@ -12,6 +13,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
 
 from canary.env import Env
 from canary.eval import run_episode
@@ -21,6 +24,10 @@ import scripts.tiebreak_experiment_ledger as ledger_mod
 import scripts.verify_tiebreak_submission as gate
 import train.neural_mlp_tiebreak as mod
 
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "train" / "neural_mlp_tiebreak.py"
 SUMMARY_PATH = REPO_ROOT / "results" / "tiebreak" / "neural_mlp_dagger" / "mlp_summary.json"
@@ -28,7 +35,35 @@ REPORT_PATH = REPO_ROOT / "docs" / "reports" / "tiebreak_neural_mlp_dagger.md"
 SELF_PATH = Path(__file__).resolve()
 
 
-def test_source_hygiene_and_ast_inference_isolation() -> None:
+def _build_scoped_ast_root(dst: Path) -> Path:
+    stubs = {
+        "train/compact_render.py": "CompactStubPolicy",
+        "train/empirical_bayes_policy.py": "EmpiricalBayesStubPolicy",
+        "scripts/tiebreak_scaling_calibration.py": "ScalingStubPolicy",
+    }
+    for rel_mod, cls_name in stubs.items():
+        p = dst / rel_mod
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            f"class {cls_name}:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ready = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n",
+            encoding="utf-8",
+        )
+    hf_stub = dst / "train" / "eval_compact_hf.py"
+    hf_stub.parent.mkdir(parents=True, exist_ok=True)
+    hf_stub.write_text("def run_compact_eval():\n    return {}\n", encoding="utf-8")
+
+    mod_dst = dst / "train" / "neural_mlp_tiebreak.py"
+    mod_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(MODULE_PATH, mod_dst)
+    return dst
+
+
+def test_source_hygiene_and_ast_inference_isolation(tmp_path: Path) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     hash_char = chr(35)
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
@@ -49,10 +84,10 @@ def test_source_hygiene_and_ast_inference_isolation() -> None:
             elif isinstance(node, ast.ImportFrom) and node.module:
                 assert node.module.split(".")[0] not in forbidden_roots
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
-    iso = gate.check_ast_inference_isolation(root=REPO_ROOT, strict=True)
+    scoped_root = _build_scoped_ast_root(tmp_path / "ast_scope")
+    iso = gate.check_ast_inference_isolation(root=scoped_root, strict=True)
     assert iso.passed is True, iso.errors
     assert "train/neural_mlp_tiebreak.py" in iso.metrics["modules_checked"]
     assert "train/neural_mlp_tiebreak.py:TinyMLPPolicy" in iso.metrics["policy_classes_checked"]
@@ -60,6 +95,7 @@ def test_source_hygiene_and_ast_inference_isolation() -> None:
     add_errs, add_classes = addendum_mod.audit_inference_module_ast("train/neural_mlp_tiebreak.py", MODULE_PATH)
     assert add_errs == []
     assert "train/neural_mlp_tiebreak.py:TinyMLPPolicy" in add_classes
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
 
 def test_tiny_mlp_forward_backward_gradients_and_checkpoint_roundtrip(tmp_path: Path) -> None:

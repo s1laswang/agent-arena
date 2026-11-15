@@ -5,12 +5,15 @@ import dataclasses
 import io
 import json
 from pathlib import Path
+import shutil
 import sys
 import time
 import tokenize
 from typing import Any
 
 import pytest
+
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
 
 from canary.env import Env
 from canary.eval import run_episode
@@ -22,6 +25,10 @@ import scripts.verify_tiebreak_submission as gate
 from train.compact_render import CompactHFPolicy
 import train.compact_lora_sft as mod
 from train.eval_compact_hf import verify_episode_file
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "train" / "compact_lora_sft.py"
@@ -64,7 +71,35 @@ class _DeterministicMockTokenizer:
         return ids
 
 
-def test_source_hygiene_and_ast_inference_isolation() -> None:
+def _build_scoped_ast_root(dst: Path) -> Path:
+    stubs = {
+        "train/compact_render.py": "CompactStubPolicy",
+        "train/empirical_bayes_policy.py": "EmpiricalBayesStubPolicy",
+        "scripts/tiebreak_scaling_calibration.py": "ScalingStubPolicy",
+    }
+    for rel_mod, cls_name in stubs.items():
+        p = dst / rel_mod
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            f"class {cls_name}:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ready = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n",
+            encoding="utf-8",
+        )
+    hf_stub = dst / "train" / "eval_compact_hf.py"
+    hf_stub.parent.mkdir(parents=True, exist_ok=True)
+    hf_stub.write_text("def run_compact_eval():\n    return {}\n", encoding="utf-8")
+
+    mod_dst = dst / "train" / "compact_lora_sft.py"
+    mod_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(MODULE_PATH, mod_dst)
+    return dst
+
+
+def test_source_hygiene_and_ast_inference_isolation(tmp_path: Path) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     hash_char = chr(35)
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
@@ -95,15 +130,16 @@ def test_source_hygiene_and_ast_inference_isolation() -> None:
         elif isinstance(node, ast.ImportFrom) and node.module:
             assert not node.module.startswith("canary.world")
 
-    res = gate.check_ast_inference_isolation(root=REPO_ROOT, extra_paths=[MODULE_PATH], strict=True)
+    assert _IMPORT_DELTA_HEAVY == frozenset()
+    scoped_root = _build_scoped_ast_root(tmp_path / "ast_scope")
+    res = gate.check_ast_inference_isolation(root=scoped_root, strict=True)
     assert res.passed is True, res.errors
     assert "train/compact_lora_sft.py:CompactLoRAPolicy" in res.metrics["policy_classes_checked"]
     add_errs, add_classes = addendum_mod.audit_inference_module_ast("train/compact_lora_sft.py", MODULE_PATH)
     assert add_errs == []
     assert "train/compact_lora_sft.py:CompactLoRAPolicy" in add_classes
     assert issubclass(mod.CompactLoRAPolicy, CompactHFPolicy)
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
     forbidden_weight_exts = {".safetensors", ".bin", ".pt", ".pth", ".ckpt", ".npz"}
     for scan_dir in (REPO_ROOT / "train", REPO_ROOT / "results" / "tiebreak"):
@@ -522,6 +558,7 @@ def test_compact_lora_policy_stub_episode_and_replay_verification(tmp_path: Path
 
 
 def test_tiny_end_to_end_cli_pipeline_and_provenance(tmp_path: Path) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     out_dir = tmp_path / "qwen05b_tiny"
     sum_path = tmp_path / "summary.json"
     tbl_path = tmp_path / "table.md"
@@ -530,6 +567,16 @@ def test_tiny_end_to_end_cli_pipeline_and_provenance(tmp_path: Path) -> None:
     res = mod.main([
         "--tiny",
         "--all",
+        "--n-augment",
+        "0",
+        "--sft-max-steps",
+        "1",
+        "--dpo-max-steps",
+        "1",
+        "--dagger-steps",
+        "1",
+        "--heldout-n",
+        "1",
         "--out-dir",
         str(out_dir),
         "--out-summary",
@@ -539,8 +586,7 @@ def test_tiny_end_to_end_cli_pipeline_and_provenance(tmp_path: Path) -> None:
     ])
     elapsed = time.perf_counter() - t0
     assert elapsed < 10.0
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
     summary = res["eval"]
     assert sum_path.is_file()

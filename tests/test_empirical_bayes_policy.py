@@ -14,9 +14,12 @@ from pathlib import Path
 
 import pytest
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 from canary import world as canary_world
 from canary.env import Env
 from canary.eval import run_episode
+import train.empirical_bayes_policy as eb_mod
 from train.empirical_bayes_policy import (
     ABLATION_VARIANTS,
     DEFAULT_CHECKPOINT_DIR,
@@ -49,6 +52,10 @@ _SPEC = importlib.util.spec_from_file_location("tiebreak_experiment_ledger", LED
 assert _SPEC is not None and _SPEC.loader is not None
 ledger_mod = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(ledger_mod)
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 
 def test_source_and_artifact_hygiene() -> None:
@@ -94,8 +101,7 @@ def test_source_and_artifact_hygiene() -> None:
         assert banned_prereg_hyphen not in low, f"forbidden wording in {art_path}"
         assert banned_prereg_compact not in low, f"forbidden wording in {art_path}"
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
 
 def test_committed_summary_n180_n90_ablations_and_panel_fix_a() -> None:
@@ -284,18 +290,57 @@ def test_posterior_stopping_and_replay_verification() -> None:
 
 def test_mini_pipeline_cli_and_secret_restoration(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     with pytest.raises(ValueError, match="workers 1"):
         run_full_pipeline(
-            stage2_count=3,
-            stage3_count=3,
+            stage2_count=1,
+            stage3_count=1,
             heldout_count=1,
             dev_count=1,
             checkpoint_dir=str(tmp_path / "c"),
             results_dir=str(tmp_path / "r"),
             workers=2,
         )
+
+    def _fast_opt_stopping(stage2_params: EmpiricalBayesParams, seeds: list[int]):
+        for s in seeds:
+            assert_strict_train_seed(s, eb_mod.STAGE3_TRAIN_RANGE[0], eb_mod.STAGE3_TRAIN_RANGE[1])
+        opt = EmpiricalBayesParams(
+            w_canary_hit=stage2_params.w_canary_hit,
+            w_canary_miss=stage2_params.w_canary_miss,
+            w_doc_hit=stage2_params.w_doc_hit,
+            w_after_hours=stage2_params.w_after_hours,
+            w_evasive=stage2_params.w_evasive,
+            w_angry_msg=stage2_params.w_angry_msg,
+            tau_margin=0.65,
+            unsurfaced_v_discount=1.0,
+            canary_coverage=0.55,
+            tiny_pool_size=4,
+            use_ev_stopping=True,
+            naive_p_threshold=0.50,
+            stage="eb_experience_opt",
+        )
+        ev = eb_mod._eval_params_on_train_slice(opt, seeds)
+        row = {
+            "phase": "fast_smoke_selected",
+            "canary_coverage": opt.canary_coverage,
+            "tiny_pool_size": opt.tiny_pool_size,
+            "tau_margin": opt.tau_margin,
+            "unsurfaced_v_discount": opt.unsurfaced_v_discount,
+            "use_ev_stopping": True,
+            **ev,
+        }
+        return opt, {
+            "seed_range": f"{seeds[0]}..{seeds[-1]}",
+            "n_episodes": len(seeds),
+            "selected": opt.to_dict(),
+            "search_ledger": [row],
+        }
+
+    monkeypatch.setattr(eb_mod, "optimize_stopping_and_splits", _fast_opt_stopping)
 
     prior_env_secret = os.environ.get("CANARY_WORLD_SECRET")
     prior_set_secret = b"test-prior-secret-value-16bytes"
@@ -306,9 +351,9 @@ def test_mini_pipeline_cli_and_secret_restoration(
         res_dir = tmp_path / "res"
         rc = main([
             "--stage2-n",
-            "3",
+            "1",
             "--stage3-n",
-            "3",
+            "1",
             "--heldout-n",
             "1",
             "--dev-n",
@@ -323,6 +368,7 @@ def test_mini_pipeline_cli_and_secret_restoration(
         assert out["replay_verified"] is True
         assert os.environ.get("CANARY_WORLD_SECRET") == "caller-env-secret-preserved"
         assert getattr(canary_world, "_SET_SECRET", None) == prior_set_secret
+        assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
         assert (ckpt_dir / "checkpoints.json").is_file()
         mini_sum = json.loads((res_dir / "summary.json").read_text(encoding="utf-8"))

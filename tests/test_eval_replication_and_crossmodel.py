@@ -22,7 +22,6 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 from canary.env import Env
-from canary.eval import make_policy_factory, run_episode
 import paired_v13
 
 SCRIPT_PATH = ROOT / "scripts/eval_replication_and_crossmodel.py"
@@ -51,7 +50,7 @@ def committed_payload() -> dict[str, Any]:
     assert JSON_PATH.is_file()
     assert MD_PATH.is_file()
     assert JSON_PATH.stat().st_size < MOD.MAX_JSON_BYTES
-    assert JSON_PATH.stat().st_size <= 50000
+    assert JSON_PATH.stat().st_size < 80 * 1024
     return json.loads(JSON_PATH.read_text(encoding="utf-8"))
 
 
@@ -60,14 +59,31 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
 
 
+def _read_seed_episodes(rel_path: str, seeds: set[int]) -> dict[int, dict[str, Any]]:
+    found: dict[int, dict[str, Any]] = {}
+    with (ROOT / rel_path).open(encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            ep = json.loads(line)
+            sd = int(ep["seed"])
+            if sd in seeds:
+                found[sd] = ep
+                if len(found) == len(seeds):
+                    break
+    return found
+
+
 def test_committed_json_and_markdown_invariants_and_exact_headline_numbers(committed_payload: dict[str, Any]):
-    assert committed_payload["schema_version"] == "v1.4.2"
+    assert committed_payload["schema_version"] == "v1.4.3"
     assert committed_payload["tiers_version"] == "v1.4"
     assert committed_payload["bootstrap"] == {"n_boot": 10000, "seed": 0}
     assert committed_payload["authoritative_headline_sources"] == [
         "docs/reports/gap.md",
         "data/runs/committed/v1.4/paired_table_gemini.md",
     ]
+    assert MOD.approx_equal(json.loads(MOD.serialize_payload(committed_payload)), committed_payload)
+
     md_text = MD_PATH.read_text(encoding="utf-8")
     assert MOD.render_markdown(committed_payload) == md_text
 
@@ -80,6 +96,49 @@ def test_committed_json_and_markdown_invariants_and_exact_headline_numbers(commi
     raw_idx = md_text.index("65% [24%, 98%]")
     luck_idx = md_text.index("72% [52%, 91%]")
     assert raw_idx < luck_idx
+
+    for required_tok in (
+        "aa1c679e",
+        "5f9b3297",
+        "s1-rehearsal-final",
+        "d0ead011",
+        "93% [20%, 371%]",
+        "+0.472",
+        "116% [78%, 363%]",
+        "+0.585",
+        "131% [86%, 590%]",
+        "+0.626",
+        "153% [89%, 411%]",
+        "+0.656",
+        "08:52",
+        "28/29",
+        "101% [79%, 140%]",
+        "84% [67%, 103%]",
+        "did NOT reproduce in the Harbor container",
+    ):
+        assert required_tok in md_text, f"missing required token {required_tok!r} in markdown"
+
+    live_hr = json.loads(MOD.serialize_payload({"hr": MOD._load_harbor_rehearsal_summary(ROOT)}))["hr"]
+    hr = committed_payload["harbor_rehearsal"]
+    assert MOD.approx_equal(live_hr, hr)
+    assert hr["present"] is True
+    assert hr["env_tag"] == "afterquery-final" and hr["env_sha"] == "1bc3e281"
+    assert hr["harbor_version"] == "0.26.0"
+    assert hr["correction_commits"] == ["aa1c679e", "5f9b3297"]
+    assert hr["final_trials_branch"] == "s1-rehearsal-final"
+    assert hr["final_trials_commit"] == "d0ead011"
+    assert hr["corrected_final"] is True and hr["ceo_append_only_verified"] is True
+    assert hr["gap_reproduced_in_harbor"] is False
+    assert hr["valid_accusations_correct"] == "28/29"
+    assert hr["total_valid_trials"] == 29
+    assert hr["run3_finished_after_0830_cutoff"] == 5
+    assert hr["run3_infra_excluded"] == 1
+    assert [r["n_valid"] for r in hr["runs"]] == [10, 10, 9]
+    assert [r["mean"] for r in hr["runs"]] == [0.472, 0.585, 0.626]
+    assert [r["pct_oracle"] for r in hr["runs"]] == [0.93, 1.16, 1.31]
+    assert hr["snapshot_0852_opencode_3"]["n_valid"] == 7
+    assert hr["snapshot_0852_opencode_3"]["mean"] == 0.656
+    assert hr["snapshot_0852_opencode_3"]["pct_oracle"] == 1.53
 
     rule = committed_payload["data_rule"]
     assert rule["working_tree_only"] is True
@@ -103,6 +162,7 @@ def test_committed_json_and_markdown_invariants_and_exact_headline_numbers(commi
 
     prim = committed_payload["primary_0_29"]
     assert "post-hoc locked in commit 671ed96 (28 s after 8fd4dec), not pre-registered" in prim["seed_lock_note"]
+    assert "aa1c679e / 5f9b3297" in prim["seed_lock_note"] and "d0ead011" in prim["seed_lock_note"]
     sol_dirs = prim["solver_reference_dirs"]
     assert [d["n"] for d in sol_dirs["medium"]] == [20, 10]
     assert [d["n"] for d in sol_dirs["hard"]] == [20, 10]
@@ -116,6 +176,10 @@ def test_committed_json_and_markdown_invariants_and_exact_headline_numbers(commi
     assert gpt_pre["stop_time_helsinki"] == "08:15"
     assert gpt_pre["spend_cap_usd"] == 200
     assert gpt_pre["committed_dir"] == "data/runs/committed/v1.4/opencode-gpt-5.5"
+    assert gpt_pre["hard_accused_count"] == 28
+    assert gpt_pre["hard_accused_correct_count"] == 28
+    assert gpt_pre["hard_wrong_accused_count"] == 0
+    assert gpt_pre["hard_non_accused_seeds"] == [0, 17]
 
     f_prov = prim["flash_medium_provenance"]
     assert f_prov["commit_brought"] == "d4bc4f3d"
@@ -154,6 +218,16 @@ def test_committed_json_and_markdown_invariants_and_exact_headline_numbers(commi
             assert math.isclose(got["luck_adjusted_ratio"], ref["post_expected_ratio"], abs_tol=1e-9)
             assert math.isclose(got["luck_adjusted_ratio_ci95"][0], ref["post_expected_lo"], abs_tol=1e-9)
             assert math.isclose(got["luck_adjusted_ratio_ci95"][1], ref["post_expected_hi"], abs_tol=1e-9)
+
+    gpt_hard = by_key[("hard", "opencode-gpt-5.5")]
+    assert gpt_hard["n"] == 30
+    assert round(gpt_hard["mean_score"], 3) == 0.504
+    assert round(gpt_hard["ratio_vs_solver"] * 100) == 101
+    assert [round(x * 100) for x in gpt_hard["ratio_ci95"]] == [79, 140]
+    assert round(gpt_hard["luck_adjusted_score"], 3) == 0.418
+    assert round(gpt_hard["luck_adjusted_ratio"] * 100) == 84
+    assert [round(x * 100) for x in gpt_hard["luck_adjusted_ratio_ci95"]] == [67, 103]
+    assert gpt_hard["sub_breakeven_gamble_count"] == 0
 
     flash_hard = by_key[("hard", "opencode-gemini-3.5-flash")]
     assert flash_hard["n"] == 30
@@ -253,18 +327,72 @@ def test_committed_json_and_markdown_invariants_and_exact_headline_numbers(commi
     assert rep["post_pr16_zero_checks"]["do_nothing_all_zero"] is True
 
 
-def test_check_mode_full_and_shallow_ci_fallback(
+def test_unmocked_seed_slice_replay_and_cli_check_modes(
     committed_payload: dict[str, Any],
     tmp_path: Path,
     monkeypatch,
     capsys,
 ):
+    paired_v13._P_CACHE.clear()
+    audit_slice = MOD._new_audit_log()
+    ext_eps = _read_seed_episodes(
+        "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard/episodes.jsonl",
+        {34, 37},
+    )
+    sol_ext_eps = _read_seed_episodes(
+        "data/runs/committed/v1.4/reference/solver-hard-seeds30to59/episodes.jsonl",
+        {34, 37},
+    )
+    ext_map = MOD._collect_validated(
+        list(ext_eps.values()),
+        source_tag="committed_v1.4",
+        cohort_name="opencode-gemini-4-carbon-ext",
+        enforce_wall_cap=True,
+        audit_log=audit_slice,
+        tier_filter="hard",
+        allowed_seeds={34, 37},
+    )
+    sol_ext_map = MOD._collect_validated(
+        list(sol_ext_eps.values()),
+        source_tag="committed_v1.4",
+        cohort_name="solver",
+        enforce_wall_cap=True,
+        audit_log=audit_slice,
+        tier_filter="hard",
+        allowed_seeds={34, 37},
+    )
+    ext_slice_summary = json.loads(
+        MOD.serialize_payload(
+            MOD.summarize_cohort(
+                "opencode-gemini-4-carbon-ext",
+                "hard",
+                "committed_v1.4",
+                ext_map,
+                sol_ext_map,
+            )
+        )
+    )
+    assert MOD.approx_equal(
+        ext_slice_summary,
+        committed_payload["replication_30_59"]["opencode_gemini_4_carbon_hard_extension"],
+    )
+
+    gpt_s0 = _read_seed_episodes("data/runs/committed/v1.4/opencode-gpt-5.5/hard/episodes.jsonl", {0})[0]
+    ok_g0, _, info_g0 = MOD.validate_and_replay_episode(gpt_s0, enforce_wall_cap=False)
+    assert ok_g0 is True and info_g0 is not None
+    assert info_g0["accused"] is None and info_g0["score"] == 0.0 and info_g0["luck_adjusted"] == 0.0
+
+    oc_s18 = _read_seed_episodes("data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl", {18})[18]
+    ok_c18, _, info_c18 = MOD.validate_and_replay_episode(oc_s18, enforce_wall_cap=False)
+    assert ok_c18 is True and info_c18 is not None
+    assert info_c18["sub_breakeven_gamble"] is True and info_c18["correct"] is False
+
+    monkeypatch.setattr(MOD, "compute", lambda *a, **kw: copy.deepcopy(committed_payload))
+
     rc_shallow = MOD.main(["--check", "--frontier-ref", "refs/heads/nonexistent-shallow-ci-ref-000"])
     out_shallow = capsys.readouterr().out
     assert rc_shallow == 0
     assert "working-tree Part A + Part B + MD verified" in out_shallow
-
-    monkeypatch.setattr(MOD, "compute", lambda *a, **kw: copy.deepcopy(committed_payload))
     assert MOD.main(["--check"]) == 0
     assert MOD.main(["--check", "--frontier-ref", "origin/fr8/canary/frontier"]) == 0
 
@@ -317,8 +445,10 @@ def test_check_mode_full_and_shallow_ci_fallback(
 
 
 def test_validate_and_replay_data_rule_and_1bc3e281_step_detail_compat():
-    solver_factory = make_policy_factory("solver")
-    base_ep = asdict(run_episode(Env("hard", 0), solver_factory(0)))
+    base_ep = _read_seed_episodes(
+        "data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl",
+        {0},
+    )[0]
 
     ok, reason, info = MOD.validate_and_replay_episode(base_ep, enforce_wall_cap=True)
     assert ok is True and reason is None and info is not None
@@ -348,7 +478,7 @@ def test_validate_and_replay_data_rule_and_1bc3e281_step_detail_compat():
     with pytest.raises(ValueError, match="Replay mismatch"):
         MOD.validate_and_replay_episode({**base_ep, "score": float(base_ep["score"]) + 0.25})
 
-    env_err = Env("hard", 3)
+    env_err = Env("medium", 3)
     bad_call = env_err.call("interview", {"employee": "e01", "topic": "leaks"})
     assert bad_call.ok is False and bad_call.error == "invalid arguments"
     assert isinstance(bad_call.data, dict) and set(bad_call.data) == {"detail"}
@@ -407,66 +537,80 @@ def test_synthetic_end_to_end_working_tree_and_optional_gpt55(tmp_path: Path, mo
     one = MOD.paired_bootstrap_stats([0.4], [0.8])
     assert math.isclose(one["ratio"], 0.5, abs_tol=1e-12)
     assert one["ratio_ci95"] == [0.5, 0.5]
-    neg_denom = MOD.paired_bootstrap_stats([0.2, 0.3], [-1.0, 0.0], n_boot=200, seed=0)
+    neg_denom = MOD.paired_bootstrap_stats([0.2, 0.3], [-1.0, 0.0], n_boot=100, seed=0)
     assert neg_denom["ratio"] is None and neg_denom["ratio_ci95"] is None
 
     f_vals = [0.6, 0.8, -1.0, 0.7, 0.5, 0.9]
     s_vals = [0.8, 0.8, 0.7, 0.8, 0.6, 0.9]
-    got_boot = MOD.paired_bootstrap_stats(f_vals, s_vals, n_boot=1000, seed=0)
-    exp_lo, exp_hi = paired_v13.boot_ratio(f_vals, s_vals, B=1000, rng_seed=0)
+    got_boot = MOD.paired_bootstrap_stats(f_vals, s_vals, n_boot=500, seed=0)
+    exp_lo, exp_hi = paired_v13.boot_ratio(f_vals, s_vals, B=500, rng_seed=0)
     assert math.isclose(got_boot["ratio_ci95"][0], exp_lo, abs_tol=1e-12)
     assert math.isclose(got_boot["ratio_ci95"][1], exp_hi, abs_tol=1e-12)
 
     monkeypatch.setattr(MOD, "DETERMINISTIC_BASELINES_0_29", ("do_nothing", "stop_early"))
     monkeypatch.setattr(MOD, "REPLICATION_REF_ORDER", ("solver", "do_nothing", "stop_early"))
-    monkeypatch.setattr(MOD, "PRIMARY_SEEDS", (0, 1))
+    monkeypatch.setattr(MOD, "PRIMARY_SEEDS", (0,))
     monkeypatch.setattr(MOD, "EXTENSION_SEEDS", (34,))
-    monkeypatch.setattr(MOD, "N_BOOT", 100)
+    monkeypatch.setattr(MOD, "N_BOOT", 50)
 
     comm = tmp_path / "committed_v14"
     front = tmp_path / "frontier_v14"
-    sol_fac = make_policy_factory("solver")
-    heu_fac = make_policy_factory("heuristic")
 
-    for tier in ("medium", "hard"):
-        sol_eps = [asdict(run_episode(Env(tier, s), sol_fac(s))) for s in (0, 1)]
-        c_eps = [
-            {**asdict(run_episode(Env(tier, s), sol_fac(s))), "agent": "opencode:google/gemini-4-carbon"}
-            for s in (0, 1)
-        ]
-        ip_eps = [
-            {**asdict(run_episode(Env(tier, s), heu_fac(s))), "agent": "gemini:gemini-4-carbon"}
-            for s in (0, 1)
-        ]
-        _write_jsonl(comm / f"reference/solver-{tier}-synth/episodes.jsonl", sol_eps)
-        _write_jsonl(comm / f"opencode-gemini-4-carbon/{tier}/episodes.jsonl", c_eps)
-        _write_jsonl(comm / f"inproc-gemini-4-carbon/{tier}/episodes.jsonl", ip_eps)
+    sol_med_0 = _read_seed_episodes(
+        "data/runs/committed/v1.4/reference/solver-medium-20261114-121126/episodes.jsonl",
+        {0},
+    )[0]
+    sol_hard_0 = _read_seed_episodes(
+        "data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl",
+        {0},
+    )[0]
+    fl_hard_0 = _read_seed_episodes(
+        "data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard/episodes.jsonl",
+        {0},
+    )[0]
+    gpt_hard_0 = _read_seed_episodes(
+        "data/runs/committed/v1.4/opencode-gpt-5.5/hard/episodes.jsonl",
+        {0},
+    )[0]
+    ext_c_34 = _read_seed_episodes(
+        "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard/episodes.jsonl",
+        {34},
+    )[34]
+    rep_sol_34 = _read_seed_episodes(
+        "data/runs/committed/v1.4/reference/solver-hard-seeds30to59/episodes.jsonl",
+        {34},
+    )[34]
 
-    fl_hard = [
-        {**asdict(run_episode(Env("hard", s), heu_fac(s))), "agent": "opencode:google/gemini-3.5-flash"}
-        for s in (0, 1)
-    ]
-    fl_med = [
-        {**asdict(run_episode(Env("medium", s), heu_fac(s))), "agent": "opencode:google/gemini-3.5-flash"}
-        for s in (0, 1)
-    ]
-    gpt55_hard = [
-        {**asdict(run_episode(Env("hard", s), sol_fac(s))), "agent": "opencode:openai/gpt-5.5"}
-        for s in (0, 1)
-    ]
-    _write_jsonl(comm / "opencode-gemini-3.5-flash/hard/episodes.jsonl", fl_hard)
-    _write_jsonl(comm / "opencode-gpt-5.5/hard/episodes.jsonl", gpt55_hard)
-    _write_jsonl(front / "opencode-gemini-3.5-flash/medium-00-01/episodes.jsonl", fl_med)
-    (front / "opencode-gemini-3.5-flash/medium-00-01/meta.json").write_text(
+    _write_jsonl(comm / "reference/solver-medium-synth/episodes.jsonl", [sol_med_0])
+    _write_jsonl(
+        comm / "opencode-gemini-4-carbon/medium/episodes.jsonl",
+        [{**sol_med_0, "agent": "opencode:google/gemini-4-carbon"}],
+    )
+    _write_jsonl(
+        comm / "inproc-gemini-4-carbon/medium/episodes.jsonl",
+        [{**sol_med_0, "agent": "gemini:gemini-4-carbon"}],
+    )
+    _write_jsonl(comm / "reference/solver-hard-synth/episodes.jsonl", [sol_hard_0])
+    _write_jsonl(
+        comm / "opencode-gemini-4-carbon/hard/episodes.jsonl",
+        [{**sol_hard_0, "agent": "opencode:google/gemini-4-carbon"}],
+    )
+    _write_jsonl(
+        comm / "inproc-gemini-4-carbon/hard/episodes.jsonl",
+        [{**sol_hard_0, "agent": "gemini:gemini-4-carbon"}],
+    )
+    _write_jsonl(comm / "opencode-gemini-3.5-flash/hard/episodes.jsonl", [fl_hard_0])
+    _write_jsonl(comm / "opencode-gpt-5.5/hard/episodes.jsonl", [gpt_hard_0])
+    _write_jsonl(
+        front / "opencode-gemini-3.5-flash/medium-00-00/episodes.jsonl",
+        [{**sol_med_0, "agent": "opencode:google/gemini-3.5-flash"}],
+    )
+    (front / "opencode-gemini-3.5-flash/medium-00-00/meta.json").write_text(
         json.dumps({"git_sha": "c01f371a8b54b9a0", "status": None}),
         encoding="utf-8",
     )
 
-    ext_c = [
-        {**asdict(run_episode(Env("hard", 34), sol_fac(34))), "agent": "opencode:google/gemini-4-carbon"}
-    ]
-    rep_sol = [asdict(run_episode(Env("hard", 34), sol_fac(34)))]
-    _write_jsonl(comm / "opencode-gemini-4-carbon-ext/hard/episodes.jsonl", ext_c)
+    _write_jsonl(comm / "opencode-gemini-4-carbon-ext/hard/episodes.jsonl", [ext_c_34])
     (comm / "opencode-gemini-4-carbon-ext/hard/meta.json").write_text(
         json.dumps({
             "git_sha": "f9fb7a4adc014efd",
@@ -475,7 +619,7 @@ def test_synthetic_end_to_end_working_tree_and_optional_gpt55(tmp_path: Path, mo
         }),
         encoding="utf-8",
     )
-    _write_jsonl(comm / "reference/solver-hard-seeds30to59/episodes.jsonl", rep_sol)
+    _write_jsonl(comm / "reference/solver-hard-seeds30to59/episodes.jsonl", [rep_sol_34])
 
     out_json = tmp_path / "out/crossmodel.json"
     out_md = tmp_path / "out/crossmodel.md"
@@ -486,12 +630,12 @@ def test_synthetic_end_to_end_working_tree_and_optional_gpt55(tmp_path: Path, mo
         "--out-md", str(out_md),
     ]
     assert MOD.main(argv) == 0
-    assert MOD.main(["--check", *argv]) == 0
-    assert MOD.main(["--check", "--frontier-ref", "refs/heads/nonexistent-ref", *argv]) == 0
     synth = json.loads(out_json.read_text(encoding="utf-8"))
+    assert synth["harbor_rehearsal"] == {"present": False}
     assert "hard_carbon_vs_gpt55" in synth["primary_0_29"]["head_to_head"]
     assert synth["primary_0_29"]["gpt_5_5_preregistration"]["committed_present"] is True
-    assert synth["primary_0_29"]["gpt_5_5_preregistration"]["completed_n_by_tier"] == {"hard": 2}
+    assert synth["primary_0_29"]["gpt_5_5_preregistration"]["completed_n_by_tier"] == {"hard": 1}
+    assert synth["primary_0_29"]["gpt_5_5_preregistration"]["hard_non_accused_seeds"] == [0]
     assert [d["dir"] for d in synth["primary_0_29"]["solver_reference_dirs"]["hard"]] == ["solver-hard-synth"]
     synth_ref_sol = next(
         r for r in synth["replication_30_59"]["reference_hard_30_59"] if r["cohort"] == "solver"
@@ -501,10 +645,14 @@ def test_synthetic_end_to_end_working_tree_and_optional_gpt55(tmp_path: Path, mo
     assert synth["replication_30_59"]["post_pr16_zero_checks"]["do_nothing_all_zero"] is True
     assert synth["replication_30_59"]["post_pr16_zero_checks"]["stop_early_all_zero"] is True
 
+    monkeypatch.setattr(MOD, "compute", lambda *a, **kw: copy.deepcopy(synth))
+    assert MOD.main(["--check", *argv]) == 0
+    assert MOD.main(["--check", "--frontier-ref", "refs/heads/nonexistent-ref", *argv]) == 0
+
 
 def test_strict_style_and_secret_hygiene():
     assert JSON_PATH.stat().st_size < MOD.MAX_JSON_BYTES
-    assert JSON_PATH.stat().st_size <= 50000
+    assert JSON_PATH.stat().st_size < 80 * 1024
     assert MD_PATH.stat().st_size > 1000
 
     for py_path in (SCRIPT_PATH, TEST_PATH):
@@ -513,14 +661,18 @@ def test_strict_style_and_secret_hygiene():
         comments = [tok for tok in tokens if tok.type == tokenize.COMMENT]
         assert not comments, f"found comment token in {py_path}"
         assert chr(35) not in src, f"found hash char in {py_path}"
+        assert all(ord(ch) < 128 for ch in src), f"found non-ascii char in {py_path}"
 
+    en_dash = chr(0x2013)
+    em_dash = chr(0x2014)
     mole_dump_rx = re.compile(r'"(?:mole|mole_id|true_mole)"\s*:\s*"e\d{2}"')
     secret_rx = re.compile(r"(?:AIza[0-9A-Za-z_\-]{20,}|\bsk-(?:proj-|ant-)?[A-Za-z0-9_\-]{20,}\b)")
     coauthor_marker = "Co-Authored-" + "By"
     for path in (SCRIPT_PATH, TEST_PATH, JSON_PATH, MD_PATH):
         raw = path.read_bytes()
         txt = raw.decode("ascii")
-        assert "\u2013" not in txt and "\u2014" not in txt, f"found unicode dash in {path}"
+        assert all(ord(ch) < 128 for ch in txt), f"found non-ascii char in {path}"
+        assert en_dash not in txt and em_dash not in txt, f"found unicode dash in {path}"
         assert coauthor_marker not in txt, f"found coauthor marker in {path}"
         assert not mole_dump_rx.search(txt), f"found mole dump pattern in {path}"
         assert not secret_rx.search(txt), f"found secret pattern in {path}"

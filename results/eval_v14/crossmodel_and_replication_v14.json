@@ -83,6 +83,85 @@
   "total_valid_replayed_episodes": 902,
   "working_tree_only": true
  },
+ "harbor_rehearsal": {
+  "agent": "opencode:google/gemini-4-carbon",
+  "ceo_append_only_verified": true,
+  "corrected_final": true,
+  "correction_commits": ["aa1c679e", "5f9b3297"],
+  "do_nothing_mean": 0.0,
+  "env_sha": "1bc3e281",
+  "env_tag": "afterquery-final",
+  "final_trials_branch": "s1-rehearsal-final",
+  "final_trials_commit": "d0ead011",
+  "gap_reproduced_in_harbor": false,
+  "harbor_version": "0.26.0",
+  "n_tasks": 10,
+  "oracle_mean_10": 0.506,
+  "oracle_mean_run3_valid_9": 0.477777777778,
+  "present": true,
+  "protocol_path": "results/harbor/rehearsal/README.md",
+  "run3_finished_after_0830_cutoff": 5,
+  "run3_infra_excluded": 1,
+  "runs": [
+   {
+    "accused": 10,
+    "correct": 9,
+    "finished_after_0830_cutoff": 0,
+    "infra_excluded": 0,
+    "mean": 0.472,
+    "n_valid": 10,
+    "oracle_same_tasks": 0.506,
+    "pct_oracle": 0.93,
+    "pct_oracle_ci": [0.2, 3.71],
+    "run": "opencode-1"
+   },
+   {
+    "accused": 10,
+    "correct": 10,
+    "finished_after_0830_cutoff": 0,
+    "infra_excluded": 0,
+    "mean": 0.585,
+    "n_valid": 10,
+    "oracle_same_tasks": 0.506,
+    "pct_oracle": 1.16,
+    "pct_oracle_ci": [0.78, 3.63],
+    "run": "opencode-2"
+   },
+   {
+    "accused": 9,
+    "correct": 9,
+    "finished_after_0830_cutoff": 5,
+    "infra_excluded": 1,
+    "mean": 0.626,
+    "n_valid": 9,
+    "oracle_same_tasks": 0.477777777778,
+    "pct_oracle": 1.31,
+    "pct_oracle_ci": [0.86, 5.9],
+    "run": "opencode-3"
+   }
+  ],
+  "shell_enabled_in_container": true,
+  "shell_used_trials": "20/28",
+  "snapshot_0852_opencode_3": {
+   "accused": 7,
+   "correct": 7,
+   "infra_excluded": 1,
+   "mean": 0.656,
+   "n_valid": 7,
+   "oracle_same_tasks": 0.429,
+   "pct_oracle": 1.53,
+   "pct_oracle_ci": [0.89, 4.11],
+   "snapshot_time_helsinki": "08:52"
+  },
+  "stop_early_mean": 0.0,
+  "table_path": "results/harbor/rehearsal/TABLE.md",
+  "tasks": "900000-900009",
+  "tier": "hard",
+  "total_valid_accused": 29,
+  "total_valid_correct": 28,
+  "total_valid_trials": 29,
+  "valid_accusations_correct": "28/29"
+ },
  "primary_0_29": {
   "cohorts": [
    {
@@ -755,6 +834,10 @@
     "hard": 30
    },
    "env_tag": "afterquery-final",
+   "hard_accused_correct_count": 28,
+   "hard_accused_count": 28,
+   "hard_non_accused_seeds": [0, 17],
+   "hard_wrong_accused_count": 0,
    "model": "gpt-5.5",
    "opencode_version": "1.19.5",
    "planned_seeds": "0-29",
@@ -873,7 +956,7 @@
     "tier": "medium"
    }
   },
-  "seed_lock_note": "Seeds 0-29 per tier were post-hoc locked in commit 671ed96 (28 s after 8fd4dec), not pre-registered: a post-hoc lock against later reruns and cherry-picking. docs/reports/gap.md and data/runs/committed/v1.4/paired_table_gemini.md form the authoritative headline table of record (hard OpenCode gemini-4-carbon n=30: raw 65% [24%, 98%] first, luck-adjusted 72% [52%, 91%] second; on hard, access_constraints never binds per docs/DIFFICULTY.md W4). Separately, the hard seeds 30-59 extension was pre-registered before any episode in f9fb7a4a, and the gpt-5.5 OpenCode 1.19.5 v1.4 hard run (seeds 0-29, stop 08:15 / $200, tag afterquery-final) was pre-registered before any episode in cf394894.",
+  "seed_lock_note": "Seeds 0-29 per tier were post-hoc locked in commit 671ed96 (28 s after 8fd4dec), not pre-registered: a post-hoc lock against later reruns and cherry-picking. docs/reports/gap.md and data/runs/committed/v1.4/paired_table_gemini.md form the authoritative headline table of record (hard OpenCode gemini-4-carbon n=30: raw 65% [24%, 98%] first, luck-adjusted 72% [52%, 91%] second; on hard, access_constraints never binds per docs/DIFFICULTY.md W4). Separately, the hard seeds 30-59 extension was pre-registered before any episode in f9fb7a4a, and the gpt-5.5 OpenCode 1.19.5 v1.4 hard run (seeds 0-29, stop 08:15 / $200, tag afterquery-final) was pre-registered before any episode in cf394894 (101% [79%, 140%] raw, 84% [67%, 103%] luck-adjusted, n=30, no gap). In the Harbor 3x10 judge-path rehearsal on tag afterquery-final (1bc3e281, corrected in aa1c679e / 5f9b3297, full trials on s1-rehearsal-final d0ead011), gemini-4-carbon scored 93% (+0.472), 116% (+0.585), and 131% (+0.626 on 9 valid trials, 5 after the 08:30 cut-off, 1 infra-excluded; 08:52 partial n=7 snapshot 153% / +0.656; 28/29 valid accusations correct), so the 65% MCP-only gap did not reproduce in the Harbor container.",
   "solver_reference_dirs": {
    "hard": [
     {
@@ -1295,6 +1378,6 @@
   },
   "solver_reference_dir": "data/runs/committed/v1.4/reference/solver-hard-seeds30to59"
  },
- "schema_version": "v1.4.2",
+ "schema_version": "v1.4.3",
  "tiers_version": "v1.4"
 }

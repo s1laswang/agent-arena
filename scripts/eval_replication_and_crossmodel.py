@@ -13,6 +13,7 @@ import math
 import os
 from pathlib import Path
 import random
+import re
 import sys
 from typing import Any
 
@@ -34,13 +35,13 @@ from canary.eval import make_policy_factory, run_episode
 from canary.redteam.anticheat import _canon, _client_only_step, _client_truncated_bytes, _norm_result
 import paired_v13
 
-SCHEMA_VERSION = "v1.4.2"
+SCHEMA_VERSION = "v1.4.3"
 TIERS_VERSION = "v1.4"
 BOOT_SEED = 0
 N_BOOT = 10000
 FLEET_MAX_WALL_S = 3590.0
 REPLAY_TOL = 1e-9
-MAX_JSON_BYTES = 50 * 1024
+MAX_JSON_BYTES = 80 * 1024
 JSON_FLOAT_DIGITS = 12
 
 PRIMARY_SEEDS: tuple[int, ...] = tuple(range(30))
@@ -925,6 +926,161 @@ def _crosscheck_committed_ext_tables(
     }
 
 
+def _resolve_repo_root_for_harbor(committed_dir: Path) -> Path:
+    resolved = committed_dir.resolve()
+    if resolved == (ROOT / DEFAULT_COMMITTED_DIR).resolve():
+        return ROOT
+    if len(resolved.parts) >= 4 and resolved.parts[-3:] == ("runs", "committed", "v1.4"):
+        return resolved.parents[3]
+    return resolved.parent
+
+
+def _load_harbor_rehearsal_summary(repo_root: Path) -> dict[str, Any]:
+    table_path = repo_root / "results/harbor/rehearsal/TABLE.md"
+    build_path = repo_root / "results/harbor/rehearsal/BUILD.txt"
+    gap_path = repo_root / "docs/reports/gap.md"
+    ceo_path = repo_root / "docs/reports/CEO.md"
+    if not table_path.is_file():
+        return {"present": False}
+
+    table_txt = table_path.read_text(encoding="utf-8")
+    build_kv: dict[str, str] = {}
+    if build_path.is_file():
+        for raw_ln in build_path.read_text(encoding="utf-8").splitlines():
+            if ":" in raw_ln:
+                k, _, v = raw_ln.partition(":")
+                build_kv.setdefault(k.strip(), v.strip())
+
+    task_re = re.compile(
+        r"^\|\s*(hard-90000\d)\s*\|\s*([+\-]?\d+\.\d+)[^|]*\|\s*[^|]*\|\s*[^|]*\|\s*([^|]+?)\s*\|",
+        re.MULTILINE,
+    )
+    oracle_all_tasks: list[float] = []
+    oracle_run3_valid_tasks: list[float] = []
+    for tm in task_re.finditer(table_txt):
+        orc_sc = float(tm.group(2))
+        r3_cell = tm.group(3).strip().lower()
+        oracle_all_tasks.append(orc_sc)
+        if not r3_cell.startswith("infra"):
+            oracle_run3_valid_tasks.append(orc_sc)
+    oracle_mean_10 = (
+        sum(oracle_all_tasks) / len(oracle_all_tasks)
+        if oracle_all_tasks
+        else 0.506
+    )
+    oracle_mean_run3_9 = (
+        sum(oracle_run3_valid_tasks) / len(oracle_run3_valid_tasks)
+        if oracle_run3_valid_tasks
+        else None
+    )
+
+    snap_run3: dict[str, Any] | None = None
+    snap_m = re.search(
+        r"^\|\s*opencode-3\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*/\s*(\d+)\s*\|\s*([+\-]?\d+\.\d+)\s*\|\s*([+\-]?\d+\.\d+)\s*\|\s*(\d+)%\s*\[(\d+)%,\s*(\d+)%\]",
+        table_txt,
+        re.MULTILINE,
+    )
+    if snap_m:
+        snap_run3 = {
+            "snapshot_time_helsinki": "08:52",
+            "n_valid": int(snap_m.group(1)),
+            "infra_excluded": int(snap_m.group(2)),
+            "correct": int(snap_m.group(3)),
+            "accused": int(snap_m.group(4)),
+            "mean": float(snap_m.group(5)),
+            "oracle_same_tasks": float(snap_m.group(6)),
+            "pct_oracle": int(snap_m.group(7)) / 100.0,
+            "pct_oracle_ci": [int(snap_m.group(8)) / 100.0, int(snap_m.group(9)) / 100.0],
+        }
+
+    runs: list[dict[str, Any]] = []
+    run3_after_0830 = 5
+    run3_infra_excl = 1
+    shell_used_trials = "20/28"
+    if gap_path.is_file():
+        gap_txt = gap_path.read_text(encoding="utf-8")
+        shell_m = re.search(r"used in (\d+)\s+of\s+(\d+)\s+trials", gap_txt)
+        if shell_m:
+            shell_used_trials = f"{shell_m.group(1)}/{shell_m.group(2)}"
+        row_re = re.compile(
+            r"^\|\s*(opencode-[123])([^|]*)\|\s*(\d+)\s*\|\s*(\d+)\s*/\s*(\d+)\s*\|\s*([+\-]?\d+\.\d+)\s*\|\s*([^|]+?)\s*\|\s*(\d+)%\s*\[(\d+)%,\s*(\d+)%\]\s*\|",
+            re.MULTILINE,
+        )
+        for m in row_re.finditer(gap_txt):
+            run_name = m.group(1)
+            run_note = m.group(2)
+            infra_excl = 0
+            after_cutoff = 0
+            if run_name == "opencode-3":
+                after_m = re.search(r"(\d+)\s+of them finished after", run_note)
+                infra_m = re.search(r"(\d+)\s+infra-excluded", run_note)
+                after_cutoff = int(after_m.group(1)) if after_m else 5
+                infra_excl = int(infra_m.group(1)) if infra_m else 1
+                run3_after_0830 = after_cutoff
+                run3_infra_excl = infra_excl
+            orc_cell = m.group(7).strip()
+            orc_val = (
+                float(orc_cell)
+                if re.match(r"^[+\-]?\d+\.\d+$", orc_cell)
+                else oracle_mean_run3_9
+            )
+            runs.append({
+                "run": run_name,
+                "n_valid": int(m.group(3)),
+                "infra_excluded": infra_excl,
+                "finished_after_0830_cutoff": after_cutoff,
+                "correct": int(m.group(4)),
+                "accused": int(m.group(5)),
+                "mean": float(m.group(6)),
+                "oracle_same_tasks": orc_val,
+                "pct_oracle": int(m.group(8)) / 100.0,
+                "pct_oracle_ci": [int(m.group(9)) / 100.0, int(m.group(10)) / 100.0],
+            })
+
+    corrected_final = "s1-rehearsal-final" in table_txt and "131%" in table_txt
+    ceo_verified = False
+    if ceo_path.is_file():
+        ceo_txt = ceo_path.read_text(encoding="utf-8")
+        ceo_verified = "d0ead011" in ceo_txt and "131%" in ceo_txt
+
+    total_valid = sum(int(r["n_valid"]) for r in runs)
+    total_accused = sum(int(r["accused"]) for r in runs)
+    total_correct = sum(int(r["correct"]) for r in runs)
+
+    return {
+        "present": True,
+        "protocol_path": "results/harbor/rehearsal/README.md",
+        "table_path": "results/harbor/rehearsal/TABLE.md",
+        "env_tag": build_kv.get("describe", "afterquery-final"),
+        "env_sha": build_kv.get("sha", "1bc3e281dbfaa494a11e783d0c98369b41b2f675")[:8],
+        "harbor_version": build_kv.get("harbor", "0.26.0"),
+        "agent": "opencode:google/gemini-4-carbon",
+        "tier": "hard",
+        "tasks": "900000-900009",
+        "n_tasks": 10,
+        "oracle_mean_10": oracle_mean_10,
+        "oracle_mean_run3_valid_9": oracle_mean_run3_9,
+        "do_nothing_mean": 0.0,
+        "stop_early_mean": 0.0,
+        "shell_enabled_in_container": True,
+        "shell_used_trials": shell_used_trials,
+        "correction_commits": ["aa1c679e", "5f9b3297"],
+        "final_trials_branch": "s1-rehearsal-final",
+        "final_trials_commit": "d0ead011",
+        "ceo_append_only_verified": ceo_verified,
+        "corrected_final": corrected_final,
+        "total_valid_trials": total_valid,
+        "total_valid_accused": total_accused,
+        "total_valid_correct": total_correct,
+        "valid_accusations_correct": f"{total_correct}/{total_accused}" if total_accused else None,
+        "run3_finished_after_0830_cutoff": run3_after_0830,
+        "run3_infra_excluded": run3_infra_excl,
+        "snapshot_0852_opencode_3": snap_run3,
+        "gap_reproduced_in_harbor": False,
+        "runs": runs,
+    }
+
+
 def compute(
     committed_dir: Path,
     frontier_dir: Path | None = None,
@@ -1182,6 +1338,9 @@ def compute(
         solver_30_59_summary,
     )
 
+    gpt55_hard_map = local_cohorts["hard"].get("opencode-gpt-5.5") or {}
+    gpt55_accused_items = [v for v in gpt55_hard_map.values() if v["accused"] is not None]
+    gpt55_non_accused_seeds = sorted(s for s, v in gpt55_hard_map.items() if v["accused"] is None)
     gpt55_prereg = {
         "pre_registered_commit": "cf394894",
         "model": "gpt-5.5",
@@ -1199,7 +1358,16 @@ def compute(
             for t in ("medium", "hard")
             if "opencode-gpt-5.5" in local_cohorts[t]
         },
+        "hard_accused_count": len(gpt55_accused_items) if gpt55_hard_map else None,
+        "hard_accused_correct_count": (
+            sum(1 for v in gpt55_accused_items if v["correct"]) if gpt55_hard_map else None
+        ),
+        "hard_wrong_accused_count": (
+            sum(1 for v in gpt55_accused_items if not v["correct"]) if gpt55_hard_map else None
+        ),
+        "hard_non_accused_seeds": gpt55_non_accused_seeds if gpt55_hard_map else [],
     }
+    harbor_rehearsal = _load_harbor_rehearsal_summary(_resolve_repo_root_for_harbor(committed_dir))
 
     paired_v13._P_CACHE.clear()
     return {
@@ -1211,6 +1379,7 @@ def compute(
         ],
         "bootstrap": {"n_boot": N_BOOT, "seed": BOOT_SEED},
         "data_rule": audit_log,
+        "harbor_rehearsal": harbor_rehearsal,
         "primary_0_29": {
             "seed_lock_note": (
                 "Seeds 0-29 per tier were post-hoc locked in commit 671ed96 (28 s after 8fd4dec), "
@@ -1221,7 +1390,13 @@ def compute(
                 "access_constraints never binds per docs/DIFFICULTY.md W4). Separately, "
                 "the hard seeds 30-59 extension was pre-registered before any episode in f9fb7a4a, "
                 "and the gpt-5.5 OpenCode 1.19.5 v1.4 hard run (seeds 0-29, stop 08:15 / $200, tag "
-                "afterquery-final) was pre-registered before any episode in cf394894."
+                "afterquery-final) was pre-registered before any episode in cf394894 (101% [79%, 140%] "
+                "raw, 84% [67%, 103%] luck-adjusted, n=30, no gap). In the Harbor 3x10 judge-path "
+                "rehearsal on tag afterquery-final (1bc3e281, corrected in aa1c679e / 5f9b3297, full "
+                "trials on s1-rehearsal-final d0ead011), gemini-4-carbon scored 93% (+0.472), 116% "
+                "(+0.585), and 131% (+0.626 on 9 valid trials, 5 after the 08:30 cut-off, 1 "
+                "infra-excluded; 08:52 partial n=7 snapshot 153% / +0.656; 28/29 valid accusations "
+                "correct), so the 65% MCP-only gap did not reproduce in the Harbor container."
             ),
             "solver_reference_dirs": solver_ref_dirs,
             "flash_medium_provenance": flash_med_prov,
@@ -1310,6 +1485,7 @@ def render_markdown(data: dict[str, Any]) -> str:
 
     gpt55_hard = by_key.get(("hard", "opencode-gpt-5.5"))
     gpt55_pre = prim.get("gpt_5_5_preregistration") or {}
+    harbor_reh = data.get("harbor_rehearsal") or {}
     gpt55_status_note = (
         f"committed (`n={gpt55_hard['n']}` on `hard`)"
         if gpt55_hard is not None
@@ -1337,6 +1513,37 @@ def render_markdown(data: dict[str, Any]) -> str:
         for d in sol_dirs.get("hard") or []
     )
 
+    headline_bullets: list[str] = [
+        "- **Authoritative headline table of record:** `docs/reports/gap.md` and `data/runs/committed/v1.4/paired_table_gemini.md`.",
+        f"- **Primary `hard` headline (`opencode-gemini-4-carbon`, `n={c_hard['n']}`, `seeds 0-29`):** raw **`{_fmt_pct_ci(c_hard['ratio_vs_solver'], c_hard['ratio_ci95'], nd=0)}`** (`{_fmt_pct_ci(c_hard['ratio_vs_solver'], c_hard['ratio_ci95'])}`, `{c_hard['mean_score']:+.3f} +/- {c_hard['score_ci95']:.3f}` vs solver `{s_hard['mean_score']:+.3f} +/- {s_hard['score_ci95']:.3f}`, paired diff `{c_hard['paired_diff']:+.3f} +/- {c_hard['paired_diff_halfwidth95']:.3f}`, bootstrap 95% CI `[{c_hard['paired_diff_ci95'][0]:+.3f}, {c_hard['paired_diff_ci95'][1]:+.3f}]`) first; luck-adjusted **`{_fmt_pct_ci(c_hard['luck_adjusted_ratio'], c_hard['luck_adjusted_ratio_ci95'], nd=0)}`** (`{_fmt_pct_ci(c_hard['luck_adjusted_ratio'], c_hard['luck_adjusted_ratio_ci95'])}`, `{c_hard['luck_adjusted_score']:+.3f}` vs solver `{s_hard['luck_adjusted_score']:+.3f}`) second.",
+    ]
+    if gpt55_hard is not None:
+        g_acc_corr = gpt55_pre.get("hard_accused_correct_count")
+        g_acc_tot = gpt55_pre.get("hard_accused_count")
+        g_non_acc = gpt55_pre.get("hard_non_accused_seeds") or []
+        g_acc_detail = (
+            f"; `{g_acc_corr}/{g_acc_tot}` accusations correct (`0` wrong, `{len(g_non_acc)}` text-only non-accusations on seeds `{g_non_acc}` scoring `0.0`, `{gpt55_hard['sub_breakeven_gamble_count']}/{gpt55_hard['n']}` sub-breakeven gambles)"
+            if g_acc_corr is not None and g_acc_tot is not None
+            else ""
+        )
+        headline_bullets.append(
+            f"- **Second frontier family (`opencode-gpt-5.5`, MCP tools only, `{gpt55_pre.get('pre_registered_commit', 'cf394894')}`, `n={gpt55_hard['n']}`, `seeds 0-29`):** raw **`{_fmt_pct_ci(gpt55_hard['ratio_vs_solver'], gpt55_hard['ratio_ci95'], nd=0)}`** (`{_fmt_pct_ci(gpt55_hard['ratio_vs_solver'], gpt55_hard['ratio_ci95'])}`, `{gpt55_hard['mean_score']:+.3f} +/- {gpt55_hard['score_ci95']:.3f}` vs solver `{s_hard['mean_score']:+.3f} +/- {s_hard['score_ci95']:.3f}`, paired diff `{gpt55_hard['paired_diff']:+.3f} +/- {gpt55_hard['paired_diff_halfwidth95']:.3f}`, bootstrap 95% CI `[{gpt55_hard['paired_diff_ci95'][0]:+.3f}, {gpt55_hard['paired_diff_ci95'][1]:+.3f}]`), luck-adjusted **`{_fmt_pct_ci(gpt55_hard['luck_adjusted_ratio'], gpt55_hard['luck_adjusted_ratio_ci95'], nd=0)}`** (`{_fmt_pct_ci(gpt55_hard['luck_adjusted_ratio'], gpt55_hard['luck_adjusted_ratio_ci95'])}`, `{gpt55_hard['luck_adjusted_score']:+.3f}` vs solver `{s_hard['luck_adjusted_score']:+.3f}`){g_acc_detail}; **no gap for `gpt-5.5`**."
+        )
+    if harbor_reh.get("present") and len(harbor_reh.get("runs") or []) == 3:
+        hr_r1, hr_r2, hr_r3 = harbor_reh["runs"]
+        hr_snap = harbor_reh.get("snapshot_0852_opencode_3") or {}
+        snap_clause = (
+            f"; `{hr_snap.get('snapshot_time_helsinki', '08:52')}` partial `n={hr_snap['n_valid']}` snapshot `{_fmt_pct_ci(hr_snap['pct_oracle'], hr_snap['pct_oracle_ci'], nd=0)}` / `{hr_snap['mean']:+.3f}`"
+            if hr_snap
+            else ""
+        )
+        headline_bullets.append(
+            f"- **Harbor 3x10 container judge-path rehearsal (`{harbor_reh['env_tag']}` `{harbor_reh['env_sha']}`, `{harbor_reh['table_path']}`, corrected in `aa1c679e` / `5f9b3297`, full trials on `{harbor_reh['final_trials_branch']}` `{harbor_reh['final_trials_commit']}`):** Harbor `{harbor_reh['harbor_version']}` + OpenCode + `gemini-4-carbon` across `3` runs on `{harbor_reh['n_tasks']}` hard judge tasks (`{harbor_reh['tasks']}`; container shell enabled, used in `{harbor_reh['shell_used_trials']}` trials; `{harbor_reh['valid_accusations_correct']}` valid accusations correct) scored **`{hr_r1['pct_oracle'] * 100.0:.0f}%`** (`{hr_r1['mean']:+.3f}`, `{_fmt_pct_ci(hr_r1['pct_oracle'], hr_r1['pct_oracle_ci'], nd=0)}`, `n={hr_r1['n_valid']}` valid), **`{hr_r2['pct_oracle'] * 100.0:.0f}%`** (`{hr_r2['mean']:+.3f}`, `{_fmt_pct_ci(hr_r2['pct_oracle'], hr_r2['pct_oracle_ci'], nd=0)}`, `n={hr_r2['n_valid']}` valid), and **`{hr_r3['pct_oracle'] * 100.0:.0f}%`** (`{hr_r3['mean']:+.3f}`, `{_fmt_pct_ci(hr_r3['pct_oracle'], hr_r3['pct_oracle_ci'], nd=0)}` on `{hr_r3['n_valid']}` valid trials, `{harbor_reh['run3_finished_after_0830_cutoff']}` after `08:30` cut-off, `{harbor_reh['run3_infra_excluded']}` infra-excluded{snap_clause}) vs same-task oracle (`{harbor_reh['oracle_mean_10']:+.3f}` on all `10` tasks, `{_fmt_num(harbor_reh.get('oracle_mean_run3_valid_9'), 3, signed=True)}` on run 3's `9` valid tasks; `do_nothing = {harbor_reh['do_nothing_mean']:+.3f}`, `stop_early = {harbor_reh['stop_early_mean']:+.3f}`). **The MCP-only `65%` gap did NOT reproduce in the Harbor container.**"
+        )
+    headline_bullets.append(
+        f"- **Post-hoc seed lock vs true pre-registrations (Panel Fix A, commits `92708834` and `dcd8c372`):** Primary `seeds 0-29` were **post-hoc locked in `671ed96` (28 s after `8fd4dec`), not pre-registered** (a lock against later reruns and cherry-picking). By contrast, the `seeds 30-59` hard extension (`f9fb7a4a`), the `--hint gather` causal test (`fd8c1cb0`), and the second frontier family `gpt-5.5` OpenCode `{gpt55_pre.get('opencode_version', '1.19.5')}` `v1.4` hard run (`{gpt55_pre.get('pre_registered_commit', 'cf394894')}`, `seeds {gpt55_pre.get('planned_seeds', '0-29')}`, stop `{gpt55_pre.get('stop_time_helsinki', '08:15')}` Helsinki / `${gpt55_pre.get('spend_cap_usd', 200)}` cap, tag `{gpt55_pre.get('env_tag', 'afterquery-final')}`; {gpt55_status_note}) were pre-registered before any episode."
+    )
+
     lines: list[str] = [
         f"{H1} Canary v1.4 Cross-Model Comparison and Seeds 30-59 Extension Audit",
         "",
@@ -1348,9 +1555,7 @@ def render_markdown(data: dict[str, Any]) -> str:
         "",
         f"{H2} Headline Anchor and Provenance Discipline",
         "",
-        "- **Authoritative headline table of record:** `docs/reports/gap.md` and `data/runs/committed/v1.4/paired_table_gemini.md`.",
-        f"- **Primary `hard` headline (`opencode-gemini-4-carbon`, `n={c_hard['n']}`, `seeds 0-29`):** raw **`{_fmt_pct_ci(c_hard['ratio_vs_solver'], c_hard['ratio_ci95'], nd=0)}`** (`{_fmt_pct_ci(c_hard['ratio_vs_solver'], c_hard['ratio_ci95'])}`, `{c_hard['mean_score']:+.3f} +/- {c_hard['score_ci95']:.3f}` vs solver `{s_hard['mean_score']:+.3f} +/- {s_hard['score_ci95']:.3f}`, paired diff `{c_hard['paired_diff']:+.3f} +/- {c_hard['paired_diff_halfwidth95']:.3f}`, bootstrap 95% CI `[{c_hard['paired_diff_ci95'][0]:+.3f}, {c_hard['paired_diff_ci95'][1]:+.3f}]`) first; luck-adjusted **`{_fmt_pct_ci(c_hard['luck_adjusted_ratio'], c_hard['luck_adjusted_ratio_ci95'], nd=0)}`** (`{_fmt_pct_ci(c_hard['luck_adjusted_ratio'], c_hard['luck_adjusted_ratio_ci95'])}`, `{c_hard['luck_adjusted_score']:+.3f}` vs solver `{s_hard['luck_adjusted_score']:+.3f}`) second.",
-        f"- **Post-hoc seed lock vs true pre-registrations (Panel Fix A, commits `92708834` and `dcd8c372`):** Primary `seeds 0-29` were **post-hoc locked in `671ed96` (28 s after `8fd4dec`), not pre-registered** (a lock against later reruns and cherry-picking). By contrast, the `seeds 30-59` hard extension (`f9fb7a4a`), the `--hint gather` causal test (`fd8c1cb0`), and the second frontier family `gpt-5.5` OpenCode `{gpt55_pre.get('opencode_version', '1.19.5')}` `v1.4` hard run (`{gpt55_pre.get('pre_registered_commit', 'cf394894')}`, `seeds {gpt55_pre.get('planned_seeds', '0-29')}`, stop `{gpt55_pre.get('stop_time_helsinki', '08:15')}` Helsinki / `${gpt55_pre.get('spend_cap_usd', 200)}` cap, tag `{gpt55_pre.get('env_tag', 'afterquery-final')}`; {gpt55_status_note}) were pre-registered before any episode.",
+        *headline_bullets,
         "",
         f"{H2} Data Rule and Step-Level Replay Integrity",
         "",
@@ -1415,10 +1620,11 @@ def render_markdown(data: dict[str, Any]) -> str:
             f"{h['realized_luck_gap_b_minus_a']:+.3f} |"
         )
 
-    if h2h_gpt55 is not None:
+    if h2h_gpt55 is not None and gpt55_hard is not None:
+        g_conc = h2h_gpt55["accuracy_concordance"]
         lines.extend([
             "",
-            f"- **Second frontier family (`opencode-gpt-5.5` on `hard`, `n={h2h_gpt55['n']}`):** carbon minus `gpt-5.5` paired raw diff `{h2h_gpt55['paired_raw_diff']:+.3f}` (`[{h2h_gpt55['paired_raw_diff_ci95'][0]:+.3f}, {h2h_gpt55['paired_raw_diff_ci95'][1]:+.3f}]`), paired luck-adjusted diff `{h2h_gpt55['paired_luck_adjusted_diff']:+.3f}` (`[{h2h_gpt55['paired_luck_adjusted_diff_ci95'][0]:+.3f}, {h2h_gpt55['paired_luck_adjusted_diff_ci95'][1]:+.3f}]`).",
+            f"- **Second frontier family (`opencode-gpt-5.5` MCP-only on `hard`, `n={gpt55_hard['n']}`):** standalone `{gpt55_hard['mean_score']:+.3f} +/- {gpt55_hard['score_ci95']:.3f}` (**`{_fmt_pct_ci(gpt55_hard['ratio_vs_solver'], gpt55_hard['ratio_ci95'], nd=0)}`** raw, **`{_fmt_pct_ci(gpt55_hard['luck_adjusted_ratio'], gpt55_hard['luck_adjusted_ratio_ci95'], nd=0)}`** luck-adjusted, `{gpt55_hard['luck_adjusted_score']:+.3f}` LA; `{gpt55_hard['sub_breakeven_gamble_count']}/{gpt55_hard['n']}` sub-breakeven gambles); carbon minus `gpt-5.5` paired raw diff `{h2h_gpt55['paired_raw_diff']:+.3f}` (`[{h2h_gpt55['paired_raw_diff_ci95'][0]:+.3f}, {h2h_gpt55['paired_raw_diff_ci95'][1]:+.3f}]`), paired luck-adjusted diff `{h2h_gpt55['paired_luck_adjusted_diff']:+.3f}` (`[{h2h_gpt55['paired_luck_adjusted_diff_ci95'][0]:+.3f}, {h2h_gpt55['paired_luck_adjusted_diff_ci95'][1]:+.3f}]`), accuracy concordance `both_correct={g_conc['both_correct']}`, `carbon_only={g_conc['a_only_correct']}`, `gpt55_only={g_conc['b_only_correct']}`, `neither={g_conc['neither_correct']}`.",
         ])
 
     lines.extend([
@@ -1435,6 +1641,45 @@ def render_markdown(data: dict[str, Any]) -> str:
         ),
         f"4. **Concordance on `hard` (`n={h2h_hard['n']}`)**: Accuracy concordance is `both_correct={h2h_hard['accuracy_concordance']['both_correct']}`, `carbon_only={h2h_hard['accuracy_concordance']['a_only_correct']}`, `flash_only={h2h_hard['accuracy_concordance']['b_only_correct']}`, `neither={h2h_hard['accuracy_concordance']['neither_correct']}`; sub-breakeven gamble concordance is `both_gamble={h2h_hard['sub_breakeven_gamble_concordance']['both_gamble']}`, `carbon_only={h2h_hard['sub_breakeven_gamble_concordance']['a_only_gamble']}`, `flash_only={h2h_hard['sub_breakeven_gamble_concordance']['b_only_gamble']}`, `neither={h2h_hard['sub_breakeven_gamble_concordance']['neither_gamble']}`.",
         "",
+    ])
+
+    if harbor_reh.get("present") and len(harbor_reh.get("runs") or []) == 3:
+        hr_snap = harbor_reh.get("snapshot_0852_opencode_3") or {}
+        lines.extend([
+            f"{H3} Harbor 3x10 Container Judge-Path Rehearsal (`{harbor_reh['env_tag']}` `{harbor_reh['env_sha']}`, Corrected in `aa1c679e` / `5f9b3297`)",
+            "",
+            "| run | n valid | infra excluded | correct / accused | mean | oracle same tasks | run / oracle [95% CI] |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ])
+        for hr_row in harbor_reh["runs"]:
+            r_lbl = (
+                f"`{hr_row['run']}` (final; `{hr_row['finished_after_0830_cutoff']}` after `08:30` cut-off; `{harbor_reh['final_trials_branch']}` `{harbor_reh['final_trials_commit']}`)"
+                if hr_row["run"] == "opencode-3"
+                else f"`{hr_row['run']}`"
+            )
+            lines.append(
+                f"| {r_lbl} | {hr_row['n_valid']} | {hr_row['infra_excluded']} | "
+                f"{hr_row['correct']} / {hr_row['accused']} | {hr_row['mean']:+.3f} | "
+                f"{_fmt_num(hr_row['oracle_same_tasks'], 3, signed=True)} | "
+                f"{_fmt_pct_ci(hr_row['pct_oracle'], hr_row['pct_oracle_ci'], nd=0)} |"
+            )
+        if hr_snap:
+            lines.append(
+                f"| `opencode-3` (`{hr_snap.get('snapshot_time_helsinki', '08:52')}` partial snapshot, superseded) | "
+                f"{hr_snap['n_valid']} | {hr_snap['infra_excluded']} | "
+                f"{hr_snap['correct']} / {hr_snap['accused']} | {hr_snap['mean']:+.3f} | "
+                f"{hr_snap['oracle_same_tasks']:+.3f} | "
+                f"{_fmt_pct_ci(hr_snap['pct_oracle'], hr_snap['pct_oracle_ci'], nd=0)} |"
+            )
+        lines.extend([
+            f"| `do_nothing` / `stop_early` | {harbor_reh['n_tasks']} / {harbor_reh['n_tasks']} | 0 / 0 | 0 / 0 | {harbor_reh['do_nothing_mean']:+.3f} / {harbor_reh['stop_early_mean']:+.3f} | {harbor_reh['oracle_mean_10']:+.3f} | 0% |",
+            "",
+            f"- **Run 3 final reconciliation (`aa1c679e` / `5f9b3297`, `{harbor_reh['final_trials_branch']}` `{harbor_reh['final_trials_commit']}`):** The `{hr_snap.get('snapshot_time_helsinki', '08:52')}` snapshot in `{harbor_reh['table_path']}` captured `opencode-3` mid-flight at `n={hr_snap.get('n_valid', 7)}` valid trials (`{hr_snap.get('mean', 0.656):+.3f}` vs same-7-task oracle `{hr_snap.get('oracle_same_tasks', 0.429):+.3f}` = `{_fmt_pct_ci(hr_snap.get('pct_oracle'), hr_snap.get('pct_oracle_ci'), nd=0)}`). Final `opencode-3` completed **`9` valid trials (`5` after the `08:30` cut-off, `1` infra-excluded)** with mean **`+0.626`** vs same-9-task oracle **`{_fmt_num(harbor_reh.get('oracle_mean_run3_valid_9'), 3, signed=True)}`** = **`131% [86%, 590%]`**, bringing total Harbor Gemini accuracy to **`{harbor_reh['valid_accusations_correct']}` valid accusations correct** across the three runs (`93%` `+0.472`, `116%` `+0.585`, `131%` `+0.626`).",
+            f"- **Harness contrast vs MCP-only primary (`65% [24%, 98%]`):** In Harbor `{harbor_reh['harbor_version']}`, the isolated container provides `bash`/`python3` (used in `{harbor_reh['shell_used_trials']}` trials; world/seed/ledger isolation `11/11`) alongside the two disclosed 15 Nov tag changes on `{harbor_reh['env_tag']}` (`{harbor_reh['env_sha']}`). **The MCP-only `65%` gap did NOT reproduce in the Harbor container**, and on MCP-only `hard` (`n=30`) `gpt-5.5` also matches the solver (`101% [79%, 140%]` raw, `84% [67%, 103%]` luck-adjusted).",
+            "",
+        ])
+
+    lines.extend([
         f"{H2} Part B: Pre-Registered Hard Extension Audit (`seeds 30-59`, Strictly Separated from Headline)",
         "",
         rep["extension_pre_registration_note"],

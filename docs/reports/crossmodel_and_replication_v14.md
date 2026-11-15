@@ -10,6 +10,8 @@ python scripts/eval_replication_and_crossmodel.py --check
 
 - **Authoritative headline table of record:** `docs/reports/gap.md` and `data/runs/committed/v1.4/paired_table_gemini.md`.
 - **Primary `hard` headline (`opencode-gemini-4-carbon`, `n=30`, `seeds 0-29`):** raw **`65% [24%, 98%]`** (`64.6% [23.8%, 98.3%]`, `+0.322 +/- 0.199` vs solver `+0.499 +/- 0.119`, paired diff `-0.177 +/- 0.194`, bootstrap 95% CI `[-0.384, -0.008]`) first; luck-adjusted **`72% [52%, 91%]`** (`72.0% [51.7%, 91.2%]`, `+0.360` vs solver `+0.499`) second.
+- **Second frontier family (`opencode-gpt-5.5`, MCP tools only, `cf394894`, `n=30`, `seeds 0-29`):** raw **`101% [79%, 140%]`** (`100.9% [78.6%, 140.3%]`, `+0.504 +/- 0.064` vs solver `+0.499 +/- 0.119`, paired diff `+0.005 +/- 0.141`, bootstrap 95% CI `[-0.124, +0.151]`), luck-adjusted **`84% [67%, 103%]`** (`83.7% [66.5%, 103.1%]`, `+0.418` vs solver `+0.499`); `28/28` accusations correct (`0` wrong, `2` text-only non-accusations on seeds `[0, 17]` scoring `0.0`, `0/30` sub-breakeven gambles); **no gap for `gpt-5.5`**.
+- **Harbor 3x10 container judge-path rehearsal (`afterquery-final` `1bc3e281`, `results/harbor/rehearsal/TABLE.md`, corrected in `aa1c679e` / `5f9b3297`, full trials on `s1-rehearsal-final` `d0ead011`):** Harbor `0.26.0` + OpenCode + `gemini-4-carbon` across `3` runs on `10` hard judge tasks (`900000-900009`; container shell enabled, used in `20/28` trials; `28/29` valid accusations correct) scored **`93%`** (`+0.472`, `93% [20%, 371%]`, `n=10` valid), **`116%`** (`+0.585`, `116% [78%, 363%]`, `n=10` valid), and **`131%`** (`+0.626`, `131% [86%, 590%]` on `9` valid trials, `5` after `08:30` cut-off, `1` infra-excluded; `08:52` partial `n=7` snapshot `153% [89%, 411%]` / `+0.656`) vs same-task oracle (`+0.506` on all `10` tasks, `+0.478` on run 3's `9` valid tasks; `do_nothing = +0.000`, `stop_early = +0.000`). **The MCP-only `65%` gap did NOT reproduce in the Harbor container.**
 - **Post-hoc seed lock vs true pre-registrations (Panel Fix A, commits `92708834` and `dcd8c372`):** Primary `seeds 0-29` were **post-hoc locked in `671ed96` (28 s after `8fd4dec`), not pre-registered** (a lock against later reruns and cherry-picking). By contrast, the `seeds 30-59` hard extension (`f9fb7a4a`), the `--hint gather` causal test (`fd8c1cb0`), and the second frontier family `gpt-5.5` OpenCode `1.19.5` `v1.4` hard run (`cf394894`, `seeds 0-29`, stop `08:15` Helsinki / `$200` cap, tag `afterquery-final`; committed (`n=30` on `hard`)) were pre-registered before any episode.
 
 ## Data Rule and Step-Level Replay Integrity
@@ -25,7 +27,7 @@ python scripts/eval_replication_and_crossmodel.py --check
 
 ## Part A: Primary Evaluation (`seeds 0-29`, Post-Hoc Seed Lock `671ed96`)
 
-Seeds 0-29 per tier were post-hoc locked in commit 671ed96 (28 s after 8fd4dec), not pre-registered: a post-hoc lock against later reruns and cherry-picking. docs/reports/gap.md and data/runs/committed/v1.4/paired_table_gemini.md form the authoritative headline table of record (hard OpenCode gemini-4-carbon n=30: raw 65% [24%, 98%] first, luck-adjusted 72% [52%, 91%] second; on hard, access_constraints never binds per docs/DIFFICULTY.md W4). Separately, the hard seeds 30-59 extension was pre-registered before any episode in f9fb7a4a, and the gpt-5.5 OpenCode 1.19.5 v1.4 hard run (seeds 0-29, stop 08:15 / $200, tag afterquery-final) was pre-registered before any episode in cf394894.
+Seeds 0-29 per tier were post-hoc locked in commit 671ed96 (28 s after 8fd4dec), not pre-registered: a post-hoc lock against later reruns and cherry-picking. docs/reports/gap.md and data/runs/committed/v1.4/paired_table_gemini.md form the authoritative headline table of record (hard OpenCode gemini-4-carbon n=30: raw 65% [24%, 98%] first, luck-adjusted 72% [52%, 91%] second; on hard, access_constraints never binds per docs/DIFFICULTY.md W4). Separately, the hard seeds 30-59 extension was pre-registered before any episode in f9fb7a4a, and the gpt-5.5 OpenCode 1.19.5 v1.4 hard run (seeds 0-29, stop 08:15 / $200, tag afterquery-final) was pre-registered before any episode in cf394894 (101% [79%, 140%] raw, 84% [67%, 103%] luck-adjusted, n=30, no gap). In the Harbor 3x10 judge-path rehearsal on tag afterquery-final (1bc3e281, corrected in aa1c679e / 5f9b3297, full trials on s1-rehearsal-final d0ead011), gemini-4-carbon scored 93% (+0.472), 116% (+0.585), and 131% (+0.626 on 9 valid trials, 5 after the 08:30 cut-off, 1 infra-excluded; 08:52 partial n=7 snapshot 153% / +0.656; 28/29 valid accusations correct), so the 65% MCP-only gap did not reproduce in the Harbor container.
 
 ### Medium Tier (`seeds 0-29`, `n=30` paired per cohort)
 
@@ -67,7 +69,7 @@ Seeds 0-29 per tier were post-hoc locked in commit 671ed96 (28 s after 8fd4dec),
 | medium | 30 | +0.713 | +0.434 | +0.279 [+0.072, +0.519] | +0.652 | +0.485 | +0.167 [-0.006, +0.358] | 2/30 (2) | 6/30 (1) | -0.112 |
 | hard | 30 | +0.322 | +0.373 | -0.051 [-0.290, +0.182] | +0.360 | +0.110 | +0.250 [+0.038, +0.475] | 3/30 (2) | 10/30 (7) | +0.300 |
 
-- **Second frontier family (`opencode-gpt-5.5` on `hard`, `n=30`):** carbon minus `gpt-5.5` paired raw diff `-0.181` (`[-0.400, +0.009]`), paired luck-adjusted diff `-0.058` (`[-0.159, +0.044]`).
+- **Second frontier family (`opencode-gpt-5.5` MCP-only on `hard`, `n=30`):** standalone `+0.504 +/- 0.064` (**`101% [79%, 140%]`** raw, **`84% [67%, 103%]`** luck-adjusted, `+0.418` LA; `0/30` sub-breakeven gambles); carbon minus `gpt-5.5` paired raw diff `-0.181` (`[-0.400, +0.009]`), paired luck-adjusted diff `-0.058` (`[-0.159, +0.044]`), accuracy concordance `both_correct=23`, `carbon_only=2`, `gpt55_only=5`, `neither=0`.
 
 ### Why `gemini-3.5-flash` Hard Raw Score (`74.7% [35.9%, 122.8%]`) Collapses Under Luck Adjustment (`22.0% [-22.6%, 63.2%]`)
 
@@ -75,6 +77,19 @@ Seeds 0-29 per tier were post-hoc locked in commit 671ed96 (28 s after 8fd4dec),
 2. **Realized luck windfall**: Across those `10` negative-EV gambles, `gemini-3.5-flash` hit the true mole on `7/10` episodes (`0.90` overall accuracy), generating `realized_luck = +0.263` per episode vs `-0.037` for `gemini-4-carbon` (a `+0.300` per-episode luck swing).
 3. **Decision-quality reversal**: Scoring each accusation by its exact solver-posterior expected value `P * V - (1 - P)` drops `gemini-3.5-flash` from `+0.373` (`74.7% [35.9%, 122.8%]`) to `+0.110` (`22.0% [-22.6%, 63.2%]` of solver), while `gemini-4-carbon` rises to `+0.360` (`72.0% [51.7%, 91.2%]` of solver), giving `gemini-4-carbon` a `+0.250` (`[+0.038, +0.475]`) paired luck-adjusted advantage on `hard` alongside a `+0.167` (`[-0.006, +0.358]`) paired luck-adjusted advantage on `medium` (`n=30`).
 4. **Concordance on `hard` (`n=30`)**: Accuracy concordance is `both_correct=23`, `carbon_only=2`, `flash_only=4`, `neither=1`; sub-breakeven gamble concordance is `both_gamble=2`, `carbon_only=1`, `flash_only=8`, `neither=19`.
+
+### Harbor 3x10 Container Judge-Path Rehearsal (`afterquery-final` `1bc3e281`, Corrected in `aa1c679e` / `5f9b3297`)
+
+| run | n valid | infra excluded | correct / accused | mean | oracle same tasks | run / oracle [95% CI] |
+|---|---:|---:|---:|---:|---:|---:|
+| `opencode-1` | 10 | 0 | 9 / 10 | +0.472 | +0.506 | 93% [20%, 371%] |
+| `opencode-2` | 10 | 0 | 10 / 10 | +0.585 | +0.506 | 116% [78%, 363%] |
+| `opencode-3` (final; `5` after `08:30` cut-off; `s1-rehearsal-final` `d0ead011`) | 9 | 1 | 9 / 9 | +0.626 | +0.478 | 131% [86%, 590%] |
+| `opencode-3` (`08:52` partial snapshot, superseded) | 7 | 1 | 7 / 7 | +0.656 | +0.429 | 153% [89%, 411%] |
+| `do_nothing` / `stop_early` | 10 / 10 | 0 / 0 | 0 / 0 | +0.000 / +0.000 | +0.506 | 0% |
+
+- **Run 3 final reconciliation (`aa1c679e` / `5f9b3297`, `s1-rehearsal-final` `d0ead011`):** The `08:52` snapshot in `results/harbor/rehearsal/TABLE.md` captured `opencode-3` mid-flight at `n=7` valid trials (`+0.656` vs same-7-task oracle `+0.429` = `153% [89%, 411%]`). Final `opencode-3` completed **`9` valid trials (`5` after the `08:30` cut-off, `1` infra-excluded)** with mean **`+0.626`** vs same-9-task oracle **`+0.478`** = **`131% [86%, 590%]`**, bringing total Harbor Gemini accuracy to **`28/29` valid accusations correct** across the three runs (`93%` `+0.472`, `116%` `+0.585`, `131%` `+0.626`).
+- **Harness contrast vs MCP-only primary (`65% [24%, 98%]`):** In Harbor `0.26.0`, the isolated container provides `bash`/`python3` (used in `20/28` trials; world/seed/ledger isolation `11/11`) alongside the two disclosed 15 Nov tag changes on `afterquery-final` (`1bc3e281`). **The MCP-only `65%` gap did NOT reproduce in the Harbor container**, and on MCP-only `hard` (`n=30`) `gpt-5.5` also matches the solver (`101% [79%, 140%]` raw, `84% [67%, 103%]` luck-adjusted).
 
 ## Part B: Pre-Registered Hard Extension Audit (`seeds 30-59`, Strictly Separated from Headline)
 

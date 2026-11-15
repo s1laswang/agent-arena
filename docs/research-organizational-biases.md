@@ -43,7 +43,7 @@ Two foundational works in behavioural decision-making and organisational economi
 
 > "By converting empirical evidence about a decision-making process into a computer program, a path is opened both for testing the adequacy of the program mechanisms for explaining the data, and for discovering the key features of the program that account, qualitatively, for the interesting and important characteristics of its behavior."
 
-### Two-Part Empirical Thesis Connecting Organisational Literature to Canary (`origin/justSilas`, `dcd8c372`)
+### Two-Part Empirical Thesis Connecting Organisational Literature to Canary (`origin/justSilas`, `58716742`)
 
 Following Simon's (1979) simulation paradigm, this document establishes a two-part empirical thesis contrasting human organisational collapses with frontier LLM failure modes in Canary:
 
@@ -58,8 +58,8 @@ Following Simon's (1979) simulation paradigm, this document establishes a two-pa
 > "Organizations now face average annual insider risk costs of US$19.5M, up from $17.4M in 2024, with containment representing the largest cost driver at $247,587 per incident, far exceeding escalation costs of $39,728."
 
 2. **What Canary's `v1.4` and Gate B `v1.5` experiments reveal about frontier LLMs:**
-   - **Frozen judged Canary `v1.4` (`canary/rules.py`, `TIERS_VERSION = "v1.4"`, hash `a8f99c2537c91d72`, commit `8f87ed1e` / `origin/justSilas` `dcd8c372`):**
-     - `hard` places the investigator in a 40-employee, 21-day company with `canaries_per_day=2` x `max_variants=3`, `delay_choices=(2, 3)`, `fingerprint_accuracy=0.95`, `leak_damage=0.05`, `decoy=True`, `framing=True`, `careful_mole=True`, `KNOWN_V_MODE=True`, and `wrong_accusation_score=-1.0` (note: `access_constraints=True` is listed on `hard` but never binds because `canary_level=1` and all staff clearances are `1..3`; see [docs/DIFFICULTY.md](DIFFICULTY.md) W4).
+   - **Frozen judged Canary `v1.4` (`canary/rules.py`, `TIERS_VERSION = "v1.4"`, hash `a8f99c2537c91d72`, commit `8f87ed1e` / `origin/justSilas` `58716742`):**
+     - `hard` places the investigator in a 40-employee, 21-day company with `canaries_per_day=2` x `max_variants=3`, `delay_choices=(2, 3)`, `fingerprint_accuracy=0.95`, `leak_damage=0.05`, `decoy=True`, `framing=True`, `careful_mole=True`, `KNOWN_V_MODE=True`, and `wrong_accusation_score=-1.0` (note: `access_constraints=True` is listed on `hard` but never binds because `canary_level=1` and all staff clearances are `1..3`, while W1 wording and `invalid arguments` `data.detail` were updated post-run at tag `afterquery-final` `1bc3e281`; see [docs/DIFFICULTY.md](DIFFICULTY.md) W1 and W4).
      - Frontier agents fail on **sequential Bayesian commitment, under-exploration, and delayed noisy feedback**: they over-spend daily actions on weak interviews (`68` per `hard` episode in `docs/reports/failure_analysis_v1.4.md`), accuse on unresolved candidate sets or below break-even posteriors `P = 0.18` to `0.63 < 1/(1+V)` instead of abstaining (`0`, [docs/reports/gap.md](reports/gap.md) and [docs/reports/failure_analysis_v1.4.md](reports/failure_analysis_v1.4.md)), and lose track of 2 to 3 day delayed concurrent canaries.
      - On the committed replay-verified `hard` evaluation (`n=30` post-hoc locked paired dev seeds `0-29` -- locked in `671ed96` 28 s after `8fd4dec` as a post-hoc lock against reruns and cherry-picking, not a pre-registration; [data/runs/committed/v1.4/paired_table_gemini.md](../data/runs/committed/v1.4/paired_table_gemini.md), [docs/reports/gap.md](reports/gap.md), and [docs/SUBMISSION.md](SUBMISSION.md); interim `n=26` check `59%` / `67%` in `docs/reports/CEO.md`), OpenCode `gemini-4-carbon` reaches **65% [24%, 98%]** of the Bayesian solver (`0.322 +/- 0.199` vs `0.499 +/- 0.119` across `solver-hard-20261114-121126` + `solver-hard-seeds20to29`; **72% [52%, 91%]** luck-adjusted); in `results/skill_ladder_v1.4.md` (`n=400`, seeds `7000-7399`), removing the EV rule costs `-0.151` to `-0.407` and removing the delay model costs `-0.457` (`medium`) and `-0.251` (`hard`).
    - **Gate B negative result on `justSilas-v15` (`de9cc50e`, commits `07cb8865`, `abbb486b`; [docs/reports/gap.md](reports/gap.md)):**
@@ -69,7 +69,7 @@ Following Simon's (1979) simulation paradigm, this document establishes a two-pa
 
 | Canary Environment / Ablation | Configuration & Key Parameters | Empirical Result | Diagnostic Takeaway |
 |---|---|---|---|
-| **Judged `v1.4` (`hard`)** (`8f87ed1e` / `dcd8c372`, hash `a8f99c2537c91d72`) | 40 staff, 21 days, 2 canaries/day x 3 variants, `delay=(2, 3)`, `fingerprint=0.95`, `decoy=True`, `framing=True`, `KNOWN_V_MODE=True`, wrong = `-1.0` | OpenCode `gemini-4-carbon` (`n=30` post-hoc locked seeds `0-29`, `paired_table_gemini.md`): **65% [24%, 98%]** of solver; luck-adj. **72% [52%, 91%]** | Frontier agents under-explore (`8.5` vs `14.1` canaries, `68` interviews) and commit on thin or negative-EV evidence |
+| **Judged `v1.4` (`hard`)** (`8f87ed1e` / `58716742`, hash `a8f99c2537c91d72`) | 40 staff, 21 days, 2 canaries/day x 3 variants, `delay=(2, 3)`, `fingerprint=0.95`, `decoy=True`, `framing=True`, `KNOWN_V_MODE=True`, wrong = `-1.0` | OpenCode `gemini-4-carbon` (`n=30` post-hoc locked seeds `0-29`, `paired_table_gemini.md`): **65% [24%, 98%]** of solver; luck-adj. **72% [52%, 91%]** | Frontier agents under-explore (`8.5` vs `14.1` canaries, `68` interviews) and commit on thin or negative-EV evidence |
 | **Skill Ladder `v1.4`** (`results/skill_ladder_v1.4.md`, `n=400`, seeds `7000-7399`) | Single-component removals from reference `SolverPolicy` (`canary/solver/ablation.py`) | No EV rule: `-0.151` to `-0.407`; no delay model: `-0.457` (`medium`), `-0.251` (`hard`) | Expected-value risk control and delayed-leak likelihoods carry the benchmark's statistical difficulty |
 | **Gate B `v1.5-candidate`** (`justSilas-v15` `de9cc50e`; dropped at Gate B, `docs/reports/gap.md`) | Adds `rumour_rate=2.0`, `rumour_frame_share=0.4`, `grudge_pairs=2` @ `0.5`, `authority_day=3`, `p_misforward=0.15` | `rumour_follower` (`n=400`): `-0.986` (`medium`) / `-0.995` (`hard`); `gemini-4-carbon` (`hard` `0-9`): **61% -> 108%** (`10/10`, mean `P=0.94`) | Dropped at Gate B: naive gossip-followers collapse, whereas frontier LLMs discount cheap talk and invert seeded rumours |
 
@@ -193,7 +193,7 @@ Organisational and social-psychological research establishes that when high-stak
   - **Verbatim quote (verbatim from abstract):**
 > "Three studies examined the hypothesis that when perceivers learn of the existence of multiple, plausibly rival motives for an actor's behavior, they are less likely to fall prey to the correspondence bias than when they learn of the existence of situational factors that may have constrained the actor's behavior."
 
-- **Judged frozen benchmark (`canary/rules.py`, `TIERS_VERSION = "v1.4"`, commit `8f87ed1e` / `origin/justSilas` `dcd8c372`):**
+- **Judged frozen benchmark (`canary/rules.py`, `TIERS_VERSION = "v1.4"`, commit `8f87ed1e` / `origin/justSilas` `58716742`):**
   - On `medium` (`n_employees=20`, `n_days=14`) and `hard` (`n_employees=40`, `n_days=21`), Canary enables `decoy=True` (a disgruntled-but-innocent employee who vents overt anger in internal chat, matching Aquino, Douglas & Martinko's 2004 hostile attribution profile) alongside `framing=True` (`framing_rate=1.5`/day on `medium`, `2.0`/day on `hard`, with `framing_decoy_share=0.5` concentrating half of fake after-hours access logs onto the vocal decoy, and Mole DSL `FRAME_SELECTORS = ("decoy", "most_restricted_peer", "random_peer", "none")` in `canary/mole/dsl.py`).
   - Meanwhile, genuine access-log base rates overlap heavily (`log_rate_benign=1.0` vs `log_rate_mole=1.15` on `medium` and `1.0` on `hard`; `p_after_hours_benign=0.10` vs `p_after_hours_mole=0.15` on `medium` and `0.30` on `hard`), and interviews remain noisy (`interview_lr=1.3` on `medium`, `1.2` on `hard`, `p_evasive_innocent=0.20`).
   - Policies that commit Ross's (1977) Fundamental Attribution Error by equating angry chat + after-hours log spikes with guilt fail catastrophically under `wrong_accusation_score = -1.0`: on fresh dev seeds 1000-1399 (`n=400`, `docs/reports/env.md`), `obvious_heuristic` scores `-0.940` (`medium`, 3.5% accuracy) and `-0.973` (`hard`, 1.5% accuracy), whereas the calibrated Bayesian `solver` (`canary/solver/belief.py:behaviour_logliks`) marginalizes over decoy identity and framing base rates (`0.658` on `medium`, `0.539` on `hard`) and waits for multi-day canary-variant intersections (`max_variants=3`, `fingerprint_accuracy=0.95` on `hard`).
@@ -411,7 +411,7 @@ Even a single centralized investigator with full authority faces severe cognitiv
 
 ### 4.4 Mapping to Canary Mechanics
 
-Canary operationalizes delayed feedback pipelines, text ambiguity, cross-departmental hidden profiles, and coordination errors directly in `origin/justSilas` (`dcd8c372`) and `origin/justSilas-v15` (`de9cc50e`):
+Canary operationalizes delayed feedback pipelines, text ambiguity, cross-departmental hidden profiles, and coordination errors directly in `origin/justSilas` (`58716742`) and `origin/justSilas-v15` (`de9cc50e`):
 
 1. **Delayed, noisy feedback and pipeline bookkeeping in judged `v1.4` (`canary/rules.py`, frozen hash `a8f99c2537c91d72`):**
    - In frozen `TIERS_VERSION = "v1.4"` (`tests/test_env_frozen.py`), leaked documents surface in `check_leak_feed` after `delay_choices=(1, 2, 3)` days on `medium` and `delay_choices=(2, 3)` days on `hard`, while `KNOWN_V_MODE=True` (`v1.3`/`v1.4`, `canary/env.py:visible_V`) hides unsurfaced leak damage so `status` and `advance_day` display only surfaced leak losses plus known canary and restriction costs. On `v1.4` `hard` (`n_employees=40`, `n_days=21`, `canaries_per_day=2`, `max_variants=3`, `fingerprint_accuracy=0.95`), up to 6 watermarked canary tests (`2/day x 3-day max lag`) are simultaneously in flight.
@@ -524,7 +524,7 @@ Across high-stakes investigations and dynamic management tasks, decision-makers 
 
 ### 5.5 Mapping to Canary v1.4, Skill Ladder, Hint Ablation, and Gate B
 
-Every mechanism in Sections 5.1 to 5.4 is directly instantiated and measured in the Canary codebase (`origin/justSilas`, commit `dcd8c372`):
+Every mechanism in Sections 5.1 to 5.4 is directly instantiated and measured in the Canary codebase (`origin/justSilas`, commit `58716742`):
 
 - **Asymmetric payoff structure and exact break-even stopping boundary (`canary/rules.py`, `canary/solver/policy.py`):**
   - Under Contract v0.3 (`canary/rules.py`, line 45), accusing an innocent employee incurs `wrong_accusation_score = -1.0`, abstaining through `n_days` scores `0.0`, and accusing the true mole scores the remaining *true* company value `V` (starting from `1.0`, minus `leak_damage` per leaked document, `canary_cost = 0.01` per planted canary, and `restrict_cost_per_day = 0.01` per restricted employee-day).
@@ -596,7 +596,7 @@ Whereas Nokia failed through fear-induced upward distortion, Yahoo! Inc. illustr
 
 ### 6.3 Mapping to Canary Mechanics: `visible_V` vs. True `V`, `advance_day` Drift, and Authority Silence
 
-Canary encodes Nokia's upward status distortion and Yahoo's value-bleeding strategic drift directly into its multi-day POMDP mechanics (`origin/justSilas`, `dcd8c372`):
+Canary encodes Nokia's upward status distortion and Yahoo's value-bleeding strategic drift directly into its multi-day POMDP mechanics (`origin/justSilas`, `58716742`):
 
 1. **Optimistic visible metrics vs. hidden structural erosion (`KNOWN_V_MODE = True`, `Env.visible_V` vs. true `V` in `canary/rules.py` line 63 and `canary/env.py` line 300):**
    - Just as Nokia's top executives relied on upward progress reports that hid Symbian's true technical lag (Vuori & Huy, 2016) and Yahoo's board anchored on lagging display-ad indicators while core value eroded, `Env.visible_V()` (`canary/env.py` line 300) displays only *surfaced* leak losses plus known operational costs (`canary_cost`, `restrict_cost_per_day`). Meanwhile, every covert exfiltration during `Env._t_advance_day` (`canary/env.py` line 514) immediately deducts `leak_damage` (`0.04` on `medium`, `0.05` on `hard`) from true `V`, which remains invisible to `status` for `delay_choices = (1, 2, 3)` days (`medium`) or `(2, 3)` days (`hard`) yet governs final `Env.verdict()` scoring. An investigator who mistakes flat `visible_V` for organizational safety commits temporal myopia; `SolverPolicy.expected_true_V` (`canary/solver/policy.py`) explicitly discounts `visible_V` for expected unsurfaced leaks still in the pipeline.
@@ -796,7 +796,7 @@ Corporate leak lore around Tesla, Inc. similarly conflates passive access-log at
 
 ### 8.5 Mapping to Canary Mechanics: `framing_rate`, `careful_mole`, and `canary_mi`
 
-Canary's adversarial environment and Bayesian reference solver (`origin/justSilas`, `dcd8c372`) directly operationalize the forensic failure modes exposed across CERT, Hanssen, Winner, and *Tesla v. Tripp*:
+Canary's adversarial environment and Bayesian reference solver (`origin/justSilas`, `58716742`) directly operationalize the forensic failure modes exposed across CERT, Hanssen, Winner, and *Tesla v. Tripp*:
 
 1. **Adversarial log spoofing (`framing=True`, `framing_rate`, `framing_decoy_share`) and decoy-marginalized `behaviour_logliks` (`canary/rules.py`, `canary/env.py`, `canary/mole/dsl.py`, `canary/solver/belief.py`):**
    - Winner (`6` printers) and *Tesla v. Tripp* (`1` Tableau timestamp accessor) were solvable from passive audit logs only because benign access was sparse and unspoofed; by contrast, Musk's 2018 allegation of actions "under false usernames" and Hanssen's deflection onto an innocent CIA suspect illustrate why unauthenticated behavioural logs fail against an adaptive insider.

@@ -57,8 +57,16 @@ FROZEN_CORE_PATHS: tuple[str, ...] = (
     "canary/solver",
     "canary/mcp_server.py",
     "canary/world.py",
-    "canary/mole",
-    "canary/text",
+    "canary/mole/__init__.py",
+    "canary/mole/dsl.py",
+    "canary/text/__init__.py",
+    "canary/text/build.py",
+    "canary/text/facts.py",
+    "canary/text/gemini.py",
+    "canary/text/instruction.py",
+    "canary/text/lint.py",
+    "canary/text/minimal.py",
+    "canary/text/template.py",
     "harbor",
 )
 

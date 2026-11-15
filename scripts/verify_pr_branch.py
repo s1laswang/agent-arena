@@ -672,9 +672,10 @@ def verify_branch(
         if p.startswith(RUN_SHARD_ROOT_PREFIXES) and p.endswith("/episodes.jsonl") and p in blob_cache
     ]
     parsed_episodes_by_file: dict[str, list[dict[str, Any]]] = {}
-    seen_tuples: dict[tuple[Any, Any, Any], str] = {}
+    seen_tuples: dict[tuple[str, Any, Any, Any], str] = {}
 
     for p in committed_ep_files:
+        root_prefix = next((rp for rp in RUN_SHARD_ROOT_PREFIXES if p.startswith(rp)), "")
         text = blob_cache[p].decode("utf-8", errors="replace")
         file_eps: list[dict[str, Any]] = []
         for idx, line in enumerate(text.splitlines(), start=1):
@@ -697,10 +698,11 @@ def verify_branch(
                 ep_errors.append(f"{p}:{idx} (seed={seed}): end_reason == error")
             if meta.get("valid") is False:
                 ep_errors.append(f"{p}:{idx} (seed={seed}): meta.valid is False")
-            tup = (ep.get("agent"), ep.get("tier"), seed)
+            ep_key = (ep.get("agent"), ep.get("tier"), seed)
+            tup = (root_prefix, *ep_key)
             loc = f"{p}:{idx}"
             if tup in seen_tuples:
-                ep_errors.append(f"duplicate (agent, tier, seed)={tup} at {loc} and {seen_tuples[tup]}")
+                ep_errors.append(f"duplicate (agent, tier, seed)={ep_key} at {loc} and {seen_tuples[tup]}")
             else:
                 seen_tuples[tup] = loc
         parsed_episodes_by_file[p] = file_eps

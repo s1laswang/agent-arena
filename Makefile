@@ -1,4 +1,4 @@
-# Canary: one-command entry points. Owners in brackets; replace the TODO echoes as you ship.
+# Canary: one-command entry points (owners in brackets). Judges: make setup && make reproduce, then make accept. See README.md.
 PROVIDER ?= template
 AGENT ?= solver
 TIER ?= all
@@ -7,7 +7,7 @@ MCP_PORT ?= 8765
 MCP_PORT_FALLBACK ?= 1
 UV := uv run --python 3.12 --extra dev --extra llm --extra plot
 
-.PHONY: play setup test eval reproduce reproduce-update anticheat-verify worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 fr8-pull mcp hunt game game-serve accept
+.PHONY: play setup test eval reproduce reproduce-update anticheat-verify worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 fr8-pull mcp hunt game game-serve accept lab-replay lab-record lab-gateway lab-dashboard
 
 setup:            ## install deps (needs uv: curl -LsSf https://astral.sh/uv/install.sh | sh)
 	@command -v uv >/dev/null 2>&1 || { echo "make setup: uv not found. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh  (then open a new shell)"; exit 127; }
@@ -19,8 +19,17 @@ test:             ## unit + integrity tests (must be green before merging into j
 eval:             ## [HARNESS] make eval AGENT=solver|baselines|openai:<model>|gemini:<model> PROVIDER=template|gemini TIER=easy|medium|hard|all
 	$(UV) python -m canary.eval --agent $(AGENT) --provider $(PROVIDER) --tier $(TIER) --seeds $(SEEDS)
 
-reproduce:        ## [HARNESS] judge table on the frozen judge seeds (no keys) -> results/latest/ (gitignored; committed results/ untouched). REPRO_FAST=1 = 5 seeds/tier
+reproduce:        ## [HARNESS] judge table on the frozen judge seeds (no keys) -> results/latest/ (gitignored; committed results/ untouched), then recompute the README headline (paired Gemini/solver table) and diff it with the committed copy. REPRO_FAST=1 = 5 seeds/tier
 	$(UV) python -m canary.eval --reproduce
+	@mkdir -p results/latest
+	@$(UV) python -W ignore scripts/paired_gemini.py --version v1.4 --seeds 0-29 \
+	  --out-md results/latest/paired_table_gemini.md --out-json results/latest/paired_table_gemini.json > /dev/null
+	@if cmp -s results/latest/paired_table_gemini.md data/runs/committed/v1.4/paired_table_gemini.md; then \
+	  echo "HEADLINE (README table, recomputed from committed episodes; identical to data/runs/committed/v1.4/paired_table_gemini.md):"; \
+	  grep -F "| hard | OpenCode + gemini-4-carbon over MCP (judges' shape)" results/latest/paired_table_gemini.md \
+	    | awk -F'|' '{gsub(/\*/,""); for(i=1;i<=NF;i++) gsub(/^ +| +$$/,"",$$i); printf "  hard, OpenCode + gemini-4-carbon over MCP: +%s vs reference solver +%s, paired on seeds 0-29 = %s of the solver (luck-adjusted %s)\n", $$5, $$10, $$11, $$14}'; \
+	else echo "HEADLINE MISMATCH: results/latest/paired_table_gemini.md differs from data/runs/committed/v1.4/paired_table_gemini.md"; \
+	  diff results/latest/paired_table_gemini.md data/runs/committed/v1.4/paired_table_gemini.md | head -20; exit 1; fi
 
 anticheat-verify: ## [INTEGRITY] rerun the committed 40-judge-seed anti-cheat battery (public test secret) and diff it with results/anticheat/exploits.json (exit 1 on any difference)
 	$(UV) python -m canary.redteam.anticheat --verify results/anticheat/exploits.json
@@ -58,7 +67,7 @@ clash:            ## [AGENTS] Gemini mole vs investigators + scenario designer (
 gemini-check:     ## [AGENTS] 1-call smoke test of GEMINI_API_KEY
 	$(UV) python -m canary.llm.check gemini
 
-fr8-sync:         ## [FR8] rsync code to freighter:~/agent-arena (private repo cannot be cloned there)
+fr8-sync:         ## [FR8] rsync code to freighter:~/agent-arena (team cluster; rsync, not git clone)
 	bash fr8/sync.sh
 
 fr8-setup:        ## [FR8] sync + build the Python env on the freighter login node

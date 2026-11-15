@@ -14,9 +14,11 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import pytest
 
-from canary.analysis.gap import mean_ci
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from canary.analysis.gap import mean_ci
 SCRIPT_PATH = ROOT / "scripts" / "build_eval_charts_v14.py"
 OUT_DIR = ROOT / "results" / "eval_v14"
 HEADLINE_TABLE_JSON = OUT_DIR / "headline_gap_table_v14.json"

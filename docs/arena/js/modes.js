@@ -2,7 +2,7 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const DC = ["#5bd1ff", "#ff8ad8", "#b6f06a", "#ffd23f", "#b17cff", "#ff9a3c"];
-  const SEEDS = [6, 26, 0, 2];
+  const SEEDS = [26, 0, 2, 6];
   let timer = 0, G = null, keyFn = null;
 
   function show(html) {

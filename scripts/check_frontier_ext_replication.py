@@ -38,7 +38,14 @@ def _read_jsonl_dir(dir_path: Path) -> list[dict[str, Any]]:
     eps: list[dict[str, Any]] = []
     if not dir_path.exists():
         return eps
-    files = [dir_path] if dir_path.is_file() else sorted(dir_path.rglob("episodes.jsonl"))
+    if dir_path.is_file():
+        files = [dir_path]
+    else:
+        files = sorted(
+            Path(root) / "episodes.jsonl"
+            for root, _dirs, names in os.walk(dir_path, followlinks=True)
+            if "episodes.jsonl" in names
+        )
     for fpath in files:
         if dir_path.is_dir():
             rel = fpath.relative_to(dir_path).parts[:-1]
@@ -160,8 +167,14 @@ def verify_frontier_ext_replication(repo: Path | str = ROOT, procs: int | None =
 
     if fleet_seeds != EXPECTED_FLEET_SEEDS:
         manifest_errs.append(f"fleet seeds {fleet_seeds} != expected {EXPECTED_FLEET_SEEDS}")
-    if comm_seeds != EXPECTED_COMMITTED_EXT_SEEDS:
-        manifest_errs.append(f"committed G1 seeds {comm_seeds} != expected {EXPECTED_COMMITTED_EXT_SEEDS}")
+    if comm_seeds not in (EXPECTED_COMMITTED_EXT_SEEDS, EXPECTED_DEDUP_EXT8_SEEDS):
+        manifest_errs.append(
+            f"committed ext seeds {comm_seeds} not in ({EXPECTED_COMMITTED_EXT_SEEDS}, {EXPECTED_DEDUP_EXT8_SEEDS})"
+        )
+    comm_g1_eps = [ep for ep in comm_ext_eps if ep.get("seed") in EXPECTED_COMMITTED_EXT_SEEDS]
+    comm_g1_seeds = [ep.get("seed") for ep in comm_g1_eps]
+    if comm_g1_seeds != EXPECTED_COMMITTED_EXT_SEEDS:
+        manifest_errs.append(f"committed G1 seeds {comm_g1_seeds} != expected {EXPECTED_COMMITTED_EXT_SEEDS}")
     if ref_seeds != EXPECTED_REF_SEEDS:
         manifest_errs.append(f"solver 30-59 seeds {ref_seeds} != expected 30..59")
 
@@ -192,24 +205,39 @@ def verify_frontier_ext_replication(repo: Path | str = ROOT, procs: int | None =
         if tr_names != exp_tr:
             manifest_errs.append(f"transcript files {tr_names} != expected {exp_tr}")
 
+    comm_g1_by_seed = {int(ep["seed"]): ep for ep in comm_g1_eps if isinstance(ep.get("seed"), int)}
     dedup_by_seed = {int(ep["seed"]): ep for ep in fleet_eps if isinstance(ep.get("seed"), int)}
-    for ep in comm_ext_eps:
-        if isinstance(ep.get("seed"), int):
-            dedup_by_seed[int(ep["seed"])] = ep
+    for seed, ep in comm_g1_by_seed.items():
+        dedup_by_seed[seed] = ep
     ext8_eps = [dedup_by_seed[s] for s in sorted(dedup_by_seed)]
     ext8_seeds = [ep["seed"] for ep in ext8_eps]
     if ext8_seeds != EXPECTED_DEDUP_EXT8_SEEDS:
         manifest_errs.append(f"deduplicated ext8 seeds {ext8_seeds} != expected {EXPECTED_DEDUP_EXT8_SEEDS}")
-    overlap = sorted(set(fleet_seeds) & set(comm_seeds))
+    if comm_seeds == EXPECTED_DEDUP_EXT8_SEEDS:
+        for ep in comm_ext_eps:
+            seed = ep.get("seed")
+            ref_ep = dedup_by_seed.get(seed) if isinstance(seed, int) else None
+            if (
+                ref_ep is None
+                or abs(float(ep["score"]) - float(ref_ep["score"])) > 1e-9
+                or ep.get("accused") != ref_ep.get("accused")
+                or bool(ep.get("correct", False)) != bool(ref_ep.get("correct", False))
+                or ep.get("final_day") != ref_ep.get("final_day")
+            ):
+                manifest_errs.append(f"committed ext8 seed={seed} mismatch vs dedup_by_seed[{seed}]")
+    overlap = sorted(set(fleet_seeds) & set(EXPECTED_COMMITTED_EXT_SEEDS))
     if overlap != [34]:
         manifest_errs.append(f"expected overlap [34] between fleet and committed G1, got {overlap}")
-    elif comm_ext_eps and dedup_by_seed.get(34) is not comm_ext_eps[0]:
+    elif 34 not in comm_g1_by_seed or dedup_by_seed.get(34) is not comm_g1_by_seed[34]:
         manifest_errs.append("deduplication did not keep committed G1 episode on overlapping seed 34")
 
     checks.append({
         "name": "manifests_and_dedup",
         "passed": not manifest_errs,
-        "summary": f"fleet={len(fleet_eps)}, committed_g1={len(comm_ext_eps)}, solver_ref={len(ref_30_59)}, dedup_ext8={ext8_seeds}",
+        "summary": (
+            f"fleet={len(fleet_eps)}, committed_ext={len(comm_ext_eps)} (g1={len(comm_g1_eps)}), "
+            f"solver_ref={len(ref_30_59)}, dedup_ext8={ext8_seeds}"
+        ),
         "errors": manifest_errs,
     })
 
@@ -225,9 +253,11 @@ def verify_frontier_ext_replication(repo: Path | str = ROOT, procs: int | None =
             if any(sub_dir.name.startswith(prefix + "-") for prefix in ("solver", "heuristic", "do_nothing", "stop_early")):
                 ref_other.extend(_read_jsonl_dir(sub_dir))
 
-    _N_ATTR = len(fleet_eps) + len(comm_ext_eps)
-    _N_REPLAY = _N_ATTR + len(ref_30_59)
-    _WORK_EPS = fleet_eps + comm_ext_eps + ref_30_59 + oc_primary + ip_primary + fl_primary + ref_other
+    comm_g1_ids = {id(ep) for ep in comm_g1_eps}
+    comm_extra_eps = [ep for ep in comm_ext_eps if id(ep) not in comm_g1_ids]
+    _N_ATTR = len(fleet_eps) + len(comm_g1_eps)
+    _N_REPLAY = _N_ATTR + len(comm_extra_eps) + len(ref_30_59)
+    _WORK_EPS = fleet_eps + comm_g1_eps + comm_extra_eps + ref_30_59 + oc_primary + ip_primary + fl_primary + ref_other
 
     needed_indices = [
         idx for idx in range(len(_WORK_EPS))
@@ -235,7 +265,12 @@ def verify_frontier_ext_replication(repo: Path | str = ROOT, procs: int | None =
     ]
 
     n_workers = procs if procs is not None else min(12, os.cpu_count() or 1)
-    use_fork = n_workers > 1 and "fork" in get_all_start_methods()
+    mod_self = sys.modules.get(__name__)
+    use_fork = (
+        n_workers > 1
+        and "fork" in get_all_start_methods()
+        and getattr(mod_self, "_worker_episode", None) is _worker_episode
+    )
 
     pool = None
     if use_fork:
@@ -264,7 +299,7 @@ def verify_frontier_ext_replication(repo: Path | str = ROOT, procs: int | None =
 
         replay_errs: list[str] = []
         replayed_n = 0
-        for label, eps in (("fleet", fleet_eps), ("committed_g1", comm_ext_eps), ("solver_30_59", ref_30_59)):
+        for label, eps in (("fleet", fleet_eps), ("committed_ext", comm_ext_eps), ("solver_30_59", ref_30_59)):
             for ep in eps:
                 replayed_n += 1
                 rep = rep_by_id.get(id(ep))
@@ -283,11 +318,22 @@ def verify_frontier_ext_replication(repo: Path | str = ROOT, procs: int | None =
                         f"{ep.get('correct')}, {ep.get('final_day')}) != replay={rep}"
                     )
 
+        expected_replays = (
+            len(EXPECTED_FLEET_SEEDS)
+            + (
+                len(EXPECTED_DEDUP_EXT8_SEEDS)
+                if comm_seeds == EXPECTED_DEDUP_EXT8_SEEDS
+                else len(EXPECTED_COMMITTED_EXT_SEEDS)
+            )
+            + len(EXPECTED_REF_SEEDS)
+        )
         checks.append({
-            "name": "env_replay_39",
-            "passed": not replay_errs and replayed_n == 39,
+            "name": "env_replay",
+            "passed": not replay_errs and replayed_n == expected_replays,
             "summary": f"{replayed_n - len(replay_errs)}/{replayed_n} episodes replay-verified in canary.env.Env",
-            "errors": replay_errs if replay_errs else ([] if replayed_n == 39 else [f"expected 39 replays, got {replayed_n}"]),
+            "errors": replay_errs
+            if replay_errs
+            else ([] if replayed_n == expected_replays else [f"expected {expected_replays} replays, got {replayed_n}"]),
         })
 
         def _p_acc(ep: dict[str, Any]) -> float | None:

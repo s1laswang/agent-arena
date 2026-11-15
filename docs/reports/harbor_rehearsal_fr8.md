@@ -60,7 +60,7 @@ Run-to-run spread over 3 OpenCode runs: run means `+0.647`, `+0.543`, `+0.527`; 
 
 ## Artifact & Consistency Verification
 
-- `canary.redteam.anticheat.harbor_consistency`: **70/70 trials and 7/7 job summaries consistent** (`reward.json` == `reward.txt` == sidecar `artifacts/ledger.json` == verifier ledger copy; 70/70 graded with `signature=ok`; 29 OpenCode trials have `agent/opencode.txt` trajectories and every accused trial names the same culprit in the trajectory and server ledger; 10/10 `cheat_probe` trials report 0 holes and score `+0.000`).
+- `canary.redteam.anticheat.harbor_consistency`: **70/70 trials and 7/7 job summaries consistent** (`reward.json` == `reward.txt` == sidecar `artifacts/ledger.json` == verifier ledger copy; 70/70 graded with `signature=ok`; 30/30 OpenCode trials have `agent/opencode.txt` logs and 29/30 have `agent/trajectory.json` checked by `harbor_consistency` and every accused trial names the same culprit in the trajectory and server ledger; 10/10 `cheat_probe` trials report 0 holes and score `+0.000`).
 - Reproduction table command once `results/harbor/rehearsal-fr8/` is present:
   ```bash
   python scripts/rehearsal_table.py results/harbor/rehearsal-fr8

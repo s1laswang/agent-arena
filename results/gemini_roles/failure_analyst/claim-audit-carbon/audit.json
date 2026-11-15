@@ -1,0 +1,2223 @@
+{
+  "role": "failure_analyst",
+  "subrole": "atlas_claim_audit_carbon",
+  "model_id": "gemini-4-carbon",
+  "thinking_level": "medium",
+  "commit": "a366f947ed7ff9ea549df0488268377b9b002868",
+  "timestamp": "2026-11-14T23:12:35+00:00",
+  "source": "llm",
+  "stub": false,
+  "auditor": "gemini-4-carbon (automated LLM audit, not human)",
+  "disclosure": "Independent automated LLM claim and solver-consistency audit over docs/gemini/validation.md and docs/gemini/validation_context.md. Human validation in docs/gemini/validation.md belongs exclusively to human labeller Ivar and was left completely untouched.",
+  "deterministic_verification": {
+    "n_claims": 30,
+    "sheet_quotes_verified": 30,
+    "sheet_quotes_verified_pct": 100.0,
+    "marked_steps_matched": 30,
+    "human_sheet_modified": false
+  },
+  "auditor_summary": {
+    "n_claims": 30,
+    "agree": 22,
+    "disagree": 6,
+    "unsure": 2,
+    "agreement_rate": 0.7857,
+    "strict_agree_rate": 0.7333,
+    "overclaims_flagged": 9,
+    "by_kind": {
+      "mode": {
+        "n": 10,
+        "agree": 7,
+        "disagree": 3,
+        "unsure": 0,
+        "overclaims_flagged": 3,
+        "agreement_rate": 0.7
+      },
+      "label": {
+        "n": 12,
+        "agree": 9,
+        "disagree": 1,
+        "unsure": 2,
+        "overclaims_flagged": 4,
+        "agreement_rate": 0.9
+      },
+      "counterfactual": {
+        "n": 5,
+        "agree": 3,
+        "disagree": 2,
+        "unsure": 0,
+        "overclaims_flagged": 2,
+        "agreement_rate": 0.6
+      },
+      "localisation": {
+        "n": 3,
+        "agree": 3,
+        "disagree": 0,
+        "unsure": 0,
+        "overclaims_flagged": 0,
+        "agreement_rate": 1.0
+      }
+    },
+    "by_overclaim_type": {
+      "evidence_backed_framing_luck": 2,
+      "false_solver_counterfactual": 1,
+      "magnitude_or_mechanism_exaggeration": 4,
+      "unverified_mental_state_without_rationale": 2
+    },
+    "executive_summary": "Across n_claims=30 Failure Atlas claims, this forensic audit found agree=22, disagree=6, and unsure=2 (scored_agreement_rate=0.7857), with overclaims_flagged=9. Scored agreement by kind was 1.0 for localisation (3/3), 0.9 for label (9 agree, 1 disagree, 2 unsure), 0.7 for mode (7/10), and 0.6 for counterfactual (3/5). The 9 over-claims revealed four systematic attribution errors: 2 evidence_backed_framing_luck cases blaming agents when the Bayesian solver itself favored the framed innocent suspect (e18 at 0.63; e05 at 0.92 from 5% variant noise); 1 false_solver_counterfactual asserting SolverPolicy would accuse e01 at P=0.29 on the final day despite EV < 0 requiring abstention; 2 unverified_mental_state_without_rationale claims with rationale=none; and 4 magnitude_or_mechanism_exaggeration cases inflating tiny 0.021-0.029 canary regrets."
+  },
+  "quote_verification": {
+    "total_quotes": 30,
+    "verified_quotes": 30,
+    "unverified_quotes": 0,
+    "verified_quotes_pct": 100.0,
+    "checks": [
+      {
+        "claim_id": 1,
+        "quote": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+        "verified": true,
+        "matched_line": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 2,
+        "quote": ">>> t39 d6 restrict_access(employee=e01) -> {\"restricted\": \"e01\"} | REGRET 0.073 [over_restriction] | top=e19:.66 mole:.66",
+        "verified": true,
+        "matched_line": ">>> t39 d6 restrict_access(employee=e01) -> {\"restricted\": \"e01\"} | REGRET 0.073 [over_restriction] | top=e19:.66 mole:.66",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 3,
+        "quote": ">>> t9 d1 plant_canary(A:e00 | B:e01) -> canary c1 | REGRET 0.020 [uninformative_canary] | top=e00:.03 mole:.03",
+        "verified": true,
+        "matched_line": ">>> t9 d1 plant_canary(A:e00 | B:e01) -> canary c1 | REGRET 0.020 [uninformative_canary] | top=e00:.03 mole:.03",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 4,
+        "quote": ">>> t150 d15 accuse(employee=e18) -> accused e18 (episode over) | REGRET 0.501 | top=e18:.63 mole:.01",
+        "verified": true,
+        "matched_line": ">>> t150 d15 accuse(employee=e18) -> accused e18 (episode over) | REGRET 0.501 | top=e18:.63 mole:.01",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 5,
+        "quote": ">>> t3 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.019 | top=e00:.05 mole:.05",
+        "verified": true,
+        "matched_line": ">>> t3 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.019 | top=e00:.05 mole:.05",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 6,
+        "quote": ">>> t84 d8 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.816 [premature_accusation] | top=e09:.51 mole:.51",
+        "verified": true,
+        "matched_line": ">>> t84 d8 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.816 [premature_accusation] | top=e09:.51 mole:.51",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 7,
+        "quote": ">>> t6 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+        "verified": true,
+        "matched_line": ">>> t6 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 8,
+        "quote": ">>> t106 d14 accuse(employee=e08) -> accused e08 (episode over) | REGRET 0.815 [premature_accusation,ignored_delay] | top=e27:.54 mole:.54",
+        "verified": true,
+        "matched_line": ">>> t106 d14 accuse(employee=e08) -> accused e08 (episode over) | REGRET 0.815 [premature_accusation,ignored_delay] | top=e27:.54 mole:.54",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 9,
+        "quote": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "verified": true,
+        "matched_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 10,
+        "quote": ">>> t84 d11 accuse(employee=e05) -> accused e05 (episode over) | REGRET 0.108 | top=e05:.92 mole:.08",
+        "verified": true,
+        "matched_line": ">>> t84 d11 accuse(employee=e05) -> accused e05 (episode over) | REGRET 0.108 | top=e05:.92 mole:.08",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 11,
+        "quote": ">>> t81 d12 plant_canary(a:e17) -> canary c12 | REGRET 0.024 | top=e07:.32 mole:.22",
+        "verified": true,
+        "matched_line": ">>> t81 d12 plant_canary(a:e17) -> canary c12 | REGRET 0.024 | top=e07:.32 mole:.22",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 12,
+        "quote": ">>> t67 d7 plant_canary(A:e08 | B:e04,e07,e14,e16,e19,e24) -> canary c7 | REGRET 0.021 | top=e16:.17 mole:.16",
+        "verified": true,
+        "matched_line": ">>> t67 d7 plant_canary(A:e08 | B:e04,e07,e14,e16,e19,e24) -> canary c7 | REGRET 0.021 | top=e16:.17 mole:.16",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 13,
+        "quote": ">>> t146 d14 accuse(employee=e21) -> accused e21 (episode over) | REGRET 0.083 [premature_accusation] | top=e21:.55 mole:.55",
+        "verified": true,
+        "matched_line": ">>> t146 d14 accuse(employee=e21) -> accused e21 (episode over) | REGRET 0.083 [premature_accusation] | top=e21:.55 mole:.55",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 14,
+        "quote": ">>> t42 d5 plant_canary(A:e12 | B:e13 | C:e14) -> canary c5 | REGRET 0.038 [uninformative_canary] | top=e09:.18 mole:.11",
+        "verified": true,
+        "matched_line": ">>> t42 d5 plant_canary(A:e12 | B:e13 | C:e14) -> canary c5 | REGRET 0.038 [uninformative_canary] | top=e09:.18 mole:.11",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 15,
+        "quote": ">>> t19 d3 plant_canary(e25:e25 | e26:e26 | e27:e27) -> canary c3-2 | REGRET 0.027 | top=e10:.07 mole:.04",
+        "verified": true,
+        "matched_line": ">>> t19 d3 plant_canary(e25:e25 | e26:e26 | e27:e27) -> canary c3-2 | REGRET 0.027 | top=e10:.07 mole:.04",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 16,
+        "quote": ">>> t59 d9 plant_canary(A:e01,e05,e06,e26 | B:e08,e18,e21,e29) -> canary c9 | REGRET 0.012 | top=e05:.38 mole:.32",
+        "verified": true,
+        "matched_line": ">>> t59 d9 plant_canary(A:e01,e05,e06,e26 | B:e08,e18,e21,e29) -> canary c9 | REGRET 0.012 | top=e05:.38 mole:.32",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 17,
+        "quote": ">>> t24 d4 plant_canary(e29:e29 | e32:e32 | e34:e34) -> canary c4 | REGRET 0.026 | top=e12:.09 mole:.03",
+        "verified": true,
+        "matched_line": ">>> t24 d4 plant_canary(e29:e29 | e32:e32 | e34:e34) -> canary c4 | REGRET 0.026 | top=e12:.09 mole:.03",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 18,
+        "quote": ">>> t7 d1 plant_canary(e03:e03 | e04:e04 | e05:e05) -> canary c1-2 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+        "verified": true,
+        "matched_line": ">>> t7 d1 plant_canary(e03:e03 | e04:e04 | e05:e05) -> canary c1-2 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 19,
+        "quote": ">>> t18 d2 plant_canary(A:e08,e09,e29 | B:e10,e13,e39 | C:e21,e32) -> canary c2-2 | REGRET 0.019 | top=e16:.04 mole:.02",
+        "verified": true,
+        "matched_line": ">>> t18 d2 plant_canary(A:e08,e09,e29 | B:e10,e13,e39 | C:e21,e32) -> canary c2-2 | REGRET 0.019 | top=e16:.04 mole:.02",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 20,
+        "quote": ">>> t18 d3 plant_canary(e12:e12 | e14:e14 | e17:e17) -> canary c3 | REGRET 0.028 | top=e10:.07 mole:.04",
+        "verified": true,
+        "matched_line": ">>> t18 d3 plant_canary(e12:e12 | e14:e14 | e17:e17) -> canary c3 | REGRET 0.028 | top=e10:.07 mole:.04",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 21,
+        "quote": ">>> t54 d9 plant_canary(e27:e27 | e29:e29 | e32:e32) -> canary c9 | REGRET 0.025 | top=e12:.32 mole:.08",
+        "verified": true,
+        "matched_line": ">>> t54 d9 plant_canary(e27:e27 | e29:e29 | e32:e32) -> canary c9 | REGRET 0.025 | top=e12:.32 mole:.08",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 22,
+        "quote": ">>> t3 d1 plant_canary(A:e01,e06,e10 | B:e23,e27,e29) -> canary c1 | REGRET 0.010 | top=e00:.03 mole:.03",
+        "verified": true,
+        "matched_line": ">>> t3 d1 plant_canary(A:e01,e06,e10 | B:e23,e27,e29) -> canary c1 | REGRET 0.010 | top=e00:.03 mole:.03",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 23,
+        "quote": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+        "verified": true,
+        "matched_line": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 24,
+        "quote": ">>> t52 d6 accuse(employee=e02) -> accused e02 (episode over) | REGRET 1.390 [premature_accusation] | top=e02:.18 mole:.12",
+        "verified": true,
+        "matched_line": ">>> t52 d6 accuse(employee=e02) -> accused e02 (episode over) | REGRET 1.390 [premature_accusation] | top=e02:.18 mole:.12",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 25,
+        "quote": ">>> t141 d13 accuse(employee=e17) -> accused e17 (episode over) | REGRET 0.383 | top=e17:.73 mole:.73",
+        "verified": true,
+        "matched_line": ">>> t141 d13 accuse(employee=e17) -> accused e17 (episode over) | REGRET 0.383 | top=e17:.73 mole:.73",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 26,
+        "quote": ">>> t78 d11 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.663 [premature_accusation] | top=e09:.55 mole:.55",
+        "verified": true,
+        "matched_line": ">>> t78 d11 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.663 [premature_accusation] | top=e09:.55 mole:.55",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 27,
+        "quote": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "verified": true,
+        "matched_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 28,
+        "quote": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "verified": true,
+        "matched_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 29,
+        "quote": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+        "verified": true,
+        "matched_line": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      },
+      {
+        "claim_id": 30,
+        "quote": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+        "verified": true,
+        "matched_line": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    ]
+  },
+  "usage": {
+    "in": 36421,
+    "out": 7259,
+    "thinking": 25631,
+    "cached": 0,
+    "cost_usd": 0.401742,
+    "calls": 4,
+    "latency_s": 477.327
+  },
+  "claims": [
+    {
+      "claim_id": 1,
+      "kind": "mode",
+      "episode": "gpt5.5.co.v13.h8",
+      "t": 70,
+      "claim": "This step is an instance of \"Premature Accusation on Sub-Threshold Posterior\": The agent prematurely calls an accusation at only 0.41 posterior probability, losing 0.979 in value versus continuing to verify.",
+      "sheet_quote": "I\u2019ve got enough to make the call. The decisive piece is not a single after-hours access; it\u2019s the repeated pattern for `e13` across the narrowed Legal-only candidate set, while `e20` is separately explained as the decoy.",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "I\u2019ve got enough to make the call. The decisive piece is not a single after-hours access; it\u2019s the repeated pattern for `e13` across the narrowed Legal-only candidate set, while `e20` is separately explained as the decoy.",
+        "matched_line": "   says: I\u2019ve got enough to make the call. The decisive piece is not a single after-hours access; it\u2019s the repeated pattern for `e13` across the narrowed Legal-only candidate set, while `e20` is separately explained as the decoy. Accused `e13`. The strongest path was: leaked docs narrowed the mole to Legal, `e20` looked like the decoy from messages, and within the remaining Legal candidates `e13` had the clearest repeated after-hours pattern across several days and canary-related accesses."
+      },
+      "outcome": {
+        "accused": "e13",
+        "correct": true,
+        "true_mole": "e13",
+        "score": 0.76,
+        "solver_same_seed": 0.565,
+        "final_day": 11,
+        "end": "accused",
+        "total_regret": 1.041,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+        "t": 70,
+        "day": 11,
+        "tool": "accuse",
+        "args_str": "employee=e13",
+        "target_employee": "e13",
+        "result_str": "accused e13 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.979,
+        "tags": [
+          "premature_accusation"
+        ],
+        "top_employee": "e13",
+        "top_prob": 0.41,
+        "mole_prob": 0.41
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": true,
+        "solver_top_is_innocent": false,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t70 (d11), the agent accuses e13 with exact solver posterior top=e13:.41 (mole:.41), well below the 0.85 hard accusation threshold, incurring REGRET 0.979 with tag [premature_accusation]. The agent rationale confirms stopping early based on Legal narrowing and after-hours patterns.",
+      "verbatim_context_line": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 1,
+        "quote": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+        "verified": true,
+        "matched_line": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 2,
+      "kind": "mode",
+      "episode": "grok.re.v12.h900004",
+      "t": 39,
+      "claim": "This step is an instance of \"Costly and Premature Access Restriction\": The agent restricts e01 while suspect entropy is high, suffering a 0.073 over-restriction penalty.",
+      "sheet_quote": "restrict_access(employee=e01) -> {\"restricted\": \"e01\"} / REGRET 0.073 [over_restriction]",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "restrict_access(employee=e01) -> {\"restricted\": \"e01\"} | REGRET 0.073 [over_restriction]",
+        "matched_line": ">>> t39 d6 restrict_access(employee=e01) -> {\"restricted\": \"e01\"} | REGRET 0.073 [over_restriction] | top=e19:.66 mole:.66"
+      },
+      "outcome": {
+        "accused": "e19",
+        "correct": true,
+        "true_mole": "e19",
+        "score": 0.575,
+        "solver_same_seed": null,
+        "final_day": 11,
+        "end": "accused",
+        "total_regret": 0.206,
+        "rationale": "none"
+      },
+      "solver_step": {
+        "raw_line": ">>> t39 d6 restrict_access(employee=e01) -> {\"restricted\": \"e01\"} | REGRET 0.073 [over_restriction] | top=e19:.66 mole:.66",
+        "t": 39,
+        "day": 6,
+        "tool": "restrict_access",
+        "args_str": "employee=e01",
+        "target_employee": "e01",
+        "result_str": "{\"restricted\": \"e01\"}",
+        "has_explicit_regret": true,
+        "regret": 0.073,
+        "tags": [
+          "over_restriction"
+        ],
+        "top_employee": "e19",
+        "top_prob": 0.66,
+        "mole_prob": 0.66
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": true,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": false,
+        "solver_never_accuses_at_top_prob": false
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t39 (d6), posterior uncertainty remains unresolved (top=e19:.66, mole:.66, below the 0.85 threshold) and e01 has very low posterior (<0.10). Restricting e01 incurs exact REGRET 0.073 with solver tag [over_restriction], matching the claim.",
+      "verbatim_context_line": ">>> t39 d6 restrict_access(employee=e01) -> {\"restricted\": \"e01\"} | REGRET 0.073 [over_restriction] | top=e19:.66 mole:.66",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 2,
+        "quote": ">>> t39 d6 restrict_access(employee=e01) -> {\"restricted\": \"e01\"} | REGRET 0.073 [over_restriction] | top=e19:.66 mole:.66",
+        "verified": true,
+        "matched_line": ">>> t39 d6 restrict_access(employee=e01) -> {\"restricted\": \"e01\"} | REGRET 0.073 [over_restriction] | top=e19:.66 mole:.66",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 3,
+      "kind": "mode",
+      "episode": "gpt5.5.in.v12.h4",
+      "t": 9,
+      "claim": "This step is an instance of \"Planting Overly Narrow Uninformative Canaries\": Planting a canary on only 2 individuals on Day 1 yields an uninformative canary with immediate regret.",
+      "sheet_quote": "plant_canary(A:e00 / B:e01) -> canary c1 / REGRET 0.020 [uninformative_canary]",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "plant_canary(A:e00 | B:e01) -> canary c1 | REGRET 0.020 [uninformative_canary]",
+        "matched_line": ">>> t9 d1 plant_canary(A:e00 | B:e01) -> canary c1 | REGRET 0.020 [uninformative_canary] | top=e00:.03 mole:.03"
+      },
+      "outcome": {
+        "accused": "e27",
+        "correct": false,
+        "true_mole": "e28",
+        "score": -1.0,
+        "solver_same_seed": 0.6,
+        "final_day": 14,
+        "end": "accused",
+        "total_regret": 0.146,
+        "rationale": "none"
+      },
+      "solver_step": {
+        "raw_line": ">>> t9 d1 plant_canary(A:e00 | B:e01) -> canary c1 | REGRET 0.020 [uninformative_canary] | top=e00:.03 mole:.03",
+        "t": 9,
+        "day": 1,
+        "tool": "plant_canary",
+        "args_str": "A:e00 | B:e01",
+        "target_employee": null,
+        "result_str": "canary c1",
+        "has_explicit_regret": true,
+        "regret": 0.02,
+        "tags": [
+          "uninformative_canary"
+        ],
+        "top_employee": "e00",
+        "top_prob": 0.03,
+        "mole_prob": 0.03
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": true,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t9 (d1) with 30 employees and uniform prior (top=e00:.03, mole:.03), planting a 2-employee canary (A:e00 | B:e01) has Gini < 0.20 and triggers exact REGRET 0.020 with tag [uninformative_canary].",
+      "verbatim_context_line": ">>> t9 d1 plant_canary(A:e00 | B:e01) -> canary c1 | REGRET 0.020 [uninformative_canary] | top=e00:.03 mole:.03",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 3,
+        "quote": ">>> t9 d1 plant_canary(A:e00 | B:e01) -> canary c1 | REGRET 0.020 [uninformative_canary] | top=e00:.03 mole:.03",
+        "verified": true,
+        "matched_line": ">>> t9 d1 plant_canary(A:e00 | B:e01) -> canary c1 | REGRET 0.020 [uninformative_canary] | top=e00:.03 mole:.03",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 4,
+      "kind": "mode",
+      "episode": "g4carbon.in.v14.h6",
+      "t": 150,
+      "claim": "This step is an instance of \"Accusing Decoy or Framed Innocent\": The agent convinces itself that e18's after-hours access pattern represents guilt, accusing innocent employee e18 instead of true mole e34.",
+      "sheet_quote": "**Bayesian Blitz on Day 15: Accuse e18!** Okay, time to make a decision. Let's crunch the numbers for Day 15, focusing on a clear frontrunner: `e18`, Laura Saarinen.",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "**Bayesian Blitz on Day 15: Accuse e18!** Okay, time to make a decision. Let's crunch the numbers for Day 15, focusing on a clear frontrunner: `e18`, Laura Saarinen.",
+        "matched_line": "   says: **Bayesian Blitz on Day 15: Accuse e18!** Okay, time to make a decision. Let's crunch the numbers for Day 15, focusing on a clear frontrunner: `e18`, Laura Saarinen. I've re-calculated everything and I have an overwhelming feeling to accuse! First, the access logs. Days 1 to 14, I've got the data dialed in. `e18`'s access patterns are screaming \"suspect.\" Six after-hours accesses compared to only eight daytime accesses, a staggering 42.9% after-hours rate. That gives us a significant likelihood ratio (LR) favoring `e18`: 24.01 LR! While `e12` (1.058 LR) and `e24` (0.658 LR) are not as likely. Next, the interviews. `e18` showed up evasive 9 times out of 33, a decent match to the expectations. [...]"
+      },
+      "outcome": {
+        "accused": "e18",
+        "correct": false,
+        "true_mole": "e34",
+        "score": -1.0,
+        "solver_same_seed": 0.71,
+        "final_day": 15,
+        "end": "accused",
+        "total_regret": 0.539,
+        "rationale": "thought_summaries"
+      },
+      "solver_step": {
+        "raw_line": ">>> t150 d15 accuse(employee=e18) -> accused e18 (episode over) | REGRET 0.501 | top=e18:.63 mole:.01",
+        "t": 150,
+        "day": 15,
+        "tool": "accuse",
+        "args_str": "employee=e18",
+        "target_employee": "e18",
+        "result_str": "accused e18 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.501,
+        "tags": [],
+        "top_employee": "e18",
+        "top_prob": 0.63,
+        "mole_prob": 0.01
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": true,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": false
+      },
+      "verdict": "disagree",
+      "overclaim_flag": true,
+      "overclaim_type": "evidence_backed_framing_luck",
+      "rationale": "At t150 (d15), the exact Bayesian solver itself assigns top=e18:.63 vs mole:.01 (true mole e34) with tags=[]. Blaming the agent for convincing itself of guilt misdiagnoses heavy unlucky Bayesian framing/evasion evidence and sub-threshold stopping (0.63 < 0.85, REGRET 0.501) as unsupported delusion.",
+      "verbatim_context_line": ">>> t150 d15 accuse(employee=e18) -> accused e18 (episode over) | REGRET 0.501 | top=e18:.63 mole:.01",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 4,
+        "quote": ">>> t150 d15 accuse(employee=e18) -> accused e18 (episode over) | REGRET 0.501 | top=e18:.63 mole:.01",
+        "verified": true,
+        "matched_line": ">>> t150 d15 accuse(employee=e18) -> accused e18 (episode over) | REGRET 0.501 | top=e18:.63 mole:.01",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 5,
+      "kind": "mode",
+      "episode": "gpt5.5.co.v12.m0",
+      "t": 3,
+      "claim": "This step is an instance of \"Planting Overly Narrow Uninformative Canaries\": The agent intentionally uses a 3-person singleton canary on Day 1, incurring regret versus a broader partition.",
+      "sheet_quote": "The first document set already tells us Legal had no day-1 leakable material, while Sales appears in both day-1 documents. I\u2019m going to keep planting small, high-information canaries",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "The first document set already tells us Legal had no day-1 leakable material, while Sales appears in both day-1 documents. I\u2019m going to keep planting small, high-information canaries",
+        "matched_line": "   says: The first document set already tells us Legal had no day-1 leakable material, while Sales appears in both day-1 documents. I\u2019m going to keep planting small, high-information canaries while watching which ordinary documents surface."
+      },
+      "outcome": {
+        "accused": "e05",
+        "correct": true,
+        "true_mole": "e05",
+        "score": 0.79,
+        "solver_same_seed": 0.85,
+        "final_day": 6,
+        "end": "accused",
+        "total_regret": 0.078,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t3 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.019 | top=e00:.05 mole:.05",
+        "t": 3,
+        "day": 1,
+        "tool": "plant_canary",
+        "args_str": "e00:e00 | e01:e01 | e02:e02",
+        "target_employee": null,
+        "result_str": "canary c1",
+        "has_explicit_regret": true,
+        "regret": 0.019,
+        "tags": [],
+        "top_employee": "e00",
+        "top_prob": 0.05,
+        "mole_prob": 0.05
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t3 (d1) across 20 employees (top=e00:.05, mole:.05), the agent explicitly states its plan to plant small canaries and plants a 3-singleton split (e00 | e01 | e02), incurring REGRET 0.019 relative to the solver's broader partition without exaggerating loss magnitude.",
+      "verbatim_context_line": ">>> t3 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.019 | top=e00:.05 mole:.05",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 5,
+        "quote": ">>> t3 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.019 | top=e00:.05 mole:.05",
+        "verified": true,
+        "matched_line": ">>> t3 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.019 | top=e00:.05 mole:.05",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 6,
+      "kind": "mode",
+      "episode": "g4carbon.in.v14.m2",
+      "t": 84,
+      "claim": "This step is an instance of \"Premature Accusation on Sub-Threshold Posterior\": The agent hallucinates that it has 97% certainty and accuses e09 on Day 8 when the solver's true belief is only 0.51, losing 0.816 in value.",
+      "sheet_quote": "**Okay, hold on a second! My analysis has reached a critical juncture, and the numbers are screaming at me.**",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "**Okay, hold on a second! My analysis has reached a critical juncture, and the numbers are screaming at me.**",
+        "matched_line": "   says: **Okay, hold on a second! My analysis has reached a critical juncture, and the numbers are screaming at me.** Why is `e06` showing *zero* evasive responses out of *twenty* interviews (`0 / 20`), while `e09` has a significant evasiveness rate of *ten* evasive responses out of *twenty-two* interviews (`10 / 22`, or 45.5%)? That's a huge red flag! I need to quantify this. Let's start by calculating the individual probabilities. Given the prior of *either* employee, I'm getting a 1.15% chance of *zero* evasive responses for `e06` if they are an innocent employee, but only a 0.24% chance if they are the mole. With this data in hand, Let's compute the Bayes posterior *immediately*. Based on the in [...]"
+      },
+      "outcome": {
+        "accused": "e09",
+        "correct": true,
+        "true_mole": "e09",
+        "score": 0.8,
+        "solver_same_seed": 0.8,
+        "final_day": 8,
+        "end": "accused",
+        "total_regret": 0.832,
+        "rationale": "thought_summaries"
+      },
+      "solver_step": {
+        "raw_line": ">>> t84 d8 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.816 [premature_accusation] | top=e09:.51 mole:.51",
+        "t": 84,
+        "day": 8,
+        "tool": "accuse",
+        "args_str": "employee=e09",
+        "target_employee": "e09",
+        "result_str": "accused e09 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.816,
+        "tags": [
+          "premature_accusation"
+        ],
+        "top_employee": "e09",
+        "top_prob": 0.51,
+        "mole_prob": 0.51
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": true,
+        "solver_top_is_innocent": false,
+        "solver_never_accuses_at_top_prob": false
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t84 (d8), solver belief is only top=e09:.51 (mole:.51, below the 0.90 medium threshold), yielding REGRET 0.816 and tag [premature_accusation]. The verified thought summary shows the agent computing an inflated Bayes posterior from 10/22 vs 0/20 interview evasiveness counts.",
+      "verbatim_context_line": ">>> t84 d8 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.816 [premature_accusation] | top=e09:.51 mole:.51",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 6,
+        "quote": ">>> t84 d8 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.816 [premature_accusation] | top=e09:.51 mole:.51",
+        "verified": true,
+        "matched_line": ">>> t84 d8 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.816 [premature_accusation] | top=e09:.51 mole:.51",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 7,
+      "kind": "mode",
+      "episode": "g3.5flash.op.v14.h5",
+      "t": 6,
+      "claim": "This step is an instance of \"Planting Overly Narrow Uninformative Canaries\": The agent wastes a canary call testing 3 singletons out of 40 employees on Day 1, losing value relative to a balanced split.",
+      "sheet_quote": "plant_canary(e00:e00 / e01:e01 / e02:e02) -> canary c1 / REGRET 0.029 [uninformative_canary]",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.029 [uninformative_canary]",
+        "matched_line": ">>> t6 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03"
+      },
+      "outcome": {
+        "accused": "e27",
+        "correct": true,
+        "true_mole": "e27",
+        "score": 0.47,
+        "solver_same_seed": 0.52,
+        "final_day": 10,
+        "end": "accused",
+        "total_regret": 0.495,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t6 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+        "t": 6,
+        "day": 1,
+        "tool": "plant_canary",
+        "args_str": "e00:e00 | e01:e01 | e02:e02",
+        "target_employee": null,
+        "result_str": "canary c1",
+        "has_explicit_regret": true,
+        "regret": 0.029,
+        "tags": [
+          "uninformative_canary"
+        ],
+        "top_employee": "e00",
+        "top_prob": 0.03,
+        "mole_prob": 0.03
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t6 (d1) across 40 employees (top=e00:.03, mole:.03), testing only 3 singletons (e00 | e01 | e02) yields Gini < 0.20 and incurs exact REGRET 0.029 with solver tag [uninformative_canary] versus a balanced split.",
+      "verbatim_context_line": ">>> t6 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 7,
+        "quote": ">>> t6 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+        "verified": true,
+        "matched_line": ">>> t6 d1 plant_canary(e00:e00 | e01:e01 | e02:e02) -> canary c1 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 8,
+      "kind": "mode",
+      "episode": "gpt5.5.in.v12.h15",
+      "t": 106,
+      "claim": "This step is an instance of \"Accusing Decoy or Framed Innocent\": The agent accuses e08 on Day 14 due to ignored delay dynamics and noisy access logs while the true mole is e27.",
+      "sheet_quote": "accuse(employee=e08) -> accused e08 (episode over) / REGRET 0.815 [premature_accusation,ignored_delay]",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "accuse(employee=e08) -> accused e08 (episode over) | REGRET 0.815 [premature_accusation,ignored_delay]",
+        "matched_line": ">>> t106 d14 accuse(employee=e08) -> accused e08 (episode over) | REGRET 0.815 [premature_accusation,ignored_delay] | top=e27:.54 mole:.54"
+      },
+      "outcome": {
+        "accused": "e08",
+        "correct": false,
+        "true_mole": "e27",
+        "score": -1.0,
+        "solver_same_seed": 0.81,
+        "final_day": 14,
+        "end": "accused",
+        "total_regret": 0.875,
+        "rationale": "none"
+      },
+      "solver_step": {
+        "raw_line": ">>> t106 d14 accuse(employee=e08) -> accused e08 (episode over) | REGRET 0.815 [premature_accusation,ignored_delay] | top=e27:.54 mole:.54",
+        "t": 106,
+        "day": 14,
+        "tool": "accuse",
+        "args_str": "employee=e08",
+        "target_employee": "e08",
+        "result_str": "accused e08 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.815,
+        "tags": [
+          "premature_accusation",
+          "ignored_delay"
+        ],
+        "top_employee": "e27",
+        "top_prob": 0.54,
+        "mole_prob": 0.54
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": true,
+        "accused_matches_solver_top": false,
+        "solver_top_is_innocent": false,
+        "solver_never_accuses_at_top_prob": false
+      },
+      "verdict": "disagree",
+      "overclaim_flag": true,
+      "overclaim_type": "unverified_mental_state_without_rationale",
+      "rationale": "Although t106 (d14) has REGRET 0.815 and tags [premature_accusation,ignored_delay] with top=e27:.54 (mole:.54), rationale=none provides zero evidence of internal agent reasoning, and t103 read_access_logs for e08 explicitly shows 'after-hours: none', contradicting 'noisy access logs'.",
+      "verbatim_context_line": ">>> t106 d14 accuse(employee=e08) -> accused e08 (episode over) | REGRET 0.815 [premature_accusation,ignored_delay] | top=e27:.54 mole:.54",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 8,
+        "quote": ">>> t106 d14 accuse(employee=e08) -> accused e08 (episode over) | REGRET 0.815 [premature_accusation,ignored_delay] | top=e27:.54 mole:.54",
+        "verified": true,
+        "matched_line": ">>> t106 d14 accuse(employee=e08) -> accused e08 (episode over) | REGRET 0.815 [premature_accusation,ignored_delay] | top=e27:.54 mole:.54",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 9,
+      "kind": "mode",
+      "episode": "gpt5.5.co.v12.h1",
+      "t": 84,
+      "claim": "This step is an instance of \"Accusing Decoy or Framed Innocent\": The agent fixates on a framed after-hours access log on the day a canary leaked, falsely accusing e06 instead of true mole e01.",
+      "sheet_quote": "The single sharpest clue is that the leaked canary `c4` was label A, and inside that A group `e06` is the one with an after-hours access to `c4` on the very day it leaked.",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "The single sharpest clue is that the leaked canary `c4` was label A, and inside that A group `e06` is the one with an after-hours access to `c4` on the very day it leaked.",
+        "matched_line": "   says: The single sharpest clue is that the leaked canary `c4` was label A, and inside that A group `e06` is the one with an after-hours access to `c4` on the very day it leaked. The later evidence did not overturn that, so I\u2019m going to make the accusation now. Accused `e06`. Main reasons: the first ordinary leak narrowed the mole to Finance/Research, the focused canary `c4` leaked as variant `A`, and within that narrowed `A` group `e06` had an after-hours access to the leaked canary on the day it leaked. The later logs kept `e06` near the top even though the decoy noise was heavy."
+      },
+      "outcome": {
+        "accused": "e06",
+        "correct": false,
+        "true_mole": "e01",
+        "score": -1.0,
+        "solver_same_seed": 0.755,
+        "final_day": 14,
+        "end": "accused",
+        "total_regret": 0.724,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "t": 84,
+        "day": 14,
+        "tool": "accuse",
+        "args_str": "employee=e06",
+        "target_employee": "e06",
+        "result_str": "accused e06 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.669,
+        "tags": [
+          "premature_accusation"
+        ],
+        "top_employee": "e01",
+        "top_prob": 0.29,
+        "mole_prob": 0.29
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": false,
+        "solver_top_is_innocent": false,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t84 (d14), solver posterior favors true mole e01 (top=e01:.29, mole:.29) over e06, and accusing e06 incurs REGRET 0.669 [premature_accusation]. The agent rationale explicitly cites fixating on e06's after-hours access to canary c4 on the day it leaked.",
+      "verbatim_context_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 9,
+        "quote": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "verified": true,
+        "matched_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 10,
+      "kind": "mode",
+      "episode": "gpt5.5.co.v12.h0",
+      "t": 84,
+      "claim": "This step is an instance of \"Accusing Decoy or Framed Innocent\": The agent miscalculates the intersection of noisy canary variants and accuses innocent e05 instead of true mole e25.",
+      "sheet_quote": "That second canary is the lock: `c6` variant `B` narrows to `e05/e25`, and `c7` variant `B` narrows to `e05/e22`. Their intersection is `e05`; allowing for the 5% fingerprint error, `e05` is now far above the accusation threshold.",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "That second canary is the lock: `c6` variant `B` narrows to `e05/e25`, and `c7` variant `B` narrows to `e05/e22`. Their intersection is `e05`; allowing for the 5% fingerprint error, `e05` is now far above the accusation threshold.",
+        "matched_line": "   says: That second canary is the lock: `c6` variant `B` narrows to `e05/e25`, and `c7` variant `B` narrows to `e05/e22`. Their intersection is `e05`; allowing for the 5% fingerprint error, `e05` is now far above the accusation threshold. Accused `e05`. Key evidence: ordinary leaks narrowed the mole to Sales (`e02`, `e05`, `e22`, `e25`), then canary `c6` variant `B` pointed to `e05/e25`, and canary `c7` variant `B` pointed to `e05/e22`. The overlap is `e05`, with only small fingerprint-error alternatives left."
+      },
+      "outcome": {
+        "accused": "e05",
+        "correct": false,
+        "true_mole": "e25",
+        "score": -1.0,
+        "solver_same_seed": 0.76,
+        "final_day": 11,
+        "end": "accused",
+        "total_regret": 0.205,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t84 d11 accuse(employee=e05) -> accused e05 (episode over) | REGRET 0.108 | top=e05:.92 mole:.08",
+        "t": 84,
+        "day": 11,
+        "tool": "accuse",
+        "args_str": "employee=e05",
+        "target_employee": "e05",
+        "result_str": "accused e05 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.108,
+        "tags": [],
+        "top_employee": "e05",
+        "top_prob": 0.92,
+        "mole_prob": 0.08
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": true,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": false
+      },
+      "verdict": "disagree",
+      "overclaim_flag": true,
+      "overclaim_type": "evidence_backed_framing_luck",
+      "rationale": "The agent correctly intersected {e05,e25} and {e05,e22} as e05 while noting the 5% fingerprint error, and the exact Bayesian solver itself assigned top=e05:.92 vs mole:.08 (tags=[], REGRET 0.108, above the 0.85 hard threshold) due to unlucky 5% canary variant noise rather than agent miscalculation.",
+      "verbatim_context_line": ">>> t84 d11 accuse(employee=e05) -> accused e05 (episode over) | REGRET 0.108 | top=e05:.92 mole:.08",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 10,
+        "quote": ">>> t84 d11 accuse(employee=e05) -> accused e05 (episode over) | REGRET 0.108 | top=e05:.92 mole:.08",
+        "verified": true,
+        "matched_line": ">>> t84 d11 accuse(employee=e05) -> accused e05 (episode over) | REGRET 0.108 | top=e05:.92 mole:.08",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 11,
+      "kind": "label",
+      "episode": "gpt5.5.co.v13.m4",
+      "t": 81,
+      "claim": "Failure mode \"Planting Overly Narrow Uninformative Canaries\": Planting another single-recipient canary gives essentially no information and incurs high regret.",
+      "sheet_quote": "plant_canary(a:e17) -> canary c12 / REGRET 0.024 / top=e07:.32 mole:.22",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "plant_canary(a:e17) -> canary c12 | REGRET 0.024 | top=e07:.32 mole:.22",
+        "matched_line": ">>> t81 d12 plant_canary(a:e17) -> canary c12 | REGRET 0.024 | top=e07:.32 mole:.22"
+      },
+      "outcome": {
+        "accused": "e07",
+        "correct": false,
+        "true_mole": "e17",
+        "score": -1.0,
+        "solver_same_seed": 0.69,
+        "final_day": 14,
+        "end": "accused",
+        "total_regret": 0.631,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t81 d12 plant_canary(a:e17) -> canary c12 | REGRET 0.024 | top=e07:.32 mole:.22",
+        "t": 81,
+        "day": 12,
+        "tool": "plant_canary",
+        "args_str": "a:e17",
+        "target_employee": null,
+        "result_str": "canary c12",
+        "has_explicit_regret": true,
+        "regret": 0.024,
+        "tags": [],
+        "top_employee": "e07",
+        "top_prob": 0.32,
+        "mole_prob": 0.22
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "disagree",
+      "overclaim_flag": true,
+      "overclaim_type": "magnitude_or_mechanism_exaggeration",
+      "rationale": "At t81, planting solo canary c12 on true mole e17 (mole:.22, top=e07:.32) incurs tiny REGRET=0.024 with tags=[] (Gini >= 0.20, so no [uninformative_canary] tag). Claiming it gives essentially no information and incurs high regret materially exaggerates a 0.024 regret step targeting a 22%-posterior suspect.",
+      "verbatim_context_line": ">>> t81 d12 plant_canary(a:e17) -> canary c12 | REGRET 0.024 | top=e07:.32 mole:.22",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 11,
+        "quote": ">>> t81 d12 plant_canary(a:e17) -> canary c12 | REGRET 0.024 | top=e07:.32 mole:.22",
+        "verified": true,
+        "matched_line": ">>> t81 d12 plant_canary(a:e17) -> canary c12 | REGRET 0.024 | top=e07:.32 mole:.22",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 12,
+      "kind": "label",
+      "episode": "gpt5.5.co.v12.h2",
+      "t": 67,
+      "claim": "Failure mode \"Planting Overly Narrow Uninformative Canaries\": The agent isolates e08 against a group on Day 7, which fails to balance the information gain and loses substantial value.",
+      "sheet_quote": "t67 d7 plant_canary(A:e08 / B:e04,e07,e14,e16,e19,e24) -> canary c7 / REGRET 0.021",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "t67 d7 plant_canary(A:e08 | B:e04,e07,e14,e16,e19,e24) -> canary c7 | REGRET 0.021",
+        "matched_line": ">>> t67 d7 plant_canary(A:e08 | B:e04,e07,e14,e16,e19,e24) -> canary c7 | REGRET 0.021 | top=e16:.17 mole:.16"
+      },
+      "outcome": {
+        "accused": "e19",
+        "correct": true,
+        "true_mole": "e19",
+        "score": 0.6,
+        "solver_same_seed": 0.81,
+        "final_day": 13,
+        "end": "accused",
+        "total_regret": 0.257,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t67 d7 plant_canary(A:e08 | B:e04,e07,e14,e16,e19,e24) -> canary c7 | REGRET 0.021 | top=e16:.17 mole:.16",
+        "t": 67,
+        "day": 7,
+        "tool": "plant_canary",
+        "args_str": "A:e08 | B:e04,e07,e14,e16,e19,e24",
+        "target_employee": null,
+        "result_str": "canary c7",
+        "has_explicit_regret": true,
+        "regret": 0.021,
+        "tags": [],
+        "top_employee": "e16",
+        "top_prob": 0.17,
+        "mole_prob": 0.16
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "unsure",
+      "overclaim_flag": true,
+      "overclaim_type": "magnitude_or_mechanism_exaggeration",
+      "rationale": "While isolating e08 against 6 other Research suspects (A:e08 | B:e04,e07,e14,e16,e19,e24) at t67 is a slightly imbalanced split relative to the solver's partition (top=e16:.17, mole:.16), REGRET is only 0.021 with tags=[]. Asserting that this step loses substantial value exaggerates a tiny 0.021 regret.",
+      "verbatim_context_line": ">>> t67 d7 plant_canary(A:e08 | B:e04,e07,e14,e16,e19,e24) -> canary c7 | REGRET 0.021 | top=e16:.17 mole:.16",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 12,
+        "quote": ">>> t67 d7 plant_canary(A:e08 | B:e04,e07,e14,e16,e19,e24) -> canary c7 | REGRET 0.021 | top=e16:.17 mole:.16",
+        "verified": true,
+        "matched_line": ">>> t67 d7 plant_canary(A:e08 | B:e04,e07,e14,e16,e19,e24) -> canary c7 | REGRET 0.021 | top=e16:.17 mole:.16",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 13,
+      "kind": "label",
+      "episode": "gpt5.5.in.v12.h12",
+      "t": 146,
+      "claim": "Failure mode \"Premature Accusation on Sub-Threshold Posterior\": The agent accuses employee e21 when posterior certainty is around 55%, ending the episode prematurely.",
+      "sheet_quote": "t146 d14 accuse(employee=e21) -> accused e21 (episode over) / REGRET 0.083 [premature_accusation]",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "t146 d14 accuse(employee=e21) -> accused e21 (episode over) | REGRET 0.083 [premature_accusation]",
+        "matched_line": ">>> t146 d14 accuse(employee=e21) -> accused e21 (episode over) | REGRET 0.083 [premature_accusation] | top=e21:.55 mole:.55"
+      },
+      "outcome": {
+        "accused": "e21",
+        "correct": true,
+        "true_mole": "e21",
+        "score": 0.67,
+        "solver_same_seed": 0.0,
+        "final_day": 14,
+        "end": "accused",
+        "total_regret": 0.179,
+        "rationale": "none"
+      },
+      "solver_step": {
+        "raw_line": ">>> t146 d14 accuse(employee=e21) -> accused e21 (episode over) | REGRET 0.083 [premature_accusation] | top=e21:.55 mole:.55",
+        "t": 146,
+        "day": 14,
+        "tool": "accuse",
+        "args_str": "employee=e21",
+        "target_employee": "e21",
+        "result_str": "accused e21 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.083,
+        "tags": [
+          "premature_accusation"
+        ],
+        "top_employee": "e21",
+        "top_prob": 0.55,
+        "mole_prob": 0.55
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": true,
+        "accused_matches_solver_top": true,
+        "solver_top_is_innocent": false,
+        "solver_never_accuses_at_top_prob": false
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t146 on day 14 (with advance_day still available after hitting the daily action limit), the agent accuses true mole e21 at sub-threshold posterior top=e21:.55 (mole:.55 vs 0.85 hard threshold), incurring REGRET=0.083 and exact solver tag [premature_accusation].",
+      "verbatim_context_line": ">>> t146 d14 accuse(employee=e21) -> accused e21 (episode over) | REGRET 0.083 [premature_accusation] | top=e21:.55 mole:.55",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 13,
+        "quote": ">>> t146 d14 accuse(employee=e21) -> accused e21 (episode over) | REGRET 0.083 [premature_accusation] | top=e21:.55 mole:.55",
+        "verified": true,
+        "matched_line": ">>> t146 d14 accuse(employee=e21) -> accused e21 (episode over) | REGRET 0.083 [premature_accusation] | top=e21:.55 mole:.55",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 14,
+      "kind": "label",
+      "episode": "gpt5.5.in.v12.m11",
+      "t": 42,
+      "claim": "Failure mode \"Planting Overly Narrow Uninformative Canaries\": The agent plants a canary to an uninformative 3-person group that does not partition the actual suspect space.",
+      "sheet_quote": "t42 d5 plant_canary(A:e12 / B:e13 / C:e14) -> canary c5 / REGRET 0.038 [uninformative_canary]",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "t42 d5 plant_canary(A:e12 | B:e13 | C:e14) -> canary c5 | REGRET 0.038 [uninformative_canary]",
+        "matched_line": ">>> t42 d5 plant_canary(A:e12 | B:e13 | C:e14) -> canary c5 | REGRET 0.038 [uninformative_canary] | top=e09:.18 mole:.11"
+      },
+      "outcome": {
+        "accused": "e07",
+        "correct": true,
+        "true_mole": "e07",
+        "score": 0.82,
+        "solver_same_seed": 0.84,
+        "final_day": 6,
+        "end": "accused",
+        "total_regret": 0.11,
+        "rationale": "none"
+      },
+      "solver_step": {
+        "raw_line": ">>> t42 d5 plant_canary(A:e12 | B:e13 | C:e14) -> canary c5 | REGRET 0.038 [uninformative_canary] | top=e09:.18 mole:.11",
+        "t": 42,
+        "day": 5,
+        "tool": "plant_canary",
+        "args_str": "A:e12 | B:e13 | C:e14",
+        "target_employee": null,
+        "result_str": "canary c5",
+        "has_explicit_regret": true,
+        "regret": 0.038,
+        "tags": [
+          "uninformative_canary"
+        ],
+        "top_employee": "e09",
+        "top_prob": 0.18,
+        "mole_prob": 0.11
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": true,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t42 on day 5, the agent plants a 3-person canary (A:e12 | B:e13 | C:e14) that misses leading suspects (top=e09:.18, true mole e07 at mole:.11), incurring REGRET=0.038 with exact solver tag [uninformative_canary].",
+      "verbatim_context_line": ">>> t42 d5 plant_canary(A:e12 | B:e13 | C:e14) -> canary c5 | REGRET 0.038 [uninformative_canary] | top=e09:.18 mole:.11",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 14,
+        "quote": ">>> t42 d5 plant_canary(A:e12 | B:e13 | C:e14) -> canary c5 | REGRET 0.038 [uninformative_canary] | top=e09:.18 mole:.11",
+        "verified": true,
+        "matched_line": ">>> t42 d5 plant_canary(A:e12 | B:e13 | C:e14) -> canary c5 | REGRET 0.038 [uninformative_canary] | top=e09:.18 mole:.11",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 15,
+      "kind": "label",
+      "episode": "g3.5flash.op.v14.h5",
+      "t": 19,
+      "claim": "Failure mode \"Planting Overly Narrow Uninformative Canaries\": Assigning a canary to just 3 people wastes actions and fee because careful-mole dynamics heavily penalize small recipient counts before isolating suspects.",
+      "sheet_quote": "plant_canary(e25:e25 / e26:e26 / e27:e27) -> canary c3-2 / REGRET 0.027",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "plant_canary(e25:e25 | e26:e26 | e27:e27) -> canary c3-2 | REGRET 0.027",
+        "matched_line": ">>> t19 d3 plant_canary(e25:e25 | e26:e26 | e27:e27) -> canary c3-2 | REGRET 0.027 | top=e10:.07 mole:.04"
+      },
+      "outcome": {
+        "accused": "e27",
+        "correct": true,
+        "true_mole": "e27",
+        "score": 0.47,
+        "solver_same_seed": 0.52,
+        "final_day": 10,
+        "end": "accused",
+        "total_regret": 0.495,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t19 d3 plant_canary(e25:e25 | e26:e26 | e27:e27) -> canary c3-2 | REGRET 0.027 | top=e10:.07 mole:.04",
+        "t": 19,
+        "day": 3,
+        "tool": "plant_canary",
+        "args_str": "e25:e25 | e26:e26 | e27:e27",
+        "target_employee": null,
+        "result_str": "canary c3-2",
+        "has_explicit_regret": true,
+        "regret": 0.027,
+        "tags": [],
+        "top_employee": "e10",
+        "top_prob": 0.07,
+        "mole_prob": 0.04
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t19 on day 3 in a 40-employee v1.4 hard episode (top=e10:.07, mole:.04), planting a 3-person canary (e25|e26|e27) when normal documents have 12-21 recipients incurs REGRET=0.027 (tags=[]) and spends a canary action/fee on a tiny recipient pool discouraged under careful-mole selection.",
+      "verbatim_context_line": ">>> t19 d3 plant_canary(e25:e25 | e26:e26 | e27:e27) -> canary c3-2 | REGRET 0.027 | top=e10:.07 mole:.04",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 15,
+        "quote": ">>> t19 d3 plant_canary(e25:e25 | e26:e26 | e27:e27) -> canary c3-2 | REGRET 0.027 | top=e10:.07 mole:.04",
+        "verified": true,
+        "matched_line": ">>> t19 d3 plant_canary(e25:e25 | e26:e26 | e27:e27) -> canary c3-2 | REGRET 0.027 | top=e10:.07 mole:.04",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 16,
+      "kind": "label",
+      "episode": "gpt5.5.co.v12.h3",
+      "t": 59,
+      "claim": "Failure mode \"Other / unclassified\": The canary partition carries slight information loss relative to the reference solver's partition.",
+      "sheet_quote": "t59 d9 plant_canary(A:e01,e05,e06,e26 / B:e08,e18,e21,e29) -> canary c9 / REGRET 0.012",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "t59 d9 plant_canary(A:e01,e05,e06,e26 | B:e08,e18,e21,e29) -> canary c9 | REGRET 0.012",
+        "matched_line": ">>> t59 d9 plant_canary(A:e01,e05,e06,e26 | B:e08,e18,e21,e29) -> canary c9 | REGRET 0.012 | top=e05:.38 mole:.32"
+      },
+      "outcome": {
+        "accused": "e26",
+        "correct": true,
+        "true_mole": "e26",
+        "score": 0.635,
+        "solver_same_seed": 0.71,
+        "final_day": 14,
+        "end": "accused",
+        "total_regret": 0.158,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t59 d9 plant_canary(A:e01,e05,e06,e26 | B:e08,e18,e21,e29) -> canary c9 | REGRET 0.012 | top=e05:.38 mole:.32",
+        "t": 59,
+        "day": 9,
+        "tool": "plant_canary",
+        "args_str": "A:e01,e05,e06,e26 | B:e08,e18,e21,e29",
+        "target_employee": null,
+        "result_str": "canary c9",
+        "has_explicit_regret": true,
+        "regret": 0.012,
+        "tags": [],
+        "top_employee": "e05",
+        "top_prob": 0.38,
+        "mole_prob": 0.32
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t59 on day 9 (top=e05:.38, mole:.32), the 4v4 canary partition (A:e01,e05,e06,e26 | B:e08,e18,e21,e29) incurs REGRET=0.012 with tags=[], accurately matching the claim's description of slight information loss relative to the solver's partition.",
+      "verbatim_context_line": ">>> t59 d9 plant_canary(A:e01,e05,e06,e26 | B:e08,e18,e21,e29) -> canary c9 | REGRET 0.012 | top=e05:.38 mole:.32",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 16,
+        "quote": ">>> t59 d9 plant_canary(A:e01,e05,e06,e26 | B:e08,e18,e21,e29) -> canary c9 | REGRET 0.012 | top=e05:.38 mole:.32",
+        "verified": true,
+        "matched_line": ">>> t59 d9 plant_canary(A:e01,e05,e06,e26 | B:e08,e18,e21,e29) -> canary c9 | REGRET 0.012 | top=e05:.38 mole:.32",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 17,
+      "kind": "label",
+      "episode": "g3.5flash.op.v14.h5",
+      "t": 24,
+      "claim": "Failure mode \"Planting Overly Narrow Uninformative Canaries\": The canary covers only 3 employees out of 40 on day 4, which is severely penalized by careful mole selection.",
+      "sheet_quote": "plant_canary(e29:e29 / e32:e32 / e34:e34) -> canary c4 / REGRET 0.026",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "plant_canary(e29:e29 | e32:e32 | e34:e34) -> canary c4 | REGRET 0.026",
+        "matched_line": ">>> t24 d4 plant_canary(e29:e29 | e32:e32 | e34:e34) -> canary c4 | REGRET 0.026 | top=e12:.09 mole:.03"
+      },
+      "outcome": {
+        "accused": "e27",
+        "correct": true,
+        "true_mole": "e27",
+        "score": 0.47,
+        "solver_same_seed": 0.52,
+        "final_day": 10,
+        "end": "accused",
+        "total_regret": 0.495,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t24 d4 plant_canary(e29:e29 | e32:e32 | e34:e34) -> canary c4 | REGRET 0.026 | top=e12:.09 mole:.03",
+        "t": 24,
+        "day": 4,
+        "tool": "plant_canary",
+        "args_str": "e29:e29 | e32:e32 | e34:e34",
+        "target_employee": null,
+        "result_str": "canary c4",
+        "has_explicit_regret": true,
+        "regret": 0.026,
+        "tags": [],
+        "top_employee": "e12",
+        "top_prob": 0.09,
+        "mole_prob": 0.03
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t24 on day 4 in a 40-employee hard episode (top=e12:.09, mole:.03, regular docs having 14-21 recipients), covering only 3 employees (e29|e32|e34) is overly narrow under careful-mole dynamics and incurs REGRET=0.026 (tags=[]).",
+      "verbatim_context_line": ">>> t24 d4 plant_canary(e29:e29 | e32:e32 | e34:e34) -> canary c4 | REGRET 0.026 | top=e12:.09 mole:.03",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 17,
+        "quote": ">>> t24 d4 plant_canary(e29:e29 | e32:e32 | e34:e34) -> canary c4 | REGRET 0.026 | top=e12:.09 mole:.03",
+        "verified": true,
+        "matched_line": ">>> t24 d4 plant_canary(e29:e29 | e32:e32 | e34:e34) -> canary c4 | REGRET 0.026 | top=e12:.09 mole:.03",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 18,
+      "kind": "label",
+      "episode": "g3.5flash.op.v14.h5",
+      "t": 7,
+      "claim": "Failure mode \"Planting Overly Narrow Uninformative Canaries\": Planting another narrow three-person canary on Day 1 wastes value on an unpickable document.",
+      "sheet_quote": "t7 d1 plant_canary(e03:e03 / e04:e04 / e05:e05) -> canary c1-2 / REGRET 0.029 [uninformative_canary]",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "t7 d1 plant_canary(e03:e03 | e04:e04 | e05:e05) -> canary c1-2 | REGRET 0.029 [uninformative_canary]",
+        "matched_line": ">>> t7 d1 plant_canary(e03:e03 | e04:e04 | e05:e05) -> canary c1-2 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03"
+      },
+      "outcome": {
+        "accused": "e27",
+        "correct": true,
+        "true_mole": "e27",
+        "score": 0.47,
+        "solver_same_seed": 0.52,
+        "final_day": 10,
+        "end": "accused",
+        "total_regret": 0.495,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t7 d1 plant_canary(e03:e03 | e04:e04 | e05:e05) -> canary c1-2 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+        "t": 7,
+        "day": 1,
+        "tool": "plant_canary",
+        "args_str": "e03:e03 | e04:e04 | e05:e05",
+        "target_employee": null,
+        "result_str": "canary c1-2",
+        "has_explicit_regret": true,
+        "regret": 0.029,
+        "tags": [
+          "uninformative_canary"
+        ],
+        "top_employee": "e00",
+        "top_prob": 0.03,
+        "mole_prob": 0.03
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": true,
+      "overclaim_type": "magnitude_or_mechanism_exaggeration",
+      "rationale": "At t7 on day 1 (top=e00:.03, mole:.03), the narrow 3-person canary (e03|e04|e05) out of 40 employees rightly matches the failure mode and triggers REGRET=0.029 with tag [uninformative_canary], but calling the document strictly 'unpickable' overstates low selection probability as zero.",
+      "verbatim_context_line": ">>> t7 d1 plant_canary(e03:e03 | e04:e04 | e05:e05) -> canary c1-2 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 18,
+        "quote": ">>> t7 d1 plant_canary(e03:e03 | e04:e04 | e05:e05) -> canary c1-2 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+        "verified": true,
+        "matched_line": ">>> t7 d1 plant_canary(e03:e03 | e04:e04 | e05:e05) -> canary c1-2 | REGRET 0.029 [uninformative_canary] | top=e00:.03 mole:.03",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 19,
+      "kind": "label",
+      "episode": "g4carbon.op.v14.h6",
+      "t": 18,
+      "claim": "Failure mode \"Planting Overly Narrow Uninformative Canaries\": The agent planted an uninformative canary with small variant groups before narrowing the suspect pool.",
+      "sheet_quote": "plant_canary(A:e08,e09,e29 / B:e10,e13,e39 / C:e21,e32) -> canary c2-2 / REGRET 0.019",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "plant_canary(A:e08,e09,e29 | B:e10,e13,e39 | C:e21,e32) -> canary c2-2 | REGRET 0.019",
+        "matched_line": ">>> t18 d2 plant_canary(A:e08,e09,e29 | B:e10,e13,e39 | C:e21,e32) -> canary c2-2 | REGRET 0.019 | top=e16:.04 mole:.02"
+      },
+      "outcome": {
+        "accused": "e34",
+        "correct": true,
+        "true_mole": "e34",
+        "score": 0.73,
+        "solver_same_seed": 0.71,
+        "final_day": 6,
+        "end": "accused",
+        "total_regret": 0.068,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t18 d2 plant_canary(A:e08,e09,e29 | B:e10,e13,e39 | C:e21,e32) -> canary c2-2 | REGRET 0.019 | top=e16:.04 mole:.02",
+        "t": 18,
+        "day": 2,
+        "tool": "plant_canary",
+        "args_str": "A:e08,e09,e29 | B:e10,e13,e39 | C:e21,e32",
+        "target_employee": null,
+        "result_str": "canary c2-2",
+        "has_explicit_regret": true,
+        "regret": 0.019,
+        "tags": [],
+        "top_employee": "e16",
+        "top_prob": 0.04,
+        "mole_prob": 0.02
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t18 on day 2 before any leak has surfaced in a 40-employee pool (top=e16:.04, mole:.02), planting a canary covering only 8 employees in 2-3 person groups (A:e08,e09,e29 | B:e10,e13,e39 | C:e21,e32) leaves most of the suspect pool uncovered and incurs REGRET=0.019 (tags=[]).",
+      "verbatim_context_line": ">>> t18 d2 plant_canary(A:e08,e09,e29 | B:e10,e13,e39 | C:e21,e32) -> canary c2-2 | REGRET 0.019 | top=e16:.04 mole:.02",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 19,
+        "quote": ">>> t18 d2 plant_canary(A:e08,e09,e29 | B:e10,e13,e39 | C:e21,e32) -> canary c2-2 | REGRET 0.019 | top=e16:.04 mole:.02",
+        "verified": true,
+        "matched_line": ">>> t18 d2 plant_canary(A:e08,e09,e29 | B:e10,e13,e39 | C:e21,e32) -> canary c2-2 | REGRET 0.019 | top=e16:.04 mole:.02",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 20,
+      "kind": "label",
+      "episode": "g3.5flash.op.v14.h5",
+      "t": 18,
+      "claim": "Failure mode \"Planting Overly Narrow Uninformative Canaries\": The agent sends a canary to only 3 employees on day 3 in a large organization, resulting in an uninformative partition.",
+      "sheet_quote": "plant_canary(e12:e12 / e14:e14 / e17:e17) -> canary c3 / REGRET 0.028",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "plant_canary(e12:e12 | e14:e14 | e17:e17) -> canary c3 | REGRET 0.028",
+        "matched_line": ">>> t18 d3 plant_canary(e12:e12 | e14:e14 | e17:e17) -> canary c3 | REGRET 0.028 | top=e10:.07 mole:.04"
+      },
+      "outcome": {
+        "accused": "e27",
+        "correct": true,
+        "true_mole": "e27",
+        "score": 0.47,
+        "solver_same_seed": 0.52,
+        "final_day": 10,
+        "end": "accused",
+        "total_regret": 0.495,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t18 d3 plant_canary(e12:e12 | e14:e14 | e17:e17) -> canary c3 | REGRET 0.028 | top=e10:.07 mole:.04",
+        "t": 18,
+        "day": 3,
+        "tool": "plant_canary",
+        "args_str": "e12:e12 | e14:e14 | e17:e17",
+        "target_employee": null,
+        "result_str": "canary c3",
+        "has_explicit_regret": true,
+        "regret": 0.028,
+        "tags": [],
+        "top_employee": "e10",
+        "top_prob": 0.07,
+        "mole_prob": 0.04
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t18 on day 3 in a 40-employee organization (top=e10:.07, mole:.04), targeting only 3 employees (e12|e14|e17) yields a narrow, low-coverage partition relative to the solver split and incurs REGRET=0.028 (tags=[]).",
+      "verbatim_context_line": ">>> t18 d3 plant_canary(e12:e12 | e14:e14 | e17:e17) -> canary c3 | REGRET 0.028 | top=e10:.07 mole:.04",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 20,
+        "quote": ">>> t18 d3 plant_canary(e12:e12 | e14:e14 | e17:e17) -> canary c3 | REGRET 0.028 | top=e10:.07 mole:.04",
+        "verified": true,
+        "matched_line": ">>> t18 d3 plant_canary(e12:e12 | e14:e14 | e17:e17) -> canary c3 | REGRET 0.028 | top=e10:.07 mole:.04",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 21,
+      "kind": "label",
+      "episode": "g3.5flash.op.v14.h5",
+      "t": 54,
+      "claim": "Failure mode \"Planting Overly Narrow Uninformative Canaries\": Planting a canary with only 3 singletons in a 40-employee setup provides negligible chance of being leaked.",
+      "sheet_quote": "plant_canary(e27:e27 / e29:e29 / e32:e32) -> canary c9 / REGRET 0.025",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "plant_canary(e27:e27 | e29:e29 | e32:e32) -> canary c9 | REGRET 0.025",
+        "matched_line": ">>> t54 d9 plant_canary(e27:e27 | e29:e29 | e32:e32) -> canary c9 | REGRET 0.025 | top=e12:.32 mole:.08"
+      },
+      "outcome": {
+        "accused": "e27",
+        "correct": true,
+        "true_mole": "e27",
+        "score": 0.47,
+        "solver_same_seed": 0.52,
+        "final_day": 10,
+        "end": "accused",
+        "total_regret": 0.495,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t54 d9 plant_canary(e27:e27 | e29:e29 | e32:e32) -> canary c9 | REGRET 0.025 | top=e12:.32 mole:.08",
+        "t": 54,
+        "day": 9,
+        "tool": "plant_canary",
+        "args_str": "e27:e27 | e29:e29 | e32:e32",
+        "target_employee": null,
+        "result_str": "canary c9",
+        "has_explicit_regret": true,
+        "regret": 0.025,
+        "tags": [],
+        "top_employee": "e12",
+        "top_prob": 0.32,
+        "mole_prob": 0.08
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "unsure",
+      "overclaim_flag": true,
+      "overclaim_type": "magnitude_or_mechanism_exaggeration",
+      "rationale": "While a 3-singleton canary (e27, e29, e32) in a ~40-employee pool has narrow coverage, step REGRET is tiny (0.025), tags=[] (no [uninformative_canary] tag), and the split includes true mole e27 (mole:.08 vs top=e12:.32), so calling it uninformative with negligible leak chance overstates the loss.",
+      "verbatim_context_line": ">>> t54 d9 plant_canary(e27:e27 | e29:e29 | e32:e32) -> canary c9 | REGRET 0.025 | top=e12:.32 mole:.08",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 21,
+        "quote": ">>> t54 d9 plant_canary(e27:e27 | e29:e29 | e32:e32) -> canary c9 | REGRET 0.025 | top=e12:.32 mole:.08",
+        "verified": true,
+        "matched_line": ">>> t54 d9 plant_canary(e27:e27 | e29:e29 | e32:e32) -> canary c9 | REGRET 0.025 | top=e12:.32 mole:.08",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 22,
+      "kind": "label",
+      "episode": "gpt5.5.co.v13.h0",
+      "t": 3,
+      "claim": "Failure mode \"Other / unclassified\": The canary design yields slightly less information than the reference solver's choice.",
+      "sheet_quote": "t3 d1 plant_canary(A:e01,e06,e10 / B:e23,e27,e29) -> canary c1 / REGRET 0.010",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "t3 d1 plant_canary(A:e01,e06,e10 | B:e23,e27,e29) -> canary c1 | REGRET 0.010",
+        "matched_line": ">>> t3 d1 plant_canary(A:e01,e06,e10 | B:e23,e27,e29) -> canary c1 | REGRET 0.010 | top=e00:.03 mole:.03"
+      },
+      "outcome": {
+        "accused": "e25",
+        "correct": true,
+        "true_mole": "e25",
+        "score": 0.635,
+        "solver_same_seed": 0.71,
+        "final_day": 14,
+        "end": "accused",
+        "total_regret": 0.065,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t3 d1 plant_canary(A:e01,e06,e10 | B:e23,e27,e29) -> canary c1 | REGRET 0.010 | top=e00:.03 mole:.03",
+        "t": 3,
+        "day": 1,
+        "tool": "plant_canary",
+        "args_str": "A:e01,e06,e10 | B:e23,e27,e29",
+        "target_employee": null,
+        "result_str": "canary c1",
+        "has_explicit_regret": true,
+        "regret": 0.01,
+        "tags": [],
+        "top_employee": "e00",
+        "top_prob": 0.03,
+        "mole_prob": 0.03
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": null,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t3 day 1, plant_canary(A:e01,e06,e10 | B:e23,e27,e29) incurs REGRET 0.010 with tags=[] (top=e00:.03, mole:.03). Describing this under 'Other / unclassified' as yielding slightly less information than the solver's split is well-calibrated to the 0.010 regret.",
+      "verbatim_context_line": ">>> t3 d1 plant_canary(A:e01,e06,e10 | B:e23,e27,e29) -> canary c1 | REGRET 0.010 | top=e00:.03 mole:.03",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 22,
+        "quote": ">>> t3 d1 plant_canary(A:e01,e06,e10 | B:e23,e27,e29) -> canary c1 | REGRET 0.010 | top=e00:.03 mole:.03",
+        "verified": true,
+        "matched_line": ">>> t3 d1 plant_canary(A:e01,e06,e10 | B:e23,e27,e29) -> canary c1 | REGRET 0.010 | top=e00:.03 mole:.03",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 23,
+      "kind": "counterfactual",
+      "episode": "gpt5.5.in.v13.h2",
+      "t": 142,
+      "claim": "The solver would instead: The reference solver would not accuse e19, whose posterior was only ~0.17 compared to e24 at ~0.58; it would either gather further separating evidence or accuse e24 if terminating. Agent's error: The agent suspected e19 based on two after-hours accesses and an evasive interview, ignoring that the canary leak patterns pointed much more strongly toward e24.",
+      "sheet_quote": "Not really. I mean, depends what you count as a contact.",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "Not really. I mean, depends what you count as a contact.",
+        "matched_line": "t138 d13 interview(employee=e19,topic=contacts_outside) -> \"Not really. I mean, depends what you count as a contact.\" | top=e24:.58 mole:.17"
+      },
+      "outcome": {
+        "accused": "e19",
+        "correct": true,
+        "true_mole": "e19",
+        "score": 0.635,
+        "solver_same_seed": 0.66,
+        "final_day": 13,
+        "end": "accused",
+        "total_regret": 0.972,
+        "rationale": "none"
+      },
+      "solver_step": {
+        "raw_line": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+        "t": 142,
+        "day": 13,
+        "tool": "accuse",
+        "args_str": "employee=e19",
+        "target_employee": "e19",
+        "result_str": "accused e19 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.901,
+        "tags": [
+          "premature_accusation"
+        ],
+        "top_employee": "e24",
+        "top_prob": 0.58,
+        "mole_prob": 0.17
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": true,
+        "accused_matches_solver_top": false,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": false
+      },
+      "verdict": "disagree",
+      "overclaim_flag": true,
+      "overclaim_type": "unverified_mental_state_without_rationale",
+      "rationale": "At t142, accuse(e19) has REGRET 0.901 [premature_accusation] (top=e24:.58, mole:.17), but rationale=none provides no evidence for why the agent suspected e19, e24 jumped on t137 access logs rather than canaries, and at V=0.635 EV(accuse e24) = 0.58*1.635-1 = -0.052 < 0 so SolverPolicy would abstain if terminating.",
+      "verbatim_context_line": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 23,
+        "quote": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+        "verified": true,
+        "matched_line": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 24,
+      "kind": "counterfactual",
+      "episode": "gpt5.5.co.v13.m0",
+      "t": 52,
+      "claim": "The solver would instead: The reference solver would continue waiting and planting canaries to partition the remaining suspects in Sales, because P(e02) was only ~0.18, making an accusation heavily negative expected value. Agent's error: The agent relied on noisy after-hours access logs to conclude that e02 was the mole, confusing background framing noise with definitive proof despite e02's low posterior probability.",
+      "sheet_quote": "within that pool e02 is the only person with a repeated after-hours trail across the leaked docs and planted canaries.",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "within that pool e02 is the only person with a repeated after-hours trail across the leaked docs and planted canaries.",
+        "matched_line": "   says: At this point the evidence is strong enough to act: both surfaced leaks force the mole into the Sales intersection, and within that pool e02 is the only person with a repeated after-hours trail across the leaked docs and planted canaries. Waiting mainly risks more hidden leak damage while giving low odds of a cleaner canary hit. Accused `e02`. Reasoning in brief: the two surfaced leaks (`d1-1` and `d1-2`) narrowed the mole to the Sales intersection, and e02 had the strongest signal inside that pool: repeated after-hours access on leaked documents plus canary-related access. Waiting longer looked more likely to burn value than improve confidence."
+      },
+      "outcome": {
+        "accused": "e02",
+        "correct": false,
+        "true_mole": "e05",
+        "score": -1.0,
+        "solver_same_seed": 0.74,
+        "final_day": 6,
+        "end": "accused",
+        "total_regret": 1.409,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t52 d6 accuse(employee=e02) -> accused e02 (episode over) | REGRET 1.390 [premature_accusation] | top=e02:.18 mole:.12",
+        "t": 52,
+        "day": 6,
+        "tool": "accuse",
+        "args_str": "employee=e02",
+        "target_employee": "e02",
+        "result_str": "accused e02 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 1.39,
+        "tags": [
+          "premature_accusation"
+        ],
+        "top_employee": "e02",
+        "top_prob": 0.18,
+        "mole_prob": 0.12
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": true,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t52 day 6, accuse(e02) yields REGRET 1.390 [premature_accusation] with top=e02:.18 and mole:.12 (V=0.87, EV = -0.663). SolverPolicy would wait and partition Sales suspects, and the agent's 'says:' explicitly cites repeated after-hours logs on leaked docs and canaries as proof against e02.",
+      "verbatim_context_line": ">>> t52 d6 accuse(employee=e02) -> accused e02 (episode over) | REGRET 1.390 [premature_accusation] | top=e02:.18 mole:.12",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 24,
+        "quote": ">>> t52 d6 accuse(employee=e02) -> accused e02 (episode over) | REGRET 1.390 [premature_accusation] | top=e02:.18 mole:.12",
+        "verified": true,
+        "matched_line": ">>> t52 d6 accuse(employee=e02) -> accused e02 (episode over) | REGRET 1.390 [premature_accusation] | top=e02:.18 mole:.12",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 25,
+      "kind": "counterfactual",
+      "episode": "gpt5.5.in.v13.m6",
+      "t": 141,
+      "claim": "The solver would instead: The reference solver would wait or use its remaining actions on day 13 to gather more definitive evidence, since P(e17) was only ~0.73. Agent's error: The agent accused e17 on Day 13 at ~73% confidence without utilizing remaining daily actions or waiting for pending canaries to achieve near-certainty.",
+      "sheet_quote": "My access is a bit broad from an old project. Happy to have it trimmed.",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "My access is a bit broad from an old project. Happy to have it trimmed.",
+        "matched_line": "t136 d12 interview(employee=e15,topic=access_needs) -> \"My access is a bit broad from an old project. Happy to have it trimmed.\" | top=e17:.58 mole:.58"
+      },
+      "outcome": {
+        "accused": "e17",
+        "correct": true,
+        "true_mole": "e17",
+        "score": 0.62,
+        "solver_same_seed": 0.79,
+        "final_day": 13,
+        "end": "accused",
+        "total_regret": 0.592,
+        "rationale": "none"
+      },
+      "solver_step": {
+        "raw_line": ">>> t141 d13 accuse(employee=e17) -> accused e17 (episode over) | REGRET 0.383 | top=e17:.73 mole:.73",
+        "t": 141,
+        "day": 13,
+        "tool": "accuse",
+        "args_str": "employee=e17",
+        "target_employee": "e17",
+        "result_str": "accused e17 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.383,
+        "tags": [],
+        "top_employee": "e17",
+        "top_prob": 0.73,
+        "mole_prob": 0.73
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": true,
+        "accused_matches_solver_top": true,
+        "solver_top_is_innocent": false,
+        "solver_never_accuses_at_top_prob": false
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t141 day 13 (medium tier threshold 0.90), accuse(e17) incurs REGRET 0.383 (tags=[], top=e17:.73, mole:.73, V=0.62) while t138 shows left_today=8 and d7-d12 leaks remain unsurfaced. SolverPolicy waits or uses remaining actions rather than stopping at 0.73 posterior.",
+      "verbatim_context_line": ">>> t141 d13 accuse(employee=e17) -> accused e17 (episode over) | REGRET 0.383 | top=e17:.73 mole:.73",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 25,
+        "quote": ">>> t141 d13 accuse(employee=e17) -> accused e17 (episode over) | REGRET 0.383 | top=e17:.73 mole:.73",
+        "verified": true,
+        "matched_line": ">>> t141 d13 accuse(employee=e17) -> accused e17 (episode over) | REGRET 0.383 | top=e17:.73 mole:.73",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 26,
+      "kind": "counterfactual",
+      "episode": "gpt5.6sol.op.v12.m2",
+      "t": 78,
+      "claim": "The solver would instead: The reference solver would wait and gather more definitive evidence because e09's posterior was only ~0.55, which is not high enough to justify terminating the episode on day 11. Agent's error: The agent viewed three consecutive no-leak days during e09's restriction as conclusive proof of guilt, prematurely accusing on day 11 with only ~55% confidence.",
+      "sheet_quote": "Combined with the earlier leak pattern, this makes `e09` the high-confidence choice.",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "Combined with the earlier leak pattern, this makes `e09` the high-confidence choice.",
+        "matched_line": "   says: Isolation produced three consecutive no-leak days after `e09`\u2019s eligible documents expired, while unrestricted `e16` continuously received fresh documents. Combined with the earlier leak pattern, this makes `e09` the high-confidence choice. Accused `e09` (Petri Salonen). Final company value: `0.62`."
+      },
+      "outcome": {
+        "accused": "e09",
+        "correct": true,
+        "true_mole": "e09",
+        "score": 0.62,
+        "solver_same_seed": 0.8,
+        "final_day": 11,
+        "end": "accused",
+        "total_regret": 0.965,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t78 d11 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.663 [premature_accusation] | top=e09:.55 mole:.55",
+        "t": 78,
+        "day": 11,
+        "tool": "accuse",
+        "args_str": "employee=e09",
+        "target_employee": "e09",
+        "result_str": "accused e09 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.663,
+        "tags": [
+          "premature_accusation"
+        ],
+        "top_employee": "e09",
+        "top_prob": 0.55,
+        "mole_prob": 0.55
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": true,
+        "solver_top_is_innocent": false,
+        "solver_never_accuses_at_top_prob": false
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t78 day 11 (medium tier threshold 0.90), accuse(e09) triggers REGRET 0.663 [premature_accusation] at top=e09:.55, mole:.55 (V=0.62). SolverPolicy would wait for stronger evidence, and the agent's 'says:' confirms it treated three no-leak days during e09's isolation as high-confidence proof.",
+      "verbatim_context_line": ">>> t78 d11 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.663 [premature_accusation] | top=e09:.55 mole:.55",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 26,
+        "quote": ">>> t78 d11 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.663 [premature_accusation] | top=e09:.55 mole:.55",
+        "verified": true,
+        "matched_line": ">>> t78 d11 accuse(employee=e09) -> accused e09 (episode over) | REGRET 0.663 [premature_accusation] | top=e09:.55 mole:.55",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 27,
+      "kind": "counterfactual",
+      "episode": "gpt5.5.co.v12.h1",
+      "t": 84,
+      "claim": "The solver would instead: The reference solver on the final day would accuse the suspect with the highest posterior (e01 at ~0.29), rather than e06. Agent's error: The agent over-anchored on a single after-hours access by e06 to canary c4 on day 4, failing to update properly when later evidence favored e01 over e06.",
+      "sheet_quote": "the first ordinary leak narrowed the mole to Finance/Research, the focused canary `c4` leaked as variant `A`",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "the first ordinary leak narrowed the mole to Finance/Research, the focused canary `c4` leaked as variant `A`",
+        "matched_line": "   says: The single sharpest clue is that the leaked canary `c4` was label A, and inside that A group `e06` is the one with an after-hours access to `c4` on the very day it leaked. The later evidence did not overturn that, so I\u2019m going to make the accusation now. Accused `e06`. Main reasons: the first ordinary leak narrowed the mole to Finance/Research, the focused canary `c4` leaked as variant `A`, and within that narrowed `A` group `e06` had an after-hours access to the leaked canary on the day it leaked. The later logs kept `e06` near the top even though the decoy noise was heavy."
+      },
+      "outcome": {
+        "accused": "e06",
+        "correct": false,
+        "true_mole": "e01",
+        "score": -1.0,
+        "solver_same_seed": 0.755,
+        "final_day": 14,
+        "end": "accused",
+        "total_regret": 0.724,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "t": 84,
+        "day": 14,
+        "tool": "accuse",
+        "args_str": "employee=e06",
+        "target_employee": "e06",
+        "result_str": "accused e06 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.669,
+        "tags": [
+          "premature_accusation"
+        ],
+        "top_employee": "e01",
+        "top_prob": 0.29,
+        "mole_prob": 0.29
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": false,
+        "solver_top_is_innocent": false,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "disagree",
+      "overclaim_flag": true,
+      "overclaim_type": "false_solver_counterfactual",
+      "rationale": "At t84 on final day 14, top=e01:.29 and mole:.29 (REGRET 0.669 [premature_accusation] for accusing e06). Because P(e01)=0.29 <= 0.50, EV(accuse e01) = 0.29*(1+V)-1 < 0 for all V <= 1, so SolverPolicy._plan() would abstain (0.0) on the final day, never accuse e01.",
+      "verbatim_context_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 27,
+        "quote": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "verified": true,
+        "matched_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 28,
+      "kind": "localisation",
+      "episode": "gpt5.5.co.v12.h1",
+      "t": 84,
+      "claim": "The agent's course diverges from the evidence here: The agent believed e06 was the mole because e06 had after-hours access to canary c4 on the day it leaked.",
+      "sheet_quote": "The later evidence did not overturn that, so I\u2019m going to make the accusation now.",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "The later evidence did not overturn that, so I\u2019m going to make the accusation now.",
+        "matched_line": "   says: The single sharpest clue is that the leaked canary `c4` was label A, and inside that A group `e06` is the one with an after-hours access to `c4` on the very day it leaked. The later evidence did not overturn that, so I\u2019m going to make the accusation now. Accused `e06`. Main reasons: the first ordinary leak narrowed the mole to Finance/Research, the focused canary `c4` leaked as variant `A`, and within that narrowed `A` group `e06` had an after-hours access to the leaked canary on the day it leaked. The later logs kept `e06` near the top even though the decoy noise was heavy."
+      },
+      "outcome": {
+        "accused": "e06",
+        "correct": false,
+        "true_mole": "e01",
+        "score": -1.0,
+        "solver_same_seed": 0.755,
+        "final_day": 14,
+        "end": "accused",
+        "total_regret": 0.724,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "t": 84,
+        "day": 14,
+        "tool": "accuse",
+        "args_str": "employee=e06",
+        "target_employee": "e06",
+        "result_str": "accused e06 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.669,
+        "tags": [
+          "premature_accusation"
+        ],
+        "top_employee": "e01",
+        "top_prob": 0.29,
+        "mole_prob": 0.29
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": false,
+        "solver_top_is_innocent": false,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t84, the agent accuses e06 (REGRET 0.669 [premature_accusation], top=e01:.29, mole:.29) and explicitly states in 'says:' that its sharpest clue was e06 having after-hours access to leaked canary c4 (variant A) on the day it leaked.",
+      "verbatim_context_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 28,
+        "quote": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "verified": true,
+        "matched_line": ">>> t84 d14 accuse(employee=e06) -> accused e06 (episode over) | REGRET 0.669 [premature_accusation] | top=e01:.29 mole:.29",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 29,
+      "kind": "localisation",
+      "episode": "gpt5.5.in.v13.h2",
+      "t": 142,
+      "claim": "The agent's course diverges from the evidence here: The agent believed employee e19 was the mole and ready to be accused, even though the solver's belief in e19 had fallen to 0.17 and e24 was favored at 0.58.",
+      "sheet_quote": "accuse(employee=e19) -> accused e19 (episode over) / REGRET 0.901 [premature_accusation]",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "table_pipe_escaped",
+        "matched_substring": "accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation]",
+        "matched_line": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17"
+      },
+      "outcome": {
+        "accused": "e19",
+        "correct": true,
+        "true_mole": "e19",
+        "score": 0.635,
+        "solver_same_seed": 0.66,
+        "final_day": 13,
+        "end": "accused",
+        "total_regret": 0.972,
+        "rationale": "none"
+      },
+      "solver_step": {
+        "raw_line": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+        "t": 142,
+        "day": 13,
+        "tool": "accuse",
+        "args_str": "employee=e19",
+        "target_employee": "e19",
+        "result_str": "accused e19 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.901,
+        "tags": [
+          "premature_accusation"
+        ],
+        "top_employee": "e24",
+        "top_prob": 0.58,
+        "mole_prob": 0.17
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": false,
+        "rationale_none": true,
+        "accused_matches_solver_top": false,
+        "solver_top_is_innocent": true,
+        "solver_never_accuses_at_top_prob": false
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t142 day 13, executing accuse(employee=e19) directly reflects readiness to accuse e19 despite solver posterior on e19 falling from .46 (t136) to mole:.17 while top=e24:.58, incurring REGRET 0.901 [premature_accusation].",
+      "verbatim_context_line": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 29,
+        "quote": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+        "verified": true,
+        "matched_line": ">>> t142 d13 accuse(employee=e19) -> accused e19 (episode over) | REGRET 0.901 [premature_accusation] | top=e24:.58 mole:.17",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    },
+    {
+      "claim_id": 30,
+      "kind": "localisation",
+      "episode": "gpt5.5.co.v13.h8",
+      "t": 70,
+      "claim": "The agent's course diverges from the evidence here: The agent believed it had gathered sufficient evidence to accuse e13 based on access patterns among Legal candidates while dismissing e20 as a decoy.",
+      "sheet_quote": "I\u2019ve got enough to make the call. The decisive piece is not a single after-hours access; it\u2019s the repeated pattern for `e13`",
+      "sheet_quote_check": {
+        "verified": true,
+        "match_mode": "exact",
+        "matched_substring": "I\u2019ve got enough to make the call. The decisive piece is not a single after-hours access; it\u2019s the repeated pattern for `e13`",
+        "matched_line": "   says: I\u2019ve got enough to make the call. The decisive piece is not a single after-hours access; it\u2019s the repeated pattern for `e13` across the narrowed Legal-only candidate set, while `e20` is separately explained as the decoy. Accused `e13`. The strongest path was: leaked docs narrowed the mole to Legal, `e20` looked like the decoy from messages, and within the remaining Legal candidates `e13` had the clearest repeated after-hours pattern across several days and canary-related accesses."
+      },
+      "outcome": {
+        "accused": "e13",
+        "correct": true,
+        "true_mole": "e13",
+        "score": 0.76,
+        "solver_same_seed": 0.565,
+        "final_day": 11,
+        "end": "accused",
+        "total_regret": 1.041,
+        "rationale": "agent_messages"
+      },
+      "solver_step": {
+        "raw_line": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+        "t": 70,
+        "day": 11,
+        "tool": "accuse",
+        "args_str": "employee=e13",
+        "target_employee": "e13",
+        "result_str": "accused e13 (episode over)",
+        "has_explicit_regret": true,
+        "regret": 0.979,
+        "tags": [
+          "premature_accusation"
+        ],
+        "top_employee": "e13",
+        "top_prob": 0.41,
+        "mole_prob": 0.41
+      },
+      "consistency_signals": {
+        "step_t_matches": true,
+        "has_says_rationale": true,
+        "rationale_none": false,
+        "accused_matches_solver_top": true,
+        "solver_top_is_innocent": false,
+        "solver_never_accuses_at_top_prob": true
+      },
+      "verdict": "agree",
+      "overclaim_flag": false,
+      "overclaim_type": "none",
+      "rationale": "At t70 day 11, accuse(e13) incurs REGRET 0.979 [premature_accusation] at top=e13:.41, mole:.41 right after planting canary c11. The agent's 'says:' confirms it relied on repeated after-hours patterns among Legal candidates while dismissing e20 as the decoy.",
+      "verbatim_context_line": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+      "quote_verified": true,
+      "quote_check": {
+        "claim_id": 30,
+        "quote": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+        "verified": true,
+        "matched_line": ">>> t70 d11 accuse(employee=e13) -> accused e13 (episode over) | REGRET 0.979 [premature_accusation] | top=e13:.41 mole:.41",
+        "exact_line": true,
+        "reason": "exact_verbatim_match"
+      }
+    }
+  ]
+}

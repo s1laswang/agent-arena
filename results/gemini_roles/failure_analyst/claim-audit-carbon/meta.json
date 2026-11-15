@@ -1,0 +1,75 @@
+{
+  "role": "failure_analyst",
+  "subrole": "atlas_claim_audit_carbon",
+  "model_id": "gemini-4-carbon",
+  "commit": "a366f947ed7ff9ea549df0488268377b9b002868",
+  "git_sha": "a366f947ed7ff9ea549df0488268377b9b002868",
+  "timestamp": "2026-11-14T23:12:35+00:00",
+  "command": "PYTHONPATH=. /tmp/fleet-root/shared/agent-arena-venv/bin/python scripts/run_claim_audit_carbon.py --sheet docs/gemini/validation.md --context docs/gemini/validation_context.md --out results/gemini_roles/failure_analyst/claim-audit-carbon --model gemini-4-carbon --thinking-level medium --batch-size 10 --request-timeout-s 600",
+  "ledger_run_id": "claim_audit_carbon:gemini-4-carbon:20261114T231235Z",
+  "stub": false,
+  "fake_env": false,
+  "smoke": false,
+  "source": "llm",
+  "auditor": "gemini-4-carbon (automated LLM audit, not human)",
+  "thinking_level": "medium",
+  "validation_sheet": "docs/gemini/validation.md",
+  "validation_context": "docs/gemini/validation_context.md",
+  "n_episodes_packed": 30,
+  "n_claims": 30,
+  "agree": 22,
+  "disagree": 6,
+  "unsure": 2,
+  "agreement_rate": 0.7857,
+  "strict_agree_rate": 0.7333,
+  "overclaims_flagged": 9,
+  "sheet_quotes_verified": 30,
+  "sheet_quotes_verified_pct": 100.0,
+  "total_quotes": 30,
+  "verified_quotes": 30,
+  "verified_quotes_pct": 100.0,
+  "by_kind": {
+    "mode": {
+      "n": 10,
+      "agree": 7,
+      "disagree": 3,
+      "unsure": 0,
+      "overclaims_flagged": 3,
+      "agreement_rate": 0.7
+    },
+    "label": {
+      "n": 12,
+      "agree": 9,
+      "disagree": 1,
+      "unsure": 2,
+      "overclaims_flagged": 4,
+      "agreement_rate": 0.9
+    },
+    "counterfactual": {
+      "n": 5,
+      "agree": 3,
+      "disagree": 2,
+      "unsure": 0,
+      "overclaims_flagged": 2,
+      "agreement_rate": 0.6
+    },
+    "localisation": {
+      "n": 3,
+      "agree": 3,
+      "disagree": 0,
+      "unsure": 0,
+      "overclaims_flagged": 0,
+      "agreement_rate": 1.0
+    }
+  },
+  "key_metric": "30/30 atlas claims audited (automated LLM, not human): 22 agree, 6 disagree, 2 unsure (78.6% scored agreement, 9 over-claims flagged, 100% verified quotes)",
+  "usage": {
+    "in": 36421,
+    "out": 7259,
+    "thinking": 25631,
+    "cached": 0,
+    "cost_usd": 0.401742,
+    "calls": 4,
+    "latency_s": 477.327
+  }
+}

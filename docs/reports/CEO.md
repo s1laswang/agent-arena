@@ -333,3 +333,11 @@ B1 hint wording fixed (head-env, verified against instruction() v1.4) and sent t
 - solver_v2: dropped (+0.012 on fresh seeds). Expert tier: dropped (Gemini 81% luck-adjusted, n=12; it isn't fooled by fingerprint noise). v1.5: dropped earlier.
 - The judged headline stays OpenCode hard 65% [24, 98], luck-adjusted 72% [52, 91]. gap.md now lists all three negative results.
 - Rehearsal protocol merged (pre-registered before any run). The tag moves to ~06:30; Gemini key quiet window 06:30–08:15.
+
+## ~03:40 Round X launched (Silas: unlimited Gemini + compute)
+- X1 causal hint: pre-registered in gap.md; ≤ 3 carbon slots on a Verda box, fixed seed order, stops at 06:00.
+- X2 DAgger: on Verda A100s via fr8.
+- X3 judge simulation: Argon judges, docs fixes by 06:00.
+- X4 VERDA.md: by 08:30.
+- Human baseline: Silas + 2 teammates.
+- Bake-off 73/100: A3/A4/A5 fixed (41f7b3d5, bddc0ff9); A1/A2/A6 covered by G1, the rehearsal and G4.

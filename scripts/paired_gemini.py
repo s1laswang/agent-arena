@@ -43,6 +43,10 @@ def empty_reply_seeds(run_dir: Path, tier: str) -> set[int]:
 
 def groups(version: str, model: str) -> list[tuple[str, str, str]]:
     g = [(f"OpenCode + {model} over MCP (judges' shape)", f"{version}/opencode-{model}", f"opencode:google/{model}"),
+         (f"OpenCode + {model} over MCP, extension (seeds 30-59)", f"{version}/opencode-{model}-ext",
+          f"opencode:google/{model}"),
+         (f"OpenCode + {model} over MCP, pooled (primary + extension)",
+          f"{version}/opencode-{model}+{version}/opencode-{model}-ext", f"opencode:google/{model}"),
          (ALT_LABEL, f"{version}/opencode-{model}", f"opencode:google/{model}"),
          (f"in-process {model} (full history, thought-signature replay)", f"{version}/inproc-{model}", f"gemini:{model}")]
     if version == "v1.4":
@@ -52,7 +56,7 @@ def groups(version: str, model: str) -> list[tuple[str, str, str]]:
         g += [("Codex gpt-5.5 over MCP (earlier official run)", "v1.3/codex-gpt-5.5-full", "codex:gpt-5.5"),
               ("in-process gpt-5.5, fixed loop (earlier official run)", "v1.3/gpt-5.5-full", "openai:gpt-5.5")]
     g += [("reference solver", f"{version}/reference", "solver"), ("heuristic", f"{version}/reference", "heuristic"),
-          ("do_nothing", f"{version}/reference", "do_nothing"), ("stop_early", f"{version}/reference", "stop_early")]
+          ("do_nothing", f"{version}/reference", "do_nothing"), ("day-1 guess (recorded under the pre-2bb6729 name stop_early; today's stop_early stops without accusing and scores 0, see results/judge_table.md)", f"{version}/reference", "stop_early")]
     return g
 
 
@@ -60,15 +64,17 @@ def rows_for(root: Path, version: str, model: str, seeds: set[int]) -> list[dict
     solver = {(e["tier"], e["seed"]): e for e in load_runs(root / version / "reference") if e["agent"] == "solver"}
     out = []
     for label, sub, agent in groups(version, model):
-        d = root / sub
-        if not d.exists():
+        dirs = [root / p for p in sub.split("+")]
+        if not all(d.exists() for d in dirs):
             continue
-        eps = [e for e in load_runs(d) if e["agent"] == agent and e["seed"] in seeds
-               and (e.get("meta") or {}).get("valid") is not False]
+        by_dir = [[e for e in load_runs(d) if e["agent"] == agent and e["seed"] in seeds
+                   and (e.get("meta") or {}).get("valid") is not False] for d in dirs]
         for tier in ("medium", "hard"):
-            es = sorted((e for e in eps if e["tier"] == tier), key=lambda e: e["seed"])
+            if len(dirs) > 1 and not all(any(e["tier"] == tier for e in eps) for eps in by_dir):
+                continue
+            es = sorted((e for eps in by_dir for e in eps if e["tier"] == tier), key=lambda e: e["seed"])
             if label == ALT_LABEL:
-                zero = empty_reply_seeds(d, tier)
+                zero = set().union(*(empty_reply_seeds(d, tier) for d in dirs))
                 if not zero:
                     continue
                 es = [dict(e, score=0.0, correct=False, accused=None) if e["seed"] in zero else e for e in es]

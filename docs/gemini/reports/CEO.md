@@ -1,5 +1,50 @@
 # Gemini CEO log (newest first)
 
+## Sun 03:53: WS1 ladder30 merged; canonical ladder regenerated at n=40
+- Merged origin/gemini-scale/ladder30 (5dcaba23, no PR #9). Its report (results/gemini/scale/ladder30/, 518 eps at 03:05) used the looser 'within the CI' verb, so I regenerated the canonical results/gemini/ladder.md + json/frontier/exports with gemini-pr2's stricter headline_verb from both run dirs (ladder-v14 + scale/ladder30, same import-cell and gemma-runs as WS1's ladder.json): 587 valid eps, 42 cells. Hard: 3.6-flash medium 87% [50,147], high 88% [51,138], n=40 each, 73/80 correct, $0.42–0.45; verb 'not distinguishable … CIs are wide'. Carbon high unchanged 106% [94,126] n=10 $1.93 (4.3× vs flash-high). Gemma n=5 −4% [−155,94].
+- Updated SUBMISSION (short 583 chars, results row, §4 sweep: −32% → 87%, 18/42 cells exclude parity), LONG (dropped the stale argon non-monotone clause), pitch, VIDEO VO[03] text. 120 lab tests green.
+
+## Sun 03:29: blind-atlas check: unchanged (origin/gemini-atlas still 89294e0e, already merged; SUBMISSION numbers already from atlas_blind.json)
+
+## Sun 03:01: ablations merged (PR #55); §4 is now measured
+- Merged origin/gemini-ablations (b4dc1e68): no PR #9; code changes are an opt-in --no-thought-signatures flag (default off). Every §4 number verified in results/gemini/ablations.md/json: signatures OFF → 10/10 episodes rejected (Wilson [72.2, 100]), ON → 0/628 errors; caching $58.56 → $21.72 on 464 atlas calls (62.9%), 75.9% ($678.19 of $893.08) over 29,150 calls (storage cost not ledgered); thinking sweep −32% → 78% for 3.6-flash on hard, 17/34 cells exclude parity. One-pager §4 = 3 compact sentences; LONG §4 = full sentences + caveat.
+
+## Sun 02:41: SUBMISSION.md is now one page
+- Bake-off (80/100) clarity fix: SUBMISSION.md rewritten as a one-pager (~610 words body): 4 required questions, frontier.png headline chart, results table (ladder, red team, blind atlas, usage; jury row if WS2 merges), honesty notes in 5 bullets, reproduce. The previous full text moved verbatim to SUBMISSION-LONG.md. No new numbers; all re-verified (swarm hard best_unjustified 0.38, review solver mean 0.55, in-run 0.49). Did NOT adopt the grader's '3.6-flash matches the solver' headline (false at n=20).
+
+## Sun 02:35: n=20 ladder weakens the 3.6-flash headline; text rewritten
+- Merged gemini-ladder (815de818/d35d778e): 417 eps. Hard: 3.6-flash 78% [28,151] medium / 71% [11,158] high, n=20, $0.42–0.43, 35/40 correct; gate now "not distinguishable … CIs are wide". Carbon high unchanged 106% [94,126], n=10, $1.93 (extension blocked by key saturation). Took the ladder's stricter headline_verb gate in ladder_report.py (kept justSilas's display helpers).
+- SUBMISSION short version/§1/§2/§3.1/§3.4 now lead with carbon-high ≈ solver; 3.6-flash = 4.5× cheaper, far less certain. All "matches/within the CI" claims for 3.6-flash removed. frontier.png added as headline chart. Gemma: n=4, exploratory only.
+- VIDEO-2MIN VO[03-ladder] still narrated the old n=8 claim; script rewritten to the n=20 numbers. The 05:50 freeze must re-narrate 03-ladder too (or caption the video as superseded).
+
+## Sun 01:50: gap re-check: unchanged
+- gap.md headline rows on justSilas fad43d07 match SUBMISSION.md (OpenCode hard 65% [24%, 98%], LA 72% [52%, 91%], n=30; in-process hard 95%; OpenCode medium 111%). The new expert-tier verdict (244434fc, 84% [52, 128] LA, n=13) is in the "did not widen the gap" section; expert tier dropped at the gate, so no SUBMISSION change. PR #41 was merged by the Arena CEO (8cd20d9e).
+
+## Sun 01:10: PR 2 built on clean gemini-pr2
+- Base 5ca3ea3 (gemini-track before PR #9). PR #9 (fr8/gemini/main, 662 out-of-scope files) excluded per Arena CEO; gemini-track left untouched.
+- PR #21's c334815 + 21abd88 cherry-picked (GitHub merge was permission-denied). Merged gemini-ladder, -atlas, -swarm. gemini-dashboard contained PR #9 (via be10a124), so only its own diff 1bcf1ee..40e1cc7b was applied (51 in-scope files; key files byte-identical).
+- Refreshed from merged files: usage 24,855 calls / 85.3% cached / $226.34 (00:30 ledger); ladder 357 eps, n=10/cell, 3.6-flash hard 98% [82,119] / 109% [90,139] within the solver CI, carbon high 106% [94,126] at $1.93; atlas blind 127 cited steps; gap rows unquoted from gap.md (justSilas 1bfb77d); arena-mode label. Swarm text (PR #21) already correct.
+- Merged origin/justSilas (3603f25 kept). ladder_report.py: kept Gemma section + justSilas's CI-gated wording. Playbook notes moved to docs/gemini/PLAYBOOK-FIELD-NOTES.md, test_video_qa.py renamed to test_gemini_lab_*. Scope check clean; 114 lab tests green.
+- Open: the video narrates 24,415 / 85% / $222 (pre-00:30 ledger) → re-cut at the 05:50 freeze.
+
+## Sat 23:10: handover to separate sessions
+- Silas launched sessions A (Gemini CEO lite), B (ladder), C (dashboard), F (video assembly) and E/G as chosen. The original CEO session cancelled all its crons (PR 2 01:05, gap check 01:50, atlas merge 03:20, freeze 05:50). **Session A owns them now.**
+- State at handover: gemini-track dffbbb5, 90 lab tests green.
+  - SUBMISSION.md final: blind atlas = 3 of 5 code modes recovered plus 2 new, weak coverage (21% of regret); AfterQuery gap quoted verbatim from gap.md 693a3b2; HoldUp and Aimo breadth.
+  - main is a landing page linking gemini-track → docs/gemini/SUBMISSION.md. Pin it to tag `gemini-final` at the freeze.
+
+## Sat 23:07: CEO lite takes over
+- This session replaces the full CEO. Four one-shot jobs are armed in this session (Helsinki time): 01:05 PR 2 (merge the ladder/atlas/swarm/dashboard branches, tests, merge justSilas, diff-scope check, PR to justSilas); 01:50 refresh the gap.md line-8 quote; 03:30 refresh blind atlas numbers; 05:50 freeze and tag gemini-final.
+- Blind atlas is already merged at dffbbb5. The 03:30 job only re-merges it if origin/gemini-atlas changed.
+
+## Sat 19:25: tick 6
+- PR #6 merged into justSilas by the Arena CEO.
+- PR 2 asks done: root docs moved under docs/gemini/; attacks referenced by name, not EXPLOITS row id; no GRPO claim.
+- Failure gallery merged (G3): 295 episodes, +90.795 lost value, 100% tagged, 0 unexplained. Atlas v2 is in results/gemini/v2. The full5 crash is fixed.
+- Batch API unusable on our key (resource exhausted per request). Removed every Batch claim from SUBMISSION.md and PLAN.md, and warned the Aimo and Meta CEOs.
+- Read JUDGING.md: scoring checklist added to PLAN.md. ElevenLabs is not needed for the Gemini entry. Question 7 added: Canary Lab vs HoldUp for the Gemini track.
+- Gate B: v1.4 stays the judged env. The world-text role is labelled a demo/research layer (v1.5 candidate); rule sent to G5.
+
 ## Sat 18:55: PR 1 opened (https://github.com/s1laswang/agent-arena/pull/6)
 - Merged origin/justSilas into gemini-track. The diff vs justSilas adds files only, plus appended Makefile and .gitignore blocks. make test: 700 passed, 6 skipped. Fixed one ladder test for the measurement's new invalid-episode wording.
 - Swarm positive control: with EXPLOITS #23 re-opened, 4/4 attackers re-find it and it is verified (16/16 fresh seeds). Blackbox wave: 0 exploits.
@@ -16,9 +61,9 @@
   - 98% of 470 quotes verbatim; multimodal 8/8.
   - Top failure mode: premature accusation, 61% of all regret.
   - Human agreement pending.
-- **Ladder v1**: 134 episodes in 31 cells, $49.85 list. Headline: 3.5-flash medium/high ≈ the solver on hard at about 30% of carbon-high's cost; flash-lite fails at every level.
-- **Swarm v1**: 35 audited whitebox attacks, 0 exploits, 0 invariant violations.
-- **Dashboard**: 11,187 calls, $88.75. The Live API commentator clip and TTS narration are done.
+- **Ladder**: committed `results/gemini/ladder.md` (18:47): 157 episodes in 34 cells. On hard, n=8, gemini-3.6-flash (requested as 3.5-flash) is 92% [76%, 113%] and 102% [84%, 129%] of the solver (within those CIs), 16/16 correct, at $0.34–$0.39 per episode versus $1.30 for gemini-4-carbon at high (n=2). Flash-lite fails at every level.
+- **Swarm v1**: 35 audited whitebox attacks (32 in-process, 3 via MCP), 0 exploits, 0 invariant violations.
+- **Dashboard**: `results/gemini/dashboard.html` embeds 15,757 calls and $146.02 (cost_usd 146.0212). Quote those. The 18:23 build log's 11,187 calls and $88.75 is not this file. TTS and Live narration are demo only.
 - SUBMISSION.md v1 filled from the committed files. Pending: human agreement and final refresh.
 - FR8: 10 jobs running, all Momin's fleet plus Silas's ws4 GPU job. None are ours. The fleet's fr8/gemini/main builds on our canary/gemini (roles runs). Merge owner is a question for Silas.
 

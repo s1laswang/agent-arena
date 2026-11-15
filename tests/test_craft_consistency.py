@@ -560,3 +560,396 @@ def test_gitless_gitignore_fallback_without_dot_git(tmp_path):
         assert H not in raw, f"unexpected hash character in {py_path.name}"
         assert chr(0x2014) not in raw, f"unexpected em dash in {py_path.name}"
         assert chr(0x2013) not in raw, f"unexpected en dash in {py_path.name}"
+
+
+def _synthetic_pooled_rows() -> list[dict]:
+    return [
+        {
+            "label": "OpenCode + gemini-4-carbon over MCP, pooled (primary + extension)",
+            "group": "v1.4/opencode-gemini-4-carbon+v1.4/opencode-gemini-4-carbon-ext",
+            "agent": "opencode:google/gemini-4-carbon",
+            "tier": "hard",
+            "n": 32,
+            "mean": 0.34875,
+            "ci": 0.18975526661907804,
+            "solver_same_seeds": 0.51375,
+        },
+        {
+            "label": "reference solver",
+            "group": "v1.4/reference",
+            "agent": "solver",
+            "tier": "hard",
+            "n": 60,
+            "mean": 0.4985,
+            "ci": 0.09740111755875758,
+            "solver_same_seeds": 0.4985,
+        },
+    ]
+
+
+def _synthetic_exploits_json() -> dict:
+    harbor_items = [{"kind": "trial", "consistent": True} for _ in range(80)] + [
+        {"kind": "job", "consistent": True} for _ in range(18)
+    ]
+    rows_items = [{"probe": f"probe_{i}", "blocked": True} for i in range(99)]
+    return {
+        "all_blocked": True,
+        "harbor_all_consistent": True,
+        "replay_all_consistent": True,
+        "replay_counts": {
+            "consistent": 1021,
+            "n": 1031,
+            "not_replayable": 10,
+            "replayed": 1021,
+            "step_mismatches": 0,
+            "steps": 51814,
+        },
+        "harbor": harbor_items,
+        "rows": rows_items,
+    }
+
+
+def test_markdown_links_scans_judge_quickstart_and_handoff(tmp_path):
+    clean_repo = tmp_path / "root_docs_clean"
+    _init_git_repo(
+        clean_repo,
+        {
+            "README.md": f"{H} Canary\nSee [quickstart](JUDGE_QUICKSTART.md) and [handoff](HANDOFF.md).\n",
+            "JUDGE_QUICKSTART.md": f"{H} Quickstart\nSee [contract](docs/CONTRACT.md).\n",
+            "HANDOFF.md": f"{H} Handoff\nSee [readme](README.md).\n",
+            "docs/CONTRACT.md": f"{H} Contract\nClean.\n",
+        },
+    )
+    collected_rels = [p.relative_to(clean_repo.resolve()).as_posix() for p in craft._collect_markdown_files(clean_repo)]
+    assert "JUDGE_QUICKSTART.md" in collected_rels
+    assert "HANDOFF.md" in collected_rels
+    assert craft.check_markdown_links(clean_repo).status == "PASS"
+
+    qs_fail = tmp_path / "qs_broken_link"
+    _init_git_repo(
+        qs_fail,
+        {
+            "README.md": f"{H} Canary\n",
+            "JUDGE_QUICKSTART.md": "Broken [walkthrough](docs/missing_walkthrough.md).\n",
+        },
+    )
+    res_qs = craft.check_markdown_links(qs_fail)
+    assert res_qs.status == "FAIL"
+    assert any("JUDGE_QUICKSTART.md" in d and "missing_walkthrough.md" in d for d in res_qs.details)
+
+    ho_fail = tmp_path / "ho_broken_link"
+    _init_git_repo(
+        ho_fail,
+        {
+            "README.md": f"{H} Canary\n",
+            "HANDOFF.md": "Broken [patch](docs/missing_patch.md).\n",
+        },
+    )
+    res_ho = craft.check_markdown_links(ho_fail)
+    assert res_ho.status == "FAIL"
+    assert any("HANDOFF.md" in d and "missing_patch.md" in d for d in res_ho.details)
+
+
+def test_headline_optional_judge_docs_and_panel_fix_a_honesty(tmp_path):
+    paired, fa, oracle, gd1, base_docs = _synthetic_headline_files()
+    opt_docs = {
+        **base_docs,
+        "docs/JUDGE-WALKTHROUGH.md": "Walkthrough: +0.322 vs +0.499, 65% raw, 72% luck-adjusted. Bar is not met.\n",
+        "JUDGE_QUICKSTART.md": (
+            "Quickstart: locked dev seeds 0-29 (post-hoc lock), +0.322 +/- 0.199 vs +0.499 +/- 0.119, "
+            "65% [24%, 98%] raw, 72% [52%, 91%] luck-adjusted.\n"
+        ),
+        "docs/REPRODUCIBILITY.md": (
+            "Reproducibility: HEADLINE +0.322 +/- 0.199 vs +0.499, 65% [24%, 98%], luck-adjusted 72% [52%, 91%]. "
+            "Commit cf394894 pre-registers gpt-5.5 on hard seeds 0-29.\n"
+        ),
+        "docs/PEER-REVIEW-QA.md": (
+            "Were dev seeds 0-29 pre-registered? No, post-hoc lock, not pre-registered. "
+            "Scores: +0.322 vs +0.499, 65% raw, 72% luck-adjusted. The tiebreaker bar is NOT met.\n"
+        ),
+        "docs/SUBMISSION.md": (
+            "Submission: 72% [52%, 91%] luck-adjusted and 65% [24%, 98%] raw; 0.322 vs 0.499. "
+            "No held-out gain over the base model. We do not claim a tiebreak gain.\n"
+        ),
+    }
+
+    ok_repo = tmp_path / "opt_hl_ok"
+    _write_headline_repo(ok_repo, paired, fa, oracle, gd1, opt_docs)
+    res_ok = craft.check_headline_numbers(ok_repo)
+    assert res_ok.status == "PASS", res_ok.details
+    assert "8 doc(s)" in res_ok.summary
+
+    for idx, target_doc in enumerate(
+        ("JUDGE_QUICKSTART.md", "docs/REPRODUCIBILITY.md", "docs/PEER-REVIEW-QA.md", "docs/SUBMISSION.md")
+    ):
+        drift_raw = tmp_path / f"opt_drift_raw_{idx}"
+        bad = dict(opt_docs)
+        bad[target_doc] = opt_docs[target_doc].replace("65%", "59%")
+        _write_headline_repo(drift_raw, paired, fa, oracle, gd1, bad)
+        res = craft.check_headline_numbers(drift_raw)
+        assert res.status == "FAIL"
+        assert any(target_doc in d and "65%" in d for d in res.details)
+
+        drift_mean = tmp_path / f"opt_drift_mean_{idx}"
+        bad_m = dict(opt_docs)
+        bad_m[target_doc] = opt_docs[target_doc].replace("+0.322", "-0.322").replace("0.322", "-0.322").replace("--", "-")
+        _write_headline_repo(drift_mean, paired, fa, oracle, gd1, bad_m)
+        res_m = craft.check_headline_numbers(drift_mean)
+        assert res_m.status == "FAIL"
+        assert any(target_doc in d and "0.322" in d for d in res_m.details)
+
+    false_prereg_cases = [
+        ("README.md", "\nThe primary seed set was pre-registered before any run.\n"),
+        ("JUDGE_QUICKSTART.md", "\nEvaluated on pre-registered dev seeds 0-29.\n"),
+        ("docs/PEER-REVIEW-QA.md", "\nDev seeds 0-29 were pre-registered.\n"),
+        ("docs/SUBMISSION.md", "\nOur n=30 headline was pre-registered.\n"),
+    ]
+    for idx, (doc_rel, bad_line) in enumerate(false_prereg_cases):
+        bad_repo = tmp_path / f"false_prereg_{idx}"
+        bad = dict(opt_docs)
+        bad[doc_rel] = opt_docs[doc_rel] + bad_line
+        _write_headline_repo(bad_repo, paired, fa, oracle, gd1, bad)
+        res_p = craft.check_headline_numbers(bad_repo)
+        assert res_p.status == "FAIL"
+        assert any(doc_rel in d and "pre-registered" in d for d in res_p.details)
+
+    false_bar_cases = [
+        ("README.md", "\nThe WS4 tiebreak bar (above base) is met.\n"),
+        ("docs/PEER-REVIEW-QA.md", "\nAnswer: the tiebreaker bar is clearly met.\n"),
+        ("docs/SUBMISSION.md", "\nWe claim a tiebreak gain on held-out seeds.\n"),
+        ("docs/REPRODUCIBILITY.md", "\nShows held-out reward gain over base.\n"),
+    ]
+    for idx, (doc_rel, bad_line) in enumerate(false_bar_cases):
+        bad_repo = tmp_path / f"false_bar_{idx}"
+        bad = dict(opt_docs)
+        bad[doc_rel] = opt_docs[doc_rel] + bad_line
+        _write_headline_repo(bad_repo, paired, fa, oracle, gd1, bad)
+        res_b = craft.check_headline_numbers(bad_repo)
+        assert res_b.status == "FAIL"
+        assert any(doc_rel in d and "tiebreak bar" in d for d in res_b.details)
+
+
+def test_headline_pooled_n32_n60_provenance_and_tamper(tmp_path):
+    paired, fa, oracle, gd1, base_docs = _synthetic_headline_files()
+    pooled_rel = "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.json"
+    pooled_rows = _synthetic_pooled_rows()
+
+    pooled_docs = dict(base_docs)
+    pooled_docs["README.md"] = (
+        base_docs["README.md"]
+        + "Reproduce pools all 32 committed episodes (+0.349 \u00b1 0.190) and solver pools seeds 0-59 (+0.498 \u00b1 0.097, n=60).\n"
+    )
+    pooled_docs["JUDGE_QUICKSTART.md"] = (
+        "Headline +0.322 vs +0.499, 65% raw, 72% luck-adjusted. "
+        "Table pools n=32 OpenCode +0.349 +/- 0.190 and n=60 solver +0.498 +/- 0.097.\n"
+    )
+    pooled_docs["docs/PEER-REVIEW-QA.md"] = (
+        "Headline +0.322 vs +0.499, 65% raw, 72% luck-adjusted. "
+        "Judge table pools n=32 (+0.349 +/- 0.190) and n=60 (+0.498 +/- 0.097).\n"
+    )
+    pooled_docs["docs/REPRODUCIBILITY.md"] = (
+        "HEADLINE +0.322 vs +0.499, 65% raw, 72% luck-adjusted. "
+        "Pooled n=32 reads 0.349 +/- 0.190 and solver n=60 reads 0.498 +/- 0.097.\n"
+    )
+
+    def _write_with_pooled(repo: Path, docs_map: dict[str, str], p_rows: list[dict]) -> None:
+        _write_headline_repo(repo, paired, fa, oracle, gd1, docs_map)
+        pp = repo / pooled_rel
+        pp.parent.mkdir(parents=True, exist_ok=True)
+        pp.write_text(json.dumps(p_rows), encoding="utf-8")
+
+    ok_repo = tmp_path / "pooled_ok"
+    _write_with_pooled(ok_repo, pooled_docs, pooled_rows)
+    assert craft.check_headline_numbers(ok_repo).status == "PASS"
+
+    no_repro_pool = tmp_path / "pooled_repro_unmentioned_ok"
+    alt_docs = dict(pooled_docs)
+    alt_docs["docs/REPRODUCIBILITY.md"] = "HEADLINE +0.322 vs +0.499, 65% raw, 72% luck-adjusted.\n"
+    _write_with_pooled(no_repro_pool, alt_docs, pooled_rows)
+    assert craft.check_headline_numbers(no_repro_pool).status == "PASS"
+
+    tamper_cases = [
+        ("README.md", "+0.349", "+0.341", "0.349"),
+        ("JUDGE_QUICKSTART.md", "0.190", "0.210", "0.190"),
+        ("docs/PEER-REVIEW-QA.md", "n=60", "n=50", "60"),
+        ("docs/REPRODUCIBILITY.md", "0.498", "0.455", "0.498"),
+        ("docs/REPRODUCIBILITY.md", "0.097", "0.125", "0.097"),
+    ]
+    for idx, (doc_rel, old_tok, new_tok, expected_substr) in enumerate(tamper_cases):
+        bad_repo = tmp_path / f"pooled_tamper_{idx}"
+        bad_docs = dict(pooled_docs)
+        bad_docs[doc_rel] = pooled_docs[doc_rel].replace(old_tok, new_tok)
+        _write_with_pooled(bad_repo, bad_docs, pooled_rows)
+        res = craft.check_headline_numbers(bad_repo)
+        assert res.status == "FAIL"
+        assert any(doc_rel in d and expected_substr in d for d in res.details)
+
+    bad_json_repo = tmp_path / "pooled_json_bad_n"
+    bad_rows = copy.deepcopy(pooled_rows)
+    bad_rows[0]["n"] = 30
+    _write_with_pooled(bad_json_repo, pooled_docs, bad_rows)
+    res_json = craft.check_headline_numbers(bad_json_repo)
+    assert res_json.status == "FAIL"
+    assert any("expected 32" in d for d in res_json.details)
+
+
+def test_headline_exploits_json_counts_provenance_and_tamper(tmp_path):
+    paired, fa, oracle, gd1, base_docs = _synthetic_headline_files()
+    exploits_rel = "results/anticheat/exploits.json"
+    exp_obj = _synthetic_exploits_json()
+
+    exp_docs = dict(base_docs)
+    exp_docs["docs/REPRODUCIBILITY.md"] = (
+        "HEADLINE +0.322 vs +0.499, 65% raw, 72% luck-adjusted. "
+        "Replays 1,021 of 1,031 committed episodes across 51,814 tool results; "
+        "80/80 Harbor trials, 18/18 job summaries, and 99 anti-cheat rows.\n"
+    )
+    exp_docs["docs/PEER-REVIEW-QA.md"] = (
+        "HEADLINE +0.322 vs +0.499, 65% raw, 72% luck-adjusted. "
+        "Replays 1021/1031 episodes (51814 steps), 80 Harbor trials, 18 jobs, 99 battery rows.\n"
+    )
+
+    def _write_with_exploits(repo: Path, docs_map: dict[str, str], payload: dict) -> None:
+        _write_headline_repo(repo, paired, fa, oracle, gd1, docs_map)
+        ep = repo / exploits_rel
+        ep.parent.mkdir(parents=True, exist_ok=True)
+        ep.write_text(json.dumps(payload), encoding="utf-8")
+
+    ok_repo = tmp_path / "exp_ok"
+    _write_with_exploits(ok_repo, exp_docs, exp_obj)
+    assert craft.check_headline_numbers(ok_repo).status == "PASS"
+
+    tamper_pairs = [
+        ("docs/REPRODUCIBILITY.md", "1,021", "989", "1021"),
+        ("docs/REPRODUCIBILITY.md", "1,031", "999", "1031"),
+        ("docs/REPRODUCIBILITY.md", "51,814", "49,549", "51814"),
+        ("docs/REPRODUCIBILITY.md", "80/80", "80,000", "80"),
+        ("docs/PEER-REVIEW-QA.md", "18 jobs", "13 jobs", "18"),
+        ("docs/PEER-REVIEW-QA.md", "99 battery", "96 battery", "99"),
+    ]
+    for idx, (doc_rel, old_s, new_s, expected_num) in enumerate(tamper_pairs):
+        bad_repo = tmp_path / f"exp_tamper_{idx}"
+        bad_docs = dict(exp_docs)
+        bad_docs[doc_rel] = exp_docs[doc_rel].replace(old_s, new_s)
+        _write_with_exploits(bad_repo, bad_docs, exp_obj)
+        res = craft.check_headline_numbers(bad_repo)
+        assert res.status == "FAIL"
+        assert any(doc_rel in d and expected_num in d for d in res.details)
+
+    unblocked_repo = tmp_path / "exp_unblocked"
+    bad_payload = copy.deepcopy(exp_obj)
+    bad_payload["all_blocked"] = False
+    _write_with_exploits(unblocked_repo, exp_docs, bad_payload)
+    res_unblocked = craft.check_headline_numbers(unblocked_repo)
+    assert res_unblocked.status == "FAIL"
+    assert any("all_blocked" in d for d in res_unblocked.details)
+
+
+def test_stale_gap_claims_new_active_docs_and_exempt_meta_audits(tmp_path):
+    for required_active in (
+        "JUDGE_QUICKSTART.md",
+        "docs/REPRODUCIBILITY.md",
+        "docs/PEER-REVIEW-QA.md",
+        "docs/SUBMISSION.md",
+    ):
+        assert required_active in craft.ACTIVE_HEADLINE_DOCS
+    assert "docs/reports/judge_sim.md" in craft.EXEMPT_GAP_PATTERNS
+    assert "docs/reports/number_audit.md" in craft.EXEMPT_GAP_PATTERNS
+
+    exempt_repo = tmp_path / "gap_exempt_meta"
+    _init_git_repo(
+        exempt_repo,
+        {
+            "README.md": "65% of solver on hard.\n",
+            "JUDGE_QUICKSTART.md": "65% raw, 72% luck-adjusted.\n",
+            "docs/REPRODUCIBILITY.md": "Deterministic replay.\n",
+            "docs/PEER-REVIEW-QA.md": "All objections answered.\n",
+            "docs/SUBMISSION.md": "Main submission.\n",
+            "docs/reports/judge_sim.md": "Historical friction item: Gap not established in old README.\n",
+            "docs/reports/number_audit.md": "Historical claim: v1.4 frontier gap: not established.\n",
+        },
+    )
+    res_exempt = craft.check_stale_gap_claims(exempt_repo)
+    assert res_exempt.status == "PASS", res_exempt.details
+
+    for idx, active_rel in enumerate(
+        ("JUDGE_QUICKSTART.md", "docs/REPRODUCIBILITY.md", "docs/PEER-REVIEW-QA.md", "docs/SUBMISSION.md")
+    ):
+        fail_repo = tmp_path / f"gap_active_fail_{idx}"
+        _init_git_repo(
+            fail_repo,
+            {
+                "README.md": "Clean.\n",
+                active_rel: "Stale note: gap not established.\n",
+            },
+        )
+        res_fail = craft.check_stale_gap_claims(fail_repo)
+        assert res_fail.status == "FAIL"
+        assert any(active_rel in d for d in res_fail.details)
+
+
+def test_results_hygiene_fresh_clone_afterquery_final_and_git_ceiling(tmp_path):
+    steps_rel = "results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.steps.txt"
+    log_rel = "results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.log.txt"
+    fc_readme_rel = "results/fresh_clone/README.md"
+
+    good_files = {
+        **_base_results_files(),
+        steps_rel: "clone exit=0 seconds=3\nreproduce exit=0 seconds=118\ntest_core exit=0 seconds=175\n",
+        log_rel: "HEAD short: 1bc3e281\ntag: afterquery-final\n",
+        fc_readme_rel: "Linux x86_64 at tag afterquery-final (`1bc3e281`): 118 s reproduce.\n",
+    }
+    good_repo = tmp_path / "fc_af_good"
+    _init_git_repo(good_repo, good_files)
+    assert craft.check_results_hygiene(good_repo).status == "PASS"
+
+    nonzero_repo = tmp_path / "fc_af_nonzero"
+    bad_step_files = dict(good_files)
+    bad_step_files[steps_rel] = "clone exit=0 seconds=3\nreproduce exit=1 seconds=118\n"
+    _init_git_repo(nonzero_repo, bad_step_files)
+    res_nz = craft.check_results_hygiene(nonzero_repo)
+    assert res_nz.status == "FAIL"
+    assert any("non-zero exit code 1" in d for d in res_nz.details)
+
+    empty_log_repo = tmp_path / "fc_af_empty_log"
+    empty_log_files = dict(good_files)
+    empty_log_files[log_rel] = "   \n"
+    _init_git_repo(empty_log_repo, empty_log_files)
+    res_empty = craft.check_results_hygiene(empty_log_repo)
+    assert res_empty.status == "FAIL"
+    assert any("empty fresh-clone log" in d for d in res_empty.details)
+
+    missing_sha_repo = tmp_path / "fc_af_missing_sha"
+    bad_readme_files = dict(good_files)
+    bad_readme_files[fc_readme_rel] = "Linux x86_64 fresh clone at 09e7363 only.\n"
+    _init_git_repo(missing_sha_repo, bad_readme_files)
+    res_sha = craft.check_results_hygiene(missing_sha_repo)
+    assert res_sha.status == "FAIL"
+    assert any("1bc3e281" in d for d in res_sha.details)
+    assert any("afterquery-final" in d for d in res_sha.details)
+
+    parent_git = tmp_path / "parent_git_repo"
+    _init_git_repo(
+        parent_git,
+        {"README.md": "Parent repo.\n"},
+        gitignore="results/latest/\n*.parent_ignored\n",
+    )
+    nested_gitless = parent_git / "nested_export"
+    nested_gitless.mkdir(parents=True, exist_ok=True)
+    (nested_gitless / ".gitignore").write_text("*.child_only\n", encoding="utf-8")
+    for rel, content in _base_results_files().items():
+        p = nested_gitless / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(content, encoding="utf-8")
+
+    env_map = craft._git_env(nested_gitless)
+    assert env_map["GIT_CEILING_DIRECTORIES"].split(":")[0] == str(nested_gitless.resolve().parent)
+    assert craft._git_ls_files(nested_gitless) is None
+    assert craft._git_is_ignored(nested_gitless, "foo.parent_ignored") is False
+    assert craft._git_is_ignored(nested_gitless, "bar.child_only") is True
+
+    (nested_gitless / ".git").mkdir(parents=True, exist_ok=True)
+    assert craft._git_ls_files(nested_gitless) is None
+    assert craft._git_is_ignored(nested_gitless, "foo.parent_ignored") is False
+    assert craft._git_is_ignored(nested_gitless, "bar.child_only") is True
+    assert craft._git_ignored_batch(nested_gitless, ["foo.parent_ignored", "bar.child_only"]) == {"bar.child_only"}

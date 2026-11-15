@@ -177,6 +177,26 @@ def _git_read_optional(git_spec: str) -> str | None:
     return proc.stdout
 
 
+def _git_list_ui_js(git_tree: str) -> list[str]:
+    try:
+        proc = subprocess.run(
+            ["git", "ls-tree", "--name-only", git_tree],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return []
+    return sorted(
+        line.strip()
+        for line in proc.stdout.splitlines()
+        if line.strip().endswith(".js")
+    )
+
+
 def _stage_arena_tree(tmp_path: Path, include_git_pack: bool = False) -> Path:
     arena_root = tmp_path / "arena"
     ui_dir = arena_root / "ui"
@@ -655,12 +675,23 @@ def test_living_office_mount_arena_ui_integration_when_available(tmp_path: Path)
         return
 
     ui_dir = arena_dir / "ui"
-    for fname in ("dom.js", "office_stage.js", "arena_app.js", "index.js"):
-        local_f = ROOT / "docs" / "arena" / "ui" / fname
-        if local_f.is_file():
-            shutil.copy2(local_f, ui_dir / fname)
-        else:
-            git_txt = _git_read_optional(f"origin/fr8/canary/craft-arena:docs/arena/ui/{fname}")
+    local_ui_dir = ROOT / "docs" / "arena" / "ui"
+    if (local_ui_dir / "index.js").is_file():
+        for src_js in sorted(local_ui_dir.glob("*.js")):
+            shutil.copy2(src_js, ui_dir / src_js.name)
+    else:
+        chosen_ref = None
+        git_names: list[str] = []
+        for candidate_ref in ("origin/fr8/canary/craft-arena", "origin/fr8/canary/arena"):
+            names = _git_list_ui_js(f"{candidate_ref}:docs/arena/ui")
+            if "index.js" in names:
+                chosen_ref = candidate_ref
+                git_names = names
+                break
+        if not chosen_ref:
+            return
+        for fname in git_names:
+            git_txt = _git_read_optional(f"{chosen_ref}:docs/arena/ui/{fname}")
             if not git_txt:
                 return
             (ui_dir / fname).write_text(git_txt, encoding="utf-8")

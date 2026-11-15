@@ -40,6 +40,17 @@ FRONTIER_V14_RUNS: tuple[tuple[str, str, str], ...] = (
     ("v1.4/opencode-gemini-3.5-flash/hard", "hard", "opencode:google/gemini-3.5-flash"),
 )
 
+SOLVER_HARD_V14_SUBDIRS: tuple[str, ...] = (
+    "solver-hard-20261114-121126",
+    "solver-hard-seeds20to29",
+    "solver-hard-seeds30to59",
+)
+
+SOLVER_MEDIUM_V14_SUBDIRS: tuple[str, ...] = (
+    "solver-medium-20261114-121126",
+    "solver-medium-seeds20to29",
+)
+
 EXPECTED_HEADLINE_RATIOS_0_29: dict[str, tuple[str, str]] = {
     "opencode_gemini_4_carbon_hard": ("65% [24%, 98%]", "72% [52%, 91%]"),
     "opencode_gemini_4_carbon_medium": ("111% [99%, 127%]", "101% [85%, 119%]"),
@@ -72,10 +83,12 @@ SECRET_AND_LEAK_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "secret_env_assignment",
         re.compile(
-            r"\b(?:GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GENERATIVE_AI_API_KEY|"
-            r"OPENAI_API_KEY|ANTHROPIC_API_KEY|CANARY_WORLD_SECRET|"
-            r"CANARY_LEDGER_TOKEN|CANARY_ADMIN_TOKEN|XAI_API_KEY|HF_TOKEN)"
-            r"\s*=\s*[\x27\x22]?[A-Za-z0-9_\-]{16,}"
+            r"\b(?:"
+            r"(?:GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GENERATIVE_AI_API_KEY|"
+            r"OPENAI_API_KEY|ANTHROPIC_API_KEY|CANARY_LEDGER_TOKEN|"
+            r"CANARY_ADMIN_TOKEN|XAI_API_KEY|HF_TOKEN)\s*=\s*[\x27\x22]?[A-Za-z0-9_\-]{16,}"
+            r"|CANARY_WORLD_SECRET\s*=\s*[\x27\x22]?(?!canary-demo-live(?![A-Za-z0-9_\-]))[A-Za-z0-9_\-]{16,}"
+            r")"
         ),
     ),
     ("world_mole_dump", re.compile(r'"(?:mole|mole_id|true_mole)"\s*:\s*"e\d{2}"')),
@@ -152,14 +165,20 @@ def _check_score_invariants(ep: dict[str, Any], loc: str, is_invalid: bool) -> l
     if accused is not None and not has_accused:
         errs.append(f"{loc}: malformed accused value {accused!r}")
     correct = bool(ep.get("correct"))
-    meta = ep.get("meta") if isinstance(ep.get("meta"), dict) else {}
+    raw_meta = ep.get("meta")
+    meta = raw_meta if isinstance(raw_meta, dict) else None
 
     if score > 0.0 and not (has_accused and correct):
         errs.append(f"{loc}: score={score} > 0 requires accused and correct=True")
     if has_accused and correct:
-        zero_v = score == 0.0 and "V" in meta and meta.get("V") == 0.0
-        if not (score > 0.0 or zero_v):
-            errs.append(f"{loc}: accused and correct=True requires score > 0 (or V==0.0), got {score}")
+        if score < 0.0:
+            errs.append(f"{loc}: accused and correct=True cannot have score < 0.0, got {score}")
+        elif score == 0.0 and meta is not None and "V" in meta:
+            v_val = meta.get("V")
+            if not (_is_finite_number(v_val) and float(v_val) == 0.0):
+                errs.append(
+                    f"{loc}: accused and correct=True with score == 0.0 contradicts meta V={v_val!r}"
+                )
     if not has_accused:
         if score != 0.0:
             errs.append(f"{loc}: no accusation requires score == 0.0, got {score}")
@@ -725,7 +744,7 @@ def _verify_cohort_episodes(
 ) -> tuple[dict[str, Any], list[str]]:
     from canary import rules
     from canary.env import Env
-    from canary.redteam.anticheat import _client_only_step
+    from canary.redteam.anticheat import _canon, _client_only_step, _client_truncated_bytes, _norm_result
 
     violations: list[str] = []
     seed_set = set(seeds_want)
@@ -791,31 +810,61 @@ def _verify_cohort_episodes(
         violations.append(f"{cohort_label}: duplicate valid seed(s) detected: {dup_seeds}")
 
     got_seeds = sorted(raw_seeds)
+    if seeds_want and seeds_want == list(range(seeds_want[0], seeds_want[-1] + 1)):
+        want_desc = f"{seeds_want[0]}..{seeds_want[-1]}"
+    else:
+        want_desc = repr(seeds_want)
     if len(valid_eps) != len(seeds_want) or got_seeds != seeds_want:
         violations.append(
-            f"{cohort_label}: expected n={len(seeds_want)} valid episodes on seeds {seeds_want[0]}..{seeds_want[-1]}, "
+            f"{cohort_label}: expected n={len(seeds_want)} valid episodes on seeds {want_desc}, "
             f"got n={len(valid_eps)} seeds={got_seeds[:5]}..{got_seeds[-5:] if got_seeds else []}"
         )
+    if not filter_seeds and set(range(30)) <= set(seeds_want) and not (set(range(30)) <= set(got_seeds)):
+        missing_primary = sorted(set(range(30)) - set(got_seeds))
+        violations.append(f"{cohort_label}: incomplete primary seeds 0..29 (missing {missing_primary[:10]})")
 
     replay_matched = 0
+    step_mismatches_total = 0
     with rules.tiers_version("v1.4"):
         for ep in sorted(valid_eps, key=lambda x: int(x["seed"])):
             seed_i = int(ep["seed"])
             env = Env(expected_tier, seed_i)
-            for st in ep.get("steps") or []:
+            step_bad = 0
+            first_bad: int | None = None
+            for step_idx, st in enumerate(ep.get("steps") or []):
                 if _client_only_step(st):
                     continue
-                env.call(st["tool"], st["args"])
+                r = env.call(st["tool"], st["args"])
+                got_payload: dict[str, Any] = {"ok": r.ok, "data": r.data, "error": r.error}
+                want = _norm_result(st.get("result"))
+                if (
+                    not r.ok
+                    and r.error == "invalid arguments"
+                    and isinstance(r.data, dict)
+                    and set(r.data) == {"detail"}
+                    and not (isinstance(want, dict) and isinstance(want.get("data"), dict) and "detail" in want["data"])
+                ):
+                    got_payload = {"ok": r.ok, "data": {}, "error": r.error}
+                trunc = _client_truncated_bytes(st.get("result"))
+                if trunc is not None:
+                    step_ok = len(json.dumps(got_payload).encode()) == trunc
+                else:
+                    step_ok = want is None or _canon(got_payload) == _canon(want)
+                if not step_ok:
+                    step_bad += 1
+                    if first_bad is None:
+                        first_bad = step_idx
+            step_mismatches_total += step_bad
             got_score = float(env.score())
             got_accused = env.verdict()["accused"]
             rec_score = float(ep["score"])
             rec_accused = ep.get("accused")
-            if abs(got_score - rec_score) < 1e-6 and got_accused == rec_accused:
+            if abs(got_score - rec_score) < 1e-6 and got_accused == rec_accused and step_bad == 0:
                 replay_matched += 1
             else:
                 violations.append(
                     f"{cohort_label} seed={seed_i}: replay mismatch recorded=({rec_score}, {rec_accused!r}) "
-                    f"replayed=({got_score}, {got_accused!r})"
+                    f"replayed=({got_score}, {got_accused!r}) step_mismatches={step_bad} first_bad_step={first_bad}"
                 )
 
     mean_sc = sum(float(e["score"]) for e in valid_eps) / len(valid_eps) if valid_eps else 0.0
@@ -832,6 +881,7 @@ def _verify_cohort_episodes(
         "seed_min": got_seeds[0] if got_seeds else None,
         "seed_max": got_seeds[-1] if got_seeds else None,
         "replay_matched": replay_matched,
+        "step_mismatches": step_mismatches_total,
         "replay_agreement_rate": (replay_matched / len(valid_eps)) if valid_eps else 0.0,
         "mean_score": round(mean_sc, 6),
     }
@@ -873,20 +923,106 @@ def gate2_replay_cache_completeness_and_step_consistency(
         frontier_summaries.append(row)
         violations.extend(errs)
 
+    extension_summaries: list[dict[str, Any]] = []
+    extension_expected = 0
+    if expected_seeds is None:
+        ext_rel = "v1.4/opencode-gemini-4-carbon-ext/hard"
+        ext_dir = root / "data" / "runs" / "committed" / ext_rel
+        ext_ep = ext_dir / "episodes.jsonl"
+        ext_meta_file = ext_dir / "meta.json"
+        if not ext_ep.is_file() or not ext_meta_file.is_file():
+            violations.append(f"missing committed extension cohort files under data/runs/committed/{ext_rel}")
+        else:
+            ext_md = json.loads(ext_meta_file.read_text(encoding="utf-8"))
+            raw_ext_seeds = ext_md.get("seeds")
+            if (
+                isinstance(raw_ext_seeds, list)
+                and raw_ext_seeds
+                and all(isinstance(s, int) and not isinstance(s, bool) for s in raw_ext_seeds)
+                and raw_ext_seeds == sorted(set(raw_ext_seeds))
+                and set(raw_ext_seeds) <= set(range(30, 60))
+            ):
+                ext_seeds_want = list(raw_ext_seeds)
+            else:
+                violations.append(
+                    f"data/runs/committed/{ext_rel}/meta.json: seeds={raw_ext_seeds!r} must be a non-empty sorted subset of 30..59"
+                )
+                ext_seeds_want = [34, 37]
+            extension_expected += len(ext_seeds_want)
+            ext_row, ext_errs = _verify_cohort_episodes(
+                ext_rel,
+                "hard",
+                "opencode:google/gemini-4-carbon",
+                [ext_ep],
+                root,
+                ext_seeds_want,
+                filter_seeds=False,
+                filter_agent=False,
+            )
+            extension_summaries.append(ext_row)
+            violations.extend(ext_errs)
+
+        gpt_rel = "v1.4/opencode-gpt-5.5/hard"
+        gpt_dir = root / "data" / "runs" / "committed" / gpt_rel
+        gpt_ep = gpt_dir / "episodes.jsonl"
+        gpt_meta_file = gpt_dir / "meta.json"
+        if gpt_ep.is_file() and gpt_meta_file.is_file():
+            gpt_md = json.loads(gpt_meta_file.read_text(encoding="utf-8"))
+            raw_gpt_seeds = gpt_md.get("seeds")
+            if (
+                isinstance(raw_gpt_seeds, list)
+                and raw_gpt_seeds
+                and all(isinstance(s, int) and not isinstance(s, bool) for s in raw_gpt_seeds)
+                and raw_gpt_seeds == sorted(set(raw_gpt_seeds))
+                and set(raw_gpt_seeds) <= set(range(30))
+            ):
+                gpt_seeds_want = list(raw_gpt_seeds)
+            else:
+                violations.append(
+                    f"data/runs/committed/{gpt_rel}/meta.json: seeds={raw_gpt_seeds!r} must be a non-empty sorted subset of 0..29"
+                )
+                gpt_seeds_want = list(range(30))
+            extension_expected += len(gpt_seeds_want)
+            gpt_agent = str(gpt_md.get("agent") or "opencode:openai/gpt-5.5")
+            gpt_row, gpt_errs = _verify_cohort_episodes(
+                gpt_rel,
+                "hard",
+                gpt_agent,
+                [gpt_ep],
+                root,
+                gpt_seeds_want,
+                filter_seeds=False,
+                filter_agent=False,
+            )
+            extension_summaries.append(gpt_row)
+            violations.extend(gpt_errs)
+
     solver_summaries: list[dict[str, Any]] = []
+    solver_expected = 0
     ref_dir = root / "data" / "runs" / "committed" / "v1.4" / "reference"
     if not ref_dir.is_dir():
         violations.append("missing committed solver reference directory: data/runs/committed/v1.4/reference")
     else:
+        if expected_seeds is None:
+            for req_sub in SOLVER_MEDIUM_V14_SUBDIRS + SOLVER_HARD_V14_SUBDIRS:
+                if not (ref_dir / req_sub / "episodes.jsonl").is_file():
+                    violations.append(
+                        f"missing committed solver reference episodes file: data/runs/committed/v1.4/reference/{req_sub}/episodes.jsonl"
+                    )
         ref_ep_files = sorted(ref_dir.rglob("episodes.jsonl"))
         for sol_tier in ("medium", "hard"):
+            if expected_seeds is None:
+                sol_seeds_want = list(range(60)) if sol_tier == "hard" else list(range(30))
+            else:
+                sol_seeds_want = seeds_want
+            solver_expected += len(sol_seeds_want)
             row, errs = _verify_cohort_episodes(
                 f"v1.4/reference/solver:{sol_tier}",
                 sol_tier,
                 "solver",
                 ref_ep_files,
                 root,
-                seeds_want,
+                sol_seeds_want,
                 filter_seeds=filter_seeds,
                 filter_agent=True,
             )
@@ -980,12 +1116,13 @@ def gate2_replay_cache_completeness_and_step_consistency(
 
     frontier_replayed = sum(r["replay_matched"] for r in frontier_summaries)
     frontier_expected = len(frontier_runs) * len(seeds_want)
+    extension_replayed = sum(r["replay_matched"] for r in extension_summaries)
     solver_replayed = sum(r["replay_matched"] for r in solver_summaries)
-    solver_expected = 2 * len(seeds_want)
+    ext_clause = f" + {extension_replayed}/{extension_expected} extension" if extension_summaries else ""
     passed = not violations
     summary = (
-        f"replayed {frontier_replayed}/{frontier_expected} frontier + {solver_replayed}/{solver_expected} solver "
-        f"v1.4 episodes (0 duplicate seeds, TIERS_VERSION=='v1.4'); "
+        f"replayed {frontier_replayed}/{frontier_expected} primary frontier{ext_clause} + "
+        f"{solver_replayed}/{solver_expected} solver v1.4 episodes (0 duplicate seeds, TIERS_VERSION=='v1.4'); "
         f"ladder verified ({total_ladder_episodes} valid, 0 errors)"
         if passed
         else f"{len(violations)} replay/completeness violation(s)"
@@ -998,6 +1135,7 @@ def gate2_replay_cache_completeness_and_step_consistency(
         data={
             "tiers_version_runtime": rules.TIERS_VERSION,
             "frontier_v14_runs": frontier_summaries,
+            "frontier_extension_v14_runs": extension_summaries,
             "solver_v14_runs": solver_summaries,
             "ladder_summary": ladder_summary,
         },
@@ -1278,6 +1416,37 @@ def _is_allowed_historical_reference(line_norm: str, heading_lower: str) -> bool
     return False
 
 
+def _valid_episode_seeds_from_jsonl(ep_path: Path) -> tuple[list[int], list[int], list[str]]:
+    seeds: list[int] = []
+    dups: list[int] = []
+    seen: set[int] = set()
+    errs: list[str] = []
+    for lineno, line in enumerate(ep_path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            ep = json.loads(line)
+        except ValueError as exc:
+            errs.append(f"{ep_path.name}:{lineno}: invalid JSON ({exc})")
+            continue
+        if not isinstance(ep, dict):
+            errs.append(f"{ep_path.name}:{lineno}: not a JSON object")
+            continue
+        meta = ep.get("meta") if isinstance(ep.get("meta"), dict) else {}
+        if (meta.get("valid") is False) or (ep.get("valid") is False):
+            continue
+        try:
+            s = int(ep["seed"])
+        except (KeyError, TypeError, ValueError):
+            errs.append(f"{ep_path.name}:{lineno}: invalid seed {ep.get('seed')!r}")
+            continue
+        if s in seen and s not in dups:
+            dups.append(s)
+        seen.add(s)
+        seeds.append(s)
+    return sorted(seeds), sorted(dups), errs
+
+
 def gate4_version_and_preregistration_hygiene(
     root: Path,
     doc_paths: tuple[str, ...] = ACTIVE_DOCS,
@@ -1320,25 +1489,64 @@ def gate4_version_and_preregistration_hygiene(
                 violations.append(f"data/runs/committed/v1.4/paired_table_gemini.md mixes {bad_tok!r}")
 
     meta_files_checked = 0
-    preregistered_cohorts = 0
+    primary_locked_cohorts = 0
+    extension_cohorts = 0
     if v14_dir.is_dir():
         for mf in sorted(v14_dir.rglob("meta.json")):
             meta_files_checked += 1
             rel_mf = str(mf.relative_to(root))
+            top_dir = mf.relative_to(v14_dir).parts[0]
             md = json.loads(mf.read_text(encoding="utf-8"))
             tv = md.get("tiers_version")
-            if tv is not None and tv != "v1.4":
-                violations.append(f"{rel_mf}: tiers_version={tv!r} != 'v1.4'")
             raw_meta_low = _norm_ascii(json.dumps(md)).lower()
             for bad_tok in forbidden_tokens:
                 if bad_tok in rel_mf.lower() or f"/{bad_tok}/" in raw_meta_low:
                     violations.append(f"{rel_mf}: mixes {bad_tok!r}")
-            if "reference" not in mf.parts:
+
+            if top_dir == "reference":
+                if tv is not None and tv != "v1.4":
+                    violations.append(f"{rel_mf}: tiers_version={tv!r} != 'v1.4'")
+            elif top_dir in ("opencode-gemini-4-carbon-ext", "opencode-gpt-5.5"):
+                if tv != "v1.4":
+                    violations.append(f"{rel_mf}: tiers_version={tv!r} != 'v1.4'")
+                seeds_meta = md.get("seeds")
+                allowed_range = set(range(30, 60)) if top_dir == "opencode-gemini-4-carbon-ext" else set(range(30))
+                range_lbl = "30..59" if top_dir == "opencode-gemini-4-carbon-ext" else "0..29"
+                meta_seeds_ok = (
+                    isinstance(seeds_meta, list)
+                    and len(seeds_meta) > 0
+                    and all(isinstance(s, int) and not isinstance(s, bool) for s in seeds_meta)
+                    and seeds_meta == sorted(set(seeds_meta))
+                    and set(seeds_meta) <= allowed_range
+                )
+                if not meta_seeds_ok:
+                    violations.append(
+                        f"{rel_mf}: extension seeds={seeds_meta!r} must be a non-empty sorted subset of {range_lbl}"
+                    )
+                ep_sibling = mf.parent / "episodes.jsonl"
+                ep_seeds_ok = True
+                if ep_sibling.is_file():
+                    ep_seeds, ep_dups, ep_errs = _valid_episode_seeds_from_jsonl(ep_sibling)
+                    for e_err in ep_errs:
+                        violations.append(f"{rel_mf}: {e_err}")
+                    if ep_dups:
+                        ep_seeds_ok = False
+                        violations.append(f"{rel_mf}: duplicate valid episode seeds in episodes.jsonl: {ep_dups}")
+                    if not (set(ep_seeds) <= allowed_range) or (meta_seeds_ok and ep_seeds != seeds_meta):
+                        ep_seeds_ok = False
+                        violations.append(
+                            f"{rel_mf}: episodes.jsonl valid seeds={ep_seeds!r} != meta seeds={seeds_meta!r} (subset of {range_lbl})"
+                        )
+                if tv == "v1.4" and meta_seeds_ok and ep_seeds_ok:
+                    extension_cohorts += 1
+            else:
+                if tv != "v1.4":
+                    violations.append(f"{rel_mf}: tiers_version={tv!r} != 'v1.4'")
                 seeds_meta = md.get("seeds")
                 if seeds_meta != list(range(30)):
-                    violations.append(f"{rel_mf}: frontier seeds={seeds_meta!r} != pre-registered 0..29")
-                else:
-                    preregistered_cohorts += 1
+                    violations.append(f"{rel_mf}: primary frontier seeds={seeds_meta!r} != locked 0..29")
+                elif tv == "v1.4":
+                    primary_locked_cohorts += 1
 
     jt_v14_rows_checked = 0
     if judge_table_path.is_file():
@@ -1383,7 +1591,8 @@ def gate4_version_and_preregistration_hygiene(
                 if bad_tok in row_low:
                     violations.append(f"README.md:{lineno}: Result v1.4 table mixes {bad_tok!r}")
 
-    prereg_rule_present = False
+    seed_lock_ok = False
+    prereg_ext_ok = False
     if gap_path.is_file():
         gap_norm = _norm_ascii(gap_path.read_text(encoding="utf-8"))
         in_v14 = False
@@ -1406,15 +1615,27 @@ def gate4_version_and_preregistration_hygiene(
                     if bad_tok in row_low:
                         violations.append(f"docs/reports/gap.md:{lineno}: v1.4 headline table mixes {bad_tok!r}")
         v14_text = "\n".join(s for _, s in v14_lines)
-        prereg_rule_present = (
-            "Pre-registered seed rule" in v14_text
+        seed_lock_ok = (
+            "Seed lock" in v14_text
+            and "671ed96" in v14_text
+            and "post-hoc lock" in v14_text.lower()
             and "seeds 0-29" in v14_text
             and "PRIMARY" in v14_text
             and "REPLICATION" in v14_text
         )
-        if not prereg_rule_present:
+        prereg_ext_ok = (
+            "Pre-registered extension" in v14_text
+            and "f9fb7a4a" in v14_text
+            and "30-59" in v14_text
+            and "Pre-registered second frontier family: gpt-5.5" in v14_text
+        )
+        if not seed_lock_ok:
             violations.append(
-                "docs/reports/gap.md v1.4 section missing Pre-registered seed rule (seeds 0-29, PRIMARY vs REPLICATION)"
+                "docs/reports/gap.md v1.4 section missing Seed lock (671ed96 post-hoc lock on seeds 0-29, PRIMARY vs REPLICATION)"
+            )
+        if not prereg_ext_ok:
+            violations.append(
+                "docs/reports/gap.md v1.4 section missing pre-registered extensions (f9fb7a4a 30-59 and cf394894 gpt-5.5)"
             )
 
     for rel in doc_paths:
@@ -1448,7 +1669,8 @@ def gate4_version_and_preregistration_hygiene(
     passed = not violations
     summary = (
         f"0 mixing of v1.2/v1.3/superseded across {paired_groups_checked} paired rows, {jt_v14_rows_checked} judge_table v1.4 rows, "
-        f"and {meta_files_checked} v1.4 meta files; pre-registration rule verified; {len(checked_files)} active docs clean"
+        f"and {meta_files_checked} v1.4 meta files ({primary_locked_cohorts} locked primary + {extension_cohorts} pre-registered extension); "
+        f"seed lock and extensions verified; {len(checked_files)} active docs clean"
         if passed
         else f"{len(violations)} version/pre-registration hygiene violation(s)"
     )
@@ -1461,8 +1683,12 @@ def gate4_version_and_preregistration_hygiene(
             "paired_groups_checked": paired_groups_checked,
             "judge_table_v14_rows_checked": jt_v14_rows_checked,
             "v14_meta_files_checked": meta_files_checked,
-            "preregistered_frontier_cohorts": preregistered_cohorts,
-            "preregistration_rule_verified": prereg_rule_present,
+            "posthoc_locked_primary_frontier_cohorts": primary_locked_cohorts,
+            "preregistered_extension_frontier_cohorts": extension_cohorts,
+            "preregistered_frontier_cohorts": extension_cohorts,
+            "seed_lock_rule_verified": seed_lock_ok,
+            "preregistered_extensions_verified": prereg_ext_ok,
+            "preregistration_rule_verified": seed_lock_ok and prereg_ext_ok,
             "active_docs_checked": checked_files,
             "historical_disclosures_allowed": historical_disclosures,
         },
@@ -1686,6 +1912,7 @@ def build_manifest(gates: list[GateResult]) -> dict[str, Any]:
         "committed_paired_rows_verified": g1.data.get("committed_paired_rows_verified", 0),
         "tiers_version_runtime": g2.data.get("tiers_version_runtime", "v1.4"),
         "frontier_v14_runs": g2.data.get("frontier_v14_runs", []),
+        "frontier_extension_v14_runs": g2.data.get("frontier_extension_v14_runs", []),
         "solver_v14_runs": g2.data.get("solver_v14_runs", []),
         "ladder_summary": g2.data.get("ladder_summary", {}),
         "judge_episode_baselines": g3.data.get("judge_episode_baselines", {}),
@@ -1697,7 +1924,11 @@ def build_manifest(gates: list[GateResult]) -> dict[str, Any]:
             "paired_groups_checked": g4.data.get("paired_groups_checked", 0),
             "judge_table_v14_rows_checked": g4.data.get("judge_table_v14_rows_checked", 0),
             "v14_meta_files_checked": g4.data.get("v14_meta_files_checked", 0),
+            "posthoc_locked_primary_frontier_cohorts": g4.data.get("posthoc_locked_primary_frontier_cohorts", 0),
+            "preregistered_extension_frontier_cohorts": g4.data.get("preregistered_extension_frontier_cohorts", 0),
             "preregistered_frontier_cohorts": g4.data.get("preregistered_frontier_cohorts", 0),
+            "seed_lock_rule_verified": g4.data.get("seed_lock_rule_verified", False),
+            "preregistered_extensions_verified": g4.data.get("preregistered_extensions_verified", False),
             "preregistration_rule_verified": g4.data.get("preregistration_rule_verified", False),
             "active_docs_checked": g4.data.get("active_docs_checked", []),
             "historical_disclosures_allowed": g4.data.get("historical_disclosures_allowed", []),
@@ -1713,6 +1944,7 @@ def render_report(manifest: dict[str, Any]) -> str:
     claims = manifest.get("paired_headline_claims", {})
     sol_ref = manifest.get("solver_paired_reference", {})
     frontier_runs = manifest.get("frontier_v14_runs", [])
+    ext_runs = manifest.get("frontier_extension_v14_runs", [])
     solver_runs = manifest.get("solver_v14_runs", [])
     ladder = manifest.get("ladder_summary", {})
     j_base = manifest.get("judge_episode_baselines", {})
@@ -1724,6 +1956,7 @@ def render_report(manifest: dict[str, Any]) -> str:
     warnings = manifest.get("warnings", [])
 
     total_frontier_eps = sum(int(r.get("replay_matched", 0)) for r in frontier_runs)
+    total_ext_eps = sum(int(r.get("replay_matched", 0)) for r in ext_runs)
     total_solver_eps = sum(int(r.get("replay_matched", 0)) for r in solver_runs)
 
     lines: list[str] = [
@@ -1799,16 +2032,16 @@ def render_report(manifest: dict[str, Any]) -> str:
             "",
             H2 + "Gate 2: Replay Cache Completeness and Step Consistency",
             "",
-            f"All **{total_frontier_eps}** committed v1.4 frontier episodes and **{total_solver_eps}** committed v1.4 solver reference episodes (**{total_frontier_eps + total_solver_eps}** total) have complete seed sets `0..29`, `0` duplicate seeds per cohort, valid score invariants, `0` timeout/error episodes marked valid, and 100% step-replay agreement in `Env(tier, seed)` under `TIERS_VERSION == \"{manifest.get('tiers_version_runtime')}\"`.",
+            f"All **{total_frontier_eps}** primary v1.4 frontier episodes (`0..29` per cohort), **{total_ext_eps}** pre-registered extension episodes (`v1.4/opencode-gemini-4-carbon-ext/hard`, `seeds=[34, 37]`), and **{total_solver_eps}** committed v1.4 solver reference episodes (`solver:medium` `0..29` `n=30`; `solver:hard` `0..59` `n=60` across `0-19`, `20-29`, `30-59`; **{total_frontier_eps + total_ext_eps + total_solver_eps}** total) have complete `0..29` primary seed sets, `0` duplicate seeds per cohort, valid score invariants, `0` timeout/error episodes marked valid, and 100% tool-step and verdict replay agreement in `Env(tier, seed)` under `TIERS_VERSION == \"{manifest.get('tiers_version_runtime')}\"` (including post-`1bc3e281` `data.detail` compatibility on `invalid arguments` steps).",
             "",
-            "| cohort | tier | agent | valid | invalid | dup seeds | replay matched | mean score |",
-            "|---|---|---|---:|---:|---:|---:|---:|",
+            "| cohort | tier | agent | valid | invalid | dup seeds | step mismatches | replay matched | mean score |",
+            "|---|---|---|---:|---:|---:|---:|---:|---:|",
         ]
     )
-    for r in list(frontier_runs) + list(solver_runs):
+    for r in list(frontier_runs) + list(ext_runs) + list(solver_runs):
         lines.append(
             f"| `{r['run_dir']}` | {r['tier']} | `{r['agent']}` | {r['n_valid']} | {r['n_invalid']} | "
-            f"{r['duplicate_seed_count']} | {r['replay_matched']}/{r['n_valid']} | {r['mean_score']:+.6f} |"
+            f"{r['duplicate_seed_count']} | {r.get('step_mismatches', 0)} | {r['replay_matched']}/{r['n_valid']} | {r['mean_score']:+.6f} |"
         )
 
     if ladder.get("present"):
@@ -1874,14 +2107,14 @@ def render_report(manifest: dict[str, Any]) -> str:
             "",
             f"- Paired v1.4 rows verified free of `v1.2`, `v1.3`, and `superseded`: **{vhyg.get('paired_groups_checked', 0)}**",
             f"- `results/judge_table.md` v1.4 reported rows verified isolated from earlier tiers and `superseded`: **{vhyg.get('judge_table_v14_rows_checked', 0)}**",
-            f"- `data/runs/committed/v1.4/**/meta.json` files verified (`tiers_version == \"v1.4\"`): **{vhyg.get('v14_meta_files_checked', 0)}** ({vhyg.get('preregistered_frontier_cohorts', 0)} frontier cohorts pre-registered on dev seeds `0..29`)",
-            f"- Pre-registered seed rule (`PRIMARY` vs `REPLICATION` on seeds `0-29` in `docs/reports/gap.md`): **{'verified' if vhyg.get('preregistration_rule_verified') else 'missing'}**",
+            f"- `data/runs/committed/v1.4/**/meta.json` files verified (`tiers_version == \"v1.4\"`): **{vhyg.get('v14_meta_files_checked', 0)}** ({vhyg.get('posthoc_locked_primary_frontier_cohorts', 0)} post-hoc locked primary frontier cohorts on dev seeds `0..29` + {vhyg.get('preregistered_extension_frontier_cohorts', 0)} pre-registered extension cohort(s))",
+            f"- Seed lock (`671ed96` post-hoc lock on `0-29`, `PRIMARY` vs `REPLICATION`) and pre-registered extensions (`f9fb7a4a` `30-59`, `cf394894` `gpt-5.5`) in `docs/reports/gap.md`: **{'verified' if vhyg.get('seed_lock_rule_verified') and vhyg.get('preregistered_extensions_verified') else 'missing'}**",
             f"- Active docs scanned for unlabelled stale claims: `{', '.join(vhyg.get('active_docs_checked', []))}` ({len(vhyg.get('historical_disclosures_allowed', []))} explicitly disclosed historical notes permitted)",
             "",
             H2 + "Gate 5: Protected-Path and Secret Hygiene",
             "",
             f"- Protected-path rules enforced from `.github/protected-paths.txt`: **{manifest.get('protected_path_rules_count', 0)}** rules (verified via `--diff-base origin/justSilas` and working-tree `HEAD`)",
-            f"- Secret and mole-leak pattern classes scanned across `results/eval*` and `docs/reports/`: **{manifest.get('secret_pattern_rules_count', 0)}** pattern classes (Google API keys, sk-* keys, OAuth and provider tokens, PEM private keys, secret env assignments, judge SALT bytes, and JSON mole-id world fields)",
+            f"- Secret and mole-leak pattern classes scanned across `results/eval*` and `docs/reports/`: **{manifest.get('secret_pattern_rules_count', 0)}** pattern classes (Google API keys, sk-* keys, OAuth and provider tokens, PEM private keys, secret env assignments with `CANARY_WORLD_SECRET=canary-demo-live` public demo placeholder exempted, judge SALT bytes, and JSON mole-id world fields)",
         ]
     )
 

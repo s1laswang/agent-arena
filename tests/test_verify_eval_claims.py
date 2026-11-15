@@ -11,9 +11,12 @@ from typing import Any
 
 import pytest
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from canary import rules
 
-ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts" / "verify_eval_claims.py"
 MANIFEST_PATH = ROOT / "results" / "eval_v14" / "claims_manifest.json"
 REPORT_PATH = ROOT / "docs" / "reports" / "eval_claims_verification.md"
@@ -139,7 +142,9 @@ def _slice_two_seed_v14_fixture(dst_root: Path) -> Path:
         f"| in-process | medium | {ip_m['n']} | {ip_m_raw} | {ip_m_luck} |",
         "",
         f"The solver is paired on all seeds (solver means: hard {so_h['mean']:.3f}, medium {so_m['mean']:.3f}).",
-        "Pre-registered seed rule: seeds 0-29 is the PRIMARY result; later reruns are REPLICATION.",
+        "Pre-registered extension (f9fb7a4a): seeds 30-59 in opencode-gemini-4-carbon-ext.",
+        "Pre-registered second frontier family: gpt-5.5 on v1.4 hard seeds 0-29.",
+        "Seed lock (671ed96, post-hoc lock): seeds 0-29 is the PRIMARY result; later reruns are REPLICATION.",
     ]
     (gap_dir / "gap.md").write_text("\n".join(gap_lines) + "\n", encoding="utf-8")
 
@@ -209,7 +214,14 @@ def test_real_repo_check_and_json_cli(capsys):
 
     g2 = gates["gate2_replay_cache_completeness_and_step_consistency"]["data"]
     assert sum(r["replay_matched"] for r in g2["frontier_v14_runs"]) == 150
-    assert sum(r["replay_matched"] for r in g2["solver_v14_runs"]) == 60
+    assert sum(r["replay_matched"] for r in g2["frontier_extension_v14_runs"]) == 2
+    assert sum(r["replay_matched"] for r in g2["solver_v14_runs"]) == 90
+    sol_by_tier = {r["tier"]: r for r in g2["solver_v14_runs"]}
+    assert sol_by_tier["medium"]["n_valid"] == 30
+    assert sol_by_tier["hard"]["n_valid"] == 60
+    assert g2["ladder_summary"]["native_valid_episodes"] == 550
+    assert g2["ladder_summary"]["imported_inproc_valid_episodes"] == 37
+    assert g2["ladder_summary"]["total_ladder_episodes"] == 587
 
 
 def test_approx_equal_and_manifest_float_tolerance(tmp_path, monkeypatch, real_gates):
@@ -277,6 +289,27 @@ def test_gate2_catches_duplicate_missing_replay_and_timeout(tmp_path, monkeypatc
     res_replay = verify.gate2_replay_cache_completeness_and_step_consistency(syn, expected_seeds=[0, 1])
     assert res_replay.passed is False
     assert any("replay mismatch" in v for v in res_replay.violations)
+
+    step_tampered = json.loads(orig_lines[0])
+    for st in step_tampered["steps"]:
+        if st.get("tool") == "status" and isinstance(st.get("result"), dict):
+            st["result"] = {"ok": True, "data": {"tampered": 1}, "error": None}
+            break
+    ep_file.write_text("\n".join([json.dumps(step_tampered), orig_lines[1]]) + "\n", encoding="utf-8")
+    res_step_bad = verify.gate2_replay_cache_completeness_and_step_consistency(syn, expected_seeds=[0, 1])
+    assert res_step_bad.passed is False
+    assert any("step_mismatches=" in v for v in res_step_bad.violations)
+
+    forged_detail_ep = json.loads(orig_lines[0])
+    forged_detail_ep["steps"][3]["result"] = {
+        "ok": False,
+        "data": {"detail": "forged detail"},
+        "error": "invalid arguments",
+    }
+    ep_file.write_text("\n".join([json.dumps(forged_detail_ep), orig_lines[1]]) + "\n", encoding="utf-8")
+    res_forged_detail = verify.gate2_replay_cache_completeness_and_step_consistency(syn, expected_seeds=[0, 1])
+    assert res_forged_detail.passed is False
+    assert any("step_mismatches=1" in v for v in res_forged_detail.violations)
 
     timeout_ep = json.loads(orig_lines[0])
     timeout_ep["end_reason"] = "error"
@@ -354,6 +387,20 @@ def test_gate3_catches_baseline_spread_and_oracle_violations(tmp_path):
     assert res_or.passed is False
     assert any("oracle range mismatch" in v for v in res_or.violations)
 
+    assert verify._check_score_invariants({"accused": "e17", "correct": True, "score": 0.0}, "row1", False) == []
+    assert verify._check_score_invariants(
+        {"accused": "e17", "correct": True, "score": 0.0, "meta": {"rc": 0}}, "row2", False
+    ) == []
+    assert verify._check_score_invariants(
+        {"accused": "e17", "correct": True, "score": 0.0, "meta": {"V": 0.0}}, "row3", False
+    ) == []
+    err_neg = verify._check_score_invariants({"accused": "e17", "correct": True, "score": -0.2}, "row4", False)
+    assert any("score < 0.0" in e for e in err_neg)
+    err_vpos = verify._check_score_invariants(
+        {"accused": "e17", "correct": True, "score": 0.0, "meta": {"V": 0.45}}, "row5", False
+    )
+    assert any("contradicts meta V=" in e for e in err_vpos)
+
 
 def test_gate4_catches_version_mixing_and_stale_claims(tmp_path):
     for rel in verify.ACTIVE_DOCS:
@@ -374,8 +421,42 @@ def test_gate4_catches_version_mixing_and_stale_claims(tmp_path):
         rel_mf = mf.relative_to(ROOT)
         (tmp_path / rel_mf).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(mf, tmp_path / rel_mf)
+    ext_ep_src = ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gemini-4-carbon-ext" / "hard" / "episodes.jsonl"
+    ext_ep_dst = v14_dst / "opencode-gemini-4-carbon-ext" / "hard" / "episodes.jsonl"
+    shutil.copyfile(ext_ep_src, ext_ep_dst)
 
+    res_init = verify.gate4_version_and_preregistration_hygiene(tmp_path)
+    assert res_init.passed is True, res_init.violations
+    assert res_init.data["posthoc_locked_primary_frontier_cohorts"] == 5
+    assert res_init.data["preregistered_extension_frontier_cohorts"] == 1
+
+    ext_mf = v14_dst / "opencode-gemini-4-carbon-ext" / "hard" / "meta.json"
+    orig_ext_mf = ext_mf.read_text(encoding="utf-8")
+    bad_ext = json.loads(orig_ext_mf)
+    bad_ext["seeds"] = [12, 37]
+    ext_mf.write_text(json.dumps(bad_ext), encoding="utf-8")
+    res_bad_ext = verify.gate4_version_and_preregistration_hygiene(tmp_path)
+    assert res_bad_ext.passed is False
+    assert any("30..59" in v for v in res_bad_ext.violations)
+    ext_mf.write_text(orig_ext_mf, encoding="utf-8")
+
+    gpt_dir = v14_dst / "opencode-gpt-5.5" / "hard"
+    gpt_dir.mkdir(parents=True, exist_ok=True)
+    (gpt_dir / "meta.json").write_text(json.dumps({"tiers_version": "v1.4", "seeds": [0, 1]}), encoding="utf-8")
     assert verify.gate4_version_and_preregistration_hygiene(tmp_path).passed is True
+    (gpt_dir / "meta.json").write_text(json.dumps({"tiers_version": "v1.4", "seeds": [35]}), encoding="utf-8")
+    res_bad_gpt = verify.gate4_version_and_preregistration_hygiene(tmp_path)
+    assert res_bad_gpt.passed is False
+    assert any("0..29" in v for v in res_bad_gpt.violations)
+    shutil.rmtree(v14_dst / "opencode-gpt-5.5")
+
+    gap_p = tmp_path / "docs" / "reports" / "gap.md"
+    orig_gap_p = gap_p.read_text(encoding="utf-8")
+    gap_p.write_text(orig_gap_p.replace("Seed lock", "Removed rule"), encoding="utf-8")
+    res_no_lock = verify.gate4_version_and_preregistration_hygiene(tmp_path)
+    assert res_no_lock.passed is False
+    assert any("Seed lock" in v for v in res_no_lock.violations)
+    gap_p.write_text(orig_gap_p, encoding="utf-8")
 
     pj = v14_dst / "paired_table_gemini.json"
     orig_pj = pj.read_text(encoding="utf-8")
@@ -457,3 +538,14 @@ def test_gate5_catches_protected_paths_and_secret_or_mole_leaks(tmp_path):
     res_mole = verify.gate5_protected_paths_and_secret_hygiene(repo, base_ref="base_branch")
     assert res_mole.passed is False
     assert any("world_mole_dump" in v for v in res_mole.violations)
+    (repo / "docs" / "reports" / "leak.md").unlink()
+
+    demo_placeholder = "dry-run under `CANARY_WORLD_SECRET=canary-demo-live` and \"canary-demo-live\"\n"
+    (repo / "docs" / "reports" / "demo_ref.md").write_text(demo_placeholder, encoding="utf-8")
+    assert verify.gate5_protected_paths_and_secret_hygiene(repo, base_ref="base_branch").passed is True
+
+    real_world_sec = "CANARY_WORLD_SECRET=" + "canary-demo-live-real-secret\n"
+    (repo / "docs" / "reports" / "demo_ref.md").write_text(real_world_sec, encoding="utf-8")
+    res_real_sec = verify.gate5_protected_paths_and_secret_hygiene(repo, base_ref="base_branch")
+    assert res_real_sec.passed is False
+    assert any("secret_env_assignment" in v for v in res_real_sec.violations)

@@ -91,7 +91,7 @@ def test_check_cli_zero_subprocess_and_size_cap(computed_summary, monkeypatch, c
     )
     assert ftf.main(["--check"]) == 0
     out = capsys.readouterr().out
-    assert "OK transcript_forensics=PASS committed_replays=442 replication_replays=305 active_transcripts=97" in out
+    assert "OK transcript_forensics=PASS committed_replays=472 replication_replays=305 active_transcripts=97" in out
     assert ftf.MAX_JSON_BYTES == 45_000
     assert JSON_PATH.stat().st_size < 45_000
     assert JSON_PATH.stat().st_size <= ftf.MAX_JSON_BYTES
@@ -147,7 +147,7 @@ def test_provenance_honesty_raw_before_la_and_replay_invariants(computed_summary
     assert gpt["prereg_commit"] == "cf394894"
     assert gpt["timeout_s"] == 7200
     assert gpt["max_spend_usd"] == 200.0
-    assert gpt["committed_v14_episodes"] == 0
+    assert gpt["committed_v14_episodes"] == 30
 
     ph = computed_summary["paired_hard_headline_0_29"]
     assert round(ph["carbon_mean_score"], 3) == 0.322
@@ -157,11 +157,11 @@ def test_provenance_honesty_raw_before_la_and_replay_invariants(computed_summary
     assert round(ph["luck_adjusted_ratio_vs_solver"] * 100) == 72
 
     rv = computed_summary["replay_and_transcript_verification"]
-    assert rv["committed_v14"]["total"] == 442
-    assert rv["committed_v14"]["verified"] == 442
+    assert rv["committed_v14"]["total"] == 472
+    assert rv["committed_v14"]["verified"] == 472
     assert rv["committed_v14"]["mismatches"] == 0
     assert rv["committed_v14"]["step_mismatches"] == 0
-    assert rv["committed_v14"]["unwrapped_mcp_error_steps"] == 80
+    assert rv["committed_v14"]["unwrapped_mcp_error_steps"] == 84
     assert rv["committed_v14"]["pre_1bc3e281_detail_normalized_steps"] == 321
     assert rv["replication_v14"]["total"] == 305
     assert rv["replication_v14"]["verified"] == 305
@@ -169,7 +169,7 @@ def test_provenance_honesty_raw_before_la_and_replay_invariants(computed_summary
     assert rv["replication_v14"]["step_mismatches"] == 0
     assert rv["replication_v14"]["unwrapped_mcp_error_steps"] == 24
     assert rv["replication_v14"]["pre_1bc3e281_detail_normalized_steps"] == 156
-    assert rv["combined_verified_episodes"] == 747
+    assert rv["combined_verified_episodes"] == 777
     assert rv["active_opencode_cohorts_count"] == 5
     assert rv["active_transcripts_verified"] == 97
     assert rv["step_sequence_mismatches"] == 0

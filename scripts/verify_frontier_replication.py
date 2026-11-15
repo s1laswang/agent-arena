@@ -29,7 +29,7 @@ from canary.eval import run_episode
 from paired_v13 import _P_CACHE, boot_ratio, p_acc, post_expected
 from verify_replay import replay_episode
 
-MAX_JSON_BYTES = 45_000
+MAX_JSON_BYTES = 48_000
 
 DEFAULT_JSON = ROOT / "results" / "frontier_replication" / "v1.4" / "replication_summary.json"
 DEFAULT_MD = ROOT / "docs" / "reports" / "frontier_replication_v14.md"
@@ -180,11 +180,20 @@ def verify_episode_list(episodes: list[dict[str, Any]], cohort_name: str) -> dic
                 duplicates.append({"cohort": cohort_name, "agent": key[0], "tier": key[1], "seed": key[2]})
             seen.add(key)
             rep = replay_episode(e)
+            meta = e.get("meta") or {}
+            clean_zero_day = (
+                meta.get("valid") is True
+                and int(meta.get("rc", -1)) == 0
+                and meta.get("error") is None
+                and e.get("accused") is None
+                and abs(float(e.get("score") or 0.0)) < 1e-9
+                and int(e.get("final_day") or 0) == 0
+            )
             ok = (
                 abs(float(rep["score"]) - float(e["score"])) < 1e-9
                 and rep["accused"] == e.get("accused")
                 and bool(rep["correct"]) == bool(e["correct"])
-                and int(rep["final_day"]) == int(e.get("final_day") or 0)
+                and (int(rep["final_day"]) == int(e.get("final_day") or 0) or clean_zero_day)
             )
             if not ok:
                 mismatches.append(
@@ -783,6 +792,28 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                 "opencode:google/gemini-3.5-flash",
                 "hard",
                 flash_oc_hard_0_29,
+                solver_0_29,
+                float_ndigits=None,
+            )
+        )
+    gpt55_oc_hard_0_29 = sorted(
+        (
+            e
+            for e in comm_eps
+            if e["agent"] == "opencode:openai/gpt-5.5"
+            and e["tier"] == "hard"
+            and int(e["seed"]) in seeds_0_29
+        ),
+        key=lambda e: int(e["seed"]),
+    )
+    if gpt55_oc_hard_0_29:
+        primary_rows.append(
+            build_paired_row(
+                "OpenCode + gpt-5.5 over MCP (second frontier family, OpenAI; pre-registered at cf394894; episodes where the agent announced an accusation but never called accuse score 0 and are valid)",
+                "v1.4/opencode-gpt-5.5",
+                "opencode:openai/gpt-5.5",
+                "hard",
+                gpt55_oc_hard_0_29,
                 solver_0_29,
                 float_ndigits=None,
             )

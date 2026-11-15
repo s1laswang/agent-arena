@@ -96,7 +96,7 @@ def test_committed_summary_and_report_pass_check(computed_summary, monkeypatch, 
     rc = vfr.main(["--check"])
     assert rc == 0
     out = capsys.readouterr().out
-    assert "committed=442/442" in out
+    assert "committed=472/472" in out
     assert "replication=305/305" in out
     assert "union_n=6" in out
     assert "pooled_n36=36" in out
@@ -242,11 +242,11 @@ def test_pre_registered_separation_g1_fr8_n6_union_and_n36_pool(computed_summary
 
     rv = computed_summary["replay_verification"]
     assert rv["step_error_detail_1bc3e281_compat"] is True
-    assert rv["committed_v14"]["verified"] == 442
+    assert rv["committed_v14"]["verified"] == 472
     assert rv["committed_v14"]["verified"] == rv["committed_v14"]["total"]
     assert rv["committed_v14"]["mismatches"] == 0
     assert rv["committed_v14"]["duplicates"] == 0
-    assert rv["committed_v14"]["pre_1bc3e281_error_steps"] == 517
+    assert rv["committed_v14"]["pre_1bc3e281_error_steps"] == 521
     assert rv["replication_v14"]["verified"] == 305
     assert rv["replication_v14"]["verified"] == rv["replication_v14"]["total"]
     assert rv["replication_v14"]["mismatches"] == 0

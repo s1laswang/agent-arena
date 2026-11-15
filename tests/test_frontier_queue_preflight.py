@@ -10,9 +10,11 @@ from pathlib import Path
 
 import pytest
 
-from canary.agents.frontier import common, opencode_run
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from canary.agents.frontier import common, opencode_run
 SCRIPT_PATH = ROOT / "scripts" / "frontier_queue_preflight.py"
 MANIFEST_PATH = ROOT / "results" / "frontier_replication" / "v1.4" / "queue_manifest.json"
 HASH_CHAR = chr(35)

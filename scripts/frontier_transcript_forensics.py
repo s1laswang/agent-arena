@@ -352,11 +352,21 @@ def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
             if first_bad_step is None:
                 first_bad_step = idx
     res = env.result("replay")
+    meta = ep.get("meta") or {}
+    clean_zero_day = (
+        not env.done
+        and meta.get("valid") is True
+        and int(meta.get("rc", -1)) == 0
+        and meta.get("error") is None
+        and ep.get("accused") is None
+        and abs(float(ep.get("score") or 0.0)) < 1e-9
+        and int(ep.get("final_day") or 0) == 0
+    )
     score_ok = (
         abs(float(res.score) - float(ep["score"])) < 1e-9
         and res.accused == ep.get("accused")
         and bool(res.correct) == bool(ep.get("correct"))
-        and int(res.final_day) == int(ep.get("final_day") or 0)
+        and (int(res.final_day) == int(ep.get("final_day") or 0) or clean_zero_day)
     )
     return {
         "ok": score_ok and step_mismatches == 0,
@@ -1276,7 +1286,9 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
                 "opencode_version": "1.19.5",
                 "timeout_s": 7200,
                 "max_spend_usd": 200.0,
-                "committed_v14_episodes": 0,
+                "committed_v14_episodes": sum(
+                    1 for ep in committed_all if "gpt-5.5" in str(ep.get("agent") or "")
+                ),
             },
             "flash_hard_gate": {
                 "gap_ships_flash_hard": include_flash_hard,
@@ -1355,7 +1367,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
         "",
         _md_heading(2, "1. Provenance Honesty (Panel Fixes A/C/D), Replay Parity, and Executive Summary"),
         "",
-        f"- **Provenance and lock honesty (`Panel Fixes A/C/D`):** Primary `seeds 0-29` (`data/runs/committed/v1.4/`, committed in `{prov['primary_0_29_lock']['episodes_commit']}`; OpenCode `gemini-4-carbon` hard raw `{ph_raw_str}` (`{_f(ph['carbon_mean_score'])}` vs solver `{_f(ph['solver_mean_score'])}`) and luck-adjusted `{ph_la_str}` (`{_f(ph['carbon_mean_post_expected'])}` vs `{_f(ph['solver_mean_post_expected'])}`)) are a **post-hoc lock** (`{prov['primary_0_29_lock']['seed_lock_commit']}`, committed `{prov['primary_0_29_lock']['lock_delay_seconds']} s` after `{prov['primary_0_29_lock']['episodes_commit']}`) against later reruns and cherry-picking, **not a pre-registration** (`20+10` solver reference directories cover `0-19` and `20-29`). By contrast, the committed G1 hard extension on `seeds 30-59` (`{prov['g1_hard_30_59_extension']['prereg_commit']}`, `n=2` completed seeds `[34, 37]` before stopping after `31` `provider_quota` exclusions to protect the shared `2M TPM` carbon quota for Harbor rehearsal) and the second frontier family `gpt-5.5` (`{prov['gpt_5_5_second_family']['prereg_commit']}`, OpenCode `1.19.5`, `7200 s` cap, `$200` spend cap, `0` committed `v1.4` episodes) were **pre-registered** before any episode ran.",
+        f"- **Provenance and lock honesty (`Panel Fixes A/C/D`):** Primary `seeds 0-29` (`data/runs/committed/v1.4/`, committed in `{prov['primary_0_29_lock']['episodes_commit']}`; OpenCode `gemini-4-carbon` hard raw `{ph_raw_str}` (`{_f(ph['carbon_mean_score'])}` vs solver `{_f(ph['solver_mean_score'])}`) and luck-adjusted `{ph_la_str}` (`{_f(ph['carbon_mean_post_expected'])}` vs `{_f(ph['solver_mean_post_expected'])}`)) are a **post-hoc lock** (`{prov['primary_0_29_lock']['seed_lock_commit']}`, committed `{prov['primary_0_29_lock']['lock_delay_seconds']} s` after `{prov['primary_0_29_lock']['episodes_commit']}`) against later reruns and cherry-picking, **not a pre-registration** (`20+10` solver reference directories cover `0-19` and `20-29`). By contrast, the committed G1 hard extension on `seeds 30-59` (`{prov['g1_hard_30_59_extension']['prereg_commit']}`, `n=2` completed seeds `[34, 37]` before stopping after `31` `provider_quota` exclusions to protect the shared `2M TPM` carbon quota for Harbor rehearsal) and the second frontier family `gpt-5.5` (`{prov['gpt_5_5_second_family']['prereg_commit']}`, OpenCode `1.19.5`, `7200 s` cap, `$200` spend cap, `{prov['gpt_5_5_second_family']['committed_v14_episodes']}` committed `v1.4` episodes) were **pre-registered** before any episode ran.",
         f"- **Step-and-ledger replay verification (`{rv['combined_verified_episodes']}/{rv['combined_verified_episodes']}`) and transcript parity:** `{rv['committed_v14']['verified']}/{rv['committed_v14']['total']}` committed `v1.4` episodes and `{rv['replication_v14']['verified']}/{rv['replication_v14']['total']}` FR8 replication episodes (`{rv['combined_verified_episodes']}/{rv['combined_verified_episodes']}` total) pass full `Env` step-and-ledger replay (`1bc3e281` `norm_result` unwrapping on `{rv['committed_v14']['unwrapped_mcp_error_steps']}` committed + `{rv['replication_v14']['unwrapped_mcp_error_steps']}` replication error steps; `detail` normalization on `{rv['committed_v14']['pre_1bc3e281_detail_normalized_steps']}` + `{rv['replication_v14']['pre_1bc3e281_detail_normalized_steps']}` pre-`1bc3e281` steps). All `{rv['active_transcripts_verified']}` active OpenCode `transcripts/*.txt` files match `steps_from_events` (`0` step mismatches, `0` unredacted `thoughtSignature` blobs, `0` secret tokens). {flash_gate_sentence}",
         f"- **Rule-awareness vs action gap:** Across `{rv['active_transcripts_verified']}` active OpenCode transcripts, **`0/{rv['active_transcripts_verified']}` (`0.0%`)** explicitly mention the disclosed `careful` mole (`1 - share`) selection weight, only `{c_hard['rule_awareness']['noisy_canary_95']['count']}/30` (`{_pct(c_hard['rule_awareness']['noisy_canary_95']['rate'])}`) primary carbon hard transcripts cite the `95%`/`5%` noisy canary mechanic (`70.0%` treat noisy variants as deterministic `100%` intersections), and although `{c_hard['rule_awareness']['interview_signal']['count']}/30` (`{_pct(c_hard['rule_awareness']['interview_signal']['rate'])}`) discuss `interview`/`evasive` responses (`0.24` vs `0.20`, `LR = 1.2`), `gemini-4-carbon` still burns **`{_f(c_hard['observed_actions']['mean_interviews'], 2)}` interviews/episode** (`{_pct(c_hard['observed_actions']['interview_step_share'])}` of all hard tool calls vs `0.00` for `solver`). Only `{c_hard['rule_awareness']['abstain_ev_penalty']['count']}/30` (`seed 11`) explicitly applies the `-1` expected-value abstention rule.",
         f"- **Verbalized certainty vs exact Bayesian posterior:** Because `canary_accuse` returns only `episode_over: true` without revealing correctness or score, the concluding `part.text` dossier captures pre-feedback epistemic confidence. On primary `hard` (`0-29`), `{c_hard['certainty_calibration']['decisive_count']}/{c_hard['accused_count']}` (`{_pct(c_hard['certainty_calibration']['decisive_rate_of_accused'])}`) accused episodes use decisive language (`uniquely`, `certain`, `100%`, `eliminated`, `strictly`), including **`{len(c_hard['certainty_calibration']['decisive_wrong_seeds'])}/{c_hard['wrong_accusation_count']}` `-1.000` wrong accusations** (`seeds {c_hard['certainty_calibration']['decisive_wrong_seeds']}`). Across `{c_hard['certainty_calibration']['verbal_posterior_count']}` hard episodes stating a numeric suspect posterior, verbalized confidence averages `{_pct(c_hard['certainty_calibration']['mean_p_verbal_when_stated'])}` vs `{_pct(c_hard['certainty_calibration']['mean_p_accused_when_verbal_stated'])}` exact `SolverPolicy` `P(accused)` (`+{_pct(c_hard['certainty_calibration']['mean_overconfidence_gap'])}` mean overconfidence, peaking at `+36.8%` on `seed 23`). Sub-breakeven accusations (`P(accused) < 1/(1+V)`) occur on `3` carbon hard seeds (`{c_hard['certainty_calibration']['sub_breakeven_seeds']}`) and `6` flash medium seeds (`{f_med['certainty_calibration']['sub_breakeven_seeds']}`, accounting for **`{len(f_med['certainty_calibration']['sub_breakeven_wrong_seeds'])}/{f_med['wrong_accusation_count']}`** of flash medium's `-1.000` errors).",

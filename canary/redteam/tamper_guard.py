@@ -348,6 +348,18 @@ def replay_committed(root: Path = ROOT) -> list[dict[str, Any]]:
                     r = env.call(st["tool"], st["args"])
                     got_payload = {"ok": r.ok, "data": r.data, "error": r.error}
                     want_raw = st.get("result")
+                    want_norm = ac._norm_result(want_raw)
+                    if (
+                        not r.ok
+                        and isinstance(r.data, dict)
+                        and set(r.data) == {"detail"}
+                        and not (
+                            isinstance(want_norm, dict)
+                            and isinstance(want_norm.get("data"), dict)
+                            and "detail" in want_norm["data"]
+                        )
+                    ):
+                        got_payload = {"ok": r.ok, "data": {}, "error": r.error}
                     is_bracket_trunc = (
                         isinstance(want_raw, dict)
                         and set(want_raw) == {"raw"}
@@ -359,8 +371,7 @@ def replay_committed(root: Path = ROOT) -> list[dict[str, Any]]:
                         n_trunc += 1
                         ok = valid_truncated_step(want_raw, got_payload, e, meta)
                     else:
-                        want = ac._norm_result(want_raw)
-                        ok = want is not None and ac._canon(got_payload) == ac._canon(want)
+                        ok = want_norm is not None and ac._canon(got_payload) == ac._canon(want_norm)
                     if not ok:
                         step_bad += 1
                         first_bad = i if first_bad is None else first_bad

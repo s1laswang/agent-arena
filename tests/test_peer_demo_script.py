@@ -87,15 +87,43 @@ def test_exact_three_minute_timeline_and_setup_surfaces() -> None:
         assert required in text, f"missing required click/setup item: {required}"
 
 
-def test_locked_gap_headline_and_seed6_seed26_verified_numbers() -> None:
+def test_locked_gap_rehearsal_gpt55_and_seed6_seed26_verified_numbers() -> None:
     text = DEMO_PATH.read_text(encoding="utf-8")
     for token in (
+        "README.md",
+        "docs/SUBMISSION.md",
         "docs/reports/gap.md",
-        "hard, judges' harness: 72% of solver luck-adjusted (65% raw), n=30; parity on medium",
+        "results/harbor/rehearsal/TABLE.md",
+        "results/behaviour_compare_v1.4.md",
         "72% [52%, 91%]",
         "65% [24%, 98%]",
+        "+0.322 +/- 0.199",
+        "+0.499 +/- 0.119",
+        "n=30",
+        "0-29",
+        "671ed96",
         "111% [99%, 127%]",
         "101% [85%, 119%]",
+        "95% [62%, 140%]",
+        "84% [65%, 106%]",
+        "did not reproduce",
+        "93%",
+        "116%",
+        "131%",
+        "+0.506",
+        "+0.472",
+        "+0.585",
+        "+0.626",
+        "9` valid trials",
+        "08:30",
+        "28/29",
+        "153%",
+        "08:52",
+        "gpt-5.5",
+        "101% [79%, 140%]",
+        "+0.504 +/- 0.064",
+        "84% [67%, 103%]",
+        "cf394894",
         "Seed 6 Caught",
         "e34",
         "+0.73",
@@ -121,6 +149,10 @@ def test_integrity_and_honest_negative_disclosures() -> None:
         "do_nothing = stop_early = 0.000",
         "52 attacks",
         "docs/EXPLOITS.md",
+        "1,034",
+        "results/redteam_1000/summary.md",
+        "12/12",
+        "docs/reports/integrity.md",
         "make reproduce",
         "Day 1",
         "Day 7",
@@ -130,8 +162,40 @@ def test_integrity_and_honest_negative_disclosures() -> None:
         "bar not met",
         "-0.050 +/- 0.049",
         "0.000",
+        "DAgger round 1",
+        "-0.542 +/- 0.214",
+        "n=50",
     ):
         assert token in text, f"missing integrity or honest negative disclosure: {token}"
+
+
+def test_rehearsal_gpt55_and_dagger_match_aa1c679e_artifacts() -> None:
+    readme_md = (ROOT / "README.md").read_text(encoding="utf-8")
+    submission_md = (ROOT / "docs/SUBMISSION.md").read_text(encoding="utf-8")
+    rehearsal_md = (ROOT / "results/harbor/rehearsal/TABLE.md").read_text(encoding="utf-8")
+    behaviour_md = (ROOT / "results/behaviour_compare_v1.4.md").read_text(encoding="utf-8")
+
+    for tok in ("93%", "116%", "131%", "+0.472", "+0.585", "+0.626", "+0.506", "28 of 29"):
+        assert tok in readme_md, f"README.md missing rehearsal token {tok}"
+    for tok in ("93%", "116%", "131%", "+0.626", "9 valid trials", "cf394894", "101% [79%, 140%]"):
+        assert tok in submission_md, f"docs/SUBMISSION.md missing token {tok}"
+    for tok in ("08:52", "9 valid trials", "+0.626", "131%", "93%", "116%"):
+        assert tok in rehearsal_md, f"results/harbor/rehearsal/TABLE.md missing token {tok}"
+    for tok in ("+0.504", "17.2", "4.2", "8.5", "68.0"):
+        assert tok in behaviour_md, f"results/behaviour_compare_v1.4.md missing token {tok}"
+    assert "0.542" in readme_md and "n=50" in readme_md
+
+    gpt_eps_path = ROOT / "data/runs/committed/v1.4/opencode-gpt-5.5/hard/episodes.jsonl"
+    gpt_eps = [
+        json.loads(line)
+        for line in gpt_eps_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(gpt_eps) == 30
+    assert sorted(ep["seed"] for ep in gpt_eps) == list(range(30))
+    accused_eps = [ep for ep in gpt_eps if ep.get("accused") is not None]
+    assert len(accused_eps) == 28
+    assert sum(1 for ep in accused_eps if ep.get("correct")) == 28
 
 
 def test_all_relative_links_and_repo_paths_are_valid() -> None:

@@ -30,13 +30,12 @@ Open four browser tabs and one terminal at the repo root before the `10:45` peer
 
 ---
 
-### `0:45-1:45` | Locked Gap + Office Replay (Tab 2, `docs/demo/replay.html`)
+### `0:45-1:45` | Measured Gap, Rehearsal Honesty + Office Replay (Tab 2, `docs/demo/replay.html`)
 
-- **State ONLY the locked headline (`0:45-1:00`, source: [docs/reports/gap.md](docs/reports/gap.md) and [data/runs/committed/v1.4/paired_table_gemini.md](data/runs/committed/v1.4/paired_table_gemini.md)):**
-  - **`hard, judges' harness: 72% of solver luck-adjusted (65% raw), n=30; parity on medium`**
-  - Exact paired numbers on `v1.4` dev seeds `0-29` (every episode replay-verified; post-hoc lock `671ed96` committed 28 s after `8fd4dec`):
-    - **`hard`, OpenCode + `gemini-4-carbon` over MCP (judges' harness):** **`72% [52%, 91%]`** luck-adjusted (**`65% [24%, 98%]`** raw; `+0.322 +/- 0.199` vs `SolverPolicy` `+0.499 +/- 0.119`, `n=30`).
-    - **Parity rows disclosed alongside:** `medium` OpenCode reaches **`111% [99%, 127%]`** raw (**`101% [85%, 119%]`** luck-adjusted, `n=30`), and `hard` in-process reaches **`95% [62%, 140%]`** raw (**`84% [65%, 106%]`** luck-adjusted, `n=30`).
+- **State the measured `v1.4` `hard` picture plainly (`0:45-1:00`, sources: [README.md](README.md), [docs/SUBMISSION.md](docs/SUBMISSION.md), [docs/reports/gap.md](docs/reports/gap.md), [data/runs/committed/v1.4/paired_table_gemini.md](data/runs/committed/v1.4/paired_table_gemini.md), and [results/harbor/rehearsal/TABLE.md](results/harbor/rehearsal/TABLE.md)):**
+  - **MCP-only `gemini-4-carbon` headline (`OpenCode`, 13 MCP tools only, dev seeds `0-29`, post-hoc lock `671ed96` committed 28 s after `8fd4dec`):** **`65% [24%, 98%]`** raw and **`72% [52%, 91%]`** luck-adjusted (`+0.322 +/- 0.199` vs `SolverPolicy` `+0.499 +/- 0.119`, `n=30`, every episode replay-verified; `medium` OpenCode `111% [99%, 127%]` raw / `101% [85%, 119%]` luck-adjusted, `hard` in-process `95% [62%, 140%]` raw / `84% [65%, 106%]` luck-adjusted).
+  - **Harbor judge-path rehearsal (full container with shell on tag `afterquery-final` `1bc3e281`, [results/harbor/rehearsal/TABLE.md](results/harbor/rehearsal/TABLE.md)):** the MCP-only gap **did not reproduce**; across 3 runs x 10 hard judge tasks, `gemini-4-carbon` scored **`+0.472` (`10` valid), `+0.585` (`10` valid), and `+0.626` (run 3: `9` valid trials, `5` finished after the `08:30` cut-off, `1` infra-excluded)** = **`93%`, `116%`, and `131%`** of the **`+0.506`** oracle (`28/29` valid Gemini accusations correct; note `153%` / `+0.656` was only the `7`-trial `08:52` snapshot before run 3 finished).
+  - **Second frontier family (`gpt-5.5`, OpenCode over MCP, pre-registered at `cf394894`):** matches the solver at **`101% [79%, 140%]`** raw (`+0.504 +/- 0.064`, luck-adjusted `84% [67%, 103%]`, `n=30`, paired on the same `0-29` post-hoc lock `671ed96` seeds; `28/28` accusations correct, `17.2` canaries and `4.2` interviews/ep vs Gemini's `8.5` canaries and `68.0` interviews/ep in [results/behaviour_compare_v1.4.md](results/behaviour_compare_v1.4.md)).
 - **Click `Seed 6 Caught` (`1:00-1:15`):**
   - True mole **`e34`** (Sofia Niemi, Research).
   - **`gemini-4-carbon` scores `+0.73` on Day 6 in `57` calls** (`7` canaries, `25` interviews; orthogonal hits `c1-2:B` and `c3-2:A`) vs **`SolverPolicy` `+0.71` on Day 6 in `52` calls** (`9` canaries, `0` interviews; `0.02` extra canary cost). When Gemini plants canaries on Day 1, it matches the solver.
@@ -51,13 +50,13 @@ Open four browser tabs and one terminal at the repo root before the `10:45` peer
 ### `1:45-2:30` | Anti-Cheat Integrity + Honest Negative Results (Tab 3, `docs/demo/living_office_v16.html`)
 
 - **Integrity (`1:45-2:00`, 15 s):**
-  - **`do_nothing = stop_early = 0.000`** on all 40 judge seeds (`guess_day1` averages `-0.95` on `hard`; [results/judge_table.md](results/judge_table.md)).
-  - **52 attacks logged and guarded by regression tests** (`#0` to `#51` in [docs/EXPLOITS.md](docs/EXPLOITS.md), plus 100 Gemini red-team swarm runs with 0 verified exploits in [results/gemini/swarm.md](results/gemini/swarm.md) and 12/12 judge-protocol checks in [docs/reports/integrity.md](docs/reports/integrity.md)).
+  - **`do_nothing = stop_early = 0.000`** on all 40 judge seeds and `10/10` Harbor rehearsal tasks (`guess_day1` averages `-0.95` on `hard`; [results/judge_table.md](results/judge_table.md)).
+  - **52 attacks logged and guarded by regression tests** (`#0` to `#51` in [docs/EXPLOITS.md](docs/EXPLOITS.md), plus a `1,034`-attack Gemini red-team sweep on `afterquery-final` with `0` verified exploits in [results/redteam_1000/summary.md](results/redteam_1000/summary.md) and `12/12` judge-protocol checks in [docs/reports/integrity.md](docs/reports/integrity.md)).
   - **`make reproduce` runs keyless** (~1 min): replays committed runs, executes the 40-seed anti-cheat battery, and recomputes the locked `n=30` `HEADLINE`.
 - **Living Office `v1.6` Preview + Honest Negative Results (`2:00-2:30`, 30 s):**
   - Switch to Tab 3 (`docs/demo/living_office_v16.html`) and click **`Day 1` -> `Day 7` -> `Day 14`** to show workplace gossip, grudges, and rumours carrying across days.
   - **Point at the top banner (honest Gate B disclosure):** `v1.6` Living Office is an **off-by-default preview** that **did NOT pass the Gate B gap gate** (`v1.5` biased employees moved `gemini-4-carbon` from `61%` to `108%` of `SolverPolicy` on `hard` seeds `0-9`, so it was dropped at Gate B and never shipped into `v1.4`; [docs/reports/gap.md](docs/reports/gap.md)).
-  - **WS4 `1.5B` tiebreak (honest negative result, [docs/reports/fr8.md](docs/reports/fr8.md) and [README.md](README.md)):** Qwen2.5-1.5B + LoRA + GRPO learned valid tool syntax (`3% -> 100%`) and cut reckless SFT accusations (`-0.457 +/- 0.086` -> **`-0.050 +/- 0.049` at 8k**, `n=90`, vs **`0.000` base**, `n=36`), **bar not met** (CI does not beat `0.000` because the small model still under-plants canaries in its own rollouts).
+  - **WS4 `1.5B` tiebreak + DAgger (honest null, [docs/reports/fr8.md](docs/reports/fr8.md) and [README.md](README.md)):** Qwen2.5-1.5B + LoRA + GRPO learned valid tool syntax (`3% -> 100%`) and cut reckless SFT accusations (`-0.457 +/- 0.086` -> **`-0.050 +/- 0.049` at 8k**, `n=90`, vs **`0.000` base**, `n=36`), and **DAgger round 1** ended at **`-0.542 +/- 0.214` at 8k** (`n=50`, partial): **bar not met** across all seven trained runs + DAgger (none beat `0.000` with CI excluding `0`).
 
 ---
 
@@ -68,7 +67,7 @@ Ask *"Which part would you like to inspect?"* and jump in one click:
 | Reviewer Question | Instant Click / Command | Verified Fact to Point At |
 |---|---|---|
 | **"Prove Seed 26 was not cherry-picked or edited."** | Terminal: press Enter on `uv run python scripts/demo_replay.py --seed 26 --verify` (`0.5 s`) | Replays both committed trajectories through a fresh `Env`: `solver +0.69 -> MATCH`, `gemini -1.00 -> MATCH` (`P(e08): 0.48 -> 0.03` on Day 10) |
-| **"Why does Gemini lose value when rules are public?"** | Open [docs/reports/failure_analysis_v1.4.md](docs/reports/failure_analysis_v1.4.md) or [results/gemini/atlas.md](results/gemini/atlas.md) | `68.0` interviews/ep (`LR = 1.2`) crowd out `plant_canary` (`8.5` vs solver `14.1` canaries/ep); premature accusation drives `61%` of regret |
+| **"Why does Gemini lose value when rules are public?"** | Open [results/behaviour_compare_v1.4.md](results/behaviour_compare_v1.4.md), [docs/reports/failure_analysis_v1.4.md](docs/reports/failure_analysis_v1.4.md), or [results/gemini/atlas.md](results/gemini/atlas.md) | `68.0` interviews/ep (`LR = 1.2`) crowd out `plant_canary` (`8.5` vs `gpt-5.5` `17.2` and solver `14.1`); premature accusation drives `61%` of regret |
 | **"How is Harbor isolated from container cheats?"** | Open [harbor/README.md](harbor/README.md) and [docs/EXPLOITS.md](docs/EXPLOITS.md) | Separate MCP sidecar (`environment_mode = "separate"`), `0600` consumed world salt, HMAC-signed ledger; `cheat.py` scores `-1.0` on `6/6` trials, `cheat_probe` `0.0` on `6/6` |
 | **"What if venue Wi-Fi blocks Pyodide CDN?"** | Switch to **Tab 4** (`docs/demo/canary_demo.mp4`, 60-90 s) | Full recorded browser + replay capture plays locally; Tabs 2-3 (`file://`) and Terminal (`scripts/demo_replay.py`) need zero network |
-| **"Where is the full submission & rubric index?"** | Open [docs/SUBMISSION.md](docs/SUBMISSION.md) and [README.md](README.md) | Complete rubric map, post-hoc lock disclosure (`671ed96`), `n=32` extension note (`75% [56%, 93%]` luck-adjusted), and one-command judge checks |
+| **"Where is the full submission & rubric index?"** | Open [docs/SUBMISSION.md](docs/SUBMISSION.md) and [README.md](README.md) | Final rehearsal (`93%` / `116%` / `131%` of `+0.506` oracle), `gpt-5.5` (`101% [79%, 140%]`), post-hoc lock (`671ed96`), `n=32` extension note (`75% [56%, 93%]` luck-adjusted), and one-command judge checks |

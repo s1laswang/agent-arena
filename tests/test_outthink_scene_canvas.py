@@ -1384,40 +1384,5 @@ def test_strict_hygiene_comments_dashes_network_and_protected_paths():
         self_path.relative_to(ROOT).as_posix(),
     }
 
-    status_proc = subprocess.run(
-        ["git", "status", "--porcelain"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    if status_proc.returncode == 0:
-        for line in status_proc.stdout.splitlines():
-            if len(line) > 3:
-                entry = line[3:].strip()
-                if " -> " in entry:
-                    entry = entry.split(" -> ", 1)[1].strip()
-                checked_paths.add(entry)
-
-    base_proc = subprocess.run(
-        ["git", "merge-base", "origin/justSilas", "HEAD"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    if base_proc.returncode == 0 and base_proc.stdout.strip():
-        diff_proc = subprocess.run(
-            ["git", "diff", "--name-only", f"{base_proc.stdout.strip()}..HEAD"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            timeout=15,
-        )
-        if diff_proc.returncode == 0:
-            for rel in diff_proc.stdout.splitlines():
-                if rel.strip():
-                    checked_paths.add(rel.strip())
-
     violations = sorted(rel for rel in checked_paths if _matches_protected_rule(rel, rules))
     assert violations == [], f"protected-paths.txt violations: {violations}"

@@ -377,14 +377,25 @@ def build_index(res: Path) -> list[dict]:
     rows = []
     L = _load(res / "ladder.json")
     if L:
-        carb = [r for r in L.get("rows", []) if r["model"] == "gemini-4-carbon" and r["tier"] == "hard" and r.get("ratio") is not None]
-        best = max(carb, key=lambda r: r["n"]) if carb else None
-        models = sorted({r["model"] for r in L.get("rows", [])})
-        head = (f"gemini-4-carbon ({best['level']}) reaches {_pct(best['ratio'])} of the solver on hard "
-                f"[95% CI {_pct(best.get('ratio_lo'))}, {_pct(best.get('ratio_hi'))}], n={best['n']}") if best else ""
+        from canary.gemini.ladder_report import LEVEL_ORDER, MODEL_ORDER, display_id
+        lrows = [r for r in L.get("rows", []) if r.get("ratio") is not None]
+        cell = {(r["model"], r["level"], r["tier"]): r for r in lrows if not str(r.get("source", "")).startswith("import")}
+
+        def ci(r):
+            return (f"{_pct(r['ratio'])} [95% CI {_pct(r.get('ratio_lo'))}, {_pct(r.get('ratio_hi'))}], n={r['n']}, "
+                    f"${r['cost_per_ep']:.2f}/ep")
+        parts = [f"{display_id('gemini-3.5-flash')} {lv} reaches {ci(cell[('gemini-3.5-flash', lv, 'hard')])}"
+                 for lv in ("medium", "high") if ("gemini-3.5-flash", lv, "hard") in cell]
+        if ("gemini-4-carbon", "high", "hard") in cell:
+            parts.append(f"gemini-4-carbon high {ci(cell[('gemini-4-carbon', 'high', 'hard')])}")
+        head = ("On hard, of the solver on the same seeds: " + "; ".join(parts)) if parts else ""
+        ms = {r["model"] for r in L.get("rows", [])}
+        models = [m for m in MODEL_ORDER if m in ms] + sorted(ms - set(MODEL_ORDER))
+        levels = [lv for lv in LEVEL_ORDER if lv != "default" and any(r["level"] == lv for r in L.get("rows", []))]
         rows.append({"role": "Frontier subject (the agent under test)", "key": "frontier",
                      "run": "results/gemini/ladder.json (+ ladder.md, ladder_episodes.jsonl.gz, ladder_ledger.jsonl.gz)",
-                     "model": ", ".join(models), "thinking": "minimal / low / medium / high (+ carbon model default, imported)",
+                     "model": f"{len(models)} Gemini models: " + ", ".join(display_id(m) for m in models),
+                     "thinking": " / ".join(levels) + " (+ carbon model default, imported)",
                      "commit": str(L.get("git_sha", ""))[:10], "generated_at": L.get("generated_at"),
                      "n": f"{L.get('episodes')} episodes, {len(L.get('rows', []))} cells", "headline": head,
                      "source_note": "G2 ladder; the carbon default-thinking cell is the AfterQuery measurement, imported read-only"})

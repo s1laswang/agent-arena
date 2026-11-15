@@ -24,7 +24,7 @@ One ledgered client (`canary/gemini/ledger.py`, a row per call) drives four role
 
 ## Headline chart
 ![Score vs cost per episode on hard, per model and thinking level](../../results/gemini/frontier.png)
-*Competence per euro on hard (`results/gemini/frontier.png`, data in `frontier.json`).*
+*Competence per dollar (USD list price) on hard (`results/gemini/frontier.png`, data in `frontier.json`).*
 
 ## Results
 | | Result | Source |

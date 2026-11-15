@@ -7,7 +7,7 @@
 Before shipping an agent that makes irreversible calls on a budget, a team must pick a model and a thinking level. Canary Lab measures that choice on an insider-threat RL environment scored against a Bayesian reference solver. On hard, gemini-4-carbon at high thinking reaches 106% [94, 126] of the solver (n=10); 3.6-flash is 4.5× cheaper but far less certain (71% [11, 158], n=20). 100 Gemini red-team attacks found 0 verified exploits, with the detector validated 4/4 on a reopened one. Blind, Gemini recovers 3 of 5 failure modes. 24,855 calls, all logged.
 
 ![Score vs cost per episode on hard, per model and thinking level](../../results/gemini/frontier.png)
-*Competence per euro on hard (`results/gemini/frontier.png`, data in `frontier.json`, generated with `results/gemini/ladder.md`).*
+*Competence per dollar (USD list price) on hard (`results/gemini/frontier.png`, data in `frontier.json`, generated with `results/gemini/ladder.md`).*
 
 ## 1. The problem
 **Who it is for:** the team about to ship an agent that makes irreversible decisions under uncertainty with a budget (security triage, insider risk, procurement). Before launch they must pick a model and a `thinking_level`, and trust that the benchmark they tuned on can't be gamed.
@@ -46,7 +46,7 @@ Every Gemini call goes through one client that writes one log row per call (`can
      - Our env charges flat damage per leak whatever the distribution. That is a simplification; broadly shared documents are usually the low-value ones.
      - The judged tasks use scripted moles.
      - The real-world fix, per-recipient watermarking, is a natural v2 mechanic and is not built.
-4. **Cost-aware evaluation.** Caching served 85.3% of all input tokens. The competence-per-euro frontier is in `results/gemini/frontier.png` (cost curves in `ladder_cost.png`).
+4. **Cost-aware evaluation.** Caching served 85.3% of all input tokens. The competence-per-dollar (USD list price) frontier is in `results/gemini/frontier.png` (cost curves in `ladder_cost.png`).
 
 **Honesty notes**
 - **Atlas v1 is not blind.** Its corpus showed Gemini our code-computed regret tags and solver beliefs, so Gemini *organised and explained* failures the code had already attributed. **The blind re-run** (`results/gemini/atlas_blind.md`, gemini-3.8-flash, commit aed53f2) shows Gemini only what the agents saw and said: 153 episodes, 751k tokens, one explicit cache. A test proves no regret, tags, beliefs or true mole are present. Scored in code, Gemini **recovered 3 of 5 code-defined failure modes** (≥30% of a tag's steps cited: premature accusation 44%, ignored delay 2 of 2, budget waste 46%; uninformative canary and over-restriction 0%). It also **named 2 modes our tags lack** (canary fingerprint misattribution; passive waiting while value drains). Coverage is weak: it cited 127 steps, covering 21% of solver regret and 4% of high-regret steps. 12 of 16 quotes are verbatim in the agents' own words.

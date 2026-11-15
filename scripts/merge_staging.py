@@ -87,7 +87,7 @@ def main(argv=None) -> int:
                          "status": ("complete" if not missing else f"INCOMPLETE: seeds {missing} have no valid episode")
                          + (f"; extension seeds {ext[0]}-{ext[-1]} as budget allowed: ran {[s for s in seeds if s in ext]}"
                             if ext else ""),
-                         "git_sha": shas[0] if shas else None, "git_shas": shas, "smoke": False, "hint": None,
+                         "git_sha": shas[0] if shas else None, "git_shas": shas, "smoke": False, "hint": m0.get("hint"),
                          "usage": usage, "pricing": a.pricing, "provenance": a.provenance,
                          "invalid_episodes": [e["seed"] for e in eps if (e.get("meta") or {}).get("valid") is False],
                          "infra_invalid_attempts_excluded": sorted(

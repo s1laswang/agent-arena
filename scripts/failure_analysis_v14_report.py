@@ -378,4 +378,66 @@ def render(data: dict) -> str:
     a("- **Caveat:** n = 30 and the raw ratio's CI is wide (gap.md). The decomposition is exact for these 30 episodes, "
       "but the shares carry sampling noise. This is one model (gemini-4-carbon). A second family is a PLAN-95 item.")
     a("")
+    if M.get("hint"):
+        L.extend(_hint_section(M["hint"]))
     return "\n".join(L)
+
+
+def _verdict(d: dict) -> str:
+    lo, hi = d["mean"] - d["ci"], d["mean"] + d["ci"]
+    return "higher" if lo > 0 else "lower" if hi < 0 else "no detectable change"
+
+
+def _hint_section(H: dict) -> list[str]:
+    h, u, s, n = H["hint"], H["unhinted"], H["solver"], H["n"]
+    seeds = H["seeds"]
+    rng = (f"{seeds[0]}–{seeds[-1]}" if seeds == list(range(seeds[0], seeds[-1] + 1)) else ", ".join(map(str, seeds)))
+
+    def ci(x):
+        return f"[{pct(x[0])}, {pct(x[1])}]"
+
+    def pr(a):
+        return "–" if a["premature_rate"] is None else f"{len(a['not_isolated'])} / {a['accused']} ({pct(a['premature_rate'])})"
+
+    ds, dl, dc, dd = H["diff_score"], H["diff_luck_adjusted"], H["diff_canaries"], H["diff_accuse_day"]
+    L = ["## 10. Causal hint test (pre-registered in gap.md)", "",
+         f"**Setup.** Same harness and model (OpenCode + `gemini-4-carbon` over MCP, v1.4 hard) with one added prompt line "
+         f"(`--hint gather`, opt-in, never part of the judged instruction), which restates rules already on the instruction page: "
+         f"*\"Evidence first: you may plant up to the stated number of canaries every day; plant them every day, and accuse only "
+         f"when exactly one employee is consistent with every leak you have seen (otherwise abstain, which scores 0).\"* "
+         f"Seeds were run in the fixed order 0→29, at most 3 in parallel, and launches stopped at 06:00 Helsinki (the amendment "
+         f"in gap.md). **n = {n}** (seeds {rng}) finished in time, and all of them are reported. Infra-invalid attempts were "
+         f"retried and never scored. Each hinted episode is paired with the unhinted primary episode and the solver on the same seed. "
+         f"The hinted run used OpenCode 1.19.5 and the unhinted run used 1.18.29.",
+         "",
+         f"| same {n} seeds | **Gemini + hint** | Gemini, no hint | reference solver |",
+         "|---|---|---|---|",
+         f"| mean score | {f2(h['score'])} ± {f2(h['score_ci'])} | {f2(u['score'])} ± {f2(u['score_ci'])} | {f2(s['score'])} ± {f2(s['score_ci'])} |",
+         f"| % of solver [95% CI] | **{pct(h['pct_solver'])}** {ci(h['pct_solver_ci'])} | {pct(u['pct_solver'])} {ci(u['pct_solver_ci'])} | – |",
+         f"| luck-adjusted score (% of solver [95% CI]) | {f2(h['luck_adjusted'])} ({pct(h['la_pct_solver'])} {ci(h['la_pct_solver_ci'])}) | "
+         f"{f2(u['luck_adjusted'])} ({pct(u['la_pct_solver'])} {ci(u['la_pct_solver_ci'])}) | {f2(s['luck_adjusted'])} |",
+         f"| canaries planted before the accusation | **{h['canaries']:.1f}** ± {h['canaries_ci']:.1f} | {u['canaries']:.1f} ± {u['canaries_ci']:.1f} | {s['canaries']:.1f} ± {s['canaries_ci']:.1f} |",
+         f"| canary capacity used / days with ≥1 canary | {pct(h['capacity_used'])} / {pct(h['days_with_canary_share'])} | "
+         f"{pct(u['capacity_used'])} / {pct(u['days_with_canary_share'])} | {pct(s['capacity_used'])} / {pct(s['days_with_canary_share'])} |",
+         f"| interviews per episode | {h['interviews']:.0f} | {u['interviews']:.0f} | {s['interviews']:.0f} |",
+         f"| premature commits (accused while ≥2 consistent) | **{pr(h)}** | {pr(u)} | {pr(s)} |",
+         f"| accusations with EV < 0 | {len(h['ev_negative'])} | {len(u['ev_negative'])} | {len(s['ev_negative'])} |",
+         f"| wrong accusations (expected) / abstentions | {h['wrong']} ({h['expected_wrong']:.1f}) / {h['abstain']} | "
+         f"{u['wrong']} ({u['expected_wrong']:.1f}) / {u['abstain']} | {s['wrong']} ({s['expected_wrong']:.1f}) / {s['abstain']} |",
+         f"| accusation day (abstention = 21) | {h['accuse_day_horizon21']:.1f} | {u['accuse_day_horizon21']:.1f} | {s['accuse_day_horizon21']:.1f} |",
+         "",
+         f"**Paired, hint − no hint (same {n} seeds, mean ± 95% CI):** score {ds['mean']:+.3f} ± {ds['ci']:.3f} ({_verdict(ds)}); "
+         f"luck-adjusted {dl['mean']:+.3f} ± {dl['ci']:.3f} ({_verdict(dl)}); canaries {dc['mean']:+.1f} ± {dc['ci']:.1f} "
+         f"({_verdict(dc)}); accusation day {dd['mean']:+.1f} ± {dd['ci']:.1f} ({_verdict(dd)}).",
+         "",
+         "| seed | hint score | no-hint score | solver | hint canaries | no-hint canaries | hint: # consistent at accusation |",
+         "|---|---|---|---|---|---|---|"]
+    for r in H["per_seed"]:
+        mark = "" if not r["hint_accused"] or r["hint_correct"] else " ✗"
+        cons = "abstained" if not r["hint_accused"] else str(r["hint_consistent"])
+        L.append(f"| {r['seed']} | {r['hint']:+.2f}{mark} | {r['unhinted']:+.2f} | {r['solver']:+.2f} | {r['hint_canaries']} | "
+                 f"{r['unhinted_canaries']} | {cons} |")
+    L += ["", f"Reproduce: `uv run python scripts/failure_analysis_v14.py` (the hinted episodes are in "
+          f"`data/runs/committed/v1.4/opencode-gemini-4-carbon-hint-gather/hard/`, replay-verified). n = {n} is small: read the "
+          f"CIs, not the point estimates.", ""]
+    return L

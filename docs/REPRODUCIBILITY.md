@@ -59,6 +59,15 @@ Measured over **300 fresh 32-byte secrets** on all **40 judge seeds (`900000..90
 
 Note: episode scores lie in `[-1.0, +1.0]`, so `guess_day1`'s arithmetic `mean - 4 * sd` sits below `-1.000` while realized 40-seed means bottom out at `-1.000`.
 
+- **Fresh-reproduce reuse in `make accept` (`ACCEPT_REUSE_MAX_AGE_S=900` default):** When `results/latest/judge_table.md`, `results/latest/exploits.json`, and `results/latest/paired_table_gemini.md` are non-empty, at most `900 s` old (`ACCEPT_REUSE_MAX_AGE_S=900`), newer than `canary/rules.py` and `results/anticheat/exploits.json`, byte-identical on `paired_table_gemini.md` against `data/runs/committed/v1.4/paired_table_gemini.md`, and report `all_blocked: true`, `replay_all_consistent: true`, and `harbor_all_consistent: true` with `easy`, `medium`, and `hard` table sections present, back-to-back `make setup && make reproduce && make accept` skips rerunning `make reproduce` and reuses the fresh outputs. Pass `ACCEPT_FORCE_REPRODUCE=1 make accept` (or `ACCEPT_REUSE_MAX_AGE_S=0 make accept`) to force a rerun:
+
+```bash
+make setup && make reproduce && make accept
+ACCEPT_FORCE_REPRODUCE=1 make accept
+```
+
+- **Streamable HTTP MCP JSON-RPC + `/ledger` smoke check in `make accept`:** After checking all 12 paired `solver` / `guess_day1` / `do_nothing` / `stop_early` rows and `exploits.json`, `scripts/judge_accept.sh` launches a live local `canary.mcp_server` (`CANARY_TIER=medium`, `CANARY_SEED=900007`, `CANARY_LEDGER_TOKEN=judge-accept-demo`, `MCP_PORT` default `18765` with `MCP_PORT_FALLBACK=1`), posts a real Streamable HTTP MCP JSON-RPC `2.0` `initialize` request to `/mcp` (`200`, verifying `result.serverInfo` and `result.protocolVersion`), checks authenticated `GET /ledger?token=judge-accept-demo` (`200` JSON object) and unauthenticated `GET /ledger` (`403`), and cleans up only its own MCP server process tree (`PASS=20`, `FAIL=0`).
+
 ### B. Harbor Dataset Oracle Bands (`harbor/build.py` + `harbor run`)
 
 Measured over **200 simulated Harbor builds** (`scripts/oracle_range.py`, artifacts in [`results/oracle_range_v1.4.json`](../results/oracle_range_v1.4.json) and [`results/oracle_range_v1.4.md`](../results/oracle_range_v1.4.md)). The default `python harbor/build.py` judge set builds **10 `hard` tasks (`900000..900009`)**:
@@ -112,11 +121,13 @@ GOOGLE_GENERATIVE_AI_API_KEY=<key> harbor run -p harbor/dataset -a opencode \
 | `REPRO_FAST` | `0` | Set `REPRO_FAST=1` to run the paired table on 5 judge seeds (`900000..900004`); when `REPRO_ANTICHEAT=1`, the anti-cheat verdict still evaluates all 40 judge seeds to avoid 5-seed false alarms on negative-EV probes |
 | `REPRO_SEEDS` / `--repro-seeds` | `40` | Explicit number of judge seeds per tier (`1..40`) for `python -m canary.eval --reproduce` |
 | `REPRO_EPISODE_TIMEOUT` | `60` | Per-episode SIGALRM wall-clock timeout (seconds) during in-process reproduction |
-| `MCP_PORT` | `8765` | Preferred local bind port for `make mcp` (`scripts/mcp_port.sh`) |
-| `MCP_PORT_FALLBACK` | `1` | When `1`, `make mcp` scans `MCP_PORT+1..MCP_PORT+50` if busy and prints the selected port; `0` fails fast |
+| `ACCEPT_REUSE_MAX_AGE_S` | `900` | Max age in seconds (`15 min`) for `make accept` (`scripts/judge_accept.sh`) to reuse fresh, consistent `results/latest/{judge_table.md,exploits.json,paired_table_gemini.md}` so `make setup && make reproduce && make accept` skips rerunning `make reproduce` (`0` disables reuse) |
+| `ACCEPT_FORCE_REPRODUCE` | `0` | Set `ACCEPT_FORCE_REPRODUCE=1` (`ACCEPT_FORCE_REPRODUCE=1 make accept`) to force `scripts/judge_accept.sh` to rerun `make reproduce` even when `results/latest/` is fresh |
+| `MCP_PORT` | `8765` (`make mcp`) / `18765` (`make accept`) | Preferred local bind port resolved via `scripts/mcp_port.sh` |
+| `MCP_PORT_FALLBACK` | `1` | When `1`, `make mcp` / `make accept` scans `MCP_PORT+1..MCP_PORT+50` if busy and prints the selected port; `0` fails fast |
 
-- **Output isolation (`results/latest/`).** `make reproduce` writes `judge_table.md`, `judge_episodes.jsonl`, `gap_chart.png`, `exploits.json`, and `exploits.md` into `results/latest/`, which is gitignored. Tracked files in `results/` stay untouched (`git status --porcelain` remains clean; only `make reproduce-update` / `--update-committed` updates `results/`). `harbor/dataset*/` is also gitignored so build-time `SALT` and `ledger_key` files are never tracked.
-- **Zip-archive support without `.git` (`git: unknown`).** Evaluating an unpacked GitHub `.zip` archive (no `.git/` directory or `git` binary, verified end-to-end across 6 checks by `python scripts/verify_zip_export.py` inside `/tmp/opencode` with `GIT_CEILING_DIRECTORIES` set, including keyless mini-reproduce, Harbor task build, replay scripts, frozen tier hash, security pytest, and all 5 craft verifiers) works out of the box: `pyproject.toml` uses static `version = "0.0.1"` (`hatchling`), `canary.eval.git_sha()` falls back cleanly to `"unknown"` (recording ``- git: `unknown` `` in `results/latest/judge_table.md`), `canary/reproduce.py` resolves run recency and provenance from committed `meta.json` ISO timestamps and `git_sha` fields rather than `git log` or filesystem `mtime`, and git-dependent tests/audits either inspect `.gitignore` directly or skip cleanly (see [`results/fresh_clone/README.md`](../results/fresh_clone/README.md)).
+- **Output isolation (`results/latest/`).** `make reproduce` writes `judge_table.md`, `judge_episodes.jsonl`, `gap_chart.png`, `exploits.json`, `exploits.md`, `paired_table_gemini.md`, and `paired_table_gemini.json` into `results/latest/`, which is gitignored. Tracked files in `results/` stay untouched (`git status --porcelain` remains clean; only `make reproduce-update` / `--update-committed` updates `results/`). `harbor/dataset*/` is also gitignored so build-time `SALT` and `ledger_key` files are never tracked.
+- **Zip-archive support without `.git` (`git: unknown`) and Craft verifiers.** Evaluating an unpacked GitHub `.zip` archive (no `.git/` directory or `git` binary, verified end-to-end across 6 checks by `python scripts/verify_zip_export.py` inside `/tmp/opencode` with `GIT_CEILING_DIRECTORIES` set, including keyless mini-reproduce, Harbor task build, replay scripts, frozen tier hash, security pytest, and all 5 zip-export craft verifiers: `scripts/audit_doc_hygiene.py`, `scripts/check_craft_consistency.py`, `scripts/verify_doc_commands.py`, `scripts/verify_judge_walkthrough.py`, and `scripts/verify_submission_surfaces.py`, plus the read-only submission provenance verifier `scripts/verify_submission_doc.py` documented in [`docs/SUBMISSION-AUDIT.md`](SUBMISSION-AUDIT.md)) works out of the box: `pyproject.toml` uses static `version = "0.0.1"` (`hatchling`), `canary.eval.git_sha()` falls back cleanly to `"unknown"` (recording ``- git: `unknown` `` in `results/latest/judge_table.md`), `canary/reproduce.py` resolves run recency and provenance from committed `meta.json` ISO timestamps and `git_sha` fields rather than `git log` or filesystem `mtime`, and git-dependent tests/audits either inspect `.gitignore` directly or skip cleanly (see [`results/fresh_clone/README.md`](../results/fresh_clone/README.md)).
 - **Clean-env fresh-clone benchmark on annotated tag `afterquery-final` (`1bc3e281`).** Recorded in [`results/fresh_clone/README.md`](../results/fresh_clone/README.md) ([`linux_x86_64_afterquery_final_1bc3e281.log.txt`](../results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.log.txt), [`linux_x86_64_afterquery_final_1bc3e281.steps.txt`](../results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.steps.txt)) under `env -i` on Linux x86_64 with zero API keys and zero `.env`: `clone 3 s`, `reproduce_table 27 s` (`REPRO_ANTICHEAT=0`), `reproduce 118 s` (full 40-seed paired table + `1,021/1,031` replay + `80/80` Harbor + `HEADLINE`), `audit_submission 4 s` (`3 PASS, 1 WARN, 0 FAIL`), and `test_core 100 passed in 175 s`, with `git status --porcelain` empty after every step.
 
 ---
@@ -129,6 +140,9 @@ Measured directly on a Linux x86_64 host (`Linux 6.12.0-211.49.1.el10_2.x86_64`,
 PYTHONPATH=. python scripts/audit_doc_hygiene.py
 PYTHONPATH=. python scripts/check_craft_consistency.py
 PYTHONPATH=. python scripts/verify_doc_commands.py
+PYTHONPATH=. python scripts/verify_judge_walkthrough.py
+PYTHONPATH=. python scripts/verify_submission_surfaces.py
+PYTHONPATH=. python scripts/verify_submission_doc.py
 PYTHONPATH=. python scripts/verify_zip_export.py
 PYTHONPATH=. python harbor/build.py --out /tmp/opencode/canary-harbor-ds
 PYTHONPATH=. python scripts/verify_replay.py data/runs/committed/v1.4
@@ -141,9 +155,12 @@ PYTHONPATH=. python -m canary.redteam.anticheat --verify results/anticheat/explo
 
 | Keyless Command | Scope | Wall-Clock (Linux x86_64) | Exit / Result |
 |---|---|---:|---|
-| `python scripts/audit_doc_hygiene.py` | Anchor fragments, image assets, tracked targets, post-PR41 stale guard | `0.17 s` | `0` (`0 FAIL`) |
-| `python scripts/check_craft_consistency.py` | Links, headline number provenance, results hygiene | `0.19 - 0.28 s` | `0` (`0 FAIL`) |
-| `python scripts/verify_doc_commands.py` | Makefile targets, script/module paths, CLI flags, Harbor rules | `0.26 - 0.73 s` | `0` (`0 FAIL`) |
+| `python scripts/audit_doc_hygiene.py` | Anchor fragments, image assets, tracked targets, post-PR41 stale guard | `0.17 - 0.51 s` | `0` (`0 FAIL`) |
+| `python scripts/check_craft_consistency.py` | Links, headline number provenance, results hygiene | `0.19 - 0.48 s` | `0` (`0 FAIL`) |
+| `python scripts/verify_submission_surfaces.py` | Harbor template, Gemini Lab caches, game/media assets, scratch isolation | `0.22 s` | `0` (`0 FAIL`) |
+| `python scripts/verify_submission_doc.py` | `SUBMISSION.md` & `gemini/SUBMISSION.md` form bounds, links, `98 + 36` metrics ([`SUBMISSION-AUDIT.md`](SUBMISSION-AUDIT.md)) | `0.27 s` | `0` (`3 PASS, 1 WARN, 0 FAIL`) |
+| `python scripts/verify_doc_commands.py` | Makefile targets, script/module paths, CLI flags, Harbor & `judge_accept.sh` env rules | `0.26 - 0.73 s` | `0` (`0 FAIL`) |
+| `python scripts/verify_judge_walkthrough.py` | Four-pillar walkthrough & quickstart claim, hash, timing, and CLI parity | `0.69 s` | `0` (`0 FAIL`) |
 | `python harbor/build.py --out <dir>` | Generate 10-task `hard` Harbor judge dataset + `0600` keys | `0.36 s` | `0` (`wrote 10 task(s)`) |
 | `python scripts/verify_replay.py data/runs/committed/v1.4` | Deterministic replay of all committed `v1.4` episodes | `3.95 s` | `0` (`442/442` verified) |
 | `python scripts/audit_submission.py` | Secret scan (`3,366` tracked files), frozen tier hashes (`a8f99c2537c91d72`), Harbor static audit | `3.81 - 5.53 s` (`4 s` fresh clone on `1bc3e281`) | `0` (`0 FAIL`) |

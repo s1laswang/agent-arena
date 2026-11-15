@@ -55,8 +55,11 @@ CHECK_NAMES: tuple[str, ...] = (
 CRAFT_VERIFIER_SCRIPTS: tuple[str, ...] = (
     "scripts/audit_doc_hygiene.py",
     "scripts/check_craft_consistency.py",
+    "scripts/verify_artifact_numbers.py",
+    "scripts/verify_commit_provenance.py",
     "scripts/verify_doc_commands.py",
     "scripts/verify_judge_walkthrough.py",
+    "scripts/verify_submission_doc.py",
     "scripts/verify_submission_surfaces.py",
 )
 
@@ -576,7 +579,7 @@ def check_craft_verifiers(
     export_dir: Path,
     runner: RunnerFn | None = None,
 ) -> CheckResult:
-    """Check 6: run all five craft verifiers inside gitless ``export_dir`` and require ``0 FAIL``."""
+    """Check 6: run all eight craft verifiers inside gitless ``export_dir`` and require ``0 FAIL``."""
     name = CHECK_CRAFT_VERIFIERS
     if has_dot_git(export_dir):
         return _dot_git_failure(name, export_dir)
@@ -603,10 +606,10 @@ def check_craft_verifiers(
             tail = f" ({snippets[0]})" if snippets else ""
             failures.append(f"{script_rel} exited with {proc.returncode}{tail}")
             continue
-        has_zero_fail = re.search(r"\b0\s+FAIL\b", stdout) is not None
+        has_zero_fail = re.search(r"^SUMMARY:.*\b0\s+FAIL\b", stdout, re.MULTILINE) is not None
         has_nonzero_fail = (
-            "[FAIL]" in stdout
-            or re.search(r"\b[1-9]\d*\s+FAIL\b", stdout) is not None
+            re.search(r"^\s*\[FAIL\]", stdout, re.MULTILINE) is not None
+            or re.search(r"^SUMMARY:.*\b[1-9]\d*\s+FAIL\b", stdout, re.MULTILINE) is not None
         )
         if not has_zero_fail or has_nonzero_fail:
             snippets = _snippet(proc)

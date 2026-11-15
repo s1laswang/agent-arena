@@ -2,6 +2,26 @@
 
 Branch `gemini-ladder`. Newest entry first.
 
+## Sun 02:35 (`date`: Sun Nov 15 02:35 EET 2026): 20-seed headline cells; headline wording tightened; carbon stopped
+
+- **Phase 5 (CEO 00:45), dev seeds 10–19:**
+  - Launched at flash 6 + carbon 6. The 24/32 launch was denied by this session's permission classifier (the
+    16-slot rule).
+  - Flash finished: 3.5-flash (served as 3.6-flash) medium/high and 3.8-flash high are at n=20 on hard AND medium.
+- **Hard at n=20:**
+  - 3.6-flash medium 78% [28, 151], high 71% [11, 158]; 35/40 correct; $0.42–0.43 per episode.
+  - Seeds 10–19 brought 5 wrong accusations (mean 0.17 / 0.04 vs 0.56 / 0.63 on 0–9).
+  - `headline_verb` now requires both lower bounds ≥ 80% for "matches". Otherwise it names the wide CIs (tested).
+- **Carbon-high extension stopped** at 02:30 (exact PIDs). In 100 min each episode reached only ~25 calls, at
+  162 s per call, with one call at 1,127 s and 20 min of silence: the shared carbon key is saturated. Carbon-high
+  stays at n=10 (106% [94, 126], $1.93). The headline states that the n and the seed sets differ.
+- **Gemma:**
+  - 31b: n=4 valid (38% [−155, 96]); 429s are infra-invalid.
+  - 26b: 0 valid, since every attempt hits ReadTimeout on the hosted API; no row.
+  - Smoke stack stopped (exact PIDs). Main Gemma pid 81651 runs until 04:45.
+- Refresh 815de818 (417 valid episodes, $181.17) now commits `frontier*.png` + `frontier.json`. `refresh.sh`
+  stages `results/gemini/frontier*`.
+
 ## Sun 00:09 (`date`: Sun Nov 15 00:09 EET 2026): Gemini grid complete; Gemma rungs running; frontier chart
 
 - **Gemini grid finished by itself**, no kills:

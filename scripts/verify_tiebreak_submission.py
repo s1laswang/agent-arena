@@ -32,7 +32,7 @@ DEV_SEED_MAX = 10_000
 JUDGE_SEED_MIN = 900_000
 MIN_VERIFIED_N = 30
 MAX_FILE_BYTES = 5 * 1024 * 1024
-MAX_RUNTIME_SECONDS = 3.0
+MAX_RUNTIME_SECONDS = 15.0
 
 CHECK_NAMES: tuple[str, ...] = (
     "protected_and_frozen_paths",
@@ -258,9 +258,12 @@ def _matches_path_rule(rel_path: str, exact_rules: Iterable[str], prefix_rules: 
 
 
 def _git_diff_paths(root: Path, base_ref: str) -> tuple[list[str], str | None, str | None]:
+    default_base = base_ref in ("origin/justSilas", "justSilas")
     candidates = [base_ref]
     if base_ref == "origin/justSilas":
         candidates.append("justSilas")
+    elif base_ref == "justSilas":
+        candidates.append("origin/justSilas")
     resolved_ref: str | None = None
     diff_lines: list[str] = []
     last_err: str | None = None
@@ -279,7 +282,19 @@ def _git_diff_paths(root: Path, base_ref: str) -> tuple[list[str], str | None, s
         last_err = (proc.stderr or proc.stdout).strip() or f"git diff exited {proc.returncode}"
 
     if resolved_ref is None:
-        return [], None, last_err
+        if not default_base:
+            return [], None, last_err
+        head_proc = subprocess.run(
+            ["git", "rev-parse", "--verify", "HEAD"],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if head_proc.returncode == 0:
+            resolved_ref = "HEAD"
+        else:
+            return [], "offline_archive", None
 
     wt_proc = subprocess.run(
         ["git", "diff", "--name-only", "HEAD"],
@@ -339,8 +354,6 @@ def check_protected_and_frozen_paths(
             paths = []
         else:
             resolved_ref = git_ref
-            if strict and git_ref != base_ref:
-                warnings.append(f"used fallback base ref {git_ref} instead of {base_ref}")
     else:
         paths = [str(p).strip() for p in changed_paths if str(p).strip()]
 

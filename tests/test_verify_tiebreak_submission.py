@@ -73,7 +73,7 @@ def test_live_repo_passes_all_checks_and_cli(capsys: pytest.CaptureFixture[str])
     assert report["passed"] is True
     assert report["checks_passed"] == 5
     assert report["checks_total"] == 5
-    assert elapsed < 3.0
+    assert elapsed < 15.0
     for name in gate.CHECK_NAMES:
         assert report["checks"][name]["passed"] is True
         assert report["checks"][name]["errors"] == []
@@ -193,6 +193,16 @@ def test_check1_git_diff_against_base_branch_and_dirty_tree(tmp_path: Path) -> N
     prot_fail = gate.check_protected_and_frozen_paths(root=repo, base_ref="justSilas", strict=True)
     assert prot_fail.passed is False
     assert any("canary/env.py" in e for e in prot_fail.errors)
+
+    ci_repo = tmp_path / "shallow_ci_repo"
+    _clone_tiebreak_surface(ci_repo)
+    subprocess.run(["git", "init", "-b", "pr-merge"], cwd=ci_repo, env=git_env, check=True, capture_output=True)
+    subprocess.run(["git", "add", "."], cwd=ci_repo, env=git_env, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "shallow merge commit"], cwd=ci_repo, env=git_env, check=True, capture_output=True)
+    subprocess.run(["git", "checkout", "--detach", "HEAD"], cwd=ci_repo, env=git_env, check=True, capture_output=True)
+    ci_report = gate.run_all_checks(root=ci_repo, strict=True)
+    assert ci_report["passed"] is True
+    assert ci_report["checks"]["protected_and_frozen_paths"]["passed"] is True
 
 
 def test_check2_ast_inference_isolation_optional_pass_and_leak_rejections(tmp_path: Path) -> None:

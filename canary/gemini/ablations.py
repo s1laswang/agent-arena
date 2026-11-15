@@ -152,8 +152,8 @@ def cache_ablation(ledger: list[dict]) -> dict:
 
 
 # --------------------------------------------------------------------------- 3. thinking sweep
-def sweep() -> list[dict]:
-    lad = json.loads((RES / "ladder.json").read_text())
+def sweep(ladder_json: Path | None = None) -> list[dict]:
+    lad = json.loads((ladder_json or RES / "ladder.json").read_text())
     out = []
     for r in lad["rows"]:
         if r["tier"] not in ("hard", "medium"):
@@ -161,10 +161,27 @@ def sweep() -> list[dict]:
         lo, hi = r["ratio_lo"], r["ratio_hi"]
         out.append({"model": r["model"], "level": r["level"], "tier": r["tier"], "n": r["n"],
                     "pct_of_solver": round(100 * r["ratio"]), "ci95": [round(100 * lo), round(100 * hi)],
-                    "ci_excludes_100": hi < 1 or lo > 1, "thinking_tokens_per_ep": round(r["thinking_per_ep"]),
+                    "ci_excludes_100": hi < 1 or lo > 1,
+                    "ci_direction": "below" if hi < 1 else "above" if lo > 1 else None,
+                    "thinking_tokens_per_ep": round(r["thinking_per_ep"]),
                     "thinking_is_estimate": r.get("thinking_is_estimate", False),
                     "usd_per_ep": round(r["cost_per_ep"], 3)})
     return out
+
+
+def parity_sentence(sw: list[dict]) -> str:
+    """'k of N cells exclude parity, all below the solver' (direction stated, never implied)."""
+    below = sum(1 for r in sw if r["ci_direction"] == "below")
+    above = sum(1 for r in sw if r["ci_direction"] == "above")
+    k = below + above
+    tail = ("all below the solver" if k and not above else "all above the solver" if k and not below
+            else f"{below} below and {above} above the solver" if k else "none differ from the solver")
+    return f"{k} of {len(sw)} cells exclude parity, {tail}"
+
+
+def _model(m: str) -> str:
+    from canary.gemini.ladder_report import display_id
+    return display_id(m)
 
 
 # --------------------------------------------------------------------------- report
@@ -180,7 +197,6 @@ def render_md(a: dict) -> str:
     s, c, sw = a["thought_signatures"], a["explicit_cache"], a["thinking_sweep"]
     on, off = s["on"], s["off"]
     ag, pg = c["atlas_plus_gallery"], c["programme"]
-    n_ex = sum(1 for r in sw if r["ci_excludes_100"])
     L = [f"# Gemini ablations (generated {a['generated_at']} by `python -m canary.gemini.ablations`)", "",
          "All numbers come from committed files under results/gemini/. 95% CIs: Wilson for rates, t-normal for means, "
          "paired bootstrap from ladder.json for % of solver.", "",
@@ -226,13 +242,18 @@ def render_md(a: dict) -> str:
         x = c[k]
         L.append(f"| {k} | {x['calls']:,} | {x['input_tokens']:,} | {_pct(x['cached_share'])} | {x['usd_paid']:.2f} | "
                  f"{x['usd_if_uncached']:.2f} | {x['usd_saved']:.2f} | {x['pct_saved']} |")
+    regen = a.get("thinking_sweep_regenerated_at")
     L += ["", "## 3. Thinking-level sweep (no new calls)",
-          f"From results/gemini/ladder.json: {len(sw)} model x thinking-level x tier cells. % of solver is paired on "
-          f"the same seeds. **Bold** = the 95% CI excludes 100% ({n_ex} of {len(sw)} cells). Thinking tokens marked * "
-          "are estimates.", "",
+          (f"Regenerated {regen} from the canonical results/gemini/ladder.json"
+           f"{' (git ' + a['ladder_git_sha'][:10] + ')' if a.get('ladder_git_sha') else ''}; sections 1 and 2 above "
+           f"are unchanged from {a['generated_at']}. " if regen else "From results/gemini/ladder.json: ")
+          + f"{len(sw)} model x thinking-level x tier cells. % of solver is paired on the same seeds. "
+          f"**Bold** = the 95% CI excludes 100%: **{parity_sentence(sw)}**. gemini-3.5-flash is the requested id; "
+          "the API serves gemini-3.6-flash. Thinking tokens marked * are estimates.", "",
           "| tier | model | level | n | % of solver [95% CI] | thinking tok/ep | USD/ep |", "|---|---|---|---|---|---|---|"]
-    for r in sorted(sw, key=lambda r: (r["tier"] != "hard", r["model"], ["minimal", "low", "medium", "high",
-                                                                          "default"].index(r["level"]))):
+    order = ["minimal", "low", "medium", "high", "xhigh", "default"]
+    for r in sorted(sw, key=lambda r: (r["tier"] != "hard", r["model"],
+                                       order.index(r["level"]) if r["level"] in order else 99)):
         cell = f"{r['pct_of_solver']}% [{r['ci95'][0]}, {r['ci95'][1]}]"
         if r["ci_excludes_100"]:
             cell = f"**{cell}**"
@@ -242,13 +263,26 @@ def render_md(a: dict) -> str:
     return "\n".join(L)
 
 
+def argon_clause(hard: dict, cell) -> str:
+    """Direction of gemini-4-argon across its thinking levels on hard, read from the data (never asserted)."""
+    lv = [x for x in ("low", "medium", "high") if ("gemini-4-argon", x) in hard]
+    if len(lv) < 2:
+        return "gemini-4-argon has fewer than two levels on hard"
+    p = [hard[("gemini-4-argon", x)]["pct_of_solver"] for x in lv]
+    lo, hi = hard[("gemini-4-argon", lv[0])], hard[("gemini-4-argon", lv[-1])]
+    overlap = lo["ci95"][0] <= hi["ci95"][1] and hi["ci95"][0] <= lo["ci95"][1]
+    shape = ("rises" if all(x < y for x, y in zip(p, p[1:])) else
+             "falls" if all(x > y for x, y in zip(p, p[1:])) else "is non-monotone")
+    return (f"gemini-4-argon {shape} across {' → '.join(lv)} ({' → '.join(f'{x}%' for x in p)}; "
+            f"{cell('gemini-4-argon', lv[0])} vs {cell('gemini-4-argon', lv[-1])}"
+            f"{', CIs overlap' if overlap else ''})")
+
+
 def section4(a: dict) -> list[str]:
     on, off = a["thought_signatures"]["on"], a["thought_signatures"]["off"]
     ag = a["explicit_cache"]["atlas_plus_gallery"]
     pg = a["explicit_cache"]["programme"]
     hard = {(r["model"], r["level"]): r for r in a["thinking_sweep"] if r["tier"] == "hard"}
-    n_ex = sum(1 for r in a["thinking_sweep"] if r["ci_excludes_100"])
-
     def cell(m, lv):
         r = hard[(m, lv)]
         return (f"{r['pct_of_solver']}% [{r['ci95'][0]}, {r['ci95'][1]}] at {lv} (n={r['n']}, "
@@ -267,10 +301,9 @@ def section4(a: dict) -> list[str]:
          f"used no cache), and caching overall saved {pg['pct_saved']}% (${pg['usd_saved']:.2f} of "
          f"${pg['usd_if_uncached']:.2f}) across all {pg['calls']:,} ledgered calls in the programme."),
         (f"**`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, "
-         f"gemini-3.5-flash goes from {cell('gemini-3.5-flash', 'minimal')} to {cell('gemini-3.5-flash', 'medium')} "
-         f"of the solver on the same seeds, while gemini-4-argon is non-monotone ({cell('gemini-4-argon', 'low')} vs "
-         f"{cell('gemini-4-argon', 'high')}); across all {len(a['thinking_sweep'])} cells the 95% CI excludes "
-         f"solver parity in {n_ex}."),
+         f"{_model('gemini-3.5-flash')} goes from {cell('gemini-3.5-flash', 'minimal')} to "
+         f"{cell('gemini-3.5-flash', 'medium')} of the solver on the same seeds, while {argon_clause(hard, cell)}; "
+         f"across all model x level x tier cells, {parity_sentence(a['thinking_sweep'])} (95% CIs)."),
     ]
 
 
@@ -282,7 +315,29 @@ def build() -> dict:
     return a
 
 
-def main() -> int:
+def regenerate_sweep(ladder_json: Path | None = None, ablations_json: Path | None = None) -> dict:
+    """Recompute ONLY the thinking sweep (+ its §4 sentence) from the canonical ladder.json; sections 1 and 2 are
+    carried over verbatim from the committed ablations.json (no ledger re-read, no API calls)."""
+    lj = ladder_json or RES / "ladder.json"
+    a = json.loads((ablations_json or RES / "ablations.json").read_text())
+    a["thinking_sweep"] = sweep(lj)
+    a["thinking_sweep_regenerated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    a["ladder_git_sha"] = json.loads(lj.read_text()).get("git_sha")
+    a["thinking_sweep_parity"] = parity_sentence(a["thinking_sweep"])
+    keep = a.get("section4") or []
+    a["section4"] = keep[:2] + [section4(a)[2]] if len(keep) >= 2 else section4(a)
+    return a
+
+
+def main(argv=None) -> int:
+    import sys
+    argv = sys.argv[1:] if argv is None else argv
+    if "--sweep-only" in argv:
+        a = regenerate_sweep()
+        (RES / "ablations.json").write_text(json.dumps(a, indent=1))
+        (RES / "ablations.md").write_text(render_md(a))
+        print(a["section4"][2])
+        return 0
     a = build()
     (RES / "ablations.json").write_text(json.dumps(a, indent=1))
     (RES / "ablations.md").write_text(render_md(a))

@@ -21,7 +21,7 @@ Per ledger row: paid = canary.llm.pricing.cost(...)['cost_usd_est'] (cached toke
 | programme | 29,150 | 860,488,544 | 86.6% | 214.89 | 893.08 | 678.19 | 75.9 |
 
 ## 3. Thinking-level sweep (no new calls)
-From results/gemini/ladder.json: 34 model x thinking-level x tier cells. % of solver is paired on the same seeds. **Bold** = the 95% CI excludes 100% (17 of 34 cells). Thinking tokens marked * are estimates.
+Regenerated 2026-11-15T04:47:20+0200 from the canonical results/gemini/ladder.json (git 76097d7843); sections 1 and 2 above are unchanged from 2026-11-15T02:44:46+0200. 42 model x thinking-level x tier cells. % of solver is paired on the same seeds. **Bold** = the 95% CI excludes 100%: **18 of 42 cells exclude parity, all below the solver**. gemini-3.5-flash is the requested id; the API serves gemini-3.6-flash. Thinking tokens marked * are estimates.
 
 | tier | model | level | n | % of solver [95% CI] | thinking tok/ep | USD/ep |
 |---|---|---|---|---|---|---|
@@ -31,17 +31,21 @@ From results/gemini/ladder.json: 34 model x thinking-level x tier cells. % of so
 | hard | gemini-3.1-flash-lite | high | 10 | **-82% [-167, 11]** | 5,679 | 0.064 |
 | hard | gemini-3.5-flash | minimal | 10 | **-32% [-124, 34]** | 0 | 0.248 |
 | hard | gemini-3.5-flash | low | 10 | 46% [-37, 104] | 8,531 | 0.275 |
-| hard | gemini-3.5-flash | medium | 20 | 78% [28, 151] | 20,151 | 0.419 |
-| hard | gemini-3.5-flash | high | 20 | 71% [11, 158] | 26,547 | 0.425 |
+| hard | gemini-3.5-flash | medium | 40 | 87% [50, 147] | 20,275 | 0.421 |
+| hard | gemini-3.5-flash | high | 40 | 88% [51, 138] | 26,775 | 0.451 |
 | hard | gemini-3.8-flash | low | 10 | **3% [-82, 68]** | 0 | 0.162 |
 | hard | gemini-3.8-flash | medium | 10 | **14% [-71, 85]** | 28,300 | 0.455 |
 | hard | gemini-3.8-flash | high | 20 | 51% [-5, 123] | 50,732 | 0.779 |
-| hard | gemini-4-argon | low | 10 | 102% [83, 130] | 0 | 0.175 |
-| hard | gemini-4-argon | medium | 10 | 41% [-35, 108] | 17,346 | 0.639 |
-| hard | gemini-4-argon | high | 10 | **45% [-34, 99]** | 44,695 | 1.610 |
+| hard | gemini-4-argon | low | 21 | 57% [-6, 127] | 10 | 0.230 |
+| hard | gemini-4-argon | medium | 21 | 64% [12, 129] | 10,924 | 0.512 |
+| hard | gemini-4-argon | high | 15 | 73% [14, 117] | 41,967 | 1.468 |
 | hard | gemini-4-carbon | low | 10 | 80% [62, 107] | 289 | 0.523 |
 | hard | gemini-4-carbon | high | 10 | 106% [94, 126] | 63,171 | 1.931 |
 | hard | gemini-4-carbon | default | 22 | 108% [62, 189] | 48,351* | 1.501 |
+| hard | gemini-4-hydrogen | low | 12 | 87% [35, 125] | 3,537 | 0.150 |
+| hard | gemini-4-hydrogen | medium | 12 | 87% [64, 118] | 16,120 | 0.473 |
+| hard | gemini-4-hydrogen | high | 10 | **70% [15, 98]** | 33,351 | 0.720 |
+| hard | gemini-4-hydrogen | xhigh | 13 | 97% [46, 140] | 65,787 | 1.191 |
 | medium | gemini-3.1-flash-lite | minimal | 10 | **-110% [-153, -53]** | 0 | 0.033 |
 | medium | gemini-3.1-flash-lite | low | 10 | **-33% [-110, 48]** | 4,290 | 0.044 |
 | medium | gemini-3.1-flash-lite | medium | 10 | **-90% [-133, -22]** | 1,686 | 0.059 |
@@ -53,15 +57,19 @@ From results/gemini/ladder.json: 34 model x thinking-level x tier cells. % of so
 | medium | gemini-3.8-flash | low | 10 | **-2% [-77, 62]** | 0 | 0.122 |
 | medium | gemini-3.8-flash | medium | 10 | **65% [18, 93]** | 33,837 | 0.549 |
 | medium | gemini-3.8-flash | high | 20 | **69% [33, 97]** | 45,240 | 0.618 |
-| medium | gemini-4-argon | low | 10 | 102% [88, 120] | 0 | 0.152 |
-| medium | gemini-4-argon | medium | 10 | 82% [62, 100] | 9,711 | 0.370 |
-| medium | gemini-4-argon | high | 10 | 52% [-17, 105] | 34,846 | 1.128 |
+| medium | gemini-4-argon | low | 22 | 96% [74, 117] | 0 | 0.155 |
+| medium | gemini-4-argon | medium | 22 | 82% [55, 105] | 8,042 | 0.295 |
+| medium | gemini-4-argon | high | 16 | 72% [27, 108] | 32,205 | 0.992 |
 | medium | gemini-4-carbon | low | 10 | 86% [71, 107] | 530 | 0.388 |
 | medium | gemini-4-carbon | high | 10 | **88% [72, 99]** | 50,290 | 1.469 |
 | medium | gemini-4-carbon | default | 15 | 78% [55, 100] | 36,812* | 1.140 |
+| medium | gemini-4-hydrogen | low | 13 | 78% [51, 104] | 2,932 | 0.150 |
+| medium | gemini-4-hydrogen | medium | 11 | 71% [22, 105] | 10,614 | 0.356 |
+| medium | gemini-4-hydrogen | high | 10 | 93% [84, 103] | 22,876 | 0.633 |
+| medium | gemini-4-hydrogen | xhigh | 12 | **89% [76, 100]** | 60,073 | 1.126 |
 
 ## §4 replacement (3 sentences)
 
 > **Thought signatures are load-bearing:** with signature replay stripped, the API rejected the first function-call replay on 10/10 hard-tier episodes of gemini-3.8-flash (400 INVALID_ARGUMENT, "Function call is missing a thought_signature"; Wilson 95% CI [72.2, 100.0]), so 0 episodes were playable, versus 10/10 played with replay on (0/628 API errors, accuracy 70.0%, CI [39.7, 89.2]).
 > **Explicit context caching** cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 75.9% ($678.19 of $893.08) across all 29,150 ledgered calls in the programme.
-> **`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, gemini-3.5-flash goes from -32% [-124, 34] at minimal (n=10, 0 thinking tok, $0.25/ep) to 78% [28, 151] at medium (n=20, 20,151 thinking tok, $0.42/ep) of the solver on the same seeds, while gemini-4-argon is non-monotone (102% [83, 130] at low (n=10, 0 thinking tok, $0.17/ep) vs 45% [-34, 99] at high (n=10, 44,695 thinking tok, $1.61/ep)); across all 34 cells the 95% CI excludes solver parity in 17.
+> **`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, gemini-3.6-flash (requested as 3.5-flash) goes from -32% [-124, 34] at minimal (n=10, 0 thinking tok, $0.25/ep) to 87% [50, 147] at medium (n=40, 20,275 thinking tok, $0.42/ep) of the solver on the same seeds, while gemini-4-argon rises across low → medium → high (57% → 64% → 73%; 57% [-6, 127] at low (n=21, 10 thinking tok, $0.23/ep) vs 73% [14, 117] at high (n=15, 41,967 thinking tok, $1.47/ep), CIs overlap); across all model x level x tier cells, 18 of 42 cells exclude parity, all below the solver (95% CIs).

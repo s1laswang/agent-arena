@@ -1,0 +1,25 @@
+{
+  "agent": "opencode:google/gemini-3.5-flash",
+  "model": "google/gemini-3.5-flash",
+  "provider": "opencode",
+  "git_sha": "a5d12c7e923bbf2ecc5d13cff3b29d63c2a029d5",
+  "tier": "medium",
+  "seeds": [
+    28
+  ],
+  "hint": null,
+  "usage": null,
+  "harness": "opencode-cli+mcp_server",
+  "steps_source": "agent_transcript",
+  "smoke": false,
+  "opencode_version": "1.19.5",
+  "model_id": "gemini-3.5-flash",
+  "opencode_permission": {
+    "*": "deny",
+    "canary_*": "allow"
+  },
+  "provider_settings": {
+    "thinking": "includeThoughts, thinkingLevel=high (OpenCode sets high for gemini-3* ids)",
+    "temperature": "1.0, topP 0.95 (OpenCode defaults for this id)"
+  }
+}

@@ -9,10 +9,14 @@ This page has two parts:
 
 Nothing on this page changes a rule or the instruction text. **CEO decision (before the 07:00 tag): the judged text stays identical to the text every committed frontier run played, so none of P1–P12 is applied.** P0 is a Harbor config change and has been applied (512836b9: agent timeout 3,600 s → 10,800 s).
 
-> ### Known wording issues (disclosed, not fixed)
-> The judged text is frozen, so these stay as written. Each one is answered here so that a reader who spots it finds the answer.
+> ### Known wording issues
+> **Changed on Sun 15 Nov, after every committed frontier run (see the commit that added this line):**
+> - **W1 is fixed in the instruction.** On tiers with the careful mole (medium, hard) the sentence "The mole never knows which documents are canaries" now reads: "The mole's rules cannot see which documents are canaries. Canaries are treated differently in exactly one place: the careful weighting stated under 'How leaks work', which the simulation applies whenever a document is picked at random." The committed runs saw the old sentence; the analysis below shows no measured Gemini loss hinges on it. The "Exact parameters" block is unchanged.
+> - **Tool errors now say what was wrong.** The error string is still `invalid arguments` (so every committed episode replays), and a new `data.detail` field names the problem (for example the allowed interview topics). Details use only the call's arguments and public state. In the 30 headline OpenCode hard episodes, 28 of 3,841 tool calls (0.7%) hit this error, so the committed scores are not sensitive to it.
 >
-> **W1. "The mole never knows which documents are canaries" vs the careful-mole weight** (medium and hard; D3, P3). Read side by side, these sentences contradict each other: how can a mole that never knows down-weight canaries? What the code does:
+> The other items below stay as written and are answered here, so that a reader who spots one finds the answer.
+>
+> **W1 (fixed 15 Nov; history). "The mole never knows which documents are canaries" vs the careful-mole weight** (medium and hard; D3, P3). Read side by side, the old sentences contradicted each other: how can a mole that never knows down-weight canaries? What the code does:
 > - **What the mole knows.** Its decision inputs (`MoleView` in `canary/mole/dsl.py`) list each leakable document by id, title, recipient count and age. There is no canary flag, so no mole rule can condition on whether a document is a canary.
 > - **What the env does.** The careful weight is applied by the env, not the mole, and only in the default random pick (`env._mole_view` → `dsl._select_leak`). After the p_leak gate passes, every eligible document has weight 1, a canary has weight 1 − (share of all staff who received any variant of it), and one document is drawn in proportion to the weights. If every weight is 0, nothing leaks. So "the mole never knows" is true of the mole's *rules*, and the careful sentence describes a *tier mechanic*. The numbers an agent needs (the multiplier, p_leak, the leak window) are all printed.
 > - **Does any measured Gemini loss hinge on it? No.** All numbers below come from `scripts/careful_mole_check.py` over the 30 OpenCode hard episodes (seeds 0–29) and the solver on the same seeds.
@@ -38,6 +42,8 @@ Nothing on this page changes a rule or the instruction text. **CEO decision (bef
 
 ---
 
+- **W4. `access_constraints` on hard is a no-op.** The rule restricts canaries to employees cleared for the document, but `canary_level = 1` and every employee's clearance is 1–3, so it never binds. It is stated in the parameter block and changes no outcome; it is a leftover knob, disclosed here rather than silently removed (rules are frozen at v1.4).
+
 ## Part 1. The agent's main mistakes (v1.4 hard, the judges' harness)
 
 OpenCode + gemini-4-carbon over MCP, 30 dev seeds, paired with the reference solver: **65% of the solver (72% luck-adjusted)**.
@@ -57,6 +63,8 @@ The other 1.11 V of the raw gap is bad luck. Two of the four wrong accusations w
 - The in-process harness shows the same exploration profile, so this is not an MCP artifact.
 
 **Companion:** the Gemini Failure Atlas ([`results/gemini/atlas.md`](../results/gemini/atlas.md)) covers every cohort, tagged by share of solver regret. Its top mode, premature accusation on a sub-threshold posterior, is the same as mistake #1 here.
+
+**Below-break-even spotlight:** [`docs/reports/failure_gallery_breakeven.md`](reports/failure_gallery_breakeven.md) takes the "3 had negative EV near the horizon" in mistake #1 apart, seed by seed. Break-even is P* = 1/(1+V), so it rises as V drains. On seed 5 Gemini accused at a solver posterior of 51.0% when true V was 0.16 (P* = 86.2%). On seed 23 it accused at 45.2% when V was 0.23 (P* = 81.3%). Both landed on the mole, so the raw scoreboard shows +0.16 and +0.23 and hides two negative-EV gambles. The third, seed 18 (62.7% vs P* = 68.5%), hit an innocent. The solver made 0 below-break-even accusations on the same 30 seeds. Keyless check: `python -m canary.gemini.gallery_breakeven --check`.
 
 ---
 

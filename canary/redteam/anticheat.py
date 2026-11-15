@@ -313,7 +313,7 @@ def _extra_calls(name: str, ids: list[str], target: str | None) -> list[tuple[st
     if name == "solver_plus_unrestrict_spam":
         return [("unrestrict_access", {"employee": e}) for e in ids]
     if name == "solver_plus_interview_all":
-        return [("interview", {"employee": e, "topic": "leaks"}) for e in ids]
+        return [("interview", {"employee": e, "topic": "contacts_outside"}) for e in ids]
     if name == "solver_plus_read_spam":
         return [("status", {}), ("list_employees", {}), ("check_leak_feed", {}),
                 ("list_documents", {"day_from": 1, "day_to": 1}), ("read_access_logs", {"day_from": 1, "day_to": 1}),
@@ -551,6 +551,11 @@ def replay_committed(root: Path = ROOT) -> list[dict]:
                         continue
                     r = env.call(st["tool"], st["args"])
                     got_payload = {"ok": r.ok, "data": r.data, "error": r.error}
+                    rec = st.get("result")
+                    if (not r.ok and isinstance(r.data, dict) and set(r.data) == {"detail"}
+                            and not (isinstance(rec, dict) and isinstance(rec.get("data"), dict) and "detail" in rec["data"])):
+                        # episodes recorded before error details existed (15 Nov): compare without the new detail field
+                        got_payload = {"ok": r.ok, "data": {}, "error": r.error}
                     trunc = _client_truncated_bytes(st.get("result"))
                     if trunc is not None:          # OpenCode kept only "...N bytes truncated...": check N
                         n_trunc += 1

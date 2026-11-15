@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
+import subprocess
 import sys
 import time
+import tokenize
 
 import pytest
 
@@ -30,15 +33,11 @@ EXPECTED_STRATEGIES = (
 
 @pytest.fixture(scope="module")
 def v15_runtime():
-    if diff_sweep.try_resolve_git_commit() is None:
-        pytest.skip("v1.5 git ref origin/justSilas-v15 (de9cc50e) not fetched in shallow checkout")
     return diff_sweep.load_v15_runtime()
 
 
 @pytest.fixture(scope="module")
 def fast_audit_report():
-    if diff_sweep.try_resolve_git_commit() is None:
-        pytest.skip("v1.5 git ref origin/justSilas-v15 (de9cc50e) not fetched in shallow checkout")
     t0 = time.perf_counter()
     report = diff_sweep.run_differential_audit(
         tiers=["easy", "medium"],
@@ -53,14 +52,32 @@ def test_isolated_git_show_v15_loader_and_v14_hash_preservation(v15_runtime) -> 
     from canary import env as env_v14
     from canary import rules as rules_v14
 
+    git_v15_sha = diff_sweep.try_resolve_git_commit()
     assert v15_runtime.commit_sha.startswith("de9cc50e")
     assert v15_runtime.pkg_name == "_canary_v15_isolated"
     assert v15_runtime.pkg_name in sys.modules
     assert f"{v15_runtime.pkg_name}.env" in sys.modules
-    assert len(v15_runtime.finder.git_show_paths) >= 10
-    assert "canary/env.py" in v15_runtime.finder.git_show_paths
-    assert "canary/rules.py" in v15_runtime.finder.git_show_paths
+    assert len(v15_runtime.finder.loaded_paths) >= 10
+    assert "canary/env.py" in v15_runtime.finder.loaded_paths
+    assert "canary/rules.py" in v15_runtime.finder.loaded_paths
     assert v15_runtime.status_unchanged is True
+
+    if git_v15_sha is not None:
+        assert v15_runtime.used_embedded_fallback is False
+        assert v15_runtime.source_mode == "git_show"
+        assert v15_runtime.finder.git_show_paths == v15_runtime.finder.loaded_paths
+        embedded_map = diff_sweep.embedded_v15_source_map()
+        for rel_path, embedded_src in embedded_map.items():
+            git_src = subprocess.check_output(
+                ["git", "show", f"{git_v15_sha}:{rel_path}"],
+                cwd=REPO_ROOT,
+                text=True,
+            )
+            assert embedded_src == git_src
+    else:
+        assert v15_runtime.used_embedded_fallback is True
+        assert v15_runtime.source_mode == "embedded_zlib_b64"
+        assert v15_runtime.finder.git_show_paths == []
 
     assert env_v14.Env is not v15_runtime.env_mod.Env
     assert rules_v14.TIERS is not v15_runtime.rules.TIERS
@@ -136,58 +153,96 @@ def test_lexical_hygiene_zero_knob_parity_and_interview_audit(fast_audit_report)
         assert tlex["secret_hygiene"]["social_messages_scanned"] > 0
 
 
-def test_shallow_safe_head_git_show_v14_sweep_and_fallback(tmp_path: Path) -> None:
+def test_shallow_ci_detached_repo_fallback(tmp_path: Path, fast_audit_report: dict) -> None:
     from canary import env as env_v14
     from canary import rules as rules_v14
 
-    head_iso = diff_sweep.load_head_isolated_v14()
-    assert head_iso["pkg_name"] == "_canary_head_isolated"
-    assert head_iso["pkg_name"] in sys.modules
-    assert len(head_iso["finder"].git_show_paths) >= 10
-    assert "canary/env.py" in head_iso["finder"].git_show_paths
-    assert head_iso["status_unchanged"] is True
-    assert env_v14.Env is not head_iso["env_mod"].Env
-    assert rules_v14.TIERS is not head_iso["rules"].TIERS
-    assert diff_sweep.compute_tier_hash(rules_v14.TIERS, rules_v14.KNOWN_V_MODE) == "a8f99c2537c91d72"
+    shallow_tmp = tmp_path / "shallow_ci_detached"
+    shallow_tmp.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=shallow_tmp, check=True)
+    subprocess.run(["git", "config", "user.email", "ci@canary.local"], cwd=shallow_tmp, check=True)
+    subprocess.run(["git", "config", "user.name", "Canary CI"], cwd=shallow_tmp, check=True)
+    (shallow_tmp / "README.txt").write_text("shallow depth=1 detached checkout\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.txt"], cwd=shallow_tmp, check=True)
+    subprocess.run(["git", "commit", "-qm", "single shallow commit"], cwd=shallow_tmp, check=True)
+    subprocess.run(["git", "checkout", "-q", "--detach", "HEAD"], cwd=shallow_tmp, check=True)
 
-    assert diff_sweep.try_resolve_git_commit(ref="refs/heads/missing-v15-ref", fallback=None) is None
+    remotes_out = subprocess.check_output(["git", "branch", "-r"], cwd=shallow_tmp, text=True).strip()
+    tags_out = subprocess.check_output(["git", "tag"], cwd=shallow_tmp, text=True).strip()
+    assert remotes_out == ""
+    assert tags_out == ""
+    assert diff_sweep.try_resolve_git_commit(repo_root=shallow_tmp) is None
+    assert diff_sweep.resolve_git_commit(repo_root=shallow_tmp) == diff_sweep.EMBEDDED_V15_COMMIT_FULL
     with pytest.raises(RuntimeError):
-        diff_sweep.resolve_git_commit(ref="refs/heads/missing-v15-ref", fallback=None)
+        diff_sweep.resolve_git_commit(ref="refs/heads/missing-v15-ref", fallback=None, repo_root=shallow_tmp)
 
-    fallback_rep = diff_sweep.run_v14_shallow_fallback_audit(tiers=["easy", "medium"], seeds=[0])
-    assert fallback_rep["shallow_checkout_fallback"] is True
-    assert fallback_rep["v15_available"] is False
-    assert fallback_rep["v14_tier_hash_preserved"] is True
-    assert fallback_rep["working_tree_unchanged"] is True
-    assert fallback_rep["total_invariant_violations"] == 0
-    assert fallback_rep["total_strategy_episodes"] == 20
-    for tier in ("easy", "medium"):
-        strats = fallback_rep["v14_strategy_sweep"][tier]["strategies"]
-        assert set(strats) == set(EXPECTED_STRATEGIES)
-        assert strats["do_nothing"]["mean_score"] == 0.0
-        assert strats["stop_early"]["mean_score"] == 0.0
-        assert strats["reference_solver"]["mean_score"] > 0.4
+    try:
+        rt_shallow = diff_sweep.load_v15_runtime(repo_root=shallow_tmp)
+        assert rt_shallow.used_embedded_fallback is True
+        assert rt_shallow.source_mode == "embedded_zlib_b64"
+        assert rt_shallow.commit_sha == diff_sweep.EMBEDDED_V15_COMMIT_FULL
+        assert rt_shallow.finder.git_show_paths == []
+        assert len(rt_shallow.finder.loaded_paths) >= 10
+        assert "canary/env.py" in rt_shallow.finder.loaded_paths
+        assert "canary/rules.py" in rt_shallow.finder.loaded_paths
+        assert rt_shallow.status_unchanged is True
+        assert env_v14.Env is not rt_shallow.env_mod.Env
+        assert rules_v14.TIERS is not rt_shallow.rules.TIERS
+        assert diff_sweep.compute_tier_hash(rules_v14.TIERS, rules_v14.KNOWN_V_MODE) == "a8f99c2537c91d72"
 
-    iv = fallback_rep["interview_template_audit"]
-    assert iv["evasive_templates_total"] == 16
-    assert iv["cooperative_templates_total"] == 16
-    assert iv["cooperative_hedge_false_positive_rate"] == 0.0
-    assert iv["evasive_hedge_recall"] >= 0.80
-    assert iv["solver_v14_marks_template_evasive"] is False
-    assert iv["solver_v15_marks_template_evasive"] is None
+        shallow_rep = diff_sweep.run_differential_audit(
+            tiers=["easy", "medium"],
+            seeds=[0, 1],
+            workers=1,
+            repo_root=shallow_tmp,
+        )
+        assert shallow_rep["shallow_checkout_fallback"] is True
+        assert shallow_rep["v15_available"] is True
+        assert shallow_rep["v15_source_mode"] == "embedded_zlib_b64"
+        assert shallow_rep["v15_commit_sha"] == "de9cc50e"
+        assert shallow_rep["v15_modules_loaded"] >= 10
+        assert shallow_rep["v15_git_show_modules_loaded"] == 0
+        assert shallow_rep["v14_tier_hash_preserved"] is True
+        assert shallow_rep["working_tree_unchanged"] is True
+        assert shallow_rep["total_invariant_violations"] == 0
+        assert shallow_rep["total_strategy_episodes"] == 80
+        assert shallow_rep["total_passive_scan_episodes"] == 8
+        assert shallow_rep["strategy_sweep"] == fast_audit_report["strategy_sweep"]
+        assert shallow_rep["lexical_and_stream_audit"] == fast_audit_report["lexical_and_stream_audit"]
 
-    se_ep_14 = diff_sweep.run_single_episode(env_v14.Env("easy", 0), diff_sweep.make_strategy("stop_early", 0, "v1.4"))
-    assert se_ep_14["quit_early"] is True and se_ep_14["done"] is False and se_ep_14["score"] == 0.0
+        nogit_tmp = tmp_path / "nogit_archive"
+        nogit_tmp.mkdir(parents=True)
+        (nogit_tmp / "archive_marker.txt").write_text("exported archive without .git\n", encoding="utf-8")
+        assert diff_sweep.resolve_head_commit(nogit_tmp) == "nogit0000"
+        rt_nogit = diff_sweep.load_v15_runtime(repo_root=nogit_tmp, pkg_name="_canary_v15_nogit_test")
+        assert rt_nogit.used_embedded_fallback is True
+        assert rt_nogit.status_unchanged is True
 
-    fb_json = tmp_path / "shallow_fallback.json"
-    rc_fb = diff_sweep.main(
-        ["--fast", "--seeds", "0", "--tiers", "easy", "--v15-ref", "refs/heads/missing-v15-ref", "--json-out", str(fb_json)]
-    )
-    assert rc_fb == 0
-    fb_payload = json.loads(fb_json.read_text(encoding="utf-8"))
-    assert fb_payload["shallow_checkout_fallback"] is True
-    assert fb_payload["total_strategy_episodes"] == 10
-    assert fb_payload["total_invariant_violations"] == 0
+        fb_json = tmp_path / "shallow_cli_out.json"
+        rc_fb = diff_sweep.main(
+            [
+                "--fast",
+                "--seeds",
+                "0",
+                "--tiers",
+                "easy",
+                "--repo-root",
+                str(nogit_tmp),
+                "--shallow-fallback",
+                "--json-out",
+                str(fb_json),
+            ]
+        )
+        assert rc_fb == 0
+        fb_payload = json.loads(fb_json.read_text(encoding="utf-8"))
+        assert fb_payload["shallow_checkout_fallback"] is True
+        assert fb_payload["v15_available"] is True
+        assert fb_payload["v14_head_sha"] == "nogit000"
+        assert fb_payload["total_strategy_episodes"] == 20
+        assert fb_payload["total_passive_scan_episodes"] == 2
+        assert fb_payload["total_invariant_violations"] == 0
+    finally:
+        diff_sweep.load_v15_runtime(repo_root=REPO_ROOT)
 
 
 def test_cli_fast_json_smoke(tmp_path: Path) -> None:
@@ -198,8 +253,9 @@ def test_cli_fast_json_smoke(tmp_path: Path) -> None:
     assert rc == 0
     assert elapsed < 5.0
     payload = json.loads(out_file.read_text(encoding="utf-8"))
-    expected_eps = 10 if payload["shallow_checkout_fallback"] else 20
-    assert payload["total_strategy_episodes"] == expected_eps
+    assert payload["v15_available"] is True
+    assert payload["total_strategy_episodes"] == 20
+    assert payload["total_passive_scan_episodes"] == 2
     assert payload["total_invariant_violations"] == 0
     assert payload["v14_tier_hash_preserved"] is True
     assert payload["working_tree_unchanged"] is True
@@ -209,6 +265,9 @@ def test_exclusive_files_hygiene_and_report_completeness() -> None:
     script_path = REPO_ROOT / "scripts" / "integrity_v14_v15_differential_sweep.py"
     report_path = REPO_ROOT / "docs" / "reports" / "integrity_v14_v15_differential_sweep.md"
     test_path = Path(__file__).resolve()
+
+    for owned_path in (script_path, report_path, test_path):
+        assert owned_path.stat().st_size <= 200 * 1024
 
     script_txt = script_path.read_text(encoding="utf-8")
     report_txt = report_path.read_text(encoding="utf-8")
@@ -222,6 +281,13 @@ def test_exclusive_files_hygiene_and_report_completeness() -> None:
     hash_char = chr(35)
     assert hash_char not in script_txt
     assert hash_char not in test_txt
+
+    for py_txt in (script_txt, test_txt):
+        comment_toks = [
+            tok for tok in tokenize.generate_tokens(io.StringIO(py_txt).readline)
+            if tok.type == tokenize.COMMENT
+        ]
+        assert comment_toks == []
 
     for sname in EXPECTED_STRATEGIES:
         assert sname in report_txt

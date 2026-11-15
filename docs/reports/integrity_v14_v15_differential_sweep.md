@@ -4,7 +4,7 @@
 
 - **Versions Audited (Paired Seeds `0..99`):**
   - **`v1.4` (`justSilas` @ `5f9b3297`, `canary/` identical to `9225f2ad`):** Frozen ruleset `TIERS_VERSION = "v1.4"` (tier hash `a8f99c2537c91d72`, `KNOWN_V_MODE = True`).
-  - **`v1.5` (`origin/justSilas-v15` @ `de9cc50e`):** `v1.5-candidate` WS2 human-bias social layer (`rumour_rate=2.0`, `rumour_frame_share=0.4`, `grudge_pairs=2`, `grudge_rate=0.5`, `authority_day=3`, `p_misforward=0.15`), loaded strictly in-memory via `git show de9cc50e:canary/...` (`14` Python modules) into the isolated module namespace `_canary_v15_isolated` with `0` checkouts, `0` working-tree modifications (`git status --porcelain` verified unchanged before, during, and after), and `v1.4` tier hash `a8f99c2537c91d72` preserved.
+  - **`v1.5` (`origin/justSilas-v15` @ `de9cc50e`):** `v1.5-candidate` WS2 human-bias social layer (`rumour_rate=2.0`, `rumour_frame_share=0.4`, `grudge_pairs=2`, `grudge_rate=0.5`, `authority_day=3`, `p_misforward=0.15`), loaded strictly in-memory via `git show de9cc50e:canary/...` (`14` Python modules; seamlessly falling back to the embedded `zlib`+`base64` `de9cc50e` source map in `fetch-depth=1` shallow CI checkouts or `.git`-less archives) into the isolated module namespace `_canary_v15_isolated` with `0` checkouts, `0` working-tree modifications (`git status --porcelain` verified unchanged before, during, and after), and `v1.4` tier hash `a8f99c2537c91d72` preserved.
 - **Scale & Budget:** `6,600` total deterministic episodes (`6,000` paired strategy episodes across `3` tiers x `10` strategies x `100` paired seeds x `2` versions + `600` full-horizon passive lexical/stream differential scan episodes across `easy`, `medium`, `hard`), `0` LLM/API calls, `96.36s` wall time (`--workers 2`).
 - **Reward & Exploit Integrity Verdict: HELD (`0` exploits, `0` score/state invariant violations across `6,000/6,000` strategy episodes).**
   - Abstaining baselines (`do_nothing`, `stop_early`) score **`+0.0000 +- 0.0000`** on `100%` of episodes across both `v1.4` and `v1.5` on every tier (`0` partial-`V` early-quit leaks).
@@ -21,11 +21,12 @@
 
 ## 2. Reproduce Commands (Keyless, Zero API Calls)
 
-Fast subset (`<2s`, `88` episodes in full clones; automatic `v1.4` `HEAD` `git show` fallback in `fetch-depth=1` shallow CI checkouts where `de9cc50e` is not fetched):
+Fast subset (`<2s`, `88` episodes in both full clones via `git show` and `fetch-depth=1` shallow CI or `.git`-less checkouts via embedded `de9cc50e` `zlib`+`base64` fallback):
 
 ```bash
 /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/integrity_v14_v15_differential_sweep.py --fast
-/tmp/fleet-silas/shared/agent-arena-venv/bin/pytest -q tests/test_integrity_v14_v15_differential_sweep.py
+/tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/integrity_v14_v15_differential_sweep.py --fast --shallow-fallback
+/tmp/fleet-silas/shared/agent-arena-venv/bin/python -m pytest -p no:cacheprovider -q tests/test_integrity_v14_v15_differential_sweep.py
 ```
 
 Full `6,600`-episode paired sweep across seeds `0..99` on `easy,medium,hard`:

@@ -7,6 +7,7 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ from train import eval_mole, qwen_diverse_mole
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts" / "verify_moletrain_submission.py"
+BRIEF_PATH = ROOT / "docs" / "reports" / "moletrain_submission_brief.md"
 TEST_PATH = Path(__file__).resolve()
 
 
@@ -68,6 +70,12 @@ def _populate_clean_tree(root: Path) -> None:
         ROOT / "results" / "moletrain" / "rl_mole_v2_heldout.json",
         mdir / "rl_mole_v2_heldout.json",
     )
+    for run_name, _ in V.V100_EVAL_RUN_SPECS:
+        src_run = ROOT / "results" / "moletrain" / run_name
+        dst_run = mdir / run_name
+        dst_run.mkdir(parents=True, exist_ok=True)
+        for fname in ("eval_summary.json", "sft_curve.jsonl", "grpo_curve.jsonl"):
+            shutil.copyfile(src_run / fname, dst_run / fname)
 
 
 def test_source_files_have_zero_hash_emdash_coauthor_and_no_torch_import():
@@ -94,20 +102,36 @@ def test_real_repo_passes_all_four_gates_and_reproducible_output(tmp_path):
     out1 = tmp_path / "gate1.json"
     out2 = tmp_path / "gate2.json"
 
+    t0 = time.perf_counter()
     rc1 = V.main(["--root", str(ROOT), "--out", str(out1), "--check"])
+    elapsed = time.perf_counter() - t0
     rc2 = V.main(["--root", str(ROOT), "--out", str(out2), "--check"])
     assert rc1 == 0
     assert rc2 == 0
+    assert elapsed < 15.0
     assert out1.read_bytes() == out2.read_bytes()
-    assert out1.stat().st_size < 25 * 1024
+    assert out1.stat().st_size <= 25 * 1024
 
     payload = json.loads(out1.read_text(encoding="utf-8"))
     assert payload["all_passed"] is True
     assert payload["gates_passed"] == 4
     assert payload["gates_total"] == 4
 
+    g2 = payload["gates"]["gate_2_hygiene"]
+    assert "train/eval_mole.py" in g2["checked_py_files"]
+    assert "train/eval_mole.py" in g2["auto_discovered_py_files"]
+    assert g2["forbidden_weight_files_found"] == []
+    assert "docs/reports/moletrain_submission_brief.md" in g2["checked_report_markdowns"]
+    assert "docs/reports/qwen_mole_training.md" in g2["checked_report_markdowns"]
+    artifact_paths = {entry["path"] for entry in g2["checked_moletrain_artifacts"]}
+    assert "results/moletrain/canary-qwen3-1p7b-mole-v1/eval_summary.json" in artifact_paths
+    assert "results/moletrain/canary-qwen3-1p7b-mole-v1/grpo_curve.jsonl" in artifact_paths
+    assert "results/moletrain/canary-qwen3-0p6b-mole-v1/sft_curve.jsonl" in artifact_paths
+
     g4 = payload["gates"]["gate_4_catchability_and_provenance"]
-    assert g4["bootstrap_cis_checked"] >= 98
+    assert g4["bootstrap_cis_checked"] >= 1100
+    assert len(g4["v100_eval_summaries_checked"]) == 3
+    assert all(r["catchable_85_both"] is True for r in g4["v100_eval_summaries_checked"])
     assert len(g4["rl_mole_v2_replay"]) == 2
     assert all(r["reproducible"] is True for r in g4["rl_mole_v2_replay"])
 
@@ -246,6 +270,126 @@ def test_gate2_hygiene_checks_and_silas_exemption(tmp_path):
     assert any("100 KB" in v for v in g2_big["violations"])
 
 
+def test_gate2_auto_discovers_changed_branch_py_files_and_catches_hygiene(tmp_path):
+    repo = tmp_path / "autodiscover_repo"
+    base_files = {
+        ".github/protected-paths.txt": (ROOT / ".github" / "protected-paths.txt").read_text(encoding="utf-8"),
+        "train/grpo_mole.py": chr(35) + " pre-existing Silas comment\ny = 2\n",
+    }
+    for rel in V.MOLETRAIN_PY_FILES:
+        base_files[rel] = "x = 1\n"
+    _init_git_repo(repo, base_files, branch="justSilas")
+
+    subprocess.run(["git", "checkout", "-q", "-b", "moletrain-feature"], cwd=repo, check=True)
+    new_scoped = (
+        "canary/forge/new_mole_helper.py",
+        "canary/mole/extra_selector.py",
+        "train/extra_trainer.py",
+        "scripts/custom_mole_probe.py",
+        "tests/test_custom_mole_probe.py",
+    )
+    for rel in new_scoped:
+        fp = repo / rel
+        fp.parent.mkdir(parents=True, exist_ok=True)
+        fp.write_text("val = 42\n", encoding="utf-8")
+    unrelated = repo / "scripts" / "other_tool.py"
+    unrelated.write_text(chr(35) + " unrelated non-mole script\nz = 3\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "add new moletrain modules"], cwd=repo, check=True)
+
+    g2_clean = V.check_gate2_hygiene(repo, base_ref="justSilas")
+    assert g2_clean["passed"] is True
+    for rel in new_scoped:
+        assert rel in g2_clean["auto_discovered_py_files"]
+        assert rel in g2_clean["checked_py_files"]
+    assert "scripts/other_tool.py" not in g2_clean["checked_py_files"]
+
+    (repo / "scripts" / "custom_mole_probe.py").write_text(
+        "val = 42  " + chr(35) + " bad comment\n",
+        encoding="utf-8",
+    )
+    g2_bad = V.check_gate2_hygiene(repo, base_ref="justSilas")
+    assert g2_bad["passed"] is False
+    assert any("scripts/custom_mole_probe.py" in v for v in g2_bad["violations"])
+
+
+def test_gate2_scans_jsonl_and_forbids_weight_files_anywhere(tmp_path):
+    tree = tmp_path / "jsonl_and_weights"
+    _populate_clean_tree(tree)
+    sub_dir = tree / "results" / "moletrain" / "nested_run"
+    sub_dir.mkdir(parents=True, exist_ok=True)
+    curve_fp = sub_dir / "curve.jsonl"
+
+    curve_fp.write_text('{"step": 1, "loss": 0.1}\nnot-json\n', encoding="utf-8")
+    g2_bad_jsonl = V.check_gate2_hygiene(tree)
+    assert g2_bad_jsonl["passed"] is False
+    assert any("curve.jsonl:2: invalid JSONL record" in v for v in g2_bad_jsonl["violations"])
+
+    curve_fp.write_text('{"step": 1, "note": "bad \\u2014 dash"}\n', encoding="utf-8")
+    g2_em_jsonl = V.check_gate2_hygiene(tree)
+    assert g2_em_jsonl["passed"] is False
+    assert any("curve.jsonl:1: contains JSON-escaped U+2014" in v for v in g2_em_jsonl["violations"])
+
+    curve_fp.write_text('{"pad": "' + ("x" * (105 * 1024)) + '"}\n', encoding="utf-8")
+    g2_big_jsonl = V.check_gate2_hygiene(tree)
+    assert g2_big_jsonl["passed"] is False
+    assert any("curve.jsonl" in v and "100 KB" in v for v in g2_big_jsonl["violations"])
+
+    curve_fp.write_text('{"step": 1, "loss": 0.1}\n', encoding="utf-8")
+    assert V.check_gate2_hygiene(tree)["passed"] is True
+
+    for rel_weight in (
+        "results/moletrain/nested_run/adapter_model.safetensors",
+        "data/models/pytorch_model.bin",
+        "train/checkpoints/policy.pt",
+    ):
+        wfp = tree / rel_weight
+        wfp.parent.mkdir(parents=True, exist_ok=True)
+        wfp.write_bytes(b"\x00\x01\x02\x03")
+        g2_w = V.check_gate2_hygiene(tree)
+        assert g2_w["passed"] is False
+        assert rel_weight in g2_w["forbidden_weight_files_found"]
+        assert any(rel_weight in v for v in g2_w["violations"])
+        wfp.unlink()
+
+
+def test_gate2_enforces_panel_fix_a_honesty_across_mole_reports(tmp_path):
+    tree = tmp_path / "panel_fix_a"
+    _populate_clean_tree(tree)
+    rep_dir = tree / "docs" / "reports"
+    rep_dir.mkdir(parents=True, exist_ok=True)
+
+    honest_md = (
+        chr(35)
+        + " Mole Report\n\n"
+        + "Dev seeds 0-29 are a post-hoc lock (671ed96 came 28 s after 8fd4dec), not pre-registered.\n"
+        + "Extension seeds 30-59 were pre-registered in f9fb7a4a.\n"
+    )
+    (rep_dir / "qwen_mole_training.md").write_text(honest_md, encoding="utf-8")
+    (rep_dir / "moletrain_submission_brief.md").write_text(honest_md, encoding="utf-8")
+    g2_honest = V.check_gate2_hygiene(tree)
+    assert g2_honest["passed"] is True
+
+    dishonest_samples = (
+        "Frontier evaluation on pre-registered seeds 0-29 shows a gap.\n",
+        "Primary dev seeds 0..29 were preregistered prior to any run.\n",
+        "We compare against the pre-registration\nof dev seeds 0 to 29 on hard.\n",
+    )
+    for bad_txt in dishonest_samples:
+        (rep_dir / "qwen_mole_training.md").write_text(bad_txt, encoding="utf-8")
+        g2_bad = V.check_gate2_hygiene(tree)
+        assert g2_bad["passed"] is False
+        assert any("Panel Fix A violation" in v for v in g2_bad["violations"])
+
+    (rep_dir / "qwen_mole_training.md").write_text(honest_md, encoding="utf-8")
+    broken_link_md = honest_md + "\nSee [unmerged](../research/08_unmerged_branch.md) and `[code](ignored.md)`.\n"
+    (rep_dir / "moletrain_submission_brief.md").write_text(broken_link_md, encoding="utf-8")
+    g2_broken = V.check_gate2_hygiene(tree)
+    assert g2_broken["passed"] is False
+    assert any("broken relative markdown link" in v for v in g2_broken["violations"])
+    assert not any("ignored.md" in v for v in g2_broken["violations"])
+
+
 def test_gate3_seed_disjointness_and_drift_detection(monkeypatch, tmp_path):
     g3_ok = V.check_gate3_seed_disjointness(ROOT)
     assert g3_ok["passed"] is True
@@ -360,7 +504,119 @@ def test_gate4_ci_bounds_catchability_schemas_and_replay(tmp_path):
     assert any("RLMoleV2.from_json" in v for v in g4_bad_pol["violations"])
 
 
-def test_cli_check_exit_codes(tmp_path):
+def test_gate4_v100_eval_summary_crosschecks(tmp_path):
+    tree = tmp_path / "v100_checks"
+    _populate_clean_tree(tree)
+    mdir = tree / "results" / "moletrain"
+    shutil.copyfile(
+        ROOT / "results" / "moletrain" / "qwen_mole_summary.json",
+        mdir / "qwen_mole_summary.json",
+    )
+    assert V.check_gate4_catchability_and_provenance(tree)["passed"] is True
+
+    p_1p7b = mdir / "canary-qwen3-1p7b-mole-v1" / "eval_summary.json"
+    orig_1p7b = json.loads(p_1p7b.read_text(encoding="utf-8"))
+
+    collapsed_1p7b = copy.deepcopy(orig_1p7b)
+    collapsed_1p7b["heldout_800k_summary"]["distinct_actions"] = 1
+    p_1p7b.write_text(json.dumps(collapsed_1p7b), encoding="utf-8")
+    g4_col = V.check_gate4_catchability_and_provenance(tree)
+    assert g4_col["passed"] is False
+    assert any("distinct_actions expected >= 2" in v for v in g4_col["violations"])
+
+    inv_1p7b = copy.deepcopy(orig_1p7b)
+    inv_1p7b["heldout_200k_summary"]["invalid_generations"] = 2
+    p_1p7b.write_text(json.dumps(inv_1p7b), encoding="utf-8")
+    g4_inv = V.check_gate4_catchability_and_provenance(tree)
+    assert g4_inv["passed"] is False
+    assert any("invalid_generations expected 0" in v for v in g4_inv["violations"])
+
+    uncatch_1p7b = copy.deepcopy(orig_1p7b)
+    uncatch_1p7b["heldout_200k_summary"]["catchable_85"] = False
+    p_1p7b.write_text(json.dumps(uncatch_1p7b), encoding="utf-8")
+    g4_unc = V.check_gate4_catchability_and_provenance(tree)
+    assert g4_unc["passed"] is False
+    assert any("catchable_85 expected True" in v for v in g4_unc["violations"])
+
+    drift_1p7b = copy.deepcopy(orig_1p7b)
+    drift_1p7b["heldout_200k_summary"]["min_regret"] = 0.1234
+    p_1p7b.write_text(json.dumps(drift_1p7b), encoding="utf-8")
+    g4_drift = V.check_gate4_catchability_and_provenance(tree)
+    assert g4_drift["passed"] is False
+    assert any("qwen_min_regret mismatches eval_summary.json" in v for v in g4_drift["violations"])
+
+    p_1p7b.unlink()
+    g4_missing = V.check_gate4_catchability_and_provenance(tree)
+    assert g4_missing["passed"] is False
+    assert any("missing V100 evaluation artifact" in v for v in g4_missing["violations"])
+
+
+def test_moletrain_submission_brief_numbers_and_citations():
+    assert BRIEF_PATH.is_file()
+    brief = BRIEF_PATH.read_text(encoding="utf-8")
+    assert chr(0x2014) not in brief
+    assert ("co-authored" + "-by") not in brief.lower()
+    assert V._scan_panel_fix_a_honesty(brief, "docs/reports/moletrain_submission_brief.md") == []
+    assert (
+        V._scan_markdown_relative_links(
+            brief,
+            BRIEF_PATH,
+            ROOT,
+            "docs/reports/moletrain_submission_brief.md",
+            allowed_rel_paths=frozenset({V.DEFAULT_GATE_REL}),
+        )
+        == []
+    )
+
+    for required_token in (
+        "Camerer et al., 2004",
+        "Korzhyk et al., 2011",
+        "Tessler et al. (2019)",
+        "Shao et al. (2024)",
+        "Hubinger et al. (2024)",
+        "verda_ws3_forensics.json",
+        "frontier_proxy_mole_matrix.json",
+        "rl_mole_v2_heldout.json",
+        "carbon_distilled_dsl_eval.json",
+        "canary-qwen3-1p7b-mole-v1",
+        "canary-qwen3-0p6b-mole-v1",
+        "canary-qwen-mole-v1",
+        "0.9667",
+        "0.9500",
+        "+0.3564",
+        "+0.4559",
+        "+0.3695",
+        "-0.323",
+        "-0.319",
+        "-0.1232 [-0.2220, -0.0253]",
+        "-0.1252",
+        "+0.2827",
+        "0.975 / 0.950",
+    ):
+        assert required_token in brief
+
+
+def test_cli_write_default_and_check_exit_codes(tmp_path):
+    clean_tree = tmp_path / "cli_clean"
+    _populate_clean_tree(clean_tree)
+    default_gate = clean_tree / "results" / "moletrain" / "submission_gate.json"
+    assert not default_gate.exists()
+
+    rc_write = V.main(["--root", str(clean_tree), "--write", "--check"])
+    assert rc_write == 0
+    assert default_gate.is_file()
+    assert default_gate.stat().st_size <= 25 * 1024
+    written_bytes = default_gate.read_bytes()
+
+    rc_check_only = V.main(["--root", str(clean_tree), "--check"])
+    assert rc_check_only == 0
+    assert default_gate.read_bytes() == written_bytes
+
+    default_gate.unlink()
+    rc_default_regen = V.main(["--root", str(clean_tree)])
+    assert rc_default_regen == 0
+    assert default_gate.is_file()
+
     bad_tree = tmp_path / "cli_bad"
     _populate_clean_tree(bad_tree)
     (bad_tree / "canary" / "forge" / "rl_mole_v2.py").write_text(
@@ -376,3 +632,6 @@ def test_cli_check_exit_codes(tmp_path):
 
     rc_check = V.main(["--root", str(bad_tree), "--out", str(out_gate), "--check"])
     assert rc_check == 1
+
+    rc_check_readonly = V.main(["--root", str(bad_tree), "--check"])
+    assert rc_check_readonly == 1

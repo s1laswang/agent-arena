@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from fnmatch import fnmatchcase
 import hashlib
 import json
 import math
@@ -16,14 +17,28 @@ if str(ROOT) not in sys.path:
 
 HASH_CHAR = chr(35)
 EM_DASH = chr(0x2014)
+EN_DASH = chr(0x2013)
 CO_AUTHOR_LOWER = "co-authored" + "-by"
 
 MAX_ARTIFACT_BYTES = 100 * 1024
 MAX_GATE_REPORT_BYTES = 25 * 1024
+DEFAULT_GATE_REL = "results/moletrain/submission_gate.json"
 MIN_CATCHABLE_ACC = 0.85
 CI_TOL = 1e-6
 
 REPLAY_EASY_SEEDS = (200_000, 200_001)
+
+FORBIDDEN_WEIGHT_SUFFIXES: tuple[str, ...] = (
+    ".safetensors",
+    ".bin",
+    ".pt",
+)
+
+V100_EVAL_RUN_SPECS: tuple[tuple[str, int], ...] = (
+    ("canary-qwen-mole-v1", 1),
+    ("canary-qwen3-0p6b-mole-v1", 2),
+    ("canary-qwen3-1p7b-mole-v1", 2),
+)
 
 MOLETRAIN_PY_FILES: tuple[str, ...] = (
     "canary/forge/rl_mole_v2.py",
@@ -71,6 +86,22 @@ SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("private_key", re.compile("-----BEGIN " + r"(?:RSA |EC |OPENSSH )?PRIVATE KEY-----")),
 )
 
+SEEDS_0_29_PATTERN = re.compile(
+    r"(?<![0-9])0\s*(?:-|to|\.\.+|" + EN_DASH + r")\s*29(?![0-9])",
+    re.IGNORECASE,
+)
+PREREG_PATTERN = re.compile(
+    r"\bpre-?regist(?:er|ered|ering|ration|rations)\b",
+    re.IGNORECASE,
+)
+NEGATED_PREREG_PATTERN = re.compile(
+    r"\b(?:not|never|neither|nor|rather\s+than)\s+(?:a\s+|an\s+|being\s+)?pre-?regist",
+    re.IGNORECASE,
+)
+FENCED_CODE_PATTERN = re.compile(r"```[\s\S]*?```")
+INLINE_CODE_PATTERN = re.compile(r"`[^`\n]*`")
+MD_LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)\s]+)(?:\s+[^)]*)?\)")
+
 PRIMARY_EVAL_MODEL_KEYS: tuple[str, ...] = (
     "rl_mole_v2",
     "grpo_mole",
@@ -114,6 +145,10 @@ def _redact_secret(token: str) -> str:
 
 def _is_finite_num(val: Any) -> bool:
     return isinstance(val, (int, float)) and not isinstance(val, bool) and math.isfinite(float(val))
+
+
+def _is_strict_int(val: Any) -> bool:
+    return isinstance(val, int) and not isinstance(val, bool)
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -203,6 +238,40 @@ def collect_changed_files(
         [],
         f"base ref {base_ref} and HEAD diff unavailable; graceful shallow CI fallback",
     )
+
+
+def is_moletrain_scoped_py(rel_path: str) -> bool:
+    norm = rel_path.replace("\\", "/").strip().lstrip("./")
+    if not norm.endswith(".py"):
+        return False
+    if norm.startswith(("canary/forge/", "canary/mole/", "train/")):
+        return True
+    name = Path(norm).name
+    if norm.startswith("scripts/") and (fnmatchcase(norm, "scripts/*mole*.py") or "mole" in name):
+        return True
+    if norm.startswith("tests/") and (fnmatchcase(norm, "tests/test_*mole*.py") or fnmatchcase(name, "test_*mole*.py")):
+        return True
+    return False
+
+
+def discover_moletrain_py_files(
+    root: Path,
+    base_ref: str = "origin/justSilas",
+    py_files: Sequence[str] = MOLETRAIN_PY_FILES,
+) -> tuple[list[str], list[str], list[str]]:
+    _, changed_files, _ = collect_changed_files(root, base_ref=base_ref)
+    ordered = [p.replace("\\", "/").lstrip("./") for p in py_files]
+    seen = set(ordered)
+    discovered_extra: list[str] = []
+    for rel in changed_files:
+        norm = rel.replace("\\", "/").lstrip("./")
+        if norm in seen or not is_moletrain_scoped_py(norm):
+            continue
+        if (root / norm).is_file():
+            seen.add(norm)
+            ordered.append(norm)
+            discovered_extra.append(norm)
+    return ordered, discovered_extra, changed_files
 
 
 def check_gate1_protected_paths(
@@ -298,11 +367,97 @@ def _scan_text_hygiene(
     return issues
 
 
+def _scan_panel_fix_a_honesty(text: str, rel_label: str) -> list[str]:
+    issues: list[str] = []
+    flagged_lines: set[int] = set()
+
+    for idx, line in enumerate(text.splitlines(), 1):
+        if SEEDS_0_29_PATTERN.search(line) and PREREG_PATTERN.search(line):
+            if not NEGATED_PREREG_PATTERN.search(line):
+                flagged_lines.add(idx)
+                issues.append(
+                    f"{rel_label}: Panel Fix A violation at line {idx} (seeds 0-29 must not be called pre-registered)"
+                )
+
+    for para in re.split(r"\n\s*\n", text):
+        for sentence in re.split(r"(?<=[.!?])\s+", para):
+            if SEEDS_0_29_PATTERN.search(sentence) and PREREG_PATTERN.search(sentence):
+                if not NEGATED_PREREG_PATTERN.search(sentence):
+                    snippet = sentence.strip().splitlines()[0] if sentence.strip() else ""
+                    line_idx = next(
+                        (i for i, ln in enumerate(text.splitlines(), 1) if snippet and snippet in ln),
+                        1,
+                    )
+                    if line_idx not in flagged_lines:
+                        flagged_lines.add(line_idx)
+                        issues.append(
+                            f"{rel_label}: Panel Fix A violation at line {line_idx} (seeds 0-29 must not be called pre-registered)"
+                        )
+    return issues
+
+
 def _normalize_rel(path: Path, root: Path) -> str:
     try:
         return path.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def _scan_markdown_relative_links(
+    text: str,
+    md_path: Path,
+    root: Path,
+    rel_label: str,
+    allowed_rel_paths: frozenset[str] = frozenset(),
+) -> list[str]:
+    issues: list[str] = []
+    stripped = FENCED_CODE_PATTERN.sub(" ", text)
+    stripped = INLINE_CODE_PATTERN.sub(" ", stripped)
+    root_resolved = root.resolve()
+    for match in MD_LINK_PATTERN.finditer(stripped):
+        raw_target = match.group(1).strip().strip("<>")
+        if not raw_target or raw_target.startswith(("http://", "https://", "mailto:", HASH_CHAR)):
+            continue
+        target_part = raw_target.split(HASH_CHAR, 1)[0].strip()
+        if not target_part:
+            continue
+        resolved = (md_path.parent / target_part).resolve()
+        try:
+            tgt_rel = resolved.relative_to(root_resolved).as_posix()
+        except ValueError:
+            issues.append(f"{rel_label}: relative markdown link escapes repo root ({raw_target})")
+            continue
+        if not resolved.exists() and tgt_rel not in allowed_rel_paths:
+            issues.append(f"{rel_label}: broken relative markdown link ({raw_target} -> {tgt_rel})")
+    return issues
+
+
+def _scan_forbidden_weight_files(root: Path, changed_files: Sequence[str]) -> list[str]:
+    candidates: set[str] = set()
+    if (root / ".git").exists():
+        tracked = _run_git_lines(root, ["ls-files"]) or []
+        for rel in tracked:
+            candidates.add(rel.replace("\\", "/").lstrip("./"))
+        for rel in changed_files:
+            norm = rel.replace("\\", "/").lstrip("./")
+            if (root / norm).exists():
+                candidates.add(norm)
+        moletrain_dir = root / "results" / "moletrain"
+        if moletrain_dir.is_dir():
+            for fp in moletrain_dir.rglob("*"):
+                if fp.is_file():
+                    candidates.add(_normalize_rel(fp, root))
+    else:
+        for fp in root.rglob("*"):
+            if fp.is_file():
+                candidates.add(_normalize_rel(fp, root))
+
+    hits: list[str] = []
+    for rel in sorted(candidates):
+        suf = Path(rel).suffix.lower()
+        if suf in FORBIDDEN_WEIGHT_SUFFIXES and (root / rel).is_file():
+            hits.append(rel)
+    return hits
 
 
 def check_gate2_hygiene(
@@ -317,7 +472,13 @@ def check_gate2_hygiene(
     checked_results_files: list[dict[str, Any]] = []
     checked_report_mds: list[str] = []
 
-    for rel in py_files:
+    effective_py_files, discovered_extra_py, changed_files = discover_moletrain_py_files(
+        root=root,
+        base_ref=base_ref,
+        py_files=py_files,
+    )
+
+    for rel in effective_py_files:
         fp = root / rel
         if not fp.is_file():
             violations.append(f"missing moletrain python file: {rel}")
@@ -326,12 +487,16 @@ def check_gate2_hygiene(
         txt = fp.read_text(encoding="utf-8")
         violations.extend(_scan_text_hygiene(txt, rel, forbid_hash=True))
 
+    weight_hits = _scan_forbidden_weight_files(root, changed_files)
+    for w_rel in weight_hits:
+        violations.append(f"{w_rel}: forbidden model weight file ({Path(w_rel).suffix.lower()}) committed")
+
     moletrain_dir = root / "results" / "moletrain"
     if moletrain_dir.is_dir():
         candidates = sorted(
             p
             for p in moletrain_dir.rglob("*")
-            if p.is_file() and p.suffix.lower() in {".json", ".md"}
+            if p.is_file() and p.suffix.lower() in {".json", ".jsonl", ".md"}
         )
         for fp in candidates:
             rel = _normalize_rel(fp, root)
@@ -344,9 +509,14 @@ def check_gate2_hygiene(
                 violations.append(
                     f"{rel}: size {sz} bytes exceeds 100 KB limit ({MAX_ARTIFACT_BYTES} bytes)"
                 )
-            txt = raw_bytes.decode("utf-8")
+            try:
+                txt = raw_bytes.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                violations.append(f"{rel}: invalid UTF-8 ({exc})")
+                continue
             violations.extend(_scan_text_hygiene(txt, rel, forbid_hash=False))
-            if fp.suffix.lower() == ".json":
+            suf = fp.suffix.lower()
+            if suf == ".json":
                 try:
                     parsed = json.loads(txt)
                 except ValueError as exc:
@@ -355,16 +525,48 @@ def check_gate2_hygiene(
                     unpacked = json.dumps(parsed, ensure_ascii=False)
                     if EM_DASH in unpacked and EM_DASH not in txt:
                         violations.append(f"{rel}: contains JSON-escaped U+2014 em-dash")
+            elif suf == ".jsonl":
+                nonempty_lines = 0
+                escaped_em_flagged = False
+                for line_no, raw_ln in enumerate(txt.splitlines(), 1):
+                    stripped = raw_ln.strip()
+                    if not stripped:
+                        continue
+                    nonempty_lines += 1
+                    try:
+                        row = json.loads(stripped)
+                    except ValueError as exc:
+                        violations.append(f"{rel}:{line_no}: invalid JSONL record ({exc})")
+                        continue
+                    if not isinstance(row, dict):
+                        violations.append(f"{rel}:{line_no}: JSONL record must be an object")
+                        continue
+                    unpacked_row = json.dumps(row, ensure_ascii=False)
+                    if not escaped_em_flagged and EM_DASH in unpacked_row and EM_DASH not in stripped:
+                        escaped_em_flagged = True
+                        violations.append(f"{rel}:{line_no}: contains JSON-escaped U+2014 em-dash")
+                if nonempty_lines == 0:
+                    violations.append(f"{rel}: JSONL file contains 0 records")
 
     reports_dir = root / "docs" / "reports"
     if reports_dir.is_dir():
-        for fp in sorted(reports_dir.glob("*mole*.md")):
+        report_paths = set(reports_dir.glob("*mole*.md"))
+        qwen_rep = reports_dir / "qwen_mole_training.md"
+        if qwen_rep.is_file():
+            report_paths.add(qwen_rep)
+        allowed_links = frozenset(excluded | {DEFAULT_GATE_REL})
+        for fp in sorted(report_paths, key=lambda p: _normalize_rel(p, root)):
             if not fp.is_file():
                 continue
             rel = _normalize_rel(fp, root)
             checked_report_mds.append(rel)
             txt = fp.read_text(encoding="utf-8")
             violations.extend(_scan_text_hygiene(txt, rel, forbid_hash=False))
+            violations.extend(_scan_panel_fix_a_honesty(txt, rel))
+            if fp.name.startswith("moletrain_") or fp.name == "qwen_mole_training.md":
+                violations.extend(
+                    _scan_markdown_relative_links(txt, fp, root, rel, allowed_rel_paths=allowed_links)
+                )
 
     if (root / ".git").exists():
         log_lines = _run_git_lines(root, ["log", f"{base_ref}..HEAD", "--format=%H %B"])
@@ -378,9 +580,13 @@ def check_gate2_hygiene(
         "name": "Code & Artifact Hygiene",
         "passed": len(violations) == 0,
         "checked_py_files": checked_py,
-        "silas_preexisting_exempt": list(PREEXISTING_SILAS_FILES),
+        "auto_discovered_py_files": discovered_extra_py,
+        "silas_preexisting_exempt": [
+            p for p in PREEXISTING_SILAS_FILES if p not in checked_py
+        ],
         "checked_moletrain_artifacts": checked_results_files,
         "checked_report_markdowns": checked_report_mds,
+        "forbidden_weight_files_found": weight_hits,
         "max_artifact_bytes": MAX_ARTIFACT_BYTES,
         "violations": violations,
     }
@@ -528,7 +734,7 @@ def check_gate3_seed_disjointness(
     moletrain_dir = root / "results" / "moletrain"
     artifact_seed_checks = 0
     if moletrain_dir.is_dir():
-        for fp in sorted(moletrain_dir.glob("*.json")):
+        for fp in sorted(moletrain_dir.rglob("*.json")):
             rel = _normalize_rel(fp, root)
             if rel in excluded or fp.name == "rl_mole_v2_policy.json":
                 continue
@@ -541,20 +747,25 @@ def check_gate3_seed_disjointness(
             sr = doc.get("seed_ranges")
             if isinstance(sr, dict):
                 expected_bucket_map = {
+                    "dev": partitions["rules_dev"],
                     "train": partitions["train_counterfactual"],
                     "val": partitions["validation"],
                     "ws3_heldout": partitions["ws3_heldout"],
+                    "heldout_200k": partitions["ws3_heldout"],
+                    "eval_400k": partitions["eval_mole_heldout"],
                     "rules_heldout": partitions["rules_heldout"],
+                    "heldout_800k": partitions["rules_heldout"],
                     "judge": partitions["rules_judge"],
                 }
                 seen_sr: list[tuple[str, tuple[int, int]]] = []
                 for k, bounds in sr.items():
-                    if isinstance(bounds, list) and len(bounds) == 2 and all(isinstance(x, int) for x in bounds):
+                    if isinstance(bounds, list) and len(bounds) == 2 and all(_is_strict_int(x) for x in bounds):
                         iv = (int(bounds[0]), int(bounds[1]))
-                        seen_sr.append((k, iv))
                         artifact_seed_checks += 1
                         if k in expected_bucket_map and not _interval_subset_of_any(iv, expected_bucket_map[k]):
                             violations.append(f"{rel}: seed_ranges.{k}={list(iv)} outside canonical {k} partition")
+                        if not k.startswith(("combined", "all_")):
+                            seen_sr.append((k, iv))
                 for idx, (k1, iv1) in enumerate(seen_sr):
                     for k2, iv2 in seen_sr[idx + 1 :]:
                         ov = _intervals_overlap(iv1, iv2)
@@ -846,6 +1057,185 @@ def _inspect_eval_artifact(
     return ci_count
 
 
+def _verify_v100_eval_summaries(
+    moletrain_dir: Path,
+    root: Path,
+    violations: list[str],
+) -> list[dict[str, Any]]:
+    summary_index: dict[str, dict[str, Any]] = {}
+    qwen_summary_path = moletrain_dir / "qwen_mole_summary.json"
+    if qwen_summary_path.is_file():
+        try:
+            qsum_doc = json.loads(qwen_summary_path.read_text(encoding="utf-8"))
+        except ValueError:
+            qsum_doc = None
+        if isinstance(qsum_doc, dict):
+            v100_sec = qsum_doc.get("v100_regularized_sft_grpo")
+            if isinstance(v100_sec, dict) and isinstance(v100_sec.get("runs"), list):
+                for entry in v100_sec["runs"]:
+                    if isinstance(entry, dict) and isinstance(entry.get("run_id"), str):
+                        summary_index[entry["run_id"]] = entry
+
+    checked_runs: list[dict[str, Any]] = []
+    for run_name, min_distinct in V100_EVAL_RUN_SPECS:
+        run_dir = moletrain_dir / run_name
+        eval_fp = run_dir / "eval_summary.json"
+        rel_eval = _normalize_rel(eval_fp, root)
+        if not eval_fp.is_file():
+            violations.append(f"missing V100 evaluation artifact: results/moletrain/{run_name}/eval_summary.json")
+            continue
+
+        for curve_name in ("sft_curve.jsonl", "grpo_curve.jsonl"):
+            cfp = run_dir / curve_name
+            if not cfp.is_file():
+                violations.append(f"missing V100 training curve: results/moletrain/{run_name}/{curve_name}")
+
+        try:
+            doc = json.loads(eval_fp.read_text(encoding="utf-8"))
+        except ValueError as exc:
+            violations.append(f"{rel_eval}: invalid JSON ({exc})")
+            continue
+        if not isinstance(doc, dict):
+            violations.append(f"{rel_eval}: top-level JSON value must be an object")
+            continue
+
+        if doc.get("name") != run_name:
+            violations.append(f"{rel_eval}: expected name={run_name!r}, got {doc.get('name')!r}")
+        if doc.get("smoke_tiny") is not False:
+            violations.append(f"{rel_eval}: expected smoke_tiny=False, got {doc.get('smoke_tiny')!r}")
+
+        val_cands = doc.get("val_candidates")
+        winner_ckpt = doc.get("winner_checkpoint")
+        if not isinstance(val_cands, dict) or not val_cands:
+            violations.append(f"{rel_eval}: missing or empty val_candidates")
+        else:
+            if not isinstance(winner_ckpt, str) or winner_ckpt not in val_cands:
+                violations.append(
+                    f"{rel_eval}: winner_checkpoint={winner_ckpt!r} missing from val_candidates"
+                )
+            for ckpt_name, ckpt_block in val_cands.items():
+                if not isinstance(ckpt_block, dict):
+                    violations.append(f"{rel_eval}.val_candidates.{ckpt_name}: must be an object")
+                    continue
+                inv_gen = ckpt_block.get("invalid_generations")
+                if not _is_strict_int(inv_gen) or int(inv_gen) != 0:
+                    violations.append(
+                        f"{rel_eval}.val_candidates.{ckpt_name}: invalid_generations expected 0, got {inv_gen!r}"
+                    )
+
+        split_stats: dict[str, dict[str, Any]] = {}
+        for split_key, paired_key in (
+            ("heldout_800k_summary", "paired_800k_vs_default"),
+            ("heldout_200k_summary", "paired_200k_vs_default"),
+        ):
+            sub = doc.get(split_key)
+            loc = f"{rel_eval}.{split_key}"
+            if not isinstance(sub, dict):
+                violations.append(f"{loc}: missing held-out summary object")
+                continue
+
+            c85 = sub.get("catchable_85")
+            if c85 is not True:
+                violations.append(f"{loc}: catchable_85 expected True, got {c85!r}")
+
+            s_acc = _extract_solver_acc(sub)
+            if s_acc is None or s_acc < MIN_CATCHABLE_ACC - 1e-9:
+                violations.append(
+                    f"{loc}: solver_acc={s_acc!r} below catchability threshold {MIN_CATCHABLE_ACC}"
+                )
+
+            inv_gen = sub.get("invalid_generations")
+            if not _is_strict_int(inv_gen) or int(inv_gen) != 0:
+                violations.append(f"{loc}: invalid_generations expected 0, got {inv_gen!r}")
+
+            dist_act = sub.get("distinct_actions")
+            if not _is_strict_int(dist_act) or int(dist_act) < min_distinct:
+                violations.append(
+                    f"{loc}: distinct_actions expected >= {min_distinct}, got {dist_act!r}"
+                )
+
+            paired_obj = doc.get(paired_key)
+            if not isinstance(paired_obj, dict) or not isinstance(paired_obj.get("qwen_mole"), dict):
+                violations.append(f"{rel_eval}.{paired_key}.qwen_mole: missing paired evaluation block")
+            else:
+                q_solver = paired_obj["qwen_mole"].get("solver")
+                s_solver = sub.get("solver")
+                if isinstance(q_solver, dict) and isinstance(s_solver, dict):
+                    if _is_three_num_list(q_solver.get("acc")) and _is_finite_num(s_solver.get("acc")):
+                        if abs(float(q_solver["acc"][0]) - float(s_solver["acc"])) > 1e-4:
+                            violations.append(
+                                f"{rel_eval}: {split_key}.solver.acc={s_solver['acc']} mismatches {paired_key} {q_solver['acc'][0]}"
+                            )
+                    if _is_three_num_list(q_solver.get("score")) and _is_finite_num(s_solver.get("score")):
+                        if abs(float(q_solver["score"][0]) - float(s_solver["score"])) > 1e-4:
+                            violations.append(
+                                f"{rel_eval}: {split_key}.solver.score={s_solver['score']} mismatches {paired_key} {q_solver['score'][0]}"
+                            )
+
+            split_stats[split_key] = {
+                "solver_acc": round(float(s_acc), 4) if s_acc is not None else None,
+                "min_regret": round(float(sub["min_regret"]), 4) if _is_finite_num(sub.get("min_regret")) else None,
+                "distinct_actions": int(dist_act) if _is_strict_int(dist_act) else None,
+                "invalid_generations": int(inv_gen) if _is_strict_int(inv_gen) else None,
+                "catchable_85": c85 is True,
+            }
+
+        if run_name in summary_index:
+            s_entry = summary_index[run_name]
+            if s_entry.get("status") != "completed":
+                violations.append(
+                    f"qwen_mole_summary.json: {run_name} status expected 'completed', got {s_entry.get('status')!r}"
+                )
+            es_sub = s_entry.get("eval_summary")
+            if not isinstance(es_sub, dict):
+                violations.append(f"qwen_mole_summary.json: {run_name} missing eval_summary block")
+            else:
+                if es_sub.get("winner_checkpoint") != winner_ckpt:
+                    violations.append(
+                        f"qwen_mole_summary.json: {run_name} winner_checkpoint={es_sub.get('winner_checkpoint')!r} != {winner_ckpt!r}"
+                    )
+                for sum_k, raw_k in (("heldout_800k", "heldout_800k_summary"), ("heldout_200k", "heldout_200k_summary")):
+                    q_ho = es_sub.get(sum_k)
+                    r_ho = split_stats.get(raw_k)
+                    if not isinstance(q_ho, dict) or r_ho is None:
+                        violations.append(f"qwen_mole_summary.json: {run_name} missing {sum_k}")
+                        continue
+                    if q_ho.get("catchable_85") is not True:
+                        violations.append(f"qwen_mole_summary.json: {run_name}.{sum_k}.catchable_85 != True")
+                    if _is_finite_num(q_ho.get("qwen_solver_acc")) and r_ho["solver_acc"] is not None:
+                        if abs(float(q_ho["qwen_solver_acc"]) - float(r_ho["solver_acc"])) > 1e-4:
+                            violations.append(
+                                f"qwen_mole_summary.json: {run_name}.{sum_k}.qwen_solver_acc mismatches eval_summary.json"
+                            )
+                    if _is_finite_num(q_ho.get("qwen_min_regret")) and r_ho["min_regret"] is not None:
+                        if abs(float(q_ho["qwen_min_regret"]) - float(r_ho["min_regret"])) > 1e-4:
+                            violations.append(
+                                f"qwen_mole_summary.json: {run_name}.{sum_k}.qwen_min_regret mismatches eval_summary.json"
+                            )
+                    if q_ho.get("distinct_actions") != r_ho["distinct_actions"]:
+                        violations.append(
+                            f"qwen_mole_summary.json: {run_name}.{sum_k}.distinct_actions mismatches eval_summary.json"
+                        )
+
+        s800 = split_stats.get("heldout_800k_summary", {})
+        s200 = split_stats.get("heldout_200k_summary", {})
+        checked_runs.append(
+            {
+                "run_id": run_name,
+                "winner_checkpoint": winner_ckpt,
+                "acc_800k": s800.get("solver_acc"),
+                "acc_200k": s200.get("solver_acc"),
+                "min_regret_800k": s800.get("min_regret"),
+                "min_regret_200k": s200.get("min_regret"),
+                "distinct_800k": s800.get("distinct_actions"),
+                "distinct_200k": s200.get("distinct_actions"),
+                "catchable_85_both": bool(s800.get("catchable_85") and s200.get("catchable_85")),
+            }
+        )
+
+    return checked_runs
+
+
 def _replay_rl_mole_v2_policy(
     policy_path: Path,
     seeds: Sequence[int] = REPLAY_EASY_SEEDS,
@@ -943,6 +1333,7 @@ def check_gate4_catchability_and_provenance(
             "artifacts_inspected": [],
             "bootstrap_cis_checked": 0,
             "verified_catchable_models": [],
+            "v100_eval_summaries_checked": [],
             "rl_mole_v2_replay": [],
             "violations": ["missing results/moletrain directory"],
         }
@@ -958,7 +1349,7 @@ def check_gate4_catchability_and_provenance(
     verified_models: list[dict[str, Any]] = []
     total_cis = 0
 
-    for fp in sorted(moletrain_dir.glob("*.json")):
+    for fp in sorted(moletrain_dir.rglob("*.json")):
         rel = _normalize_rel(fp, root)
         if rel in excluded:
             continue
@@ -993,10 +1384,12 @@ def check_gate4_catchability_and_provenance(
                 if not isinstance(sub, dict) or not isinstance(sub.get("rl_mole_v2"), dict):
                     violations.append(f"rl_mole_v2_heldout.json missing {set_key}.rl_mole_v2 block")
 
+    v100_checked = _verify_v100_eval_summaries(moletrain_dir, root, violations)
+
     if total_cis == 0:
-        violations.append("0 bootstrap CIs found across results/moletrain/*.json")
+        violations.append("0 bootstrap CIs found across results/moletrain/**/*.json")
     if not verified_models:
-        violations.append("0 primary catchable mole evaluation blocks verified in results/moletrain/*.json")
+        violations.append("0 primary catchable mole evaluation blocks verified in results/moletrain/**/*.json")
 
     replays: list[dict[str, Any]] = []
     if pol_path.is_file():
@@ -1011,6 +1404,7 @@ def check_gate4_catchability_and_provenance(
         "artifacts_inspected": artifacts_meta,
         "bootstrap_cis_checked": total_cis,
         "verified_catchable_models": verified_models,
+        "v100_eval_summaries_checked": v100_checked,
         "rl_mole_v2_replay": replays,
         "violations": violations,
     }
@@ -1074,9 +1468,9 @@ def run_all_gates(
     serialized = json.dumps(report, indent=2) + "\n"
     encoded = serialized.encode("utf-8")
     self_issues = _scan_text_hygiene(serialized, "submission_gate.json", forbid_hash=False)
-    if len(encoded) >= MAX_GATE_REPORT_BYTES:
+    if len(encoded) > MAX_GATE_REPORT_BYTES:
         self_issues.append(
-            f"submission_gate.json size {len(encoded)} bytes >= 25 KB ({MAX_GATE_REPORT_BYTES} bytes)"
+            f"submission_gate.json size {len(encoded)} bytes > 25 KB ({MAX_GATE_REPORT_BYTES} bytes)"
         )
     if self_issues:
         g2["violations"].extend(self_issues)
@@ -1089,20 +1483,23 @@ def run_all_gates(
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(serialized, encoding="utf-8")
     else:
-        existing_gate = root / "results" / "moletrain" / "submission_gate.json"
+        existing_gate = root / DEFAULT_GATE_REL
         if existing_gate.is_file():
             raw_existing = existing_gate.read_bytes()
             ex_issues: list[str] = []
-            if len(raw_existing) >= MAX_GATE_REPORT_BYTES:
+            if len(raw_existing) > MAX_GATE_REPORT_BYTES:
                 ex_issues.append(
-                    f"results/moletrain/submission_gate.json size {len(raw_existing)} bytes >= 25 KB"
+                    f"{DEFAULT_GATE_REL} size {len(raw_existing)} bytes > 25 KB"
                 )
             ex_txt = raw_existing.decode("utf-8")
-            ex_issues.extend(_scan_text_hygiene(ex_txt, "results/moletrain/submission_gate.json", forbid_hash=False))
+            ex_issues.extend(_scan_text_hygiene(ex_txt, DEFAULT_GATE_REL, forbid_hash=False))
             try:
-                json.loads(ex_txt)
+                ex_doc = json.loads(ex_txt)
             except ValueError as exc:
-                ex_issues.append(f"results/moletrain/submission_gate.json: invalid JSON ({exc})")
+                ex_issues.append(f"{DEFAULT_GATE_REL}: invalid JSON ({exc})")
+            else:
+                if not isinstance(ex_doc, dict) or ex_doc.get("all_passed") is not True:
+                    ex_issues.append(f"{DEFAULT_GATE_REL}: committed gate report has all_passed != True")
             if ex_issues:
                 g2["violations"].extend(ex_issues)
                 g2["passed"] = False
@@ -1135,12 +1532,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--root", type=Path, default=ROOT)
     ap.add_argument("--base-ref", default="origin/justSilas")
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--write", action="store_true")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
 
     root_resolved = args.root.resolve()
-    out_resolved = args.out if (args.out is None or args.out.is_absolute()) else Path.cwd() / args.out
+    if args.out is not None:
+        out_resolved: Path | None = args.out if args.out.is_absolute() else Path.cwd() / args.out
+    elif args.write or not args.check:
+        out_resolved = root_resolved / DEFAULT_GATE_REL
+    else:
+        out_resolved = None
 
     report = run_all_gates(
         root=root_resolved,

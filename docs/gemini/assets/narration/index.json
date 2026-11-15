@@ -1,0 +1,66 @@
+{
+ "01-hook": {
+  "file": "01-hook.wav",
+  "model": "gemini-3.8-flash-tts",
+  "seconds": 20.4,
+  "text": "One mole is leaking a company's documents. The agent catches them with canary traps: different versions of a document to different people, then watch which one leaks. One mole, one accusation. This is Canary Lab: Gemini plays, explains and attacks its own benchmark.",
+  "voice": "Kore",
+  "words": 43
+ },
+ "02-frontier": {
+  "file": "02-frontier.wav",
+  "model": "gemini-3.8-flash-tts",
+  "seconds": 33.84,
+  "text": "And here is the price of it. On hard, Gemini 4 Carbon at high thinking reaches 106 percent of the solver, interval 94 percent to 126 percent, over 10 episodes, at 1.93 dollars each. Gemini 3.6 Flash at high thinking is 4.3 times cheaper, at 0.45 dollars, but scores 88 percent, interval 51 percent to 138 percent, over 40 episodes: far less certain.",
+  "voice": "Kore",
+  "words": 63
+ },
+ "02-ladder": {
+  "file": "02-ladder.wav",
+  "model": "gemini-3.8-flash-tts",
+  "seconds": 23.64,
+  "text": "First, the Gemini Ladder. We ran 6 Gemini models at up to four thinking levels on the same seeds as the solver: 587 paired episodes, fanned out over our cluster through one Gemini gateway. Thinking control is the knob. Each row shows how much of the gap to the solver that extra thinking buys.",
+  "voice": "Kore",
+  "words": 54
+ },
+ "03-atlas": {
+  "file": "03-atlas.wav",
+  "model": "gemini-3.8-flash-tts",
+  "seconds": 18.36,
+  "text": "Next, the Failure Atlas. Gemini read all 153 trajectories, 793 thousand tokens, in one long, cached context, together with a chart of each agent's beliefs against the solver's. It names the failure modes and ties each one to the regret it costs.",
+  "voice": "Kore",
+  "words": 42
+ },
+ "03-modes": {
+  "file": "03-modes.wav",
+  "model": "gemini-3.8-flash-tts",
+  "seconds": 24.52,
+  "text": "Shown our own regret tags, it explains them: the biggest is \"Premature Accusation on Sub-Threshold Posterior\", 61 percent of all regret. Then we hid every label. Blind, Gemini recovered 3 of our 5 code-defined failure modes and named 2 new ones, though its cited steps cover only 21 percent of the regret. Every quote is checked word for word against the transcript.",
+  "voice": "Kore",
+  "words": 62
+ },
+ "04-swarm": {
+  "file": "04-swarm.wav",
+  "model": "gemini-3.8-flash-tts",
+  "seconds": 32.84,
+  "text": "Then we turned Gemini on our own benchmark. 100 Gemini attacks, 8 personas, most holding our whole codebase in context, tried to score without catching the mole. Every win is audited against the evidence. The best score the evidence can't justify is 0.38 on hard, against the solver's 0.53. None of them beat the reward, and 5 of their findings are now regression tests. And on a known exploit we reopened, the detector caught 4 of 4.",
+  "voice": "Kore",
+  "words": 77
+ },
+ "05-dashboard": {
+  "file": "05-dashboard.wav",
+  "model": "gemini-3.8-flash-tts",
+  "seconds": 23.84,
+  "text": "Every one of the 45,692 Gemini calls went through one ledger: 1.4 billion tokens, 17.5 million of them thinking, 88 percent of the input served from the context cache. And the gateway recorded every response, so anyone can replay our Gemini results offline, without a key.",
+  "voice": "Kore",
+  "words": 46
+ },
+ "06-close": {
+  "file": "06-close.wav",
+  "model": "gemini-3.8-flash-tts",
+  "seconds": 10.64,
+  "text": "Million-token context, thinking control, context caching, speech, Live and multimodal input, on one API. That's why it had to be Gemini.",
+  "voice": "Kore",
+  "words": 21
+ }
+}

@@ -1,15 +1,15 @@
 {
- "generated_at": "2026-11-15T05:02:55+02:00",
+ "generated_at": "2026-11-15T05:03:43+02:00",
  "what": "de-duplicated union of every committed Gemini ledger under results/gemini (canary.gemini.usage_union)",
  "dedup_key": "(ts, host, pid, feature, model, in, out); also the API response/request id when a row has one",
- "calls": 44565,
- "errors": 143,
- "input_tokens": 1318369523,
- "cached_tokens": 1160725047,
- "thinking_tokens": 17097734,
- "output_tokens": 2050087,
- "cache_share_of_input": 0.8804,
- "cost_usd_list": 400.0576,
+ "calls": 45692,
+ "errors": 144,
+ "input_tokens": 1346251331,
+ "cached_tokens": 1185094329,
+ "thinking_tokens": 17453191,
+ "output_tokens": 2090940,
+ "cache_share_of_input": 0.8803,
+ "cost_usd_list": 407.3436,
  "cost_unknown_calls": 702,
  "models": [
   "gemini-3.1-flash-lite",
@@ -43,17 +43,17 @@
   "video_qa"
  ],
  "start": 1794658241.63,
- "end": 1794710724.738,
+ "end": 1794711821.525,
  "by_feature": [
   {
-   "calls": 38979,
-   "errors": 57,
-   "in": 1214610921,
-   "out": 1408084,
-   "thinking": 13187131,
-   "cached": 1094030827,
-   "cost_usd": 321.83,
-   "tokens": 1229206136,
+   "calls": 40093,
+   "errors": 58,
+   "in": 1242491838,
+   "out": 1441877,
+   "thinking": 13542588,
+   "cached": 1118400109,
+   "cost_usd": 329.0888,
+   "tokens": 1257476303,
    "feature": "ladder",
    "models": [
     "gemini-3.1-flash-lite",
@@ -152,14 +152,14 @@
    ]
   },
   {
-   "calls": 50,
+   "calls": 63,
    "errors": 6,
-   "in": 7557,
-   "out": 13133,
+   "in": 8448,
+   "out": 20193,
    "thinking": 0,
    "cached": 0,
-   "cost_usd": 0.0549,
-   "tokens": 20690,
+   "cost_usd": 0.0821,
+   "tokens": 28641,
    "feature": "narrate",
    "models": [
     "gemini-3.8-flash",
@@ -331,19 +331,19 @@
    ]
   },
   {
-   "calls": 9379,
+   "calls": 10016,
    "errors": 3,
-   "in": 297688030,
-   "out": 346980,
-   "thinking": 2847201,
-   "cached": 261702988,
-   "cost_usd": 58.5947,
-   "tokens": 300882211,
+   "in": 317913499,
+   "out": 365162,
+   "thinking": 3087505,
+   "cached": 279546599,
+   "cost_usd": 62.6887,
+   "tokens": 321366166,
    "model": "gemini-3.5-flash",
-   "thinking_share": 0.8914,
-   "p50_latency_s": 2.78,
-   "p95_latency_s": 11.59,
-   "latency_n": 9375,
+   "thinking_share": 0.8942,
+   "p50_latency_s": 2.83,
+   "p95_latency_s": 13.28,
+   "latency_n": 10012,
    "kinds": [
     "batch",
     "cache",
@@ -351,8 +351,8 @@
    ]
   },
   {
-   "calls": 9809,
-   "errors": 32,
+   "calls": 9810,
+   "errors": 33,
    "in": 336453607,
    "out": 527783,
    "thinking": 5179055,
@@ -372,38 +372,38 @@
    ]
   },
   {
-   "calls": 8575,
+   "calls": 9050,
    "errors": 26,
-   "in": 256435587,
-   "out": 398079,
-   "thinking": 3815784,
-   "cached": 228606120,
-   "cost_usd": 90.4936,
-   "tokens": 260649450,
+   "in": 264090997,
+   "out": 413685,
+   "thinking": 3930937,
+   "cached": 235131791,
+   "cost_usd": 93.6584,
+   "tokens": 268435619,
    "model": "gemini-4-hydrogen",
-   "thinking_share": 0.9055,
-   "p50_latency_s": 3.61,
-   "p95_latency_s": 37.71,
-   "latency_n": 8547,
+   "thinking_share": 0.9048,
+   "p50_latency_s": 3.66,
+   "p95_latency_s": 37.64,
+   "latency_n": 9022,
    "kinds": [
     "count",
     "generate"
    ]
   },
   {
-   "calls": 8611,
+   "calls": 8612,
    "errors": 12,
-   "in": 237241136,
-   "out": 357778,
+   "in": 237241174,
+   "out": 357783,
    "thinking": 2412975,
    "cached": 216093272,
-   "cost_usd": 91.6125,
-   "tokens": 240011889,
+   "cost_usd": 91.6127,
+   "tokens": 240011932,
    "model": "gemini-4-argon",
    "thinking_share": 0.8709,
    "p50_latency_s": 9.69,
    "p95_latency_s": 64.03,
-   "latency_n": 8599,
+   "latency_n": 8600,
    "kinds": [
     "generate"
    ]
@@ -446,14 +446,14 @@
    ]
   },
   {
-   "calls": 38,
+   "calls": 51,
    "errors": 6,
-   "in": 1572,
-   "out": 12274,
+   "in": 2463,
+   "out": 19334,
    "thinking": 0,
    "cached": 0,
-   "cost_usd": 0.0472,
-   "tokens": 13846,
+   "cost_usd": 0.0743,
+   "tokens": 21797,
    "model": "gemini-3.8-flash-tts",
    "thinking_share": 0.0,
    "p50_latency_s": 0.0,
@@ -555,10 +555,10 @@
   }
  ],
  "rows_with_response_id": 0,
- "rows_without_response_id": 44565,
+ "rows_without_response_id": 45692,
  "response_id_note": "canary/gemini/ledger.py writes one self-written row per call (bulk ladder rows included) and records no API response id, so every row is de-duplicated by the composite key.",
- "raw_rows_in_files": 94657,
- "duplicates_removed": 50092,
+ "raw_rows_in_files": 113137,
+ "duplicates_removed": 67445,
  "files": [
   {
    "file": "results/gemini/ablations_sig_off/ledger.jsonl.gz",
@@ -566,11 +566,11 @@
   },
   {
    "file": "results/gemini/ladder_gemma_ledger.jsonl.gz",
-   "rows": 377
+   "rows": 332
   },
   {
    "file": "results/gemini/ladder_ledger.jsonl.gz",
-   "rows": 38476
+   "rows": 36164
   },
   {
    "file": "results/gemini/roles/mole/ledger.jsonl",
@@ -590,8 +590,8 @@
   },
   {
    "file": "results/gemini/usage_ledger.jsonl.gz",
-   "rows": 24855
+   "rows": 45692
   }
  ],
- "headline": "44,565 Gemini API calls, 1,318M input tokens (88.0% served from cache), 17.1M thinking tokens, $400.06 at list price (results/gemini/usage_total.json)"
+ "headline": "45,692 Gemini API calls, 1,346M input tokens (88.0% served from cache), 17.5M thinking tokens, $407.34 at list price (results/gemini/usage_total.json)"
 }

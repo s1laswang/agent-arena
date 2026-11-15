@@ -57,7 +57,7 @@ with the value cell circled.
 
 > VO[02-ladder]: First, the Gemini Ladder. We ran {ladder_models} Gemini models at up to four thinking levels on the same seeds as the solver: {ladder_episodes} paired episodes, fanned out over our cluster through one Gemini gateway. Thinking control is the knob. Each row shows how much of the gap to the solver that extra thinking buys.
 
-> VO[02-frontier]: And here is the price of it. On {frontier_tier}, {frontier_model} at {frontier_level} thinking reaches {frontier_pct} of the solver, interval {frontier_ci}, over {frontier_n} episodes, for {frontier_cost_share} of the cost per episode of {frontier_ref}.
+> VO[02-frontier]: And here is the price of it. On {frontier_tier}, {lead_model} at {lead_level} thinking reaches {lead_pct} of the solver, interval {lead_ci}, over {lead_n} episodes, at {lead_cost} each. {cheap_model} at {cheap_level} thinking is {cheap_times} times cheaper, at {cheap_cost}, but scores {cheap_pct}, interval {cheap_ci}, over {cheap_n} episodes: far less certain.
 
 ### 03 Atlas (1:15–2:00)
 

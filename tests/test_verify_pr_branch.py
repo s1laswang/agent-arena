@@ -829,6 +829,58 @@ def test_replay_catches_tampering_behind_opencode_artifacts(tmp_path: Path, tamp
     assert "step_mismatches=" in gates["replay_mismatch"]["errors"][0]
 
 
+def test_replay_accepts_pre_detail_invalid_arguments_steps(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "pre-detail-errors")
+
+    env = Env("medium", 5)
+    r_bad = env.call("interview", {"employee": "e01", "topic": "leaks"})
+    assert not r_bad.ok and r_bad.error == "invalid arguments" and "detail" in r_bad.data
+    steps = [
+        {
+            "t": 0,
+            "day": 1,
+            "tool": "interview",
+            "args": {"employee": "e01", "topic": "leaks"},
+            "result": {"ok": False, "data": {}, "error": "invalid arguments"},
+        },
+        {
+            "t": 1,
+            "day": 1,
+            "tool": "interview",
+            "args": {"employee": "e01", "topic": "leaks"},
+            "result": {
+                "ok": False,
+                "error": json.dumps({"ok": False, "data": {}, "error": "invalid arguments"}),
+            },
+        },
+    ]
+    env.call("interview", {"employee": "e01", "topic": "leaks"})
+    ep = {
+        "agent": "opencode:google/gemini-4-carbon",
+        "tier": "medium",
+        "seed": 5,
+        "score": env.score(),
+        "accused": env.verdict()["accused"],
+        "steps": steps,
+        "meta": {"valid": True},
+    }
+    shard = "results/selected_fleet_replication/v1.4/opencode-gemini-4-carbon/medium-s05"
+    _commit_files(
+        repo,
+        {
+            f"{shard}/episodes.jsonl": json.dumps(ep) + "\n",
+            f"{shard}/meta.json": json.dumps({"tiers_version": "v1.4", "seeds": [5]}) + "\n",
+        },
+        message="add pre-detail invalid arguments episode",
+    )
+
+    rep = verify_branch(base="justSilas", branch="pre-detail-errors", repo=repo)
+    assert rep["ok"] is True, rep
+    gates = _gate_map(rep)
+    assert gates["replay_mismatch"]["passed"] is True
+
+
 def test_self_hygiene_zero_comments_and_dashes() -> None:
     for py_rel in ("scripts/verify_pr_branch.py", "tests/test_verify_pr_branch.py"):
         raw = (ROOT / py_rel).read_bytes()

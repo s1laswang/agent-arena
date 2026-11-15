@@ -213,12 +213,23 @@ def _replay_episode_hardened(ep: dict[str, Any], tiers_version: str = "v1.4") ->
             res = env.call(st.get("tool"), call_args)
             got_payload = {"ok": res.ok, "data": res.data, "error": res.error}
             rec_result = st.get("result")
+            want = _norm_result(rec_result)
+            if (
+                not res.ok
+                and isinstance(res.data, dict)
+                and set(res.data) == {"detail"}
+                and not (
+                    isinstance(want, dict)
+                    and isinstance(want.get("data"), dict)
+                    and "detail" in want["data"]
+                )
+            ):
+                got_payload = {"ok": res.ok, "data": {}, "error": res.error}
             trunc_bytes = _client_truncated_bytes(rec_result)
             if trunc_bytes is not None:
                 steps_truncated_checked += 1
                 step_ok = len(json.dumps(got_payload).encode("utf-8")) == trunc_bytes
             else:
-                want = _norm_result(rec_result)
                 step_ok = want is None or _canon(got_payload) == _canon(want)
             if not step_ok:
                 step_mismatches += 1
